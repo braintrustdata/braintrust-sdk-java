@@ -1,0 +1,19 @@
+version: 1
+name: braintrust-sdk-spec
+
+envars:
+  - name: BRAINTRUST_API_KEY
+    description: "Braintrust API key. You can find this in the Braintrust UI under user settings -> API keys"
+    type: string
+    required: true
+  - name: BRAINTRUST_API_URL
+    description: "URL to report Braintrust log and experiment data to"
+    type: string
+    default: "https://api.braintrust.dev"
+
+attributes:
+  - name: braintrust.parent
+    description: >
+      A parent attribute is required to report data to Braintrust.
+      Can be `project_id:1234`, `project_name:myproject`, or `experiment_id:5678`
+    type: string

@@ -1,0 +1,6 @@
+# Core deps for codegen
+Jinja2>=3.1
+PyYAML>=6.0
+
+# Optional: type stubs if you use mypy or pyright
+types-PyYAML>=6.0
