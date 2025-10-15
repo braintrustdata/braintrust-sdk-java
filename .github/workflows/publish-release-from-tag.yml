@@ -13,6 +13,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   validate-and-publish:
     name: Validate Tag and Publish Release
@@ -94,12 +97,11 @@ jobs:
         id: find-artifacts
         run: |
           VERSION="${{ steps.determine-tag.outputs.tag }}"
-          VERSION_NO_V="${VERSION#v}"
 
-          # Find the built JAR files
-          MAIN_JAR=$(find build/libs -name "*-${VERSION_NO_V}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
-          SOURCES_JAR=$(find build/libs -name "*-${VERSION_NO_V}-sources.jar" | head -1)
-          JAVADOC_JAR=$(find build/libs -name "*-${VERSION_NO_V}-javadoc.jar" | head -1)
+          # Find the built JAR files (version includes 'v' prefix from generateVersion())
+          MAIN_JAR=$(find build/libs -name "*-${VERSION}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
+          SOURCES_JAR=$(find build/libs -name "*-${VERSION}-sources.jar" | head -1)
+          JAVADOC_JAR=$(find build/libs -name "*-${VERSION}-javadoc.jar" | head -1)
 
           echo "main-jar=$MAIN_JAR" >> $GITHUB_OUTPUT
           echo "sources-jar=$SOURCES_JAR" >> $GITHUB_OUTPUT
@@ -133,3 +135,6 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to Sonatype
+        run: |
+          echo "TODO!"
