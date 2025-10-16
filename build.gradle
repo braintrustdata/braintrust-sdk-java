@@ -1,8 +1,10 @@
 plugins {
   id 'java-library'
   id 'maven-publish'
+  id 'signing'
   id 'com.diffplug.spotless' version '6.25.0'
   id 'io.freefair.lombok' version '9.0.0-rc2'
+  id 'com.vanniktech.maven.publish' version '0.28.0'
   id 'idea'
   id 'eclipse'
 }
@@ -29,8 +31,6 @@ java {
     languageVersion = JavaLanguageVersion.of(17)
     vendor = JvmVendorSpec.ADOPTIUM // eclipse JVM
   }
-  withJavadocJar()
-  withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -224,31 +224,58 @@ jar {
   }
 }
 
-publishing {
-  publications {
-    maven(MavenPublication) {
-      from components.java
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.JavaLibrary
+import com.vanniktech.maven.publish.SonatypeHost
 
-      pom {
-        name = 'Braintrust Java SDK'
-        description = 'OpenTelemetry-based Braintrust SDK for Java'
-        url = 'https://github.com/braintrustdata/braintrust-x-java'
+def signingKey = System.getenv("GPG_SIGNING_KEY")
+def signingKeyId = System.getenv("GPG_SIGNING_KEY_ID")
+def signingPassword = System.getenv("GPG_SIGNING_PASSWORD")
 
-        licenses {
-          license {
-            name = 'MIT License'
-            url = 'https://opensource.org/licenses/MIT'
-          }
-        }
+if (signingKey != null && signingKeyId != null && signingPassword != null) {
+  ext["signingInMemoryKey"] = signingKey
+  ext["signingInMemoryKeyId"] = signingKeyId
+  ext["signingInMemoryKeyPassword"] = signingPassword
+}
 
-        developers {
-          developer {
-            id = 'braintrust'
-            name = 'Braintrust Team'
-            email = 'support@braintrust.dev'
-          }
-        }
+mavenPublishing {
+  if (signingKey != null && signingKeyId != null && signingPassword != null) {
+    signAllPublications()
+  }
+  publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+  coordinates(group.toString(), 'braintrust-sdk-java', version.toString())
+  configure(
+    new JavaLibrary(
+      new JavadocJar.Javadoc(),
+      true
+    )
+  )
+
+  pom {
+    name = 'Braintrust Java SDK'
+    description = 'Braintrust SDK for logs and evals in Java'
+    url = 'https://github.com/braintrustdata/braintrust-sdk-java'
+
+    licenses {
+      license {
+        name = 'MIT License'
+        url = 'https://opensource.org/licenses/MIT'
       }
+    }
+
+    developers {
+      developer {
+        id = 'braintrust'
+        name = 'Braintrust Team'
+        email = 'info@braintrust.dev'
+      }
+    }
+
+    scm {
+      connection = 'scm:git:git://github.com/braintrustdata/braintrust-sdk-java.git'
+      developerConnection = 'scm:git:git://github.com/braintrustdata/braintrust-sdk-java.git'
+      url = 'https://github.com/braintrustdata/braintrust-sdk-java'
     }
   }
 }

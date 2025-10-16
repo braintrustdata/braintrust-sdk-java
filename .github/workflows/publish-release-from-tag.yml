@@ -136,5 +136,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to Sonatype
-        run: |
-          echo "TODO!"
+        run: |-
+          if [ -z "$SONATYPE_USERNAME" ]; then
+            echo "Error: SONATYPE_USERNAME is not set"
+            exit 1
+          fi
+          if [ -z "$SONATYPE_PASSWORD" ]; then
+            echo "Error: SONATYPE_PASSWORD is not set"
+            exit 1
+          fi
+          if [ -z "$GPG_SIGNING_KEY" ]; then
+            echo "Error: GPG_SIGNING_KEY is not set"
+            exit 1
+          fi
+          if [ -z "$GPG_SIGNING_PASSWORD" ]; then
+            echo "Error: GPG_SIGNING_PASSWORD is not set"
+            exit 1
+          fi
+          echo "All required credentials are set"
+          export -- GPG_SIGNING_KEY_ID
+          printenv -- GPG_SIGNING_KEY | gpg --batch --passphrase-fd 3 --import 3<<< "$GPG_SIGNING_PASSWORD"
+          GPG_SIGNING_KEY_ID="$(gpg --with-colons --list-keys | awk -F : -- '/^pub:/ { getline; print "0x" substr($10, length($10) - 7) }')"
+          ./gradlew publishAndReleaseToMavenCentral --stacktrace -PmavenCentralUsername="$SONATYPE_USERNAME" -PmavenCentralPassword="$SONATYPE_PASSWORD" --no-configuration-cache
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
