@@ -1,48 +1,109 @@
-# Braintrust Java SDK
+# Braintrust Java Tracing & Eval SDK
 
-An OpenTelemetry-based Braintrust SDK for Java 17 and up. Contains:
+[![javadoc](https://javadoc.io/badge2/dev.braintrust/braintrust-sdk-java/javadoc.svg)](https://javadoc.io/doc/dev.braintrust/braintrust-sdk-java)
+[![CI](https://github.com/braintrustdata/braintrust-sdk-java/actions/workflows/ci.yml/badge.svg)](https://github.com/braintrustdata/braintrust-sdk-java/actions/workflows/ci.yml)
 
-- Instrumentation for major AI vendors (OpenAI, Anthropic, etc)
-- LLM Eval framework for sending Experiments to Braintrust
-- Utils for sending Open Telemetry data to Braintrust
+## Overview
 
-If you're simply looking to call the Braintrust API with Java code, see [https://github.com/braintrustdata/braintrust-java](https://github.com/braintrustdata/braintrust-java)
+This library provides tools for **evaluating** and **tracing** AI applications in [Braintrust](https://www.braintrust.dev). Use it to:
 
-This SDK is currently is in BETA status and APIs may change
+- **Evaluate** your AI models with custom test cases and scoring functions
+- **Trace** LLM calls and monitor AI application performance with OpenTelemetry
+- **Integrate** seamlessly with OpenAI, Anthropic, and other LLM providers
 
-<!-- # Using the SDK in your code -->
+This SDK is currently in BETA status and APIs may change.
 
-<!-- *NOTE: The SDK has not published a release to maven yet. This section will not work until our first release is published* -->
+## See Also
 
-<!-- build.gradle -->
-<!-- ```gradle -->
-<!-- dependencies { -->
-<!--   implementation 'dev.braintrust:sdk:0.0.1' -->
-<!-- } -->
-<!-- ``` -->
+If you're looking to call the Braintrust REST API with Java code, see the [Braintrust API Client](https://github.com/braintrustdata/braintrust-java)
 
-# Examples
+## Quick Start
 
-All examples can be found here: [./examples/src/main/java/dev/braintrust/examples](./examples/src/main/java/dev/braintrust/examples)
+Add the SDK to your package manager. Latest version and full instructions can be found in [Maven Central](https://central.sonatype.com/artifact/dev.braintrust/braintrust-sdk-java/versions)
 
-To run the examples from the command line you need:
-- A Braintrust account and a valid BRAINTRUST_API_KEY
-- Java 17 (or greater):
-    - macOS: `brew install openjdk@17`
-    - Ubuntu: `sudo apt install openjdk-17-jdk`
-- (Optional to run the oai example) a valid OPENAI_API_KEY
-
-Then, from the repo root:
+build.gradle example:
+```gradle
+dependencies {
+  implementation 'dev.braintrust:sdk:<version-goes-here>'
+}
 ```
+
+### Evals
+
+```java
+var config = BraintrustConfig.fromEnvironment();
+var openTelemetry = BraintrustTracing.of(config, true);
+var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
+
+Function<String, String> getFoodType =
+        (String food) -> {
+            var request =
+                    ChatCompletionCreateParams.builder()
+                            .model(ChatModel.GPT_4O_MINI)
+                            .addSystemMessage("Return a one word answer")
+                            .addUserMessage("What kind of food is " + food + "?")
+                            .maxTokens(50L)
+                            .temperature(0.0)
+                            .build();
+            var response = openAIClient.chat().completions().create(request);
+            return response.choices().get(0).message().content().orElse("").toLowerCase();
+        };
+
+var eval =
+        Eval.<String, String>builder()
+                .name("java-eval-x-" + System.currentTimeMillis())
+                .tracer(BraintrustTracing.getTracer(openTelemetry))
+                .config(config)
+                .cases(
+                        EvalCase.of("asparagus", "vegetable"),
+                        EvalCase.of("banana", "fruit"))
+                .task(getFoodType)
+                .scorers(
+                        Scorer.of(
+                                "fruit_scorer",
+                                result -> "fruit".equals(result) ? 1.0 : 0.0),
+                        Scorer.of(
+                                "vegetable_scorer",
+                                result -> "vegetable".equals(result) ? 1.0 : 0.0))
+                .build();
+var result = eval.run();
+System.out.println("\n\n" + result.createReportString());
+```
+
+### OpenAI Tracing
+
+```java
+var braintrustConfig = BraintrustConfig.fromEnvironment();
+var openTelemetry = BraintrustTracing.of(braintrustConfig, true);
+OpenAIClient openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
+
+var request =
+        ChatCompletionCreateParams.builder()
+                .model(ChatModel.GPT_4O_MINI)
+                .addSystemMessage("You are a helpful assistant")
+                .addUserMessage("What is the capital of France?")
+                .temperature(0.0)
+                .build();
+# openai calls will be automatically traced and reported to braintrust
+var response = openAIClient.chat().completions().create(request);
+```
+
+## Running Examples
+
+Example source code can be found [here](./examples/src/main/java/dev/braintrust/examples)
+
+```bash
+export BRAINTRUST_API_KEY="your-braintrust-api-key"
+export OPENAI_API_KEY="your-oai-api-key" # to run oai examples
+export ANTHROPIC_API_KEY="your-anthropic-api-key" # to run anthropic examples
+# install java 17 or later
+brew install openjdk@17 # macOS
+sudo apt install openjdk-17-jdk # ubuntu
+# to run a specific example
 ./gradlew :examples:runSimpleOpenTelemetry
-```
-
-If you wish to see all examples run:
-```
+# to see all examples
 ./gradlew :examples:tasks --group="Braintrust SDK Examples"
 ```
-
-If you wish to hack around with the examples you can modify source then re-run the gradle task.
 
 ## Logging
 
