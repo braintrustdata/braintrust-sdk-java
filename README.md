@@ -24,7 +24,7 @@ Add the SDK to your package manager. Latest version and full instructions can be
 build.gradle example:
 ```gradle
 dependencies {
-  implementation 'dev.braintrust:sdk:<version-goes-here>'
+  implementation 'dev.braintrust:braintrust-sdk-java:<version-goes-here>'
 }
 ```
 
