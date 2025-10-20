@@ -88,13 +88,28 @@ class BraintrustSpanExporter implements SpanExporter {
                                 return exporterBuilder.build();
                             });
 
-            log.debug("Exporting {} spans with x-bt-parent: {}", spans.size(), parent);
             if (config.exportSpansInMemoryForUnitTest()) {
                 SPANS_EXPORTED.putIfAbsent(parent, new CopyOnWriteArrayList<>());
                 SPANS_EXPORTED.get(parent).addAll(spans);
                 return CompletableResultCode.ofSuccess();
             } else {
-                return exporter.export(spans);
+                var result = exporter.export(spans);
+                // NOTE: whenComplete mutates the original object. does not copy.
+                return result.whenComplete(
+                        () -> {
+                            if (result.isSuccess()) {
+                                log.debug(
+                                        "Successfully exported {} spans with x-bt-parent: {}",
+                                        spans.size(),
+                                        parent);
+                            } else {
+                                log.warn(
+                                        "Failed to export {} spans to endpoint {}",
+                                        spans.size(),
+                                        tracesEndpoint,
+                                        result.getFailureThrowable());
+                            }
+                        });
             }
         } catch (Exception e) {
             log.error("Failed to export spans", e);

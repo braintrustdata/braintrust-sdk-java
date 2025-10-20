@@ -85,9 +85,23 @@ class BraintrustLogExporter implements LogRecordExporter {
                                 return exporterBuilder.build();
                             });
 
-            log.debug("Exporting {} logs with x-bt-parent: {}", logs.size(), parent);
-            // Export the logs
-            return exporter.export(logs);
+            var result = exporter.export(logs);
+            // NOTE: whenComplete mutates the original object. does not copy.
+            return result.whenComplete(
+                    () -> {
+                        if (result.isSuccess()) {
+                            log.debug(
+                                    "Successfully exported {} logs with x-bt-parent: {}",
+                                    logs.size(),
+                                    parent);
+                        } else {
+                            log.warn(
+                                    "Failed to export {} spans to endpoint {}",
+                                    logs.size(),
+                                    logsEndpoint,
+                                    result.getFailureThrowable());
+                        }
+                    });
         } catch (Exception e) {
             log.error("Failed to export logs", e);
             return CompletableResultCode.ofFailure();
