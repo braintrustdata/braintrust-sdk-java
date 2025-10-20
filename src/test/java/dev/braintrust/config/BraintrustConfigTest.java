@@ -46,14 +46,27 @@ class BraintrustConfigTest {
                 new dev.braintrust.api.BraintrustApiClient.OrganizationAndProjectInfo(
                         orgInfo, project);
         var client = new dev.braintrust.api.BraintrustApiClient.InMemoryImpl(orgAndProjectInfo);
-        var config =
-                BraintrustConfig.of(
-                        "BRAINTRUST_API_KEY", "foobar",
-                        "BRAINTRUST_API_URL", "https://api.braintrust.dev",
-                        "BRAINTRUST_APP_URL", "https://braintrust.dev",
-                        "BRAINTRUST_DEFAULT_PROJECT_ID", projectId);
-        assertEquals(
-                "https://braintrust.dev/app/Test%20Org/p/some%20project",
-                config.fetchProjectURI(client).toASCIIString());
+        { // standard braintrust.dev
+            var config =
+                    BraintrustConfig.of(
+                            "BRAINTRUST_API_KEY", "foobar",
+                            "BRAINTRUST_API_URL", "https://api.braintrust.dev",
+                            "BRAINTRUST_APP_URL", "https://braintrust.dev",
+                            "BRAINTRUST_DEFAULT_PROJECT_ID", projectId);
+            assertEquals(
+                    "https://braintrust.dev/app/Test%20Org/p/some%20project",
+                    config.fetchProjectURI(client).toASCIIString());
+        }
+        { // self-hosted with a non-standard port
+            var config =
+                    BraintrustConfig.of(
+                            "BRAINTRUST_API_KEY", "foobar",
+                            "BRAINTRUST_API_URL", "http://someselfhost:8080",
+                            "BRAINTRUST_APP_URL", "http://someselfhost:3001",
+                            "BRAINTRUST_DEFAULT_PROJECT_ID", projectId);
+            assertEquals(
+                    "http://someselfhost:3001/app/Test%20Org/p/some%20project",
+                    config.fetchProjectURI(client).toASCIIString());
+        }
     }
 }

@@ -96,14 +96,17 @@ public final class BraintrustConfig extends BaseConfig {
         try {
             var orgAndProject = client.getProjectAndOrgInfo().orElseThrow();
             var baseURI = new URI(appUrl());
+            var path =
+                    "/app/%s/p/%s"
+                            .formatted(
+                                    orgAndProject.orgInfo().name(), orgAndProject.project().name());
             return new URI(
                     baseURI.getScheme(),
+                    baseURI.getUserInfo(),
                     baseURI.getHost(),
-                    baseURI.getPath()
-                            + "/app/"
-                            + orgAndProject.orgInfo().name()
-                            + "/p/"
-                            + orgAndProject.project().name(),
+                    baseURI.getPort(),
+                    path,
+                    null,
                     null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
