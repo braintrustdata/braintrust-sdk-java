@@ -5,9 +5,8 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionStreamOptions;
-import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.Braintrust;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
-import dev.braintrust.trace.BraintrustTracing;
 
 /** Basic OTel + OpenAI instrumentation example */
 public class OpenAIInstrumentationExample {
@@ -16,12 +15,15 @@ public class OpenAIInstrumentationExample {
             System.err.println(
                     "\nWARNING envar OPEN_AI_API_KEY not found. This example will likely fail.\n");
         }
-        var braintrustConfig = BraintrustConfig.fromEnvironment();
-        var openTelemetry = BraintrustTracing.of(braintrustConfig, true);
-        var tracer = BraintrustTracing.getTracer(openTelemetry);
+        var braintrust = Braintrust.get();
+        var openTelemetry = braintrust.openTelemetryCreate();
         OpenAIClient openAIClient =
                 BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
-        var rootSpan = tracer.spanBuilder("openai-java-instrumentation-example").startSpan();
+        var rootSpan =
+                openTelemetry
+                        .getTracer("my-instrumentation")
+                        .spanBuilder("openai-java-instrumentation-example")
+                        .startSpan();
         try (var ignored = rootSpan.makeCurrent()) {
             chatCompletionsExample(openAIClient);
             // chatCompletionsStreamingExample(openAIClient);
@@ -29,7 +31,7 @@ public class OpenAIInstrumentationExample {
             rootSpan.end();
         }
         var url =
-                braintrustConfig.fetchProjectURI()
+                braintrust.projectUri()
                         + "/logs?r=%s&s=%s"
                                 .formatted(
                                         rootSpan.getSpanContext().getTraceId(),

@@ -1,7 +1,9 @@
 package dev.braintrust.instrumentation.openai;
 
 import com.openai.client.OpenAIClient;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.instrumentation.openai.otel.OpenAITelemetry;
+import dev.braintrust.prompt.BraintrustPrompt;
 import io.opentelemetry.api.OpenTelemetry;
 
 /** Braintrust OpenAI client instrumentation. */
@@ -20,5 +22,9 @@ public class BraintrustOpenAI {
                     .build()
                     .wrap(openAIClient);
         }
+    }
+
+    public static ChatCompletionCreateParams buildChatCompletionsPrompt(BraintrustPrompt prompt) {
+        throw new RuntimeException("TODO");
     }
 }
