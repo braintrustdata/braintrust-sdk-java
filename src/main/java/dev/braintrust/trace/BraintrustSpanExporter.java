@@ -48,6 +48,7 @@ class BraintrustSpanExporter implements SpanExporter {
 
         // Combine all results
         var combined = CompletableResultCode.ofAll(results);
+        log.debug("span export results: {}", combined.isSuccess());
 
         return combined;
     }
