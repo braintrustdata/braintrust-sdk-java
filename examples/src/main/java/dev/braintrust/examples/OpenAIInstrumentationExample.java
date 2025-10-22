@@ -10,6 +10,7 @@ import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
 
 /** Basic OTel + OpenAI instrumentation example */
 public class OpenAIInstrumentationExample {
+
     public static void main(String[] args) throws Exception {
         if (null == System.getenv("OPENAI_API_KEY")) {
             System.err.println(

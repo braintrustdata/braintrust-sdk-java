@@ -1,4 +1,4 @@
-package dev.braintrust.trace;
+package dev.braintrust;
 
 import java.util.Properties;
 

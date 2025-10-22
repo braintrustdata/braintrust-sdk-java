@@ -31,8 +31,8 @@ dependencies {
 ### Evals
 
 ```java
-var config = BraintrustConfig.fromEnvironment();
-var openTelemetry = BraintrustTracing.of(config, true);
+var braintrust = Braintrust.get();
+var openTelemetry = braintrust.openTelemetryCreate();
 var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
 
 Function<String, String> getFoodType =
@@ -49,11 +49,8 @@ Function<String, String> getFoodType =
             return response.choices().get(0).message().content().orElse("").toLowerCase();
         };
 
-var eval =
-        Eval.<String, String>builder()
+var eval = braintrust.<String, String>evalBuilder()
                 .name("java-eval-x-" + System.currentTimeMillis())
-                .tracer(BraintrustTracing.getTracer(openTelemetry))
-                .config(config)
                 .cases(
                         EvalCase.of("asparagus", "vegetable"),
                         EvalCase.of("banana", "fruit"))
@@ -73,8 +70,8 @@ System.out.println("\n\n" + result.createReportString());
 ### OpenAI Tracing
 
 ```java
-var braintrustConfig = BraintrustConfig.fromEnvironment();
-var openTelemetry = BraintrustTracing.of(braintrustConfig, true);
+var braintrust = Braintrust.get();
+var openTelemetry = braintrust.openTelemetryCreate();
 OpenAIClient openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
 
 var request =

@@ -17,6 +17,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -38,6 +40,10 @@ public interface BraintrustApiClient {
 
     /** Get project and org info for the given project ID */
     Optional<OrganizationAndProjectInfo> getProjectAndOrgInfo(String projectId);
+
+    /** Get a prompt by slug and optional version */
+    Optional<Prompt> getPrompt(
+            @Nonnull String projectName, @Nonnull String slug, @Nullable String version);
 
     static BraintrustApiClient of(BraintrustConfig config) {
         return new HttpImpl(config);
@@ -139,6 +145,55 @@ public interface BraintrustApiClient {
             return Optional.of(new OrganizationAndProjectInfo(orgInfo, project));
         }
 
+        @Override
+        public Optional<Prompt> getPrompt(
+                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
+            Objects.requireNonNull(projectName, slug);
+            try {
+                var uriBuilder = new StringBuilder(config.apiUrl() + "/v1/prompt?");
+
+                if (!slug.isEmpty()) {
+                    uriBuilder.append("slug=").append(slug);
+                }
+
+                if (!projectName.isEmpty()) {
+                    if (uriBuilder.charAt(uriBuilder.length() - 1) != '?') {
+                        uriBuilder.append("&");
+                    }
+                    uriBuilder.append("project_name=").append(projectName);
+                }
+
+                if (version != null && !version.isEmpty()) {
+                    if (uriBuilder.charAt(uriBuilder.length() - 1) != '?') {
+                        uriBuilder.append("&");
+                    }
+                    uriBuilder.append("version=").append(version);
+                }
+
+                PromptListResponse response =
+                        getAsync(
+                                        uriBuilder.toString().replace(config.apiUrl(), ""),
+                                        PromptListResponse.class)
+                                .get();
+
+                if (response.objects() == null || response.objects().isEmpty()) {
+                    return Optional.empty();
+                }
+
+                if (response.objects().size() > 1) {
+                    throw new ApiException(
+                            "Multiple objects found for slug: "
+                                    + slug
+                                    + ", projectName: "
+                                    + projectName);
+                }
+
+                return Optional.of(response.objects().get(0));
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         private <T> CompletableFuture<T> getAsync(String path, Class<T> responseType) {
             var request =
                     HttpRequest.newBuilder()
@@ -235,9 +290,17 @@ public interface BraintrustApiClient {
         private final List<OrganizationAndProjectInfo> organizationAndProjectInfos;
         private final Set<Experiment> experiments =
                 Collections.newSetFromMap(new ConcurrentHashMap<>());
+        private final List<Prompt> prompts = new ArrayList<>();
 
         public InMemoryImpl(OrganizationAndProjectInfo... organizationAndProjectInfos) {
             this.organizationAndProjectInfos = List.of(organizationAndProjectInfos);
+        }
+
+        public InMemoryImpl(
+                List<OrganizationAndProjectInfo> organizationAndProjectInfos,
+                List<Prompt> prompts) {
+            this.organizationAndProjectInfos = organizationAndProjectInfos;
+            this.prompts.addAll(prompts);
         }
 
         @Override
@@ -292,6 +355,55 @@ public interface BraintrustApiClient {
             return organizationAndProjectInfos.stream()
                     .filter(orgAndProject -> orgAndProject.project().id().equals(projectId))
                     .findFirst();
+        }
+
+        @Override
+        public Optional<Prompt> getPrompt(
+                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
+            Objects.requireNonNull(projectName, slug);
+            List<Prompt> matchingPrompts =
+                    prompts.stream()
+                            .filter(
+                                    prompt -> {
+                                        // Filter by slug if provided
+                                        if (slug != null && !slug.isEmpty()) {
+                                            if (!prompt.slug().equals(slug)) {
+                                                return false;
+                                            }
+                                        }
+
+                                        // Filter by project name if provided
+                                        if (projectName != null && !projectName.isEmpty()) {
+                                            // Find project by name and check if ID matches
+                                            Project project = getOrCreateProject(projectName);
+                                            if (!prompt.projectId().equals(project.id())) {
+                                                return false;
+                                            }
+                                        }
+
+                                        // Filter by version if provided
+                                        // Note: Version filtering would require additional metadata
+                                        // on Prompt
+                                        // For now, we'll skip this as Prompt doesn't have a
+                                        // version field
+
+                                        return true;
+                                    })
+                            .toList();
+
+            if (matchingPrompts.isEmpty()) {
+                return Optional.empty();
+            }
+
+            if (matchingPrompts.size() > 1) {
+                throw new ApiException(
+                        "Multiple objects found for slug: "
+                                + slug
+                                + ", projectName: "
+                                + projectName);
+            }
+
+            return Optional.of(matchingPrompts.get(0));
         }
     }
 
@@ -362,4 +474,21 @@ public interface BraintrustApiClient {
     record LoginResponse(List<OrganizationInfo> orgInfo) {}
 
     record OrganizationAndProjectInfo(OrganizationInfo orgInfo, Project project) {}
+
+    // Prompt models
+    record PromptData(Object prompt, Object options) {}
+
+    record Prompt(
+            String id,
+            String projectId,
+            String orgId,
+            String name,
+            String slug,
+            Optional<String> description,
+            String created,
+            PromptData promptData,
+            Optional<List<String>> tags,
+            Optional<Object> metadata) {}
+
+    record PromptListResponse(List<Prompt> objects) {}
 }

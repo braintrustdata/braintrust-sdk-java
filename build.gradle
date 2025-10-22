@@ -219,7 +219,7 @@ jar {
       'Implementation-Title': 'Braintrust Java SDK',
       'Implementation-Version': version,
       'Implementation-Vendor': 'Braintrust',
-      'Main-Class': 'dev.braintrust.trace.SDKMain'
+      'Main-Class': 'dev.braintrust.SDKMain'
     )
   }
 }
