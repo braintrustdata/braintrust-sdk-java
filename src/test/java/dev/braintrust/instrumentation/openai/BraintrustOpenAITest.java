@@ -498,7 +498,7 @@ public class BraintrustOpenAITest {
 
         BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
 
-        Map<String, String> parameters = Map.of("name", "Alice");
+        Map<String, Object> parameters = Map.of("name", "Alice");
         ChatCompletionCreateParams renderedParams =
                 BraintrustOpenAI.buildChatCompletionsPrompt(prompt, parameters);
 

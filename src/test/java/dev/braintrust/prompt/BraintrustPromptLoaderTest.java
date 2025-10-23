@@ -47,7 +47,7 @@ public class BraintrustPromptLoaderTest {
         assertNotNull(prompt);
 
         // Test rendering
-        Map<String, String> parameters = Map.of("name", "Bob");
+        Map<String, Object> parameters = Map.of("name", "Bob");
         List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
 
         assertEquals(2, renderedMessages.size());

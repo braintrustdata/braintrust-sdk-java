@@ -1,18 +1,17 @@
 package dev.braintrust.prompt;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheException;
 import dev.braintrust.api.BraintrustApiClient;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class BraintrustPrompt {
-    private static final Pattern MUSTACHE_PATTERN = Pattern.compile("\\{\\{([^}]+)\\}\\}");
-
     private final BraintrustApiClient.Prompt apiPrompt;
     private final Map<String, String> defaults;
 
@@ -25,7 +24,7 @@ public class BraintrustPrompt {
         this.defaults = defaults;
     }
 
-    public List<Map<String, Object>> renderMessages(Map<String, String> parameters) {
+    public List<Map<String, Object>> renderMessages(Map<String, Object> parameters) {
         // get promptData->prompt->messages
         Map<String, Object> promptData = (Map<String, Object>) apiPrompt.promptData().prompt();
         List<Map<String, Object>> messages = (List<Map<String, Object>>) promptData.get("messages");
@@ -34,7 +33,6 @@ public class BraintrustPrompt {
             throw new RuntimeException("No messages found in prompt data");
         }
 
-        Set<String> usedParameters = new HashSet<>();
         List<Map<String, Object>> renderedMessages = new ArrayList<>();
 
         for (Map<String, Object> message : messages) {
@@ -42,18 +40,11 @@ public class BraintrustPrompt {
             String content = (String) message.get("content");
 
             if (content != null) {
-                String renderedContent = renderTemplate(content, parameters, usedParameters);
+                String renderedContent = renderTemplate(content, parameters);
                 renderedMessage.put("content", renderedContent);
             }
 
             renderedMessages.add(renderedMessage);
-        }
-
-        // Check if all parameters were used
-        Set<String> unusedParameters = new HashSet<>(parameters.keySet());
-        unusedParameters.removeAll(usedParameters);
-        if (!unusedParameters.isEmpty()) {
-            throw new RuntimeException("Unused parameters: " + unusedParameters);
         }
 
         return renderedMessages;
@@ -92,24 +83,22 @@ public class BraintrustPrompt {
         return result;
     }
 
-    private String renderTemplate(
-            String template, Map<String, String> parameters, Set<String> usedParameters) {
-        Matcher matcher = MUSTACHE_PATTERN.matcher(template);
-        StringBuffer result = new StringBuffer();
-
-        while (matcher.find()) {
-            String paramName = matcher.group(1);
-            String paramValue = parameters.get(paramName);
-
-            if (paramValue == null) {
-                throw new RuntimeException("Missing parameter: " + paramName);
+    private String renderTemplate(String template, Map<String, Object> parameters) {
+        try {
+            DefaultMustacheFactory factory = new DefaultMustacheFactory();
+            Mustache mustache = factory.compile(new StringReader(template), "template");
+            StringWriter writer = new StringWriter();
+            mustache.execute(writer, parameters);
+            writer.flush();
+            return writer.toString();
+        } catch (MustacheException e) {
+            // If the template is malformed, just return it as-is
+            return template;
+        } catch (Exception e) {
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
             }
-
-            usedParameters.add(paramName);
-            matcher.appendReplacement(result, Matcher.quoteReplacement(paramValue));
+            throw new RuntimeException("Failed to render template", e);
         }
-
-        matcher.appendTail(result);
-        return result.toString();
     }
 }

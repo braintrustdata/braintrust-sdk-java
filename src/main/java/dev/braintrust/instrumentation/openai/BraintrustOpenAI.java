@@ -31,7 +31,7 @@ public class BraintrustOpenAI {
 
     @SneakyThrows
     public static ChatCompletionCreateParams buildChatCompletionsPrompt(
-            BraintrustPrompt prompt, Map<String, String> parameters) {
+            BraintrustPrompt prompt, Map<String, Object> parameters) {
         var promptMap = new HashMap<>(prompt.getOptions());
         promptMap.put("messages", prompt.renderMessages(parameters));
         var promptJson = ObjectMappers.jsonMapper().writeValueAsString(promptMap);

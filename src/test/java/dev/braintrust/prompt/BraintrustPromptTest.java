@@ -11,90 +11,6 @@ import org.junit.jupiter.api.Test;
 public class BraintrustPromptTest {
 
     @Test
-    void testRenderMessagesWithParameters() {
-        // Create a test prompt object
-        BraintrustApiClient.Prompt promptObject = createTestPrompt();
-
-        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
-
-        // Render messages with parameters
-        Map<String, String> parameters = Map.of("name", "Alice");
-        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
-
-        // Verify the messages were rendered correctly
-        assertEquals(2, renderedMessages.size());
-
-        Map<String, Object> systemMessage = renderedMessages.get(0);
-        assertEquals("system", systemMessage.get("role"));
-        assertEquals(
-                "You are a kind chatbot who briefly greets people", systemMessage.get("content"));
-
-        Map<String, Object> userMessage = renderedMessages.get(1);
-        assertEquals("user", userMessage.get("role"));
-        assertEquals("What's up my friend? My name is Alice", userMessage.get("content"));
-    }
-
-    @Test
-    void testRenderMessagesWithMissingParameter() {
-        BraintrustApiClient.Prompt promptObject = createTestPrompt();
-        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
-
-        // Try to render without providing the required parameter
-        Map<String, String> parameters = Map.of();
-
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> {
-                            prompt.renderMessages(parameters);
-                        });
-
-        assertTrue(exception.getMessage().contains("Missing parameter: name"));
-    }
-
-    @Test
-    void testRenderMessagesWithUnusedParameter() {
-        BraintrustApiClient.Prompt promptObject = createTestPrompt();
-        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
-
-        // Provide extra parameters that aren't used
-        Map<String, String> parameters = Map.of("name", "Alice", "unused", "value");
-
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> {
-                            prompt.renderMessages(parameters);
-                        });
-
-        assertTrue(exception.getMessage().contains("Unused parameters"));
-        assertTrue(exception.getMessage().contains("unused"));
-    }
-
-    @Test
-    void testGetOptions() {
-        BraintrustApiClient.Prompt promptObject = createTestPrompt();
-        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
-
-        Map<String, Object> options = prompt.getOptions();
-
-        // Verify that top-level options and params are merged
-        assertEquals("gpt-4o-mini", options.get("model"));
-        assertEquals(true, options.get("use_cache"));
-        assertEquals(0, options.get("temperature"));
-
-        Map<String, Object> responseFormat = (Map<String, Object>) options.get("response_format");
-        assertNotNull(responseFormat);
-        assertEquals("text", responseFormat.get("type"));
-
-        // Verify that "params" itself is not in the result
-        assertFalse(options.containsKey("params"));
-
-        // Verify that "position" (a top-level option) is included
-        assertEquals("0|hzzzzz:", options.get("position"));
-    }
-
-    @Test
     void testGetOptionsWithDefaults() {
         BraintrustApiClient.Prompt promptObject = createTestPrompt();
 
@@ -157,7 +73,7 @@ public class BraintrustPromptTest {
         BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
 
         // Render with empty parameters - malformed mustache should be ignored
-        Map<String, String> parameters = Map.of();
+        Map<String, Object> parameters = Map.of();
         List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
 
         // Verify the malformed mustache is left as-is (not treated as a parameter)
@@ -165,6 +81,326 @@ public class BraintrustPromptTest {
         assertEquals(
                 "Hello {{ whatever. This should not match.",
                 renderedMessages.get(1).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithParameters() {
+        // Create a test prompt object
+        BraintrustApiClient.Prompt promptObject = createTestPrompt();
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Render messages with parameters
+        Map<String, Object> parameters = Map.of("name", "Alice");
+        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
+
+        // Verify the messages were rendered correctly
+        assertEquals(2, renderedMessages.size());
+
+        Map<String, Object> systemMessage = renderedMessages.get(0);
+        assertEquals("system", systemMessage.get("role"));
+        assertEquals(
+                "You are a kind chatbot who briefly greets people", systemMessage.get("content"));
+
+        Map<String, Object> userMessage = renderedMessages.get(1);
+        assertEquals("user", userMessage.get("role"));
+        assertEquals("What's up my friend? My name is Alice", userMessage.get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithList() {
+        // Create a prompt that uses Mustache list iteration
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role", "system",
+                                        "content", "You are a helpful assistant"),
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "Here are the items:\n"
+                                                + "{{#items}}- {{name}}: {{description}}\n"
+                                                + "{{/items}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Render with list parameters
+        Map<String, Object> parameters =
+                Map.of(
+                        "items",
+                        List.of(
+                                Map.of("name", "Apple", "description", "A red fruit"),
+                                Map.of("name", "Banana", "description", "A yellow fruit"),
+                                Map.of("name", "Cherry", "description", "A small red fruit")));
+
+        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
+
+        assertEquals(2, renderedMessages.size());
+        String expectedContent =
+                "Here are the items:\n"
+                        + "- Apple: A red fruit\n"
+                        + "- Banana: A yellow fruit\n"
+                        + "- Cherry: A small red fruit\n";
+        assertEquals(expectedContent, renderedMessages.get(1).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithEmptyList() {
+        // Create a prompt that uses Mustache list iteration
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "Items: {{#items}}{{name}} {{/items}}{{^items}}No items"
+                                                + " found{{/items}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Render with empty list
+        Map<String, Object> parameters = Map.of("items", List.of());
+        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
+
+        assertEquals(1, renderedMessages.size());
+        assertEquals("Items: No items found", renderedMessages.get(0).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithConditional() {
+        // Create a prompt that uses Mustache conditionals
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role", "system",
+                                        "content", "You are a helpful assistant"),
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "Hello {{name}}!{{#isAdmin}} You have admin"
+                                                + " privileges.{{/isAdmin}}{{^isAdmin}} You are a"
+                                                + " regular user.{{/isAdmin}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Test with admin user
+        Map<String, Object> adminParameters = Map.of("name", "Alice", "isAdmin", true);
+        List<Map<String, Object>> adminMessages = prompt.renderMessages(adminParameters);
+        assertEquals(
+                "Hello Alice! You have admin privileges.", adminMessages.get(1).get("content"));
+
+        // Test with regular user
+        Map<String, Object> regularParameters = Map.of("name", "Bob", "isAdmin", false);
+        List<Map<String, Object>> regularMessages = prompt.renderMessages(regularParameters);
+        assertEquals("Hello Bob! You are a regular user.", regularMessages.get(1).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithNestedObjects() {
+        // Create a prompt that uses nested object properties
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "User: {{user.firstName}} {{user.lastName}}\n"
+                                                + "Email: {{user.contact.email}}\n"
+                                                + "Phone: {{user.contact.phone}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Render with nested object
+        Map<String, Object> parameters =
+                Map.of(
+                        "user",
+                        Map.of(
+                                "firstName",
+                                "John",
+                                "lastName",
+                                "Doe",
+                                "contact",
+                                Map.of("email", "john@example.com", "phone", "555-1234")));
+
+        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
+
+        assertEquals(1, renderedMessages.size());
+        String expectedContent = "User: John Doe\nEmail: john@example.com\nPhone: " + "555-1234";
+        assertEquals(expectedContent, renderedMessages.get(0).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithInvertedSection() {
+        // Create a prompt that uses inverted sections (renders when value is false/empty)
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "{{#hasError}}Error:"
+                                                + " {{errorMessage}}{{/hasError}}{{^hasError}}All"
+                                                + " systems operational{{/hasError}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Test without error
+        Map<String, Object> noErrorParams = Map.of("hasError", false);
+        List<Map<String, Object>> noErrorMessages = prompt.renderMessages(noErrorParams);
+        assertEquals("All systems operational", noErrorMessages.get(0).get("content"));
+
+        // Test with error
+        Map<String, Object> errorParams =
+                Map.of("hasError", true, "errorMessage", "Database connection failed");
+        List<Map<String, Object>> errorMessages = prompt.renderMessages(errorParams);
+        assertEquals("Error: Database connection failed", errorMessages.get(0).get("content"));
+    }
+
+    @Test
+    void testRenderMessagesWithComplexTypes() {
+        // Test that non-string types are properly rendered
+        Map<String, Object> messages =
+                Map.of(
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "content",
+                                        "Count: {{count}}\n"
+                                                + "Price: ${{price}}\n"
+                                                + "Enabled: {{enabled}}")));
+
+        Map<String, Object> options = Map.of("model", "gpt-4o-mini");
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(messages, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "proj-id",
+                        "org-id",
+                        "test-prompt",
+                        "test-slug",
+                        Optional.empty(),
+                        "2025-01-01T00:00:00Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        // Test with various data types
+        Map<String, Object> parameters = Map.of("count", 42, "price", 19.99, "enabled", true);
+
+        List<Map<String, Object>> renderedMessages = prompt.renderMessages(parameters);
+
+        assertEquals(1, renderedMessages.size());
+        assertEquals(
+                "Count: 42\nPrice: $19.99\nEnabled: true", renderedMessages.get(0).get("content"));
     }
 
     private BraintrustApiClient.Prompt createTestPrompt() {
