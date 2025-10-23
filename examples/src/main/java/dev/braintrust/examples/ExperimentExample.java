@@ -3,18 +3,16 @@ package dev.braintrust.examples;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.eval.Eval;
+import dev.braintrust.Braintrust;
 import dev.braintrust.eval.EvalCase;
 import dev.braintrust.eval.Scorer;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
-import dev.braintrust.trace.BraintrustTracing;
 import java.util.function.Function;
 
 public class ExperimentExample {
     public static void main(String[] args) throws Exception {
-        var config = BraintrustConfig.fromEnvironment();
-        var openTelemetry = BraintrustTracing.of(config, true);
+        var braintrust = Braintrust.get();
+        var openTelemetry = braintrust.openTelemetryCreate();
         var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
 
         Function<String, String> getFoodType =
@@ -32,13 +30,12 @@ public class ExperimentExample {
                 };
 
         var eval =
-                Eval.<String, String>builder()
+                braintrust
+                        .<String, String>evalBuilder()
                         .name("java-eval-x-" + System.currentTimeMillis()) // NOTE: if you use a
                         // constant, additional runs
                         // will append new cases to
                         // the same experiment
-                        .tracer(BraintrustTracing.getTracer(openTelemetry))
-                        .config(config)
                         .cases(
                                 EvalCase.of("strawberry", "fruit"),
                                 EvalCase.of("asparagus", "vegetable"),

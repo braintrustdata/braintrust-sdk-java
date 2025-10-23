@@ -10,19 +10,19 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
-import com.openai.models.chat.completions.ChatCompletionContentPart;
-import com.openai.models.chat.completions.ChatCompletionContentPartImage;
-import com.openai.models.chat.completions.ChatCompletionContentPartText;
-import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import com.openai.models.chat.completions.ChatCompletionStreamOptions;
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
+import com.openai.models.chat.completions.*;
+import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.prompt.BraintrustPrompt;
 import dev.braintrust.trace.Base64Attachment;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -454,5 +454,62 @@ public class BraintrustOpenAITest {
                 "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"This image"
                     + " shows the Eiffel Tower in Paris, France.\"}],\"finish_reason\":\"stop\"}]",
                 outputJson);
+    }
+
+    @Test
+    @SneakyThrows
+    void testBuildChatCompletionsPrompt() {
+        Map<String, Object> promptContent =
+                Map.of(
+                        "type",
+                        "chat",
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role", "system",
+                                        "content",
+                                                "You are a kind chatbot who briefly greets people"),
+                                Map.of(
+                                        "role", "user",
+                                        "content", "What's up my friend? My name is {{name}}")));
+
+        Map<String, Object> options =
+                Map.of(
+                        "model",
+                        "gpt-4o-mini",
+                        "params",
+                        Map.of("temperature", 0.1, "max_tokens", 102));
+
+        BraintrustApiClient.PromptData promptData =
+                new BraintrustApiClient.PromptData(promptContent, options);
+
+        BraintrustApiClient.Prompt promptObject =
+                new BraintrustApiClient.Prompt(
+                        "test-id",
+                        "test-project-id",
+                        "test-org-id",
+                        "kind-greeter",
+                        "kind-greeter-test",
+                        Optional.of("Test prompt"),
+                        "2025-10-21T21:35:18.287Z",
+                        promptData,
+                        Optional.empty(),
+                        Optional.empty());
+
+        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
+
+        Map<String, Object> parameters = Map.of("name", "Alice");
+        ChatCompletionCreateParams renderedParams =
+                BraintrustOpenAI.buildChatCompletionsPrompt(prompt, parameters);
+
+        assertEquals(
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .temperature(0.1)
+                        .maxTokens(102L)
+                        .addSystemMessage("You are a kind chatbot who briefly greets people")
+                        .addUserMessage("What's up my friend? My name is Alice")
+                        .build(),
+                renderedParams);
     }
 }

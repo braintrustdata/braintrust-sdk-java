@@ -1,7 +1,6 @@
 package dev.braintrust.examples;
 
-import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.trace.BraintrustTracing;
+import dev.braintrust.Braintrust;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter;
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
@@ -51,8 +50,8 @@ public class CustomOpenTelemetryExample {
         // NOTE: there are many ways to set up otel builders, etc.
         // The important line is here: call enable with your otel builders and braintrust will
         // export open telemetry data in addition to your existing setup
-        var braintrustConfig = BraintrustConfig.fromEnvironment();
-        BraintrustTracing.enable(braintrustConfig, tracerBuilder, loggerBuilder, meterBuilder);
+        var braintrust = Braintrust.get();
+        braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
 
         var openTelemetry =
                 OpenTelemetrySdk.builder()
@@ -74,7 +73,7 @@ public class CustomOpenTelemetryExample {
             span.end();
         }
         var url =
-                braintrustConfig.fetchProjectURI()
+                braintrust.projectUri()
                         + "/logs?r=%s&s=%s"
                                 .formatted(
                                         span.getSpanContext().getTraceId(),
