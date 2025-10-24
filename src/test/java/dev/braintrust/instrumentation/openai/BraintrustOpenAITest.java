@@ -2,7 +2,6 @@ package dev.braintrust.instrumentation.openai;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static dev.braintrust.trace.BraintrustTracingTest.getExportedBraintrustSpans;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,19 +10,15 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.*;
+import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
-import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.prompt.BraintrustPrompt;
 import dev.braintrust.trace.Base64Attachment;
-import dev.braintrust.trace.BraintrustTracing;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,16 +32,11 @@ public class BraintrustOpenAITest {
     static WireMockExtension wireMock =
             WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
-    private final BraintrustConfig config =
-            BraintrustConfig.of(
-                    "BRAINTRUST_API_KEY", "foobar",
-                    "BRAINTRUST_DEFAULT_PROJECT_NAME", "unit-test-project",
-                    "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", "true");
+    private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
-        GlobalOpenTelemetry.resetForTest();
-        getExportedBraintrustSpans().clear();
+        testHarness = TestHarness.setup();
         wireMock.resetAll();
     }
 
@@ -85,8 +75,6 @@ public class BraintrustOpenAITest {
                                 }
                                 """)));
 
-        var openTelemetry = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
-
         // Create OpenAI client pointing to WireMock server
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
@@ -95,7 +83,7 @@ public class BraintrustOpenAITest {
                         .build();
 
         // Wrap with Braintrust instrumentation
-        openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, openAIClient);
+        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
 
         var request =
                 ChatCompletionCreateParams.builder()
@@ -116,17 +104,9 @@ public class BraintrustOpenAITest {
                 response.choices().get(0).message().content().get());
 
         // Verify spans were exported
-        assertTrue(
-                openTelemetry
-                        .getSdkTracerProvider()
-                        .forceFlush()
-                        .join(10, TimeUnit.SECONDS)
-                        .isSuccess());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        var span = spanData.get(0);
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
 
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
         assertEquals(
@@ -152,7 +132,7 @@ public class BraintrustOpenAITest {
                     + " is the capital of France?\"}]}]",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.input.messages")));
         assertEquals(
-                "project_name:unit-test-project",
+                "project_name:" + TestHarness.defaultProjectName(),
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.parent")));
         assertEquals(
                 20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
@@ -212,8 +192,6 @@ public class BraintrustOpenAITest {
                                         .withHeader("Content-Type", "text/event-stream")
                                         .withBody(streamingResponse)));
 
-        var openTelemetry = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
-
         // Create OpenAI client pointing to WireMock server
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
@@ -222,7 +200,7 @@ public class BraintrustOpenAITest {
                         .build();
 
         // Wrap with Braintrust instrumentation
-        openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, openAIClient);
+        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
 
         var request =
                 ChatCompletionCreateParams.builder()
@@ -255,17 +233,9 @@ public class BraintrustOpenAITest {
         wireMock.verify(1, postRequestedFor(urlEqualTo("/chat/completions")));
 
         // Verify spans were exported
-        assertTrue(
-                openTelemetry
-                        .getSdkTracerProvider()
-                        .forceFlush()
-                        .join(10, TimeUnit.SECONDS)
-                        .isSuccess());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        var span = spanData.get(0);
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
 
         // Verify span attributes
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
@@ -337,8 +307,6 @@ public class BraintrustOpenAITest {
                                 }
                                 """)));
 
-        var openTelemetry = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
-
         // Create OpenAI client pointing to WireMock server
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
@@ -347,7 +315,7 @@ public class BraintrustOpenAITest {
                         .build();
 
         // Wrap with Braintrust instrumentation
-        openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, openAIClient);
+        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
 
         String imageDataUrl =
                 Base64Attachment.ofFile(
@@ -399,17 +367,9 @@ public class BraintrustOpenAITest {
                 response.choices().get(0).message().content().get());
 
         // Verify spans were exported
-        assertTrue(
-                openTelemetry
-                        .getSdkTracerProvider()
-                        .forceFlush()
-                        .join(10, TimeUnit.SECONDS)
-                        .isSuccess());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        var span = spanData.get(0);
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
 
         // Verify span attributes
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));

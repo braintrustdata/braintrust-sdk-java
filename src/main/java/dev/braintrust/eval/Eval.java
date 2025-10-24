@@ -2,6 +2,7 @@ package dev.braintrust.eval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.trace.BraintrustContext;
@@ -9,7 +10,6 @@ import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import java.net.URI;
 import java.util.*;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -158,19 +158,12 @@ public final class Eval<INPUT, OUTPUT> {
 
         @SneakyThrows
         private Result() {
-            var baseURI = new URI(config.appUrl());
             this.experimentUrl =
-                    new URI(
-                                    baseURI.getScheme(),
-                                    baseURI.getHost(),
-                                    "/app/"
-                                            + orgAndProject.orgInfo().name()
-                                            + "/p/"
-                                            + orgAndProject.project().name()
-                                            + "/experiments/"
-                                            + experimentName,
-                                    null)
-                            .toASCIIString();
+                    "%s/experiments/%s"
+                            .formatted(
+                                    BraintrustUtils.createProjectURI(config.appUrl(), orgAndProject)
+                                            .toASCIIString(),
+                                    experimentName);
         }
 
         public String createReportString() {

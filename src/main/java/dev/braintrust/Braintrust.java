@@ -37,14 +37,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Braintrust {
     private static final String SDK_VERSION = SDKMain.loadVersionFromProperties();
-    private static final AtomicReference<Braintrust> instance = new AtomicReference<>();
+    private static final AtomicReference<Braintrust> INSTANCE = new AtomicReference<>();
 
     /**
      * get or create the global braintrust instance. Most users will want to use this method to
      * access the Braintrust SDK.
      */
     public static Braintrust get() {
-        var current = instance.get();
+        var current = INSTANCE.get();
         if (null == current) {
             return get(BraintrustConfig.fromEnvironment());
         } else {
@@ -54,16 +54,32 @@ public class Braintrust {
 
     /** get or create the global braintrust instance from the given config */
     public static Braintrust get(BraintrustConfig config) {
-        var current = instance.get();
+        var current = INSTANCE.get();
         if (null == current) {
-            var success = instance.compareAndSet(null, of(config));
-            if (success) {
-                log.info("initialized global Braintrust sdk {}", SDK_VERSION);
-            }
-            return instance.get();
+            return set(of(config));
         } else {
             return current;
         }
+    }
+
+    static Braintrust set(Braintrust braintrust) {
+        var current = INSTANCE.get();
+        if (null == current) {
+            var success = INSTANCE.compareAndSet(null, braintrust);
+            if (success) {
+                log.info("initialized global Braintrust sdk {}", SDK_VERSION);
+            } else {
+                throw new RuntimeException("set must only be called once");
+            }
+            return braintrust;
+        } else {
+            return current;
+        }
+    }
+
+    /** clear global braintrust instance. Only used for testing */
+    static void resetForTest() {
+        INSTANCE.set(null);
     }
 
     /** Create a new Braintrust instance from the given config */
@@ -85,7 +101,7 @@ public class Braintrust {
     @Accessors(fluent = true)
     private final BraintrustPromptLoader promptLoader;
 
-    private Braintrust(
+    Braintrust(
             BraintrustConfig config,
             BraintrustApiClient apiClient,
             BraintrustPromptLoader promptLoader) {
@@ -94,9 +110,10 @@ public class Braintrust {
         this.promptLoader = promptLoader;
     }
 
+    /** the the URI to the configured braintrust org and project */
     public URI projectUri() {
-        // TODO cache?
-        return config.fetchProjectURI();
+        return BraintrustUtils.createProjectURI(
+                config.appUrl(), apiClient().getOrCreateProjectAndOrgInfo(config()));
     }
 
     /**

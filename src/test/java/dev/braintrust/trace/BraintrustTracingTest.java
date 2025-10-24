@@ -2,35 +2,18 @@ package dev.braintrust.trace;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import dev.braintrust.config.BraintrustConfig;
-import io.opentelemetry.api.GlobalOpenTelemetry;
+import dev.braintrust.TestHarness;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.logs.SdkLoggerProvider;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.data.SpanData;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustTracingTest {
-    public static Map<String, List<SpanData>> getExportedBraintrustSpans() {
-        return BraintrustSpanExporter.SPANS_EXPORTED;
-    }
-
-    private final BraintrustConfig config =
-            BraintrustConfig.of(
-                    "BRAINTRUST_API_KEY", "foobar",
-                    "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", "true");
+    private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
-        GlobalOpenTelemetry.resetForTest();
-        getExportedBraintrustSpans().clear();
+        testHarness = TestHarness.setup();
     }
 
     @Test
@@ -45,40 +28,40 @@ public class BraintrustTracingTest {
 
     @Test
     void globalBTTracing() {
-        var sdk = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
         doSimpleOtelTrace(BraintrustTracing.getTracer());
-        assertTrue(sdk.getSdkTracerProvider().forceFlush().join(10, TimeUnit.SECONDS).isSuccess());
-        assertEquals(1, getExportedBraintrustSpans().size());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        assertEquals(
-                true, spanData.get(0).getAttributes().get(AttributeKey.booleanKey("unit-test")));
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertEquals(true, spans.get(0).getAttributes().get(AttributeKey.booleanKey("unit-test")));
     }
 
     @Test
     void customBTTracing() {
-        var tracerBuilder = SdkTracerProvider.builder();
-        var loggerBuilder = SdkLoggerProvider.builder();
-        var meterBuilder = SdkMeterProvider.builder();
-        BraintrustTracing.enable(config, tracerBuilder, loggerBuilder, meterBuilder);
-        var sdk =
-                OpenTelemetrySdk.builder()
-                        .setTracerProvider(tracerBuilder.build())
-                        .setLoggerProvider(loggerBuilder.build())
-                        .setMeterProvider(meterBuilder.build())
-                        .build();
-        GlobalOpenTelemetry.set(sdk);
-        doSimpleOtelTrace(sdk.getTracer("some-instrumentation"));
-        assertTrue(sdk.getSdkTracerProvider().forceFlush().join(10, TimeUnit.SECONDS).isSuccess());
-        assertEquals(1, getExportedBraintrustSpans().size());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
+        // TestHarness already sets up custom BT tracing with openTelemetryEnable
+        // We just need to verify it works with a custom tracer
+        doSimpleOtelTrace(testHarness.openTelemetry().getTracer("some-instrumentation"));
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertEquals(true, spans.get(0).getAttributes().get(AttributeKey.booleanKey("unit-test")));
+    }
+
+    @Test
+    void spanProcessorAddsParentFromConfig() {
+        // Verify that BraintrustSpanProcessor automatically adds the braintrust.parent
+        // attribute from the config when no parent is explicitly set on the span
+        doSimpleOtelTrace(testHarness.openTelemetry().getTracer("my tracer"));
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        // The span should have the braintrust.parent attribute set from the config
+        var parentAttribute = span.getAttributes().get(AttributeKey.stringKey("braintrust.parent"));
+        assertNotNull(
+                parentAttribute,
+                "braintrust.parent attribute should be set by BraintrustSpanProcessor");
         assertEquals(
-                true, spanData.get(0).getAttributes().get(AttributeKey.booleanKey("unit-test")));
+                "project_name:" + TestHarness.defaultProjectName(),
+                parentAttribute,
+                "braintrust.parent should be set from the config's default project name");
     }
 
     private void doSimpleOtelTrace(Tracer tracer) {
