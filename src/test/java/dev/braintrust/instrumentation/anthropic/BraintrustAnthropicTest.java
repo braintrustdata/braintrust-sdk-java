@@ -2,7 +2,6 @@ package dev.braintrust.instrumentation.anthropic;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static dev.braintrust.trace.BraintrustTracingTest.getExportedBraintrustSpans;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.anthropic.client.AnthropicClient;
@@ -11,12 +10,8 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.trace.BraintrustTracing;
-import io.opentelemetry.api.GlobalOpenTelemetry;
+import dev.braintrust.TestHarness;
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,16 +24,11 @@ public class BraintrustAnthropicTest {
     static WireMockExtension wireMock =
             WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
-    private final BraintrustConfig config =
-            BraintrustConfig.of(
-                    "BRAINTRUST_API_KEY", "foobar",
-                    "BRAINTRUST_DEFAULT_PROJECT_NAME", "unit-test-project",
-                    "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", "true");
+    private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
-        GlobalOpenTelemetry.resetForTest();
-        getExportedBraintrustSpans().clear();
+        testHarness = TestHarness.setup();
         wireMock.resetAll();
     }
 
@@ -74,8 +64,6 @@ public class BraintrustAnthropicTest {
                                 }
                                 """)));
 
-        var openTelemetry = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
-
         // Create Anthropic client pointing to WireMock server
         AnthropicClient anthropicClient =
                 AnthropicOkHttpClient.builder()
@@ -84,7 +72,7 @@ public class BraintrustAnthropicTest {
                         .build();
 
         // Wrap with Braintrust instrumentation
-        anthropicClient = BraintrustAnthropic.wrap(openTelemetry, anthropicClient);
+        anthropicClient = BraintrustAnthropic.wrap(testHarness.openTelemetry(), anthropicClient);
 
         var request =
                 MessageCreateParams.builder()
@@ -106,17 +94,9 @@ public class BraintrustAnthropicTest {
         assertEquals("The capital of France is Paris.", contentBlock.asText().text());
 
         // Verify spans were exported
-        assertTrue(
-                openTelemetry
-                        .getSdkTracerProvider()
-                        .forceFlush()
-                        .join(10, TimeUnit.SECONDS)
-                        .isSuccess());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        var span = spanData.get(0);
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
 
         // Verify standard GenAI attributes
         assertEquals(
@@ -138,7 +118,7 @@ public class BraintrustAnthropicTest {
                 "msg_test123",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
         assertEquals(
-                "project_name:unit-test-project",
+                "project_name:" + TestHarness.defaultProjectName(),
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.parent")));
         assertEquals(
                 20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
@@ -227,8 +207,6 @@ public class BraintrustAnthropicTest {
                                         .withHeader("Content-Type", "text/event-stream")
                                         .withBody(streamingResponse)));
 
-        var openTelemetry = (OpenTelemetrySdk) BraintrustTracing.of(config, true);
-
         // Create Anthropic client pointing to WireMock server
         AnthropicClient anthropicClient =
                 AnthropicOkHttpClient.builder()
@@ -237,7 +215,7 @@ public class BraintrustAnthropicTest {
                         .build();
 
         // Wrap with Braintrust instrumentation
-        anthropicClient = BraintrustAnthropic.wrap(openTelemetry, anthropicClient);
+        anthropicClient = BraintrustAnthropic.wrap(testHarness.openTelemetry(), anthropicClient);
 
         var request =
                 MessageCreateParams.builder()
@@ -268,17 +246,9 @@ public class BraintrustAnthropicTest {
         wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
 
         // Verify spans were exported
-        assertTrue(
-                openTelemetry
-                        .getSdkTracerProvider()
-                        .forceFlush()
-                        .join(10, TimeUnit.SECONDS)
-                        .isSuccess());
-        var spanData =
-                getExportedBraintrustSpans().get(config.getBraintrustParentValue().orElseThrow());
-        assertNotNull(spanData);
-        assertEquals(1, spanData.size());
-        var span = spanData.get(0);
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
 
         // Verify standard GenAI attributes
         assertEquals(

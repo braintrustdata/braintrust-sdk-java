@@ -90,3 +90,18 @@ task runAnthropicInstrumentation(type: JavaExec) {
     suspend = false
   }
 }
+
+
+task runPromptFetching(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the prompt fetching example'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.PromptFetchingExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

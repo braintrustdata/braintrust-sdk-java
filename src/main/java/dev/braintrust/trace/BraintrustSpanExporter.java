@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,9 +18,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 class BraintrustSpanExporter implements SpanExporter {
-    /** Only used in unit tests. */
-    static final Map<String, List<SpanData>> SPANS_EXPORTED = new ConcurrentHashMap<>();
-
     private final BraintrustConfig config;
     private final String tracesEndpoint;
     private final Map<String, OtlpHttpSpanExporter> exporterCache = new ConcurrentHashMap<>();
@@ -90,8 +86,8 @@ class BraintrustSpanExporter implements SpanExporter {
                             });
 
             if (config.exportSpansInMemoryForUnitTest()) {
-                SPANS_EXPORTED.putIfAbsent(parent, new CopyOnWriteArrayList<>());
-                SPANS_EXPORTED.get(parent).addAll(spans);
+                // unit test harness hooks up an in-memory exporter so we don't need to do anything
+                // here
                 return CompletableResultCode.ofSuccess();
             } else {
                 var result = exporter.export(spans);

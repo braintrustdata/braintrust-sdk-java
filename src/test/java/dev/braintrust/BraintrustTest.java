@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.braintrust.config.BraintrustConfig;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import java.net.URI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,6 @@ public class BraintrustTest {
 
     @BeforeEach
     void setUp() {
-        // Reset global OpenTelemetry before each test
         GlobalOpenTelemetry.resetForTest();
     }
 
@@ -163,5 +163,19 @@ public class BraintrustTest {
 
         assertSame(braintrust1, braintrust2);
         assertSame(braintrust1, braintrust3);
+    }
+
+    @Test
+    public void testProjectURI() {
+        var harness = TestHarness.setup();
+        var config = harness.braintrust().config();
+        assertEquals(
+                URI.create(
+                        "%s/app/%s/p/%s"
+                                .formatted(
+                                        config.appUrl(),
+                                        TestHarness.defaultOrgName().replace(" ", "%20"),
+                                        TestHarness.defaultProjectName().replace(" ", "%20"))),
+                harness.braintrust().projectUri());
     }
 }

@@ -41,6 +41,10 @@ public interface BraintrustApiClient {
     /** Get project and org info for the given project ID */
     Optional<OrganizationAndProjectInfo> getProjectAndOrgInfo(String projectId);
 
+    // TODO: cache project+org info?
+    /** Get project and org info for the given config. Creating them if necessary */
+    OrganizationAndProjectInfo getOrCreateProjectAndOrgInfo(BraintrustConfig config);
+
     /** Get a prompt by slug and optional version */
     Optional<Prompt> getPrompt(
             @Nonnull String projectName, @Nonnull String slug, @Nullable String version);
@@ -143,6 +147,43 @@ public interface BraintrustApiClient {
                         "Should not happen. Unable to find project's org: " + project.orgId());
             }
             return Optional.of(new OrganizationAndProjectInfo(orgInfo, project));
+        }
+
+        @Override
+        public OrganizationAndProjectInfo getOrCreateProjectAndOrgInfo(BraintrustConfig config) {
+            // Get or create project based on config
+            Project project;
+            if (config.defaultProjectId().isPresent()) {
+                var projectId = config.defaultProjectId().get();
+                project =
+                        getProject(projectId)
+                                .orElseThrow(
+                                        () ->
+                                                new ApiException(
+                                                        "Project with ID '"
+                                                                + projectId
+                                                                + "' not found"));
+            } else if (config.defaultProjectName().isPresent()) {
+                var projectName = config.defaultProjectName().get();
+                project = getOrCreateProject(projectName);
+            } else {
+                throw new ApiException(
+                        "Either project ID or project name must be provided in config");
+            }
+
+            // Fetch organization info
+            OrganizationInfo orgInfo = null;
+            for (var org : login().orgInfo()) {
+                if (project.orgId().equalsIgnoreCase(org.id())) {
+                    orgInfo = org;
+                    break;
+                }
+            }
+            if (null == orgInfo) {
+                throw new ApiException("Unable to find organization for project: " + project.id());
+            }
+
+            return new OrganizationAndProjectInfo(orgInfo, project);
         }
 
         @Override
@@ -293,13 +334,14 @@ public interface BraintrustApiClient {
         private final List<Prompt> prompts = new ArrayList<>();
 
         public InMemoryImpl(OrganizationAndProjectInfo... organizationAndProjectInfos) {
-            this.organizationAndProjectInfos = List.of(organizationAndProjectInfos);
+            this.organizationAndProjectInfos =
+                    new ArrayList<>(List.of(organizationAndProjectInfos));
         }
 
         public InMemoryImpl(
                 List<OrganizationAndProjectInfo> organizationAndProjectInfos,
                 List<Prompt> prompts) {
-            this.organizationAndProjectInfos = organizationAndProjectInfos;
+            this.organizationAndProjectInfos = new ArrayList<>(organizationAndProjectInfos);
             this.prompts.addAll(prompts);
         }
 
@@ -311,11 +353,24 @@ public interface BraintrustApiClient {
                     return orgAndProject.project();
                 }
             }
-            throw new RuntimeException(
-                    "Project '"
-                            + projectName
-                            + "' not found in test data. Please add it to the InMemoryImpl"
-                            + " constructor.");
+
+            // Create new project if not found
+            var defaultOrgInfo =
+                    organizationAndProjectInfos.isEmpty()
+                            ? new OrganizationInfo("default-org-id", "Default Organization")
+                            : organizationAndProjectInfos.get(0).orgInfo();
+
+            var newProject =
+                    new Project(
+                            "project-" + UUID.randomUUID().toString(),
+                            projectName,
+                            defaultOrgInfo.id(),
+                            java.time.Instant.now().toString(),
+                            java.time.Instant.now().toString());
+
+            organizationAndProjectInfos.add(
+                    new OrganizationAndProjectInfo(defaultOrgInfo, newProject));
+            return newProject;
         }
 
         @Override
@@ -355,6 +410,39 @@ public interface BraintrustApiClient {
             return organizationAndProjectInfos.stream()
                     .filter(orgAndProject -> orgAndProject.project().id().equals(projectId))
                     .findFirst();
+        }
+
+        @Override
+        public OrganizationAndProjectInfo getOrCreateProjectAndOrgInfo(BraintrustConfig config) {
+            // Get or create project based on config
+            Project project;
+            if (config.defaultProjectId().isPresent()) {
+                var projectId = config.defaultProjectId().get();
+                project =
+                        getProject(projectId)
+                                .orElseThrow(
+                                        () ->
+                                                new ApiException(
+                                                        "Project with ID '"
+                                                                + projectId
+                                                                + "' not found"));
+            } else if (config.defaultProjectName().isPresent()) {
+                var projectName = config.defaultProjectName().get();
+                project = getOrCreateProject(projectName);
+            } else {
+                throw new ApiException(
+                        "Either project ID or project name must be provided in config");
+            }
+
+            // Find the organization info for this project
+            return organizationAndProjectInfos.stream()
+                    .filter(info -> info.project().id().equals(project.id()))
+                    .findFirst()
+                    .orElseThrow(
+                            () ->
+                                    new ApiException(
+                                            "Unable to find organization for project: "
+                                                    + project.id()));
         }
 
         @Override
