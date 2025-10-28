@@ -60,6 +60,7 @@ dependencies {
   implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
   implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
   implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${jacksonVersion}"
+  implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
 
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
@@ -381,4 +382,14 @@ task installGitHooks(type: Exec) {
   description = 'Install git hooks for code formatting'
   group = 'Build Setup'
   commandLine 'bash', 'scripts/install-hooks.sh'
+}
+
+// Task to run SDK spec test runner
+task runSpecTests(type: JavaExec) {
+  description = 'Run SDK specification tests'
+  group = 'verification'
+  dependsOn compileTestJava
+
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'dev.braintrust.sdkspec.Runner'
 }
