@@ -35,6 +35,8 @@ final class StreamListener {
     private final boolean captureMessageContent;
     private final boolean newSpan;
     private final AtomicBoolean hasEnded;
+    private final AtomicBoolean firstChunkReceived;
+    private final long startTime;
 
     @Nullable private CompletionUsage usage;
     @Nullable private String model;
@@ -55,10 +57,21 @@ final class StreamListener {
         this.newSpan = newSpan;
         choiceBuffers = new ArrayList<>();
         hasEnded = new AtomicBoolean();
+        firstChunkReceived = new AtomicBoolean(false);
+        startTime = System.nanoTime();
     }
 
     @SneakyThrows
     void onChunk(ChatCompletionChunk chunk) {
+        // Capture time_to_first_token and provider on first chunk
+        if (firstChunkReceived.compareAndSet(false, true)) {
+            long endTime = System.nanoTime();
+            double timeToFirstToken = (endTime - startTime) / 1_000_000.0; // Convert to milliseconds
+            Span span = Span.fromContext(context);
+            span.setAttribute("braintrust.time_to_first_token", timeToFirstToken);
+            span.setAttribute("braintrust.provider", "openai");
+        }
+
         model = chunk.model();
         responseId = chunk.id();
         chunk.usage().ifPresent(u -> usage = u);

@@ -88,8 +88,16 @@ final class InstrumentedChatCompletionService
 
         Context context = instrumenter.start(parentContext, chatCompletionCreateParams);
         ChatCompletion completion;
+        long startTime = System.nanoTime();
         try (Scope ignored = context.makeCurrent()) {
             completion = createWithLogs(context, chatCompletionCreateParams, requestOptions);
+            long endTime = System.nanoTime();
+            double timeToFirstToken = (endTime - startTime) / 1_000_000.0; // Convert to milliseconds
+
+            // Add time_to_first_token and provider as span attributes
+            io.opentelemetry.api.trace.Span span = io.opentelemetry.api.trace.Span.fromContext(context);
+            span.setAttribute("gen_ai.server.time_to_first_token", timeToFirstToken);
+            span.setAttribute("gen_ai.provider.name", "openai");
         } catch (Throwable t) {
             instrumenter.end(context, chatCompletionCreateParams, null, t);
             throw t;
