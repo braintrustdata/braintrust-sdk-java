@@ -182,6 +182,15 @@ public class BaseConfigTest {
         assertEquals(2.71828, config.getConfig("DOUBLE_VAR", 0.0), 0.00001);
     }
 
+    @Test
+    void testEquals() {
+        var cfg1 = new TestConfig(Map.of("FOO", "bar"));
+        var cfg2 = new TestConfig(Map.of("FOO", "bar"));
+        var cfg3 = new TestConfig(Map.of("FOO", "baz"));
+        assertEquals(cfg1, cfg2);
+        assertNotEquals(cfg1, cfg3);
+    }
+
     static class TestConfig extends BaseConfig {
         TestConfig(Map<String, String> envOverrides) {
             super(envOverrides);

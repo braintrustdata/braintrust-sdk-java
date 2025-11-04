@@ -95,4 +95,87 @@ public final class BraintrustConfig extends BaseConfig {
         var orgAndProject = client.getProjectAndOrgInfo().orElseThrow();
         return BraintrustUtils.createProjectURI(appUrl(), orgAndProject);
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final Map<String, String> envOverrides = new HashMap<>();
+
+        public Builder apiKey(String value) {
+            envOverrides.put("BRAINTRUST_API_KEY", value);
+            return this;
+        }
+
+        public Builder apiUrl(String value) {
+            envOverrides.put("BRAINTRUST_API_URL", value);
+            return this;
+        }
+
+        public Builder appUrl(String value) {
+            envOverrides.put("BRAINTRUST_APP_URL", value);
+            return this;
+        }
+
+        public Builder tracesPath(String value) {
+            envOverrides.put("BRAINTRUST_TRACES_PATH", value);
+            return this;
+        }
+
+        public Builder logsPath(String value) {
+            envOverrides.put("BRAINTRUST_LOGS_PATH", value);
+            return this;
+        }
+
+        public Builder defaultProjectId(String value) {
+            if (value != null) {
+                envOverrides.put("BRAINTRUST_DEFAULT_PROJECT_ID", value);
+            } else {
+                envOverrides.put("BRAINTRUST_DEFAULT_PROJECT_ID", NULL_OVERRIDE);
+            }
+            return this;
+        }
+
+        public Builder defaultProjectName(String value) {
+            if (value != null) {
+                envOverrides.put("BRAINTRUST_DEFAULT_PROJECT_NAME", value);
+            } else {
+                envOverrides.put("BRAINTRUST_DEFAULT_PROJECT_NAME", NULL_OVERRIDE);
+            }
+            return this;
+        }
+
+        public Builder enableTraceConsoleLog(boolean value) {
+            envOverrides.put("BRAINTRUST_ENABLE_TRACE_CONSOLE_LOG", String.valueOf(value));
+            return this;
+        }
+
+        public Builder debug(boolean value) {
+            envOverrides.put("BRAINTRUST_DEBUG", String.valueOf(value));
+            return this;
+        }
+
+        public Builder requestTimeout(Duration value) {
+            envOverrides.put("BRAINTRUST_REQUEST_TIMEOUT", String.valueOf(value.getSeconds()));
+            return this;
+        }
+
+        // hiding visibility. only used for testing
+        Builder experimentalOtelLogs(boolean value) {
+            envOverrides.put("BRAINTRUST_X_OTEL_LOGS", String.valueOf(value));
+            return this;
+        }
+
+        // hiding visibility. only used for testing
+        Builder exportSpansInMemoryForUnitTest(boolean value) {
+            envOverrides.put(
+                    "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", String.valueOf(value));
+            return this;
+        }
+
+        public BraintrustConfig build() {
+            return new BraintrustConfig(envOverrides);
+        }
+    }
 }

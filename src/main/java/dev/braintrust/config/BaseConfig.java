@@ -5,7 +5,9 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 class BaseConfig {
     /** Sentinal used to set null in the env. Only used for testing. */
     static final String NULL_OVERRIDE = "BRAINTRUST_NULL_SENTINAL_" + System.currentTimeMillis();
