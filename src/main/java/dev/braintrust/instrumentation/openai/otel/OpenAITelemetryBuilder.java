@@ -11,7 +11,6 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.embeddings.CreateEmbeddingResponse;
 import com.openai.models.embeddings.EmbeddingCreateParams;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiAttributesExtractor;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiClientMetrics;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiSpanNameExtractor;
@@ -68,8 +67,6 @@ public final class OpenAITelemetryBuilder {
                         .addOperationMetrics(GenAiClientMetrics.get())
                         .buildInstrumenter(SpanKindExtractor.alwaysClient());
 
-        Logger eventLogger = openTelemetry.getLogsBridge().get(INSTRUMENTATION_NAME);
-        return new OpenAITelemetry(
-                chatInstrumenter, embeddingsInstrumenter, eventLogger, captureMessageContent);
+        return new OpenAITelemetry(chatInstrumenter, embeddingsInstrumenter, captureMessageContent);
     }
 }

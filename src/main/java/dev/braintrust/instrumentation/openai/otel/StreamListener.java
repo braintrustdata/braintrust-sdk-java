@@ -5,13 +5,10 @@
 
 package dev.braintrust.instrumentation.openai.otel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionChunk;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import com.openai.models.chat.completions.ChatCompletionMessage;
 import com.openai.models.completions.CompletionUsage;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
@@ -23,15 +20,11 @@ import javax.annotation.Nullable;
 import lombok.SneakyThrows;
 
 final class StreamListener {
-    private static final ObjectMapper JSON_MAPPER =
-            new com.fasterxml.jackson.databind.ObjectMapper();
-
     private final Context context;
     private final ChatCompletionCreateParams request;
     private final List<StreamedMessageBuffer> choiceBuffers;
 
     private final Instrumenter<ChatCompletionCreateParams, ChatCompletion> instrumenter;
-    private final Logger eventLogger;
     private final boolean captureMessageContent;
     private final boolean newSpan;
     private final AtomicBoolean hasEnded;
@@ -44,13 +37,11 @@ final class StreamListener {
             Context context,
             ChatCompletionCreateParams request,
             Instrumenter<ChatCompletionCreateParams, ChatCompletion> instrumenter,
-            Logger eventLogger,
             boolean captureMessageContent,
             boolean newSpan) {
         this.context = context;
         this.request = request;
         this.instrumenter = instrumenter;
-        this.eventLogger = eventLogger;
         this.captureMessageContent = captureMessageContent;
         this.newSpan = newSpan;
         choiceBuffers = new ArrayList<>();
@@ -75,19 +66,8 @@ final class StreamListener {
             buffer.append(choice.delta());
             if (choice.finishReason().isPresent()) {
                 buffer.finishReason = choice.finishReason().get().toString();
-                Span.fromContext(context)
-                        .setAttribute(
-                                "braintrust.output_json",
-                                JSON_MAPPER.writeValueAsString(
-                                        new ChatCompletionMessage[] {buffer.toChoice().message()}));
-
-                // message has ended, let's emit
-                ChatCompletionEventsHelper.emitCompletionLogEvent(
-                        context,
-                        eventLogger,
-                        choice.index(),
-                        buffer.finishReason,
-                        buffer.toEventBody());
+                BraintrustOAISpanAttributes.setBraintrustOutputJson(
+                        Span.fromContext(context), buffer.toChoice().message());
             }
         }
     }

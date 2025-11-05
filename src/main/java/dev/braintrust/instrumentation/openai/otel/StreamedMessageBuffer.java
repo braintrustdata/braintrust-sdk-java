@@ -9,12 +9,9 @@ import com.openai.core.JsonField;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionChunk;
 import com.openai.models.chat.completions.ChatCompletionMessage;
-import io.opentelemetry.api.common.Value;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 final class StreamedMessageBuffer {
@@ -50,21 +47,6 @@ final class StreamedMessageBuffer {
             choice.message(JsonField.ofNullable(null));
         }
         return choice.build();
-    }
-
-    Value<?> toEventBody() {
-        Map<String, Value<?>> body = new HashMap<>();
-        if (message != null) {
-            body.put("content", Value.of(message.toString()));
-        }
-        if (toolCalls != null) {
-            List<Value<?>> toolCallsJson =
-                    toolCalls.values().stream()
-                            .map(StreamedMessageBuffer::buildToolCallEventObject)
-                            .collect(Collectors.toList());
-            body.put("tool_calls", Value.of(toolCallsJson));
-        }
-        return Value.of(body);
     }
 
     void append(ChatCompletionChunk.Choice.Delta delta) {
@@ -106,25 +88,6 @@ final class StreamedMessageBuffer {
                                 });
             }
         }
-    }
-
-    private static Value<?> buildToolCallEventObject(ToolCallBuffer call) {
-        Map<String, Value<?>> result = new HashMap<>();
-        result.put("id", Value.of(call.id));
-        if (call.type != null) {
-            result.put("type", Value.of(call.type));
-        }
-
-        Map<String, Value<?>> function = new HashMap<>();
-        if (call.function.name != null) {
-            function.put("name", Value.of(call.function.name));
-        }
-        if (call.function.arguments != null) {
-            function.put("arguments", Value.of(call.function.arguments.toString()));
-        }
-        result.put("function", Value.of(function));
-
-        return Value.of(result);
     }
 
     private static class FunctionBuffer {

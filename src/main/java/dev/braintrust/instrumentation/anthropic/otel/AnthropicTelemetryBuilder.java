@@ -4,7 +4,6 @@ import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiAttributesExtractor;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiClientMetrics;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiSpanNameExtractor;
@@ -50,7 +49,6 @@ public final class AnthropicTelemetryBuilder {
                         .addOperationMetrics(GenAiClientMetrics.get())
                         .buildInstrumenter(SpanKindExtractor.alwaysClient());
 
-        Logger eventLogger = openTelemetry.getLogsBridge().get(INSTRUMENTATION_NAME);
-        return new AnthropicTelemetry(messageInstrumenter, eventLogger, captureMessageContent);
+        return new AnthropicTelemetry(messageInstrumenter, captureMessageContent);
     }
 }
