@@ -91,14 +91,16 @@ jobs:
         run: ./gradlew check
 
       - name: Build release artifacts
-        run: ./gradlew build publishToMavenLocal -Pversion=${{ steps.determine-tag.outputs.tag }}
+        run: ./gradlew build publishToMavenLocal
 
       - name: Find built artifacts
         id: find-artifacts
         run: |
-          VERSION="${{ steps.determine-tag.outputs.tag }}"
+          TAG="${{ steps.determine-tag.outputs.tag }}"
+          # Strip 'v' prefix to get the actual version used by Gradle
+          VERSION="${TAG#v}"
 
-          # Find the built JAR files (version includes 'v' prefix from generateVersion())
+          # Find the built JAR files (version does NOT include 'v' prefix)
           MAIN_JAR=$(find build/libs -name "*-${VERSION}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
           SOURCES_JAR=$(find build/libs -name "*-${VERSION}-sources.jar" | head -1)
           JAVADOC_JAR=$(find build/libs -name "*-${VERSION}-javadoc.jar" | head -1)
@@ -163,3 +165,11 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+
+      - name: Wait for Maven Central sync
+        run: |
+          TAG="${{ steps.determine-tag.outputs.tag }}"
+          # Strip 'v' prefix to get the Maven version
+          VERSION="${TAG#v}"
+          echo "Waiting for version $VERSION to sync to Maven Central. THIS CAN TAKE MANY HOURS! Godspeed"
+          ./scripts/wait-for-maven.sh "$VERSION"

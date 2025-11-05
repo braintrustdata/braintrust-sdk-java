@@ -89,15 +89,15 @@ dependencies {
  *
  * This is written into braintrust.properties at build time and shipped into the distributed sdk jar
  *
- * - if we are on a tag (i.e. v0.0.3), use the tag
- * - otherwise, use $mostRecentTag-$currentCommitSha
+ * - if we are on a tag (i.e. v0.0.3), use the tag WITHOUT the 'v' prefix (0.0.3)
+ * - otherwise, use $mostRecentTag-$currentCommitSha (without 'v' prefix)
  *
  * Additionally, if the git workspace is not clean, append -DIRTY to the version
  *
  * Examples
- * - v0.0.3
- * - v0.0.3-c4af682
- * - v0.0.3-c4af682-DIRTY
+ * - 0.0.3 (from tag v0.0.3)
+ * - 0.0.3-c4af682 (from tag v0.0.3)
+ * - 0.0.3-c4af682-DIRTY
  */
 def generateVersion() {
   // Check if workspace is clean
@@ -125,8 +125,8 @@ def generateVersion() {
 
   def version
   if (currentTag != null) {
-    // We're on a tag, use the tag name
-    version = currentTag
+    // We're on a tag, use the tag name (strip 'v' prefix if present)
+    version = currentTag.startsWith('v') ? currentTag.substring(1) : currentTag
   } else {
     // Not on a tag, find the most recent tag
     def mostRecentTag = null
@@ -142,7 +142,9 @@ def generateVersion() {
     }
 
     if (mostRecentTag != null) {
-      version = "${mostRecentTag}-${gitSha}"
+      // Strip 'v' prefix if present
+      def cleanTag = mostRecentTag.startsWith('v') ? mostRecentTag.substring(1) : mostRecentTag
+      version = "${cleanTag}-${gitSha}"
     } else {
       version = gitSha
     }
