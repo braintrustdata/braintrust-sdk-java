@@ -165,3 +165,11 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+
+      - name: Wait for Maven Central sync
+        run: |
+          TAG="${{ steps.determine-tag.outputs.tag }}"
+          # Strip 'v' prefix to get the Maven version
+          VERSION="${TAG#v}"
+          echo "Waiting for version $VERSION to sync to Maven Central. THIS CAN TAKE MANY HOURS! Godspeed"
+          ./scripts/wait-for-maven.sh "$VERSION"
