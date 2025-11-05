@@ -41,7 +41,7 @@ public class ExperimentExample {
                                 EvalCase.of("asparagus", "vegetable"),
                                 EvalCase.of("apple", "fruit"),
                                 EvalCase.of("banana", "fruit"))
-                        .task(getFoodType)
+                        .taskFunction(getFoodType)
                         .scorers(
                                 Scorer.of(
                                         "fruit_scorer",

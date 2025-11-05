@@ -250,8 +250,8 @@ public final class Eval<INPUT, OUTPUT> {
             return this;
         }
 
-        public Builder<INPUT, OUTPUT> task(Function<INPUT, OUTPUT> taskFn) {
-            return task((Task<INPUT, OUTPUT>) evalCase -> taskFn.apply(evalCase.input()));
+        public Builder<INPUT, OUTPUT> taskFunction(Function<INPUT, OUTPUT> taskFn) {
+            return task(evalCase -> taskFn.apply(evalCase.input()));
         }
 
         @SafeVarargs
