@@ -6,7 +6,6 @@ import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
-import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +29,7 @@ public class EvalTest {
                         .cases(
                                 EvalCase.of("strawberry", "fruit"),
                                 EvalCase.of("asparagus", "vegetable"))
-                        .task((Function<String, String>) food -> "fruit")
+                        .task(food -> "fruit")
                         .scorers(
                                 Scorer.of(
                                         "fruit_scorer",
