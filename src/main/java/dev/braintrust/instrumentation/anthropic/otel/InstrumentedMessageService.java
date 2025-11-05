@@ -8,8 +8,6 @@ import com.anthropic.models.messages.MessageParam;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.TextBlockParam;
 import com.anthropic.services.blocking.MessageService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -18,24 +16,19 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.SneakyThrows;
 
 final class InstrumentedMessageService
         extends DelegatingInvocationHandler<MessageService, InstrumentedMessageService> {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private final Instrumenter<MessageCreateParams, Message> instrumenter;
-    private final Logger eventLogger;
     private final boolean captureMessageContent;
 
     InstrumentedMessageService(
             MessageService delegate,
             Instrumenter<MessageCreateParams, Message> instrumenter,
-            Logger eventLogger,
             boolean captureMessageContent) {
         super(delegate);
         this.instrumenter = instrumenter;
-        this.eventLogger = eventLogger;
         this.captureMessageContent = captureMessageContent;
     }
 
@@ -79,7 +72,6 @@ final class InstrumentedMessageService
         return super.invoke(proxy, method, args);
     }
 
-    @SneakyThrows
     private Message create(MessageCreateParams inputMessage, RequestOptions requestOptions) {
         Context parentContext = Context.current();
         if (!instrumenter.shouldStart(parentContext, inputMessage)) {
@@ -99,14 +91,9 @@ final class InstrumentedMessageService
                                 .content(inputMessage.system().get().asString())
                                 .build());
             }
-            Span.current()
-                    .setAttribute(
-                            "braintrust.input_json", JSON_MAPPER.writeValueAsString(inputMessages));
+            BraintrustAnthropicSpanAttributes.setInputMessages(Span.current(), inputMessages);
             outputMessage = delegate.create(inputMessage, requestOptions);
-            Span.current()
-                    .setAttribute(
-                            "braintrust.output_json",
-                            JSON_MAPPER.writeValueAsString(new Message[] {outputMessage}));
+            BraintrustAnthropicSpanAttributes.setOutputMessage(Span.current(), outputMessage);
         } catch (Throwable t) {
             instrumenter.end(context, inputMessage, null, t);
             throw t;
@@ -120,20 +107,20 @@ final class InstrumentedMessageService
             MessageCreateParams inputMessage, RequestOptions requestOptions) {
         Context parentContext = Context.current();
         if (!instrumenter.shouldStart(parentContext, inputMessage)) {
-            return createStreamingWithLogs(parentContext, inputMessage, requestOptions, false);
+            return createStreamingWithAttributes(
+                    parentContext, inputMessage, requestOptions, false);
         }
 
         Context context = instrumenter.start(parentContext, inputMessage);
         try (Scope ignored = context.makeCurrent()) {
-            return createStreamingWithLogs(context, inputMessage, requestOptions, true);
+            return createStreamingWithAttributes(context, inputMessage, requestOptions, true);
         } catch (Throwable t) {
             instrumenter.end(context, inputMessage, null, t);
             throw t;
         }
     }
 
-    @SneakyThrows
-    private StreamResponse<RawMessageStreamEvent> createStreamingWithLogs(
+    private StreamResponse<RawMessageStreamEvent> createStreamingWithAttributes(
             Context context,
             MessageCreateParams inputMessage,
             RequestOptions requestOptions,
@@ -148,21 +135,15 @@ final class InstrumentedMessageService
                             .content(inputMessage.system().get().asString())
                             .build());
         }
-        Span.fromContext(context)
-                .setAttribute(
-                        "braintrust.input_json", JSON_MAPPER.writeValueAsString(inputMessages));
+        BraintrustAnthropicSpanAttributes.setInputMessages(
+                Span.fromContext(context), inputMessages);
 
         StreamResponse<RawMessageStreamEvent> result =
                 delegate.createStreaming(inputMessage, requestOptions);
         return new TracingStreamedResponse(
                 result,
                 new StreamListener(
-                        context,
-                        inputMessage,
-                        instrumenter,
-                        eventLogger,
-                        captureMessageContent,
-                        newSpan));
+                        context, inputMessage, instrumenter, captureMessageContent, newSpan));
     }
 
     private static String contentToString(MessageCreateParams.System content) {

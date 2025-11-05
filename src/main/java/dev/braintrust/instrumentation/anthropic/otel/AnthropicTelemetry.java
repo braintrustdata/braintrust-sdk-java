@@ -4,7 +4,6 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
 
 /** Entrypoint for instrumenting Anthropic clients. */
@@ -23,24 +22,18 @@ public final class AnthropicTelemetry {
     }
 
     private final Instrumenter<MessageCreateParams, Message> messageInstrumenter;
-
-    private final Logger eventLogger;
-
     private final boolean captureMessageContent;
 
     AnthropicTelemetry(
             Instrumenter<MessageCreateParams, Message> messageInstrumenter,
-            Logger eventLogger,
             boolean captureMessageContent) {
         this.messageInstrumenter = messageInstrumenter;
-        this.eventLogger = eventLogger;
         this.captureMessageContent = captureMessageContent;
     }
 
     /** Wraps the provided AnthropicClient, enabling telemetry for it. */
     public AnthropicClient wrap(AnthropicClient client) {
-        return new InstrumentedAnthropicClient(
-                        client, messageInstrumenter, eventLogger, captureMessageContent)
+        return new InstrumentedAnthropicClient(client, messageInstrumenter, captureMessageContent)
                 .createProxy();
     }
 }

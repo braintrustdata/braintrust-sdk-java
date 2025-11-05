@@ -20,12 +20,12 @@ enum EmbeddingAttributesGetter
 
     @Override
     public String getOperationName(EmbeddingCreateParams request) {
-        return GenAiAttributes.GenAiOperationNameIncubatingValues.EMBEDDINGS;
+        return BraintrustOAISpanAttributes.OPERATION_EMBEDDINGS;
     }
 
     @Override
     public String getSystem(EmbeddingCreateParams request) {
-        return GenAiAttributes.GenAiProviderNameIncubatingValues.OPENAI;
+        return BraintrustOAISpanAttributes.SYSTEM_OPENAI;
     }
 
     @Override

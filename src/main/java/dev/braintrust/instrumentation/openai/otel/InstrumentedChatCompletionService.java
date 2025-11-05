@@ -11,7 +11,7 @@ import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionChunk;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.services.blocking.chat.ChatCompletionService;
-import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
@@ -22,17 +22,14 @@ final class InstrumentedChatCompletionService
                 ChatCompletionService, InstrumentedChatCompletionService> {
 
     private final Instrumenter<ChatCompletionCreateParams, ChatCompletion> instrumenter;
-    private final Logger eventLogger;
     private final boolean captureMessageContent;
 
     InstrumentedChatCompletionService(
             ChatCompletionService delegate,
             Instrumenter<ChatCompletionCreateParams, ChatCompletion> instrumenter,
-            Logger eventLogger,
             boolean captureMessageContent) {
         super(delegate);
         this.instrumenter = instrumenter;
-        this.eventLogger = eventLogger;
         this.captureMessageContent = captureMessageContent;
     }
 
@@ -83,13 +80,13 @@ final class InstrumentedChatCompletionService
             ChatCompletionCreateParams chatCompletionCreateParams, RequestOptions requestOptions) {
         Context parentContext = Context.current();
         if (!instrumenter.shouldStart(parentContext, chatCompletionCreateParams)) {
-            return createWithLogs(parentContext, chatCompletionCreateParams, requestOptions);
+            return createWithAttributes(parentContext, chatCompletionCreateParams, requestOptions);
         }
 
         Context context = instrumenter.start(parentContext, chatCompletionCreateParams);
         ChatCompletion completion;
         try (Scope ignored = context.makeCurrent()) {
-            completion = createWithLogs(context, chatCompletionCreateParams, requestOptions);
+            completion = createWithAttributes(context, chatCompletionCreateParams, requestOptions);
         } catch (Throwable t) {
             instrumenter.end(context, chatCompletionCreateParams, null, t);
             throw t;
@@ -99,15 +96,14 @@ final class InstrumentedChatCompletionService
         return completion;
     }
 
-    private ChatCompletion createWithLogs(
+    private ChatCompletion createWithAttributes(
             Context context,
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions) {
-        ChatCompletionEventsHelper.emitPromptLogEvents(
-                context, eventLogger, chatCompletionCreateParams, captureMessageContent);
+        BraintrustOAISpanAttributes.setInputMessages(
+                Span.current(), chatCompletionCreateParams.messages());
         ChatCompletion result = delegate.create(chatCompletionCreateParams, requestOptions);
-        ChatCompletionEventsHelper.emitCompletionLogEvents(
-                context, eventLogger, result, captureMessageContent);
+        BraintrustOAISpanAttributes.setOutputMessagesFromCompletion(Span.current(), result);
         return result;
     }
 
@@ -115,13 +111,13 @@ final class InstrumentedChatCompletionService
             ChatCompletionCreateParams chatCompletionCreateParams, RequestOptions requestOptions) {
         Context parentContext = Context.current();
         if (!instrumenter.shouldStart(parentContext, chatCompletionCreateParams)) {
-            return createStreamingWithLogs(
+            return createStreamingWithAttributes(
                     parentContext, chatCompletionCreateParams, requestOptions, false);
         }
 
         Context context = instrumenter.start(parentContext, chatCompletionCreateParams);
         try (Scope ignored = context.makeCurrent()) {
-            return createStreamingWithLogs(
+            return createStreamingWithAttributes(
                     context, chatCompletionCreateParams, requestOptions, true);
         } catch (Throwable t) {
             instrumenter.end(context, chatCompletionCreateParams, null, t);
@@ -129,13 +125,13 @@ final class InstrumentedChatCompletionService
         }
     }
 
-    private StreamResponse<ChatCompletionChunk> createStreamingWithLogs(
+    private StreamResponse<ChatCompletionChunk> createStreamingWithAttributes(
             Context context,
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions,
             boolean newSpan) {
-        ChatCompletionEventsHelper.emitPromptLogEvents(
-                context, eventLogger, chatCompletionCreateParams, captureMessageContent);
+        BraintrustOAISpanAttributes.setInputMessages(
+                Span.current(), chatCompletionCreateParams.messages());
         StreamResponse<ChatCompletionChunk> result =
                 delegate.createStreaming(chatCompletionCreateParams, requestOptions);
         return new TracingStreamedResponse(
@@ -144,7 +140,6 @@ final class InstrumentedChatCompletionService
                         context,
                         chatCompletionCreateParams,
                         instrumenter,
-                        eventLogger,
                         captureMessageContent,
                         newSpan));
     }

@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
@@ -25,7 +24,6 @@ final class StreamListener {
     private final Context context;
     private final MessageCreateParams request;
     private final Instrumenter<MessageCreateParams, Message> instrumenter;
-    private final Logger eventLogger;
     private final boolean captureMessageContent;
     private final boolean newSpan;
     private final AtomicBoolean hasEnded;
@@ -42,13 +40,11 @@ final class StreamListener {
             Context context,
             MessageCreateParams request,
             Instrumenter<MessageCreateParams, Message> instrumenter,
-            Logger eventLogger,
             boolean captureMessageContent,
             boolean newSpan) {
         this.context = context;
         this.request = request;
         this.instrumenter = instrumenter;
-        this.eventLogger = eventLogger;
         this.captureMessageContent = captureMessageContent;
         this.newSpan = newSpan;
         hasEnded = new AtomicBoolean();
@@ -93,9 +89,8 @@ final class StreamListener {
             message.put("content", contentBuilder.toString());
             outputArray.add(message);
 
-            Span.fromContext(context)
-                    .setAttribute(
-                            "braintrust.output_json", JSON_MAPPER.writeValueAsString(outputArray));
+            BraintrustAnthropicSpanAttributes.setOutputJson(
+                    Span.fromContext(context), JSON_MAPPER.writeValueAsString(outputArray));
         }
     }
 

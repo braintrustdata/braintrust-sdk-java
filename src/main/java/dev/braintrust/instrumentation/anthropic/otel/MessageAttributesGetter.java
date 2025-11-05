@@ -13,12 +13,12 @@ enum MessageAttributesGetter implements GenAiAttributesGetter<MessageCreateParam
 
     @Override
     public String getOperationName(MessageCreateParams request) {
-        return GenAiAttributes.GenAiOperationNameIncubatingValues.CHAT;
+        return BraintrustAnthropicSpanAttributes.OPERATION_CHAT;
     }
 
     @Override
     public String getSystem(MessageCreateParams request) {
-        return GenAiAttributes.GenAiProviderNameIncubatingValues.ANTHROPIC;
+        return BraintrustAnthropicSpanAttributes.SYSTEM_ANTHROPIC;
     }
 
     @Override

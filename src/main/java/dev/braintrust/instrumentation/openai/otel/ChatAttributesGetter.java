@@ -22,12 +22,12 @@ enum ChatAttributesGetter
 
     @Override
     public String getOperationName(ChatCompletionCreateParams request) {
-        return GenAiAttributes.GenAiOperationNameIncubatingValues.CHAT;
+        return BraintrustOAISpanAttributes.OPERATION_CHAT;
     }
 
     @Override
     public String getSystem(ChatCompletionCreateParams request) {
-        return GenAiAttributes.GenAiProviderNameIncubatingValues.OPENAI;
+        return BraintrustOAISpanAttributes.SYSTEM_OPENAI;
     }
 
     @Override
