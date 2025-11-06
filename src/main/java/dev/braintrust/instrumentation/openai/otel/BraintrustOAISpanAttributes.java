@@ -7,9 +7,7 @@ package dev.braintrust.instrumentation.openai.otel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.models.chat.completions.ChatCompletion;
-import com.openai.models.chat.completions.ChatCompletionMessage;
 import io.opentelemetry.api.trace.Span;
-import java.util.List;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,54 +23,34 @@ final class BraintrustOAISpanAttributes {
 
     private BraintrustOAISpanAttributes() {}
 
-    /**
-     * Sets the gen_ai.input.messages attribute with the serialized input messages. This captures
-     * the user's prompt and system messages before sending to OpenAI.
-     */
     @SneakyThrows
-    public static void setInputMessages(Span span, List<?> messages) {
-        String semconvJson =
-                GenAiSemconvSerializer.serializeInputMessages(
-                        (List<com.openai.models.chat.completions.ChatCompletionMessageParam>)
-                                messages);
+    static void setRequestAttributes(
+            Span span, com.openai.models.chat.completions.ChatCompletionCreateParams request) {
+        // Set input messages
+        String semconvJson = GenAiSemconvSerializer.serializeInputMessages(request.messages());
         span.setAttribute("gen_ai.input.messages", semconvJson);
-    }
 
-    /**
-     * Sets the gen_ai.output.messages attribute with the serialized output message. This captures
-     * the assistant's response from OpenAI for a single choice.
-     */
-    @SneakyThrows
-    public static void setOutputMessages(
-            Span span, ChatCompletionMessage message, String finishReason) {
-        String outputJson = GenAiSemconvSerializer.serializeOutputMessage(message, finishReason);
-        span.setAttribute("gen_ai.output.messages", outputJson);
-    }
+        // Set Braintrust metadata
+        span.setAttribute("braintrust.metadata.provider", SYSTEM_OPENAI);
 
-    /**
-     * Sets the gen_ai.output.messages attribute for the primary choice in a completion. Logs a
-     * debug message if there are no choices or multiple choices.
-     */
-    public static void setOutputMessagesFromCompletion(Span span, ChatCompletion completion) {
-        if (completion.choices().isEmpty()) {
-            log.debug("no choices in OAI response");
-        } else if (completion.choices().size() > 1) {
-            log.debug("multiple choices in OAI response: {}", completion.choices().size());
-        } else {
-            // Set gen_ai.output.messages attribute for single choice (most common case)
-            ChatCompletion.Choice choice = completion.choices().get(0);
-            setOutputMessages(span, choice.message(), choice.finishReason().toString());
+        // Set model in metadata if present
+        try {
+            var model = request.model();
+            span.setAttribute("braintrust.metadata.model", model.toString());
+        } catch (Exception e) {
+            // If model() throws or returns null, just skip setting it
+            log.debug("Could not get model from request", e);
         }
     }
 
-    /**
-     * Sets the braintrust.output_json attribute with a single message. This is used for streaming
-     * responses to capture output in Braintrust format.
-     */
     @SneakyThrows
-    public static void setBraintrustOutputJson(Span span, ChatCompletionMessage message) {
+    static void setOutputMessagesFromCompletion(Span span, ChatCompletion completion) {
         span.setAttribute(
-                "braintrust.output_json",
-                JSON_MAPPER.writeValueAsString(new ChatCompletionMessage[] {message}));
+                "gen_ai.output.messages",
+                GenAiSemconvSerializer.serializeOutputMessages(completion.choices()));
+    }
+
+    static void setTimeToFirstToken(Span span, double timeInSeconds) {
+        span.setAttribute("braintrust.metrics.time_to_first_token", timeInSeconds);
     }
 }

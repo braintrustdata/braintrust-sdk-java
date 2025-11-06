@@ -28,6 +28,8 @@ final class StreamListener {
     private final boolean captureMessageContent;
     private final boolean newSpan;
     private final AtomicBoolean hasEnded;
+    private final AtomicBoolean firstChunkReceived;
+    private final long startTimeNanos;
 
     @Nullable private CompletionUsage usage;
     @Nullable private String model;
@@ -38,18 +40,29 @@ final class StreamListener {
             ChatCompletionCreateParams request,
             Instrumenter<ChatCompletionCreateParams, ChatCompletion> instrumenter,
             boolean captureMessageContent,
-            boolean newSpan) {
+            boolean newSpan,
+            long startTimeNanos) {
         this.context = context;
         this.request = request;
         this.instrumenter = instrumenter;
         this.captureMessageContent = captureMessageContent;
         this.newSpan = newSpan;
+        this.startTimeNanos = startTimeNanos;
         choiceBuffers = new ArrayList<>();
         hasEnded = new AtomicBoolean();
+        firstChunkReceived = new AtomicBoolean();
     }
 
     @SneakyThrows
     void onChunk(ChatCompletionChunk chunk) {
+        // Calculate time to first token on the first chunk
+        if (firstChunkReceived.compareAndSet(false, true)) {
+            long elapsedNanos = System.nanoTime() - startTimeNanos;
+            double timeToFirstTokenSeconds = elapsedNanos / 1_000_000_000.0;
+            BraintrustOAISpanAttributes.setTimeToFirstToken(
+                    Span.fromContext(context), timeToFirstTokenSeconds);
+        }
+
         model = chunk.model();
         responseId = chunk.id();
         chunk.usage().ifPresent(u -> usage = u);
@@ -66,8 +79,6 @@ final class StreamListener {
             buffer.append(choice.delta());
             if (choice.finishReason().isPresent()) {
                 buffer.finishReason = choice.finishReason().get().toString();
-                BraintrustOAISpanAttributes.setBraintrustOutputJson(
-                        Span.fromContext(context), buffer.toChoice().message());
             }
         }
     }
@@ -102,7 +113,10 @@ final class StreamListener {
         }
 
         if (newSpan) {
-            instrumenter.end(context, request, result.build(), error);
+            ChatCompletion completion = result.build();
+            BraintrustOAISpanAttributes.setOutputMessagesFromCompletion(
+                    Span.fromContext(context), completion);
+            instrumenter.end(context, request, completion, error);
         }
     }
 }
