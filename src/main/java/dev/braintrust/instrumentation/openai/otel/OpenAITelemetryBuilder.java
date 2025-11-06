@@ -13,9 +13,9 @@ import com.openai.models.embeddings.EmbeddingCreateParams;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiAttributesExtractor;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiClientMetrics;
-import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiSpanNameExtractor;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor;
+import io.opentelemetry.instrumentation.api.instrumenter.SpanNameExtractor;
 
 /** A builder of {@link OpenAITelemetry}. */
 @SuppressWarnings("IdentifierName") // Want to match library's convention
@@ -47,11 +47,15 @@ public final class OpenAITelemetryBuilder {
      * OpenAITelemetryBuilder}.
      */
     public OpenAITelemetry build() {
+        // Use hardcoded span names to match Python/TypeScript SDKs
+        SpanNameExtractor<ChatCompletionCreateParams> chatSpanNameExtractor =
+                request -> "Chat Completion";
+        SpanNameExtractor<EmbeddingCreateParams> embeddingSpanNameExtractor =
+                request -> "Embedding";
+
         Instrumenter<ChatCompletionCreateParams, ChatCompletion> chatInstrumenter =
                 Instrumenter.<ChatCompletionCreateParams, ChatCompletion>builder(
-                                openTelemetry,
-                                INSTRUMENTATION_NAME,
-                                GenAiSpanNameExtractor.create(ChatAttributesGetter.INSTANCE))
+                                openTelemetry, INSTRUMENTATION_NAME, chatSpanNameExtractor)
                         .addAttributesExtractor(
                                 GenAiAttributesExtractor.create(ChatAttributesGetter.INSTANCE))
                         .addOperationMetrics(GenAiClientMetrics.get())
@@ -59,9 +63,7 @@ public final class OpenAITelemetryBuilder {
 
         Instrumenter<EmbeddingCreateParams, CreateEmbeddingResponse> embeddingsInstrumenter =
                 Instrumenter.<EmbeddingCreateParams, CreateEmbeddingResponse>builder(
-                                openTelemetry,
-                                INSTRUMENTATION_NAME,
-                                GenAiSpanNameExtractor.create(EmbeddingAttributesGetter.INSTANCE))
+                                openTelemetry, INSTRUMENTATION_NAME, embeddingSpanNameExtractor)
                         .addAttributesExtractor(
                                 GenAiAttributesExtractor.create(EmbeddingAttributesGetter.INSTANCE))
                         .addOperationMetrics(GenAiClientMetrics.get())

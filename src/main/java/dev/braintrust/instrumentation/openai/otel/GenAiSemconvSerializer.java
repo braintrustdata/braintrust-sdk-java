@@ -7,16 +7,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
-import com.openai.models.chat.completions.ChatCompletionContentPartImage;
-import com.openai.models.chat.completions.ChatCompletionContentPartText;
-import com.openai.models.chat.completions.ChatCompletionDeveloperMessageParam;
-import com.openai.models.chat.completions.ChatCompletionMessage;
-import com.openai.models.chat.completions.ChatCompletionMessageParam;
-import com.openai.models.chat.completions.ChatCompletionMessageToolCall;
-import com.openai.models.chat.completions.ChatCompletionSystemMessageParam;
-import com.openai.models.chat.completions.ChatCompletionToolMessageParam;
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
+import com.openai.models.chat.completions.*;
 import dev.braintrust.trace.Base64Attachment;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
@@ -441,9 +432,12 @@ final class GenAiSemconvSerializer {
     }
 
     @SneakyThrows
-    static String serializeOutputMessage(ChatCompletionMessage message, String finishReason) {
-        SemconvOutputChatMessage outputMessage = transformOutputMessage(message, finishReason);
-        return JSON_MAPPER.writeValueAsString(new SemconvOutputChatMessage[] {outputMessage});
+    static String serializeOutputMessages(List<ChatCompletion.Choice> choices) {
+        var semConvMessages =
+                choices.stream()
+                        .map(c -> transformOutputMessage(c.message(), c.finishReason().toString()))
+                        .toList();
+        return JSON_MAPPER.writeValueAsString(semConvMessages);
     }
 
     @Nullable

@@ -103,14 +103,20 @@ final class InstrumentedChatCompletionServiceAsync
             Context context,
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions) {
-        BraintrustOAISpanAttributes.setInputMessages(
-                Span.current(), chatCompletionCreateParams.messages());
+        BraintrustOAISpanAttributes.setRequestAttributes(
+                Span.current(), chatCompletionCreateParams);
+
+        long startTimeNanos = System.nanoTime();
         CompletableFuture<ChatCompletion> future =
                 delegate.create(chatCompletionCreateParams, requestOptions);
         future.thenAccept(
-                r ->
-                        BraintrustOAISpanAttributes.setOutputMessagesFromCompletion(
-                                Span.current(), r));
+                r -> {
+                    long elapsedNanos = System.nanoTime() - startTimeNanos;
+                    double timeToFirstTokenSeconds = elapsedNanos / 1_000_000_000.0;
+                    BraintrustOAISpanAttributes.setTimeToFirstToken(
+                            Span.current(), timeToFirstTokenSeconds);
+                    BraintrustOAISpanAttributes.setOutputMessagesFromCompletion(Span.current(), r);
+                });
         return future;
     }
 
@@ -137,8 +143,9 @@ final class InstrumentedChatCompletionServiceAsync
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions,
             boolean newSpan) {
-        BraintrustOAISpanAttributes.setInputMessages(
-                Span.current(), chatCompletionCreateParams.messages());
+        BraintrustOAISpanAttributes.setRequestAttributes(
+                Span.current(), chatCompletionCreateParams);
+        long startTimeNanos = System.nanoTime();
         AsyncStreamResponse<ChatCompletionChunk> result =
                 delegate.createStreaming(chatCompletionCreateParams, requestOptions);
         return new TracingAsyncStreamedResponse(
@@ -148,6 +155,7 @@ final class InstrumentedChatCompletionServiceAsync
                         chatCompletionCreateParams,
                         instrumenter,
                         captureMessageContent,
-                        newSpan));
+                        newSpan,
+                        startTimeNanos));
     }
 }

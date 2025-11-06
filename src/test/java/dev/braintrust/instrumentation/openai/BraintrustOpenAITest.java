@@ -8,7 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.core.JsonValue;
 import com.openai.models.ChatModel;
+import com.openai.models.FunctionDefinition;
+import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
@@ -108,6 +111,9 @@ public class BraintrustOpenAITest {
         assertEquals(1, spans.size());
         var span = spans.get(0);
 
+        // Verify span name matches other SDKs
+        assertEquals("Chat Completion", span.getName());
+
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
         assertEquals(
                 "gpt-4o-mini",
@@ -142,12 +148,42 @@ public class BraintrustOpenAITest {
                 0.0,
                 span.getAttributes().get(AttributeKey.doubleKey("gen_ai.request.temperature")));
 
+        // Verify time to first token metric was captured
+        Double timeToFirstToken =
+                span.getAttributes()
+                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
+        assertNotNull(timeToFirstToken, "time_to_first_token should be set");
+        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
+
+        // Verify Braintrust metadata was captured
+        assertEquals(
+                "openai",
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.provider")));
+        assertEquals(
+                "gpt-4o-mini",
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.model")));
+
+        // Verify gen_ai.output.messages conforms to OTel spec with finish_reason
         String outputJson =
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
+        assertNotNull(outputJson);
         assertEquals(
                 "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"The capital"
                         + " of France is Paris.\"}],\"finish_reason\":\"stop\"}]",
                 outputJson);
+
+        // Verify the structure includes finish_reason and correct message content
+        var outputMessages = JSON_MAPPER.readTree(outputJson);
+        assertEquals(1, outputMessages.size());
+        var outputMessage = outputMessages.get(0);
+        assertEquals("assistant", outputMessage.get("role").asText());
+        assertEquals("stop", outputMessage.get("finish_reason").asText());
+        assertTrue(outputMessage.has("parts"));
+        var parts = outputMessage.get("parts");
+        assertEquals(1, parts.size());
+        var textPart = parts.get(0);
+        assertEquals("text", textPart.get("type").asText());
+        assertEquals("The capital of France is Paris.", textPart.get("content").asText());
 
         assertEquals(
                 "chatcmpl-test123",
@@ -237,6 +273,9 @@ public class BraintrustOpenAITest {
         assertEquals(1, spans.size());
         var span = spans.get(0);
 
+        // Verify span name matches other SDKs
+        assertEquals("Chat Completion", span.getName());
+
         // Verify span attributes
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
         assertEquals(
@@ -262,14 +301,38 @@ public class BraintrustOpenAITest {
         assertEquals(
                 8L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
 
-        // Verify output JSON was captured
+        // Verify time to first token metric was captured
+        Double timeToFirstToken =
+                span.getAttributes()
+                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
+        assertNotNull(timeToFirstToken, "time_to_first_token should be set");
+        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
+
+        // Verify Braintrust metadata was captured
+        assertEquals(
+                "openai",
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.provider")));
+        assertEquals(
+                "gpt-4o-mini",
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.model")));
+
+        // Verify gen_ai.output.messages conforms to OTel spec with finish_reason
         String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
         assertNotNull(outputJson);
+
+        // Verify the structure includes finish_reason and correct message content
         var outputMessages = JSON_MAPPER.readTree(outputJson);
         assertEquals(1, outputMessages.size());
-        var messageZero = outputMessages.get(0);
-        assertEquals("The capital of France is Paris.", messageZero.get("content").asText());
+        var outputMessage = outputMessages.get(0);
+        assertEquals("assistant", outputMessage.get("role").asText());
+        assertEquals("stop", outputMessage.get("finish_reason").asText());
+        assertTrue(outputMessage.has("parts"));
+        var parts = outputMessage.get("parts");
+        assertEquals(1, parts.size());
+        var textPart = parts.get(0);
+        assertEquals("text", textPart.get("type").asText());
+        assertEquals("The capital of France is Paris.", textPart.get("content").asText());
     }
 
     @Test
@@ -471,5 +534,161 @@ public class BraintrustOpenAITest {
                         .addUserMessage("What's up my friend? My name is Alice")
                         .build(),
                 renderedParams);
+    }
+
+    @Test
+    @SneakyThrows
+    void testWrapOpenAiWithToolCalls() {
+        // Mock the OpenAI API response with tool calls
+        wireMock.stubFor(
+                post(urlEqualTo("/chat/completions"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                                {
+                                                  "id": "chatcmpl-test-tool",
+                                                  "object": "chat.completion",
+                                                  "created": 1234567890,
+                                                  "model": "gpt-4o-2024-08-06",
+                                                  "choices": [
+                                                    {
+                                                      "index": 0,
+                                                      "message": {
+                                                        "role": "assistant",
+                                                        "content": null,
+                                                        "tool_calls": [
+                                                          {
+                                                            "id": "call_abc123",
+                                                            "type": "function",
+                                                            "function": {
+                                                              "name": "get_weather",
+                                                              "arguments": "{\\"location\\":\\"Paris, France\\"}"
+                                                            }
+                                                          }
+                                                        ]
+                                                      },
+                                                      "finish_reason": "tool_calls"
+                                                    }
+                                                  ],
+                                                  "usage": {
+                                                    "prompt_tokens": 20,
+                                                    "completion_tokens": 15,
+                                                    "total_tokens": 35
+                                                  }
+                                                }
+                                                """)));
+
+        OpenAIClient client =
+                BraintrustOpenAI.wrapOpenAI(
+                        testHarness.openTelemetry(),
+                        OpenAIOkHttpClient.builder()
+                                .baseUrl(wireMock.baseUrl())
+                                .apiKey("test-api-key")
+                                .build());
+
+        // Make a request with tools (we'll just verify the SDK handles tool call responses
+        // correctly)
+
+        ChatCompletionCreateParams params =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O)
+                        .maxTokens(500)
+                        .temperature(0.0)
+                        .tools(
+                                List.of(
+                                        ChatCompletionTool.builder()
+                                                .type(JsonValue.from("function"))
+                                                .function(
+                                                        FunctionDefinition.builder()
+                                                                .name("get_weather")
+                                                                .description(
+                                                                        "Get the current weather"
+                                                                                + " for a location")
+                                                                .parameters(
+                                                                        FunctionParameters.builder()
+                                                                                .putAllAdditionalProperties(
+                                                                                        Map.of(
+                                                                                                "location",
+                                                                                                        JsonValue
+                                                                                                                .from(
+                                                                                                                        Map
+                                                                                                                                .of(
+                                                                                                                                        "type",
+                                                                                                                                        "string",
+                                                                                                                                        "description",
+                                                                                                                                        "The city"
+                                                                                                                                            + " and state,"
+                                                                                                                                            + " e.g."
+                                                                                                                                            + " San Francisco,"
+                                                                                                                                            + " CA")),
+                                                                                                "unit",
+                                                                                                        JsonValue
+                                                                                                                .from(
+                                                                                                                        Map
+                                                                                                                                .of(
+                                                                                                                                        "type",
+                                                                                                                                        "string",
+                                                                                                                                        "enum",
+                                                                                                                                        List
+                                                                                                                                                .of(
+                                                                                                                                                        "celsius",
+                                                                                                                                                        "fahrenheit"),
+                                                                                                                                        "description",
+                                                                                                                                        "The unit"
+                                                                                                                                            + " of temperature"))))
+                                                                                .build())
+                                                                .build())
+                                                .build()))
+                        .addUserMessage("What is the weather like in Paris, France?")
+                        .build();
+
+        ChatCompletion response = client.chat().completions().create(params);
+
+        // Verify the response has tool calls
+        assertEquals(1, response.choices().size());
+        var choice = response.choices().get(0);
+        assertEquals("tool_calls", choice.finishReason().asString());
+        assertTrue(choice.message().toolCalls().isPresent());
+        assertEquals(1, choice.message().toolCalls().get().size());
+        var toolCall = choice.message().toolCalls().get().get(0);
+        assertEquals("call_abc123", toolCall.id());
+        assertEquals("get_weather", toolCall.function().name());
+
+        // Verify spans were exported
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        // Verify span name
+        assertEquals("Chat Completion", span.getName());
+
+        // Verify gen_ai.output.messages conforms to OTel spec with tool calls and finish_reason
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
+        assertNotNull(outputJson);
+
+        // Parse and verify the structure
+        var outputMessages = JSON_MAPPER.readTree(outputJson);
+        assertEquals(1, outputMessages.size());
+        var outputMessage = outputMessages.get(0);
+
+        // Verify role and finish_reason
+        assertEquals("assistant", outputMessage.get("role").asText());
+        assertEquals("tool_calls", outputMessage.get("finish_reason").asText());
+
+        // Verify parts contain tool_call
+        assertTrue(outputMessage.has("parts"));
+        var parts = outputMessage.get("parts");
+        assertEquals(1, parts.size());
+
+        // Verify tool call part matches OTel spec for ToolCallRequestPart
+        var toolCallPart = parts.get(0);
+        assertEquals("tool_call", toolCallPart.get("type").asText());
+        assertEquals("call_abc123", toolCallPart.get("id").asText());
+        assertEquals("get_weather", toolCallPart.get("name").asText());
+        assertTrue(toolCallPart.get("arguments").asText().contains("Paris"));
     }
 }

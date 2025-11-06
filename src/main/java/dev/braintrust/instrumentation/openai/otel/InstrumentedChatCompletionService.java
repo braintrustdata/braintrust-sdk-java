@@ -100,9 +100,15 @@ final class InstrumentedChatCompletionService
             Context context,
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions) {
-        BraintrustOAISpanAttributes.setInputMessages(
-                Span.current(), chatCompletionCreateParams.messages());
+        BraintrustOAISpanAttributes.setRequestAttributes(
+                Span.current(), chatCompletionCreateParams);
+
+        long startTimeNanos = System.nanoTime();
         ChatCompletion result = delegate.create(chatCompletionCreateParams, requestOptions);
+        long elapsedNanos = System.nanoTime() - startTimeNanos;
+        double timeToFirstTokenSeconds = elapsedNanos / 1_000_000_000.0;
+
+        BraintrustOAISpanAttributes.setTimeToFirstToken(Span.current(), timeToFirstTokenSeconds);
         BraintrustOAISpanAttributes.setOutputMessagesFromCompletion(Span.current(), result);
         return result;
     }
@@ -130,8 +136,9 @@ final class InstrumentedChatCompletionService
             ChatCompletionCreateParams chatCompletionCreateParams,
             RequestOptions requestOptions,
             boolean newSpan) {
-        BraintrustOAISpanAttributes.setInputMessages(
-                Span.current(), chatCompletionCreateParams.messages());
+        BraintrustOAISpanAttributes.setRequestAttributes(
+                Span.current(), chatCompletionCreateParams);
+        long startTimeNanos = System.nanoTime();
         StreamResponse<ChatCompletionChunk> result =
                 delegate.createStreaming(chatCompletionCreateParams, requestOptions);
         return new TracingStreamedResponse(
@@ -141,6 +148,7 @@ final class InstrumentedChatCompletionService
                         chatCompletionCreateParams,
                         instrumenter,
                         captureMessageContent,
-                        newSpan));
+                        newSpan,
+                        startTimeNanos));
     }
 }
