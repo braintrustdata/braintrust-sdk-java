@@ -1,5 +1,6 @@
 package dev.braintrust.eval;
 
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -13,8 +14,25 @@ import java.util.function.Function;
 public interface Scorer<INPUT, OUTPUT> {
     String getName();
 
-    double score(EvalCase<INPUT, OUTPUT> evalCase, OUTPUT result);
+    List<Score> score(TaskResult<INPUT, OUTPUT> taskResult);
 
+    static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> of(
+            String scorerName, Function<OUTPUT, Double> scorerFn) {
+        return new Scorer<>() {
+            @Override
+            public String getName() {
+                return scorerName;
+            }
+
+            @Override
+            public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
+                return List.of(new Score(scorerName, scorerFn.apply(taskResult.result())));
+            }
+        };
+    }
+
+    /** Deprecated. Use {@link #of(String, Function)} or implement the Scorer interface instead. */
+    @Deprecated
     static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> of(
             String scorerName, BiFunction<EvalCase<INPUT, OUTPUT>, OUTPUT, Double> scorerFn) {
         return new Scorer<>() {
@@ -24,14 +42,14 @@ public interface Scorer<INPUT, OUTPUT> {
             }
 
             @Override
-            public double score(EvalCase<INPUT, OUTPUT> evalCase, OUTPUT result) {
-                return scorerFn.apply(evalCase, result);
+            public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
+                return List.of(
+                        new Score(
+                                scorerName,
+                                scorerFn.apply(
+                                        EvalCase.from(taskResult.datasetCase()),
+                                        taskResult.result())));
             }
         };
-    }
-
-    static <INPUT, OUTPUT, RESULT> Scorer<INPUT, OUTPUT> of(
-            String scorerName, Function<OUTPUT, Double> scorerFn) {
-        return of(scorerName, (evalCase, result) -> scorerFn.apply(result));
     }
 }

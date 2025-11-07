@@ -14,7 +14,6 @@ import java.util.*;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Getter;
 import lombok.SneakyThrows;
 
 /**
@@ -26,14 +25,13 @@ import lombok.SneakyThrows;
 public final class Eval<INPUT, OUTPUT> {
     private static final AttributeKey<String> PARENT =
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
-    private static final ObjectMapper JSON_MAPPER =
-            new com.fasterxml.jackson.databind.ObjectMapper();
+    static final ObjectMapper JSON_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
     private final @Nonnull String experimentName;
     private final @Nonnull BraintrustConfig config;
     private final @Nonnull BraintrustApiClient client;
     private final @Nonnull BraintrustApiClient.OrganizationAndProjectInfo orgAndProject;
     private final @Nonnull Tracer tracer;
-    private final @Nonnull List<EvalCase<INPUT, OUTPUT>> evalCases;
+    private final @Nonnull Dataset<INPUT, OUTPUT> dataset;
     private final @Nonnull Task<INPUT, OUTPUT> task;
     private final @Nonnull List<Scorer<INPUT, OUTPUT>> scorers;
 
@@ -52,13 +50,13 @@ public final class Eval<INPUT, OUTPUT> {
                                                     "invalid project id: " + builder.projectId));
         }
         this.tracer = Objects.requireNonNull(builder.tracer);
-        this.evalCases = List.copyOf(builder.evalCases);
+        this.dataset = builder.dataset;
         this.task = Objects.requireNonNull(builder.task);
         this.scorers = List.copyOf(builder.scorers);
     }
 
     /** Runs the evaluation and returns results. */
-    public Result run() {
+    public EvalResult run() {
         var experiment =
                 client.getOrCreateExperiment(
                         new BraintrustApiClient.CreateExperimentRequest(
@@ -67,44 +65,55 @@ public final class Eval<INPUT, OUTPUT> {
                                 Optional.empty(),
                                 Optional.empty()));
         var experimentID = experiment.id();
-        var evalCaseResults =
-                evalCases.stream().map(evalCase -> evalOne(experimentID, evalCase)).toList();
-        return new Result();
+
+        try (var cursor = dataset.openCursor()) {
+            for (var datsetCase = cursor.next();
+                    datsetCase.isPresent();
+                    datsetCase = cursor.next()) {
+                evalOne(experimentID, datsetCase.get());
+            }
+        }
+        var experimentUrl =
+                "%s/experiments/%s"
+                        .formatted(
+                                BraintrustUtils.createProjectURI(config.appUrl(), orgAndProject)
+                                        .toASCIIString(),
+                                experimentName);
+        return new EvalResult(experimentUrl);
     }
 
-    private EvalCase.Result<INPUT, OUTPUT> evalOne(
-            String experimentId, EvalCase<INPUT, OUTPUT> evalCase) {
+    @SneakyThrows
+    private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
+        JSON_MAPPER.writeValueAsString(Map.of("type", "eval"));
         var rootSpan =
                 tracer.spanBuilder("eval") // TODO: allow names for eval cases
                         .setNoParent() // each eval case is its own trace
                         .setSpanKind(SpanKind.CLIENT)
                         .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .setAttribute("braintrust.span_attributes", "{\"type\":\"eval\"}")
-                        // FIXME: use proper object mapper for json stuff
+                        .setAttribute("braintrust.span_attributes", json(Map.of("type", "eval")))
                         .setAttribute(
-                                "braintrust.input_json",
-                                "{ \"input\":\"" + evalCase.input() + "\"}")
-                        .setAttribute("braintrust.expected", "\"" + evalCase.expected() + "\"")
+                                "braintrust.input_json", json(Map.of("input", datasetCase.input())))
+                        .setAttribute("braintrust.expected", json(datasetCase.expected()))
                         .startSpan();
         try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
-            final OUTPUT result;
+            final TaskResult<INPUT, OUTPUT> taskResult;
             { // run task
                 var taskSpan =
                         tracer.spanBuilder("task")
                                 .setAttribute(PARENT, "experiment_id:" + experimentId)
-                                .setAttribute("braintrust.span_attributes", "{\"type\":\"task\"}")
+                                .setAttribute(
+                                        "braintrust.span_attributes", json(Map.of("type", "task")))
                                 .startSpan();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
-                    result = task.apply(evalCase);
+                    taskResult = task.apply(datasetCase);
                 } finally {
                     taskSpan.end();
                 }
                 try {
                     rootSpan.setAttribute(
                             "braintrust.output_json",
-                            JSON_MAPPER.writeValueAsString(
-                                    Map.of("output", String.valueOf(result))));
+                            JSON_MAPPER.writeValueAsString(Map.of("output", taskResult.result())));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }
@@ -113,66 +122,40 @@ public final class Eval<INPUT, OUTPUT> {
                 var scoreSpan =
                         tracer.spanBuilder("score")
                                 .setAttribute(PARENT, "experiment_id:" + experimentId)
-                                .setAttribute("braintrust.span_attributes", "{\"type\":\"score\"}")
+                                .setAttribute(
+                                        "braintrust.span_attributes", json(Map.of("type", "score")))
                                 .startSpan();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
-                    // NOTE: linked hash map to preserve ordering. Not in the spec but nice user
-                    // experience
-                    final HashMap<String, Double> nameToScore = new LinkedHashMap<>();
-                    var scores =
-                            scorers.stream()
-                                    .map(
-                                            scorer -> {
-                                                var score = scorer.score(evalCase, result);
-                                                if (score < 0.0 || score > 1.0) {
-                                                    throw new RuntimeException(
-                                                            "score must be between 0 and 1: "
-                                                                    + scorer.getName()
-                                                                    + " : "
-                                                                    + score);
-                                                }
-                                                nameToScore.put(scorer.getName(), score);
-                                                return score;
-                                            })
-                                    .toList();
-                    try {
-                        scoreSpan.setAttribute(
-                                "braintrust.scores", JSON_MAPPER.writeValueAsString(nameToScore));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
+                    // linked map to preserve ordering. Not in the spec but nice user experience
+                    final Map<String, Double> nameToScore = new LinkedHashMap<>();
+                    scorers.forEach(
+                            scorer -> {
+                                var scores = scorer.score(taskResult);
+                                scores.forEach(
+                                        score -> {
+                                            if (score.value() < 0.0 || score.value() > 1.0) {
+                                                throw new RuntimeException(
+                                                        "score must be between 0 and 1: %s : %s"
+                                                                .formatted(
+                                                                        scorer.getName(), score));
+                                            }
+                                            nameToScore.put(score.name(), score.value());
+                                        });
+                            });
+                    scoreSpan.setAttribute("braintrust.scores", json(nameToScore));
                 } finally {
                     scoreSpan.end();
                 }
             }
-            return new EvalCase.Result<>(evalCase, result);
         } finally {
             rootSpan.end();
         }
     }
 
-    /** Results of all eval cases of an experiment. */
-    public class Result {
-        @Getter private final String experimentUrl;
-
-        @SneakyThrows
-        private Result() {
-            this.experimentUrl =
-                    "%s/experiments/%s"
-                            .formatted(
-                                    BraintrustUtils.createProjectURI(config.appUrl(), orgAndProject)
-                                            .toASCIIString(),
-                                    experimentName);
-        }
-
-        public String createReportString() {
-            try {
-                return "Experiment complete. View results in braintrust: " + experimentUrl;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
+    @SneakyThrows
+    private String json(Object o) {
+        return JSON_MAPPER.writeValueAsString(o);
     }
 
     /** Creates a new eval builder. */
@@ -182,12 +165,12 @@ public final class Eval<INPUT, OUTPUT> {
 
     /** Builder for creating evaluations with fluent API. */
     public static final class Builder<INPUT, OUTPUT> {
+        public @Nonnull Dataset<INPUT, OUTPUT> dataset;
         private @Nonnull String experimentName = "unnamed-java-eval";
         private @Nullable BraintrustConfig config;
         private @Nullable BraintrustApiClient apiClient;
         private @Nullable String projectId;
         private @Nullable Tracer tracer = null;
-        private @Nonnull List<EvalCase<INPUT, OUTPUT>> evalCases = List.of();
         private @Nullable Task<INPUT, OUTPUT> task;
         private @Nonnull List<Scorer<INPUT, OUTPUT>> scorers = List.of();
 
@@ -201,15 +184,13 @@ public final class Eval<INPUT, OUTPUT> {
             if (projectId == null) {
                 projectId = config.defaultProjectId().orElse(null);
             }
-            if (evalCases.isEmpty()) {
-                throw new RuntimeException("must provide at least one eval case");
-            }
             if (scorers.isEmpty()) {
                 throw new RuntimeException("must provide at least one scorer");
             }
             if (null == apiClient) {
                 apiClient = BraintrustApiClient.of(config);
             }
+            Objects.requireNonNull(dataset);
             Objects.requireNonNull(task);
             return new Eval<>(this);
         }
@@ -239,10 +220,28 @@ public final class Eval<INPUT, OUTPUT> {
             return this;
         }
 
+        public Builder<INPUT, OUTPUT> dataset(Dataset<INPUT, OUTPUT> dataset) {
+            this.dataset = dataset;
+            return this;
+        }
+
+        /** Deprecated. Use {@link #cases(DatasetCase[])} or {@link #dataset(Dataset)} instead */
+        @Deprecated
         @SafeVarargs
         public final Builder<INPUT, OUTPUT> cases(EvalCase<INPUT, OUTPUT>... cases) {
-            this.evalCases = List.of(cases);
-            return this;
+            return cases(
+                    Arrays.stream(cases)
+                            .map(evalCase -> DatasetCase.of(evalCase.input(), evalCase.expected()))
+                            .toList()
+                            .toArray(new DatasetCase[0]));
+        }
+
+        @SafeVarargs
+        public final Builder<INPUT, OUTPUT> cases(DatasetCase<INPUT, OUTPUT>... cases) {
+            if (cases.length == 0) {
+                throw new RuntimeException("must provide at least one case");
+            }
+            return dataset(Dataset.of(cases));
         }
 
         public Builder<INPUT, OUTPUT> task(Task<INPUT, OUTPUT> task) {
@@ -251,7 +250,15 @@ public final class Eval<INPUT, OUTPUT> {
         }
 
         public Builder<INPUT, OUTPUT> taskFunction(Function<INPUT, OUTPUT> taskFn) {
-            return task(evalCase -> taskFn.apply(evalCase.input()));
+            return task(
+                    new Task<>() {
+                        @Override
+                        public TaskResult<INPUT, OUTPUT> apply(
+                                DatasetCase<INPUT, OUTPUT> datasetCase) {
+                            var result = taskFn.apply(datasetCase.input());
+                            return new TaskResult<>(result, datasetCase);
+                        }
+                    });
         }
 
         @SafeVarargs

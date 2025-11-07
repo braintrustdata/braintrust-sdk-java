@@ -52,9 +52,9 @@ Function<String, String> getFoodType =
 var eval = braintrust.<String, String>evalBuilder()
                 .name("java-eval-x-" + System.currentTimeMillis())
                 .cases(
-                        EvalCase.of("asparagus", "vegetable"),
-                        EvalCase.of("banana", "fruit"))
-                .task(getFoodType)
+                        DatasetCase.of("asparagus", "vegetable"),
+                        DatasetCase.of("banana", "fruit"))
+                .taskFunction(getFoodType)
                 .scorers(
                         Scorer.of(
                                 "fruit_scorer",
