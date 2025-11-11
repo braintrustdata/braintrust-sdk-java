@@ -32,8 +32,7 @@ final class BraintrustAnthropicSpanAttributes {
      */
     @SneakyThrows
     public static void setOutputMessage(Span span, Message message) {
-        span.setAttribute(
-                "braintrust.output_json", JSON_MAPPER.writeValueAsString(new Message[] {message}));
+        span.setAttribute("braintrust.output_json", JSON_MAPPER.writeValueAsString(message));
     }
 
     /**

@@ -13,7 +13,7 @@ enum MessageAttributesGetter implements GenAiAttributesGetter<MessageCreateParam
 
     @Override
     public String getOperationName(MessageCreateParams request) {
-        return BraintrustAnthropicSpanAttributes.OPERATION_CHAT;
+        return "anthropic.messages.create";
     }
 
     @Override

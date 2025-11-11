@@ -6,7 +6,6 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiAttributesExtractor;
 import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiClientMetrics;
-import io.opentelemetry.instrumentation.api.incubator.semconv.genai.GenAiSpanNameExtractor;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor;
 
@@ -39,11 +38,14 @@ public final class AnthropicTelemetryBuilder {
      * AnthropicTelemetryBuilder}.
      */
     public AnthropicTelemetry build() {
+        // Use a custom span name extractor that returns just the operation name
+        // without appending the model name (unlike the default GenAiSpanNameExtractor)
         Instrumenter<MessageCreateParams, Message> messageInstrumenter =
                 Instrumenter.<MessageCreateParams, Message>builder(
                                 openTelemetry,
                                 INSTRUMENTATION_NAME,
-                                GenAiSpanNameExtractor.create(MessageAttributesGetter.INSTANCE))
+                                request ->
+                                        MessageAttributesGetter.INSTANCE.getOperationName(request))
                         .addAttributesExtractor(
                                 GenAiAttributesExtractor.create(MessageAttributesGetter.INSTANCE))
                         .addOperationMetrics(GenAiClientMetrics.get())

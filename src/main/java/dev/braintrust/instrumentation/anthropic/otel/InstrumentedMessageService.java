@@ -81,17 +81,20 @@ final class InstrumentedMessageService
         Context context = instrumenter.start(parentContext, inputMessage);
         Message outputMessage;
         try (Scope ignored = context.makeCurrent()) {
+            Span currentSpan = Span.current();
+            // Set provider metadata
+            currentSpan.setAttribute("provider", "anthropic");
+
             List<MessageParam> inputMessages = new ArrayList<>(inputMessage.messages());
-            // Put system in the input message so the backend will pick it up in the LLM display
+            // Append system message to the end so the backend will pick it up in the LLM display
             if (inputMessage.system().isPresent()) {
                 inputMessages.add(
-                        0,
                         MessageParam.builder()
                                 .role(MessageParam.Role.of("system"))
                                 .content(inputMessage.system().get().asString())
                                 .build());
             }
-            BraintrustAnthropicSpanAttributes.setInputMessages(Span.current(), inputMessages);
+            BraintrustAnthropicSpanAttributes.setInputMessages(currentSpan, inputMessages);
             outputMessage = delegate.create(inputMessage, requestOptions);
             BraintrustAnthropicSpanAttributes.setOutputMessage(Span.current(), outputMessage);
         } catch (Throwable t) {
@@ -125,18 +128,20 @@ final class InstrumentedMessageService
             MessageCreateParams inputMessage,
             RequestOptions requestOptions,
             boolean newSpan) {
+        Span span = Span.fromContext(context);
+        // Set provider metadata
+        span.setAttribute("provider", "anthropic");
+
         List<MessageParam> inputMessages = new ArrayList<>(inputMessage.messages());
-        // Put system in the input message so the backend will pick it up in the LLM display
+        // Append system message to the end so the backend will pick it up in the LLM display
         if (inputMessage.system().isPresent()) {
             inputMessages.add(
-                    0,
                     MessageParam.builder()
                             .role(MessageParam.Role.of("system"))
                             .content(inputMessage.system().get().asString())
                             .build());
         }
-        BraintrustAnthropicSpanAttributes.setInputMessages(
-                Span.fromContext(context), inputMessages);
+        BraintrustAnthropicSpanAttributes.setInputMessages(span, inputMessages);
 
         StreamResponse<RawMessageStreamEvent> result =
                 delegate.createStreaming(inputMessage, requestOptions);
