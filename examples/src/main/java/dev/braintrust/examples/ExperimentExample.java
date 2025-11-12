@@ -4,7 +4,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.Braintrust;
-import dev.braintrust.eval.EvalCase;
+import dev.braintrust.eval.DatasetCase;
 import dev.braintrust.eval.Scorer;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
 import java.util.function.Function;
@@ -37,10 +37,10 @@ public class ExperimentExample {
                         // will append new cases to
                         // the same experiment
                         .cases(
-                                EvalCase.of("strawberry", "fruit"),
-                                EvalCase.of("asparagus", "vegetable"),
-                                EvalCase.of("apple", "fruit"),
-                                EvalCase.of("banana", "fruit"))
+                                DatasetCase.of("strawberry", "fruit"),
+                                DatasetCase.of("asparagus", "vegetable"),
+                                DatasetCase.of("apple", "fruit"),
+                                DatasetCase.of("banana", "fruit"))
                         .taskFunction(getFoodType)
                         .scorers(
                                 Scorer.of(

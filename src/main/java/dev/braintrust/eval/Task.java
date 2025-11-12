@@ -7,5 +7,5 @@ package dev.braintrust.eval;
  * @param <OUTPUT> type of the output data
  */
 public interface Task<INPUT, OUTPUT> {
-    OUTPUT apply(EvalCase<INPUT, OUTPUT> evalCase);
+    TaskResult<INPUT, OUTPUT> apply(DatasetCase<INPUT, OUTPUT> datasetCase);
 }
