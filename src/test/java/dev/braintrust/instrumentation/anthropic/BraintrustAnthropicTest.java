@@ -113,7 +113,8 @@ public class BraintrustAnthropicTest {
                         .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons"))
                         .toString());
         assertEquals(
-                "chat", span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
+                "anthropic.messages.create",
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
         assertEquals(
                 "msg_test123",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
@@ -132,9 +133,9 @@ public class BraintrustAnthropicTest {
 
         // Verify Braintrust-specific attributes
         assertEquals(
-                "[{\"content\":\"You are a helpful"
-                    + " assistant\",\"role\":\"system\",\"valid\":false},{\"content\":\"What is the"
-                    + " capital of France?\",\"role\":\"user\",\"valid\":true}]",
+                "[{\"content\":\"What is the capital of"
+                        + " France?\",\"role\":\"user\",\"valid\":true},{\"content\":\"You are a"
+                        + " helpful assistant\",\"role\":\"system\",\"valid\":false}]",
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
 
         // Verify output JSON
@@ -142,17 +143,15 @@ public class BraintrustAnthropicTest {
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
         assertNotNull(outputJson);
 
-        var outputMessages = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputMessages.size());
-        var messageZero = outputMessages.get(0);
-        assertEquals("msg_test123", messageZero.get("id").asText());
-        assertEquals("message", messageZero.get("type").asText());
-        assertEquals("assistant", messageZero.get("role").asText());
+        var outputMessage = JSON_MAPPER.readTree(outputJson);
+        assertEquals("msg_test123", outputMessage.get("id").asText());
+        assertEquals("message", outputMessage.get("type").asText());
+        assertEquals("assistant", outputMessage.get("role").asText());
         assertEquals(
                 "The capital of France is Paris.",
-                messageZero.get("content").get(0).get("text").asText());
-        assertEquals(8, messageZero.get("usage").get("output_tokens").asInt());
-        assertEquals(20, messageZero.get("usage").get("input_tokens").asInt());
+                outputMessage.get("content").get(0).get("text").asText());
+        assertEquals(8, outputMessage.get("usage").get("output_tokens").asInt());
+        assertEquals(20, outputMessage.get("usage").get("input_tokens").asInt());
     }
 
     @Test
@@ -260,7 +259,8 @@ public class BraintrustAnthropicTest {
                 "claude-3-5-haiku-20241022",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
         assertEquals(
-                "chat", span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
+                "anthropic.messages.create",
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
         assertEquals(
                 "msg_test123",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
