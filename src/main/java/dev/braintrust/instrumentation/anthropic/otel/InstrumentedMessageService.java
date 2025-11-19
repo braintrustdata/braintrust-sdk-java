@@ -79,6 +79,7 @@ final class InstrumentedMessageService
         }
 
         Context context = instrumenter.start(parentContext, inputMessage);
+        long startTimeNanos = System.nanoTime();
         Message outputMessage;
         try (Scope ignored = context.makeCurrent()) {
             Span currentSpan = Span.current();
@@ -96,6 +97,10 @@ final class InstrumentedMessageService
             }
             BraintrustAnthropicSpanAttributes.setInputMessages(currentSpan, inputMessages);
             outputMessage = delegate.create(inputMessage, requestOptions);
+            long endTimeNanos = System.nanoTime();
+            double timeToFirstTokenSeconds = (endTimeNanos - startTimeNanos) / 1_000_000_000.0;
+            currentSpan.setAttribute(
+                    "braintrust.metrics.time_to_first_token", timeToFirstTokenSeconds);
             BraintrustAnthropicSpanAttributes.setOutputMessage(Span.current(), outputMessage);
         } catch (Throwable t) {
             instrumenter.end(context, inputMessage, null, t);
@@ -143,12 +148,18 @@ final class InstrumentedMessageService
         }
         BraintrustAnthropicSpanAttributes.setInputMessages(span, inputMessages);
 
+        long startTimeNanos = System.nanoTime();
         StreamResponse<RawMessageStreamEvent> result =
                 delegate.createStreaming(inputMessage, requestOptions);
         return new TracingStreamedResponse(
                 result,
                 new StreamListener(
-                        context, inputMessage, instrumenter, captureMessageContent, newSpan));
+                        context,
+                        inputMessage,
+                        instrumenter,
+                        captureMessageContent,
+                        newSpan,
+                        startTimeNanos));
     }
 
     private static String contentToString(MessageCreateParams.System content) {

@@ -27,6 +27,7 @@ final class StreamListener {
     private final boolean captureMessageContent;
     private final boolean newSpan;
     private final AtomicBoolean hasEnded;
+    private final long startTimeNanos;
 
     private final StringBuilder contentBuilder = new StringBuilder();
 
@@ -35,23 +36,32 @@ final class StreamListener {
     @Nullable private Model model;
     @Nullable private String responseId;
     @Nullable private String stopReason;
+    @Nullable private Double timeToFirstToken;
 
     StreamListener(
             Context context,
             MessageCreateParams request,
             Instrumenter<MessageCreateParams, Message> instrumenter,
             boolean captureMessageContent,
-            boolean newSpan) {
+            boolean newSpan,
+            long startTimeNanos) {
         this.context = context;
         this.request = request;
         this.instrumenter = instrumenter;
         this.captureMessageContent = captureMessageContent;
         this.newSpan = newSpan;
+        this.startTimeNanos = startTimeNanos;
         hasEnded = new AtomicBoolean();
     }
 
     @SneakyThrows
     void onEvent(RawMessageStreamEvent event) {
+        // Capture time to first token on the first event
+        if (timeToFirstToken == null) {
+            long firstEventTimeNanos = System.nanoTime();
+            timeToFirstToken = (firstEventTimeNanos - startTimeNanos) / 1_000_000_000.0;
+        }
+
         // Handle message_start event
         if (event.messageStart().isPresent()) {
             var messageStart = event.messageStart().get();
@@ -142,6 +152,11 @@ final class StreamListener {
         } else if (usage != null) {
             // Fallback to usage from message_start for output_tokens if no delta
             span.setAttribute("gen_ai.usage.output_tokens", usage.outputTokens());
+        }
+
+        // Set time to first token if captured
+        if (timeToFirstToken != null) {
+            span.setAttribute("braintrust.metrics.time_to_first_token", timeToFirstToken);
         }
 
         instrumenter.end(context, request, null, error);
