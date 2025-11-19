@@ -152,6 +152,13 @@ public class BraintrustAnthropicTest {
                 outputMessage.get("content").get(0).get("text").asText());
         assertEquals(8, outputMessage.get("usage").get("output_tokens").asInt());
         assertEquals(20, outputMessage.get("usage").get("input_tokens").asInt());
+
+        // Verify time to first token
+        Double timeToFirstToken =
+                span.getAttributes()
+                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
+        assertNotNull(timeToFirstToken, "time_to_first_token should be present");
+        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
     }
 
     @Test
@@ -280,5 +287,12 @@ public class BraintrustAnthropicTest {
         var messageZero = outputMessages.get(0);
         assertEquals("assistant", messageZero.get("role").asText());
         assertEquals("The capital of France is Paris.", messageZero.get("content").asText());
+
+        // Verify time to first token
+        Double timeToFirstToken =
+                span.getAttributes()
+                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
+        assertNotNull(timeToFirstToken, "time_to_first_token should be present for streaming");
+        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
     }
 }
