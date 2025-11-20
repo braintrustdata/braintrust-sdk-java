@@ -27,6 +27,14 @@ dependencies {
   implementation 'com.openai:openai-java:2.8.1'
   // to run anthropic examples
   implementation "com.anthropic:anthropic-java:2.8.1"
+  // to run gemini examples
+  implementation 'com.google.genai:google-genai:1.20.0'
+  // spring ai examples
+  implementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'
+  // spring boot for SpringAIExample (exclude logback, use slf4j-simple like other examples)
+  implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+  }
 }
 
 application {
@@ -97,6 +105,34 @@ task runPromptFetching(type: JavaExec) {
   description = 'Run the prompt fetching example'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.braintrust.examples.PromptFetchingExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
+
+task runGeminiInstrumentation(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the Gemini instrumentation example. NOTE: this requires GOOGLE_API_KEY or GEMINI_API_KEY to be exported and will make a small call to google, using your tokens'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.GeminiInstrumentationExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
+
+task runSpringAI(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the Spring Boot + Spring AI + Gemini example.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.SpringAIExample'
   systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
   debugOptions {
     enabled = true
