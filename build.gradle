@@ -82,6 +82,10 @@ dependencies {
   // Anthropic Instrumentation
   compileOnly "com.anthropic:anthropic-java:2.8.1"
   testImplementation "com.anthropic:anthropic-java:2.8.1"
+
+  // Google GenAI Instrumentation
+  compileOnly "com.google.genai:google-genai:1.20.0"
+  testImplementation "com.google.genai:google-genai:1.20.0"
 }
 
 /**
