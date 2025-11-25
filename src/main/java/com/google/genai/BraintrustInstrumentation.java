@@ -3,7 +3,6 @@ package com.google.genai;
 import io.opentelemetry.api.OpenTelemetry;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.logging.Logger;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -13,9 +12,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class BraintrustInstrumentation {
-    private static final Logger logger =
-            Logger.getLogger(BraintrustInstrumentation.class.getName());
-
     /**
      * Wraps a Client's internal ApiClient with an instrumented version.
      *
@@ -56,7 +52,7 @@ public class BraintrustInstrumentation {
             replaceApiClientInService(client.async.tunings, instrumentedApiClient);
         }
 
-        logger.info("Successfully instrumented Gemini client");
+        log.debug("Successfully instrumented Gemini client");
         return client;
     }
 
@@ -72,7 +68,7 @@ public class BraintrustInstrumentation {
             setFinalField(service, apiClientField, instrumentedApiClient);
         } catch (NoSuchFieldException e) {
             // Some services might not have an apiClient field
-            logger.fine("No apiClient field found in " + service.getClass().getSimpleName());
+            log.info("No apiClient field found in " + service.getClass().getSimpleName());
         }
     }
 
