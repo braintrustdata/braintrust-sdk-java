@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.Test;
 
 class BraintrustConfigTest {
@@ -71,5 +72,23 @@ class BraintrustConfigTest {
                     builderMethodNames.contains(configFieldName),
                     "Builder is missing method for field: " + configFieldName);
         }
+    }
+
+    @Test
+    void testDefaultSslContextWhenNotProvided() throws Exception {
+        // Create config without custom SSL context
+        var config =
+                BraintrustConfig.builder()
+                        .apiKey("test-key")
+                        .apiUrl("https://api.braintrust.dev")
+                        .defaultProjectName("test-project")
+                        .build();
+
+        // Verify config has default SSL context and trust manager
+        assertNotNull(config.sslContext());
+        assertNotNull(config.x509TrustManager());
+
+        // Should be the system defaults
+        assertEquals(SSLContext.getDefault(), config.sslContext());
     }
 }

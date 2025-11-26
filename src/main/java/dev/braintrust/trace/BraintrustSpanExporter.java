@@ -71,6 +71,9 @@ class BraintrustSpanExporter implements SpanExporter {
                                 var exporterBuilder =
                                         OtlpHttpSpanExporter.builder()
                                                 .setEndpoint(tracesEndpoint)
+                                                .setSslContext(
+                                                        config.sslContext(),
+                                                        config.x509TrustManager())
                                                 .addHeader(
                                                         "Authorization",
                                                         "Bearer " + config.apiKey())
