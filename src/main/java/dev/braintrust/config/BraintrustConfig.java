@@ -8,7 +8,11 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
 /**
@@ -37,6 +41,12 @@ public final class BraintrustConfig extends BaseConfig {
     private final Duration requestTimeout =
             Duration.ofSeconds(getConfig("BRAINTRUST_REQUEST_TIMEOUT", 30));
 
+    /** Custom SSL context for OTLP exporter. Builder-only field, not backed by envars. */
+    private final SSLContext sslContext;
+
+    /** Custom X509 trust manager for OTLP exporter. Builder-only field, not backed by envars. */
+    private final X509TrustManager x509TrustManager;
+
     /** Setting for unit testing. Do not use in production. */
     private final boolean exportSpansInMemoryForUnitTest =
             getConfig("BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", false);
@@ -55,14 +65,27 @@ public final class BraintrustConfig extends BaseConfig {
         for (int i = 0; i < envOverrides.length - 1; i = i + 2) {
             overridesMap.put(envOverrides[i], envOverrides[i + 1]);
         }
-        return new BraintrustConfig(overridesMap);
+        return new BraintrustConfig(overridesMap, null, null);
     }
 
-    private BraintrustConfig(Map<String, String> envOverrides) {
+    @SneakyThrows
+    private BraintrustConfig(
+            Map<String, String> envOverrides,
+            SSLContext sslContext,
+            X509TrustManager x509TrustManager) {
         super(envOverrides);
         if (defaultProjectId.isEmpty() && defaultProjectName.isEmpty()) {
             // should never happen
             throw new RuntimeException("A project name or ID is required.");
+        }
+
+        this.sslContext = sslContext != null ? sslContext : SSLContext.getDefault();
+        if (x509TrustManager != null) {
+            this.x509TrustManager = x509TrustManager;
+        } else {
+            var tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init((java.security.KeyStore) null);
+            this.x509TrustManager = (X509TrustManager) tmf.getTrustManagers()[0];
         }
     }
 
@@ -102,6 +125,8 @@ public final class BraintrustConfig extends BaseConfig {
 
     public static class Builder {
         private final Map<String, String> envOverrides = new HashMap<>();
+        private SSLContext sslContext;
+        private X509TrustManager x509TrustManager;
 
         public Builder apiKey(String value) {
             envOverrides.put("BRAINTRUST_API_KEY", value);
@@ -174,8 +199,18 @@ public final class BraintrustConfig extends BaseConfig {
             return this;
         }
 
+        public Builder sslContext(SSLContext value) {
+            this.sslContext = value;
+            return this;
+        }
+
+        public Builder x509TrustManager(X509TrustManager value) {
+            this.x509TrustManager = value;
+            return this;
+        }
+
         public BraintrustConfig build() {
-            return new BraintrustConfig(envOverrides);
+            return new BraintrustConfig(envOverrides, sslContext, x509TrustManager);
         }
     }
 }
