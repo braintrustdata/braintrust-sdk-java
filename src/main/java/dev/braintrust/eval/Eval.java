@@ -95,6 +95,10 @@ public final class Eval<INPUT, OUTPUT> {
                                 "braintrust.input_json", json(Map.of("input", datasetCase.input())))
                         .setAttribute("braintrust.expected", json(datasetCase.expected()))
                         .startSpan();
+        if (!datasetCase.tags().isEmpty()) {
+            rootSpan.setAttribute(
+                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
+        }
         try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
             final TaskResult<INPUT, OUTPUT> taskResult;
             { // run task

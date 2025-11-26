@@ -7,6 +7,8 @@ import dev.braintrust.Braintrust;
 import dev.braintrust.eval.DatasetCase;
 import dev.braintrust.eval.Scorer;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public class ExperimentExample {
@@ -37,7 +39,13 @@ public class ExperimentExample {
                         // will append new cases to
                         // the same experiment
                         .cases(
-                                DatasetCase.of("strawberry", "fruit"),
+                                new DatasetCase<>(
+                                        "strawberry",
+                                        "fruit",
+                                        // custom tags which appear in Braintrust UI
+                                        List.of("example"),
+                                        // custom metadata passed to scorers
+                                        Map.of("calories", 30)),
                                 DatasetCase.of("asparagus", "vegetable"),
                                 DatasetCase.of("apple", "fruit"),
                                 DatasetCase.of("banana", "fruit"))
