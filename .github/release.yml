@@ -1,5 +1,4 @@
 changelog:
-  include_author: false
   exclude:
     labels:
       - ignore-for-release
