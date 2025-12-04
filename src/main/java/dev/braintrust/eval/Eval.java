@@ -64,15 +64,7 @@ public final class Eval<INPUT, OUTPUT> {
                                 experimentName,
                                 Optional.empty(),
                                 Optional.empty()));
-        var experimentID = experiment.id();
-
-        try (var cursor = dataset.openCursor()) {
-            for (var datsetCase = cursor.next();
-                    datsetCase.isPresent();
-                    datsetCase = cursor.next()) {
-                evalOne(experimentID, datsetCase.get());
-            }
-        }
+        dataset.forEach(datasetCase -> evalOne(experiment.id(), datasetCase));
         var experimentUrl =
                 "%s/experiments/%s"
                         .formatted(
