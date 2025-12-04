@@ -17,7 +17,7 @@ public interface Scorer<INPUT, OUTPUT> {
     List<Score> score(TaskResult<INPUT, OUTPUT> taskResult);
 
     static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> of(
-            String scorerName, Function<OUTPUT, Double> scorerFn) {
+            String scorerName, Function<TaskResult<INPUT, OUTPUT>, Double> scorerFn) {
         return new Scorer<>() {
             @Override
             public String getName() {
@@ -26,15 +26,13 @@ public interface Scorer<INPUT, OUTPUT> {
 
             @Override
             public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
-                return List.of(new Score(scorerName, scorerFn.apply(taskResult.result())));
+                return List.of(new Score(scorerName, scorerFn.apply(taskResult)));
             }
         };
     }
 
-    /** Deprecated. Use {@link #of(String, Function)} or implement the Scorer interface instead. */
-    @Deprecated
     static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> of(
-            String scorerName, BiFunction<EvalCase<INPUT, OUTPUT>, OUTPUT, Double> scorerFn) {
+            String scorerName, BiFunction<OUTPUT, OUTPUT, Double> scorerFn) {
         return new Scorer<>() {
             @Override
             public String getName() {
@@ -47,8 +45,7 @@ public interface Scorer<INPUT, OUTPUT> {
                         new Score(
                                 scorerName,
                                 scorerFn.apply(
-                                        EvalCase.from(taskResult.datasetCase()),
-                                        taskResult.result())));
+                                        taskResult.datasetCase().expected(), taskResult.result())));
             }
         };
     }
