@@ -9,7 +9,15 @@ public record DatasetCase<INPUT, OUTPUT>(
         INPUT input,
         OUTPUT expected,
         @Nonnull List<String> tags,
-        @Nonnull Map<String, Object> metadata) {
+        @Nonnull Map<String, Object> metadata,
+        String id,
+        String xactId) {
+    public DatasetCase(INPUT input,
+                       OUTPUT expected,
+                       @Nonnull List<String> tags,
+                       @Nonnull Map<String, Object> metadata) {
+        this(input, expected, tags, metadata, "0", "0");
+    }
 
     public static <INPUT, OUTPUT> DatasetCase<INPUT, OUTPUT> of(INPUT input, OUTPUT expected) {
         return new DatasetCase<>(input, expected, List.of(), Map.of());

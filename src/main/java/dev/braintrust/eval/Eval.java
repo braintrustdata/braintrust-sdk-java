@@ -76,7 +76,6 @@ public final class Eval<INPUT, OUTPUT> {
 
     @SneakyThrows
     private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
-        JSON_MAPPER.writeValueAsString(Map.of("type", "eval"));
         var rootSpan =
                 tracer.spanBuilder("eval") // TODO: allow names for eval cases
                         .setNoParent() // each eval case is its own trace
@@ -86,6 +85,13 @@ public final class Eval<INPUT, OUTPUT> {
                         .setAttribute(
                                 "braintrust.input_json", json(Map.of("input", datasetCase.input())))
                         .setAttribute("braintrust.expected", json(datasetCase.expected()))
+                        .setAttribute("braintrust.origin", json(Map.of(
+                                "_xact_id", datasetCase.xactId(),
+                                "id", datasetCase.id(),
+                                // DONTMERGE don't hardcode the dataset id
+                                "object_id", "bdc082aa-3713-4769-b80d-f5fb53af062a",
+                                "object_type", "dataset"
+                        )))
                         .startSpan();
         if (!datasetCase.tags().isEmpty()) {
             rootSpan.setAttribute(

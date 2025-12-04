@@ -91,7 +91,7 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
             }
 
             DatasetCase<INPUT, OUTPUT> datasetCase =
-                    new DatasetCase<>(input, expected, tags, metadata);
+                    new DatasetCase<>(input, expected, tags, metadata, (String) event.get("id"), (String) event.get("_xact_id"));
 
             return Optional.of(datasetCase);
         }
