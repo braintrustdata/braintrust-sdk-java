@@ -2,6 +2,7 @@ package dev.braintrust;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.eval.Dataset;
 import dev.braintrust.eval.Eval;
 import dev.braintrust.prompt.BraintrustPromptLoader;
 import dev.braintrust.trace.BraintrustTracing;
@@ -12,6 +13,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -160,5 +162,15 @@ public class Braintrust {
     public <INPUT, OUTPUT> Eval.Builder<INPUT, OUTPUT> evalBuilder() {
         return (Eval.Builder<INPUT, OUTPUT>)
                 Eval.builder().config(this.config).apiClient(this.apiClient);
+    }
+
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(String datasetName) {
+        return fetchDataset(datasetName, null);
+    }
+
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
+            String datasetName, @Nullable String datasetVersion) {
+        var projectName = apiClient.getOrCreateProjectAndOrgInfo(config).project().name();
+        return Dataset.fetchFromBraintrust(apiClient(), projectName, datasetName, datasetVersion);
     }
 }

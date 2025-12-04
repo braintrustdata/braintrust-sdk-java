@@ -19,8 +19,8 @@ class DatasetInMemoryImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTPUT> {
     }
 
     @Override
-    public String version() {
-        return "0";
+    public Optional<String> version() {
+        return Optional.empty();
     }
 
     @Override

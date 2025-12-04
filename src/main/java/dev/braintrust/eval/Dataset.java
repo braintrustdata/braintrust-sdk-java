@@ -1,7 +1,10 @@
 package dev.braintrust.eval;
 
+import dev.braintrust.api.BraintrustApiClient;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -16,7 +19,19 @@ public interface Dataset<INPUT, OUTPUT> {
 
     String id();
 
-    String version();
+    /** Dataset version. Empty means the dataset will fetch latest upon every cursor open */
+    Optional<String> version();
+
+    /** Convenience method to safely iterate all items in a dataset. */
+    default void forEach(Consumer<DatasetCase<INPUT, OUTPUT>> consumer) {
+        try (var cursor = openCursor()) {
+            Optional<DatasetCase<INPUT, OUTPUT>> cursorCase = cursor.next();
+            while (cursorCase.isPresent()) {
+                consumer.accept(cursorCase.get());
+                cursorCase = cursor.next();
+            }
+        }
+    }
 
     @NotThreadSafe
     interface Cursor<CASE> extends AutoCloseable {
@@ -38,5 +53,35 @@ public interface Dataset<INPUT, OUTPUT> {
     @SafeVarargs
     static <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> of(DatasetCase<INPUT, OUTPUT>... cases) {
         return new DatasetInMemoryImpl<>(List.of(cases));
+    }
+
+    static <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchFromBraintrust(
+            BraintrustApiClient apiClient,
+            String projectName,
+            String datasetName,
+            @Nullable String datasetVersion) {
+        var datasets = apiClient.queryDatasets(projectName, datasetName);
+
+        if (datasets.isEmpty()) {
+            throw new RuntimeException(
+                    "Dataset not found: project=" + projectName + ", dataset=" + datasetName);
+        }
+
+        if (datasets.size() > 1) {
+            throw new RuntimeException(
+                    "Multiple datasets found for project="
+                            + projectName
+                            + ", dataset="
+                            + datasetName
+                            + ". Found "
+                            + datasets.size()
+                            + " datasets");
+        }
+
+        var dataset = datasets.get(0);
+        return new DatasetBrainstoreImpl<>(
+                apiClient,
+                dataset.id(),
+                datasetVersion != null ? datasetVersion : dataset.updatedAt());
     }
 }

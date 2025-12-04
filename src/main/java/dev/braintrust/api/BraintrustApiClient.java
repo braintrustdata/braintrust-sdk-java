@@ -49,6 +49,15 @@ public interface BraintrustApiClient {
     Optional<Prompt> getPrompt(
             @Nonnull String projectName, @Nonnull String slug, @Nullable String version);
 
+    /** Fetch dataset events with pagination */
+    DatasetFetchResponse fetchDatasetEvents(String datasetId, DatasetFetchRequest request);
+
+    /** Get dataset metadata by ID */
+    Optional<Dataset> getDataset(String datasetId);
+
+    /** Query datasets by project name and dataset name */
+    List<Dataset> queryDatasets(String projectName, String datasetName);
+
     static BraintrustApiClient of(BraintrustConfig config) {
         return new HttpImpl(config);
     }
@@ -235,6 +244,49 @@ public interface BraintrustApiClient {
             }
         }
 
+        @Override
+        public DatasetFetchResponse fetchDatasetEvents(
+                String datasetId, DatasetFetchRequest request) {
+            try {
+                String path = "/v1/dataset/" + datasetId + "/fetch";
+                return postAsync(path, request, DatasetFetchResponse.class).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new ApiException(e);
+            }
+        }
+
+        @Override
+        public Optional<Dataset> getDataset(String datasetId) {
+            try {
+                return getAsync("/v1/dataset/" + datasetId, Dataset.class)
+                        .handle(
+                                (dataset, error) -> {
+                                    if (error != null && isNotFound(error)) {
+                                        return Optional.<Dataset>empty();
+                                    }
+                                    if (error != null) {
+                                        throw new CompletionException(error);
+                                    }
+                                    return Optional.of(dataset);
+                                })
+                        .get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public List<Dataset> queryDatasets(String projectName, String datasetName) {
+            try {
+                String path =
+                        "/v1/dataset?project_name=" + projectName + "&dataset_name=" + datasetName;
+                DatasetList response = getAsync(path, DatasetList.class).get();
+                return response.objects();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         private <T> CompletableFuture<T> getAsync(String path, Class<T> responseType) {
             var request =
                     HttpRequest.newBuilder()
@@ -301,8 +353,14 @@ public interface BraintrustApiClient {
         }
 
         private boolean isNotFound(Throwable error) {
-            if (error instanceof ApiException) {
-                return ((ApiException) error).getMessage().contains("404");
+            // Unwrap CompletionException if present
+            Throwable cause = error;
+            if (error instanceof CompletionException && error.getCause() != null) {
+                cause = error.getCause();
+            }
+
+            if (cause instanceof ApiException) {
+                return ((ApiException) cause).getMessage().contains("404");
             }
             return false;
         }
@@ -493,6 +551,23 @@ public interface BraintrustApiClient {
 
             return Optional.of(matchingPrompts.get(0));
         }
+
+        // Will add dataset support if needed in unit tests (this is unlikely to be needed though)
+        @Override
+        public DatasetFetchResponse fetchDatasetEvents(
+                String datasetId, DatasetFetchRequest request) {
+            return new DatasetFetchResponse(List.of(), null);
+        }
+
+        @Override
+        public Optional<Dataset> getDataset(String datasetId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<Dataset> queryDatasets(String projectName, String datasetName) {
+            return List.of();
+        }
     }
 
     // Request/Response DTOs
@@ -538,7 +613,7 @@ public interface BraintrustApiClient {
             String createdAt,
             String updatedAt) {}
 
-    record DatasetList(List<Dataset> datasets) {}
+    record DatasetList(List<Dataset> objects) {}
 
     record DatasetEvent(Object input, Optional<Object> output, Optional<Object> metadata) {
         public DatasetEvent(Object input) {
@@ -553,6 +628,18 @@ public interface BraintrustApiClient {
     record InsertEventsRequest(List<DatasetEvent> events) {}
 
     record InsertEventsResponse(int insertedCount) {}
+
+    record DatasetFetchRequest(int limit, @Nullable String cursor, @Nullable String version) {
+        public DatasetFetchRequest(int limit) {
+            this(limit, null, null);
+        }
+
+        public DatasetFetchRequest(int limit, @Nullable String cursor) {
+            this(limit, cursor, null);
+        }
+    }
+
+    record DatasetFetchResponse(List<Map<String, Object>> events, @Nullable String cursor) {}
 
     // User and Organization models for login functionality
     record OrganizationInfo(String id, String name) {}
