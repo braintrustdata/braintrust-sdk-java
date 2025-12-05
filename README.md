@@ -57,11 +57,8 @@ var eval = braintrust.<String, String>evalBuilder()
                 .taskFunction(getFoodType)
                 .scorers(
                         Scorer.of(
-                                "fruit_scorer",
-                                result -> "fruit".equals(result) ? 1.0 : 0.0),
-                        Scorer.of(
-                                "vegetable_scorer",
-                                result -> "vegetable".equals(result) ? 1.0 : 0.0))
+                                "exact_match",
+                                (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
                 .build();
 var result = eval.run();
 System.out.println("\n\n" + result.createReportString());
