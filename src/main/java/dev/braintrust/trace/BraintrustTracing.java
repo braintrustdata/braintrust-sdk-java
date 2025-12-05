@@ -26,6 +26,34 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Main entry point for Braintrust tracing setup. Provides convenient methods to initialize
  * OpenTelemetry with Braintrust configuration.
+ *
+ * <h2>Distributed Tracing</h2>
+ *
+ * <p>For distributed tracing across process boundaries (e.g., microservices, Temporal workflows,
+ * gRPC services), you must configure OpenTelemetry propagators to propagate the braintrust.parent
+ * attribute via baggage:
+ *
+ * <pre>{@code
+ * import io.opentelemetry.api.GlobalOpenTelemetry;
+ * import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
+ * import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+ * import io.opentelemetry.context.propagation.ContextPropagators;
+ * import io.opentelemetry.context.propagation.TextMapPropagator;
+ *
+ * // Initialize Braintrust tracing
+ * OpenTelemetry otel = BraintrustTracing.quickstart();
+ *
+ * // Configure propagators for distributed tracing
+ * GlobalOpenTelemetry.set(OpenTelemetrySdk.builder()
+ *     .setTracerProvider(...)
+ *     .setPropagators(ContextPropagators.create(
+ *         TextMapPropagator.composite(
+ *             W3CTraceContextPropagator.getInstance(),
+ *             W3CBaggagePropagator.getInstance())))
+ *     .build());
+ * }</pre>
+ *
+ * <p>Without baggage propagation, parent context will only work within a single process.
  */
 @Slf4j
 public final class BraintrustTracing {
@@ -39,6 +67,9 @@ public final class BraintrustTracing {
      * <br>
      * If you're looking for more options for configuring Braintrust/OpenTelemetry, consult the
      * `enable` method.
+     *
+     * <p><b>Note:</b> For distributed tracing across process boundaries, you must also configure
+     * propagators. See the class-level documentation for details.
      */
     public static OpenTelemetry quickstart() {
         return of(BraintrustConfig.fromEnvironment(), true);
@@ -79,6 +110,9 @@ public final class BraintrustTracing {
      * <br>
      * NOTE: This method should only be invoked once. Enabling Braintrust multiple times is
      * unsupported and may lead to undesired behavior
+     *
+     * <p><b>Note:</b> For distributed tracing across process boundaries, you must also configure
+     * propagators. See the class-level documentation for details.
      */
     public static void enable(
             @Nonnull BraintrustConfig config,
