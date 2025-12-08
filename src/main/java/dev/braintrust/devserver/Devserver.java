@@ -9,7 +9,9 @@ import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.eval.Dataset;
 import dev.braintrust.eval.DatasetCase;
 import dev.braintrust.eval.Score;
+import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
+import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
@@ -570,16 +572,46 @@ public class Devserver {
                         caseCount[0]++;
                         log.info("Processing dataset case #{}", caseCount[0]);
 
-                        // CLAUDE -- I need to set up the root span context with distributed trace info from the reqquest.getParent()
-                        // the value will look like this:
-                        // {"object_type":"playground_logs","object_id":"61738d9e-8c77-48db-bbb3-e69ef85a472f","propagated_event":{"span_attributes":{"generation":"470bb640-7dd7-4e5c-ba0f-7777365cbf46"}}}
-                        // See BraintrustContext.java for distributed tracing examples
+                        // Set up the root span context with distributed trace info from request.getParent()
+                        // Parse parent object to extract object_type:object_id and propagated_event
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
+                        String objectType = (String) parentMap.get("object_type");
+                        String objectId = (String) parentMap.get("object_id");
 
-                        // Create eval span for this dataset case (matches Eval.java pattern)
+                        // Extract propagated span attributes if present
+                        Map<String, Object> propagatedSpanAttributes = new java.util.HashMap<>();
+                        Object propagatedEvent = parentMap.get("propagated_event");
+                        if (propagatedEvent instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> propagatedEventMap = (Map<String, Object>) propagatedEvent;
+                            Object spanAttrs = propagatedEventMap.get("span_attributes");
+                            if (spanAttrs instanceof Map) {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> spanAttrsMap = (Map<String, Object>) spanAttrs;
+                                propagatedSpanAttributes.putAll(spanAttrsMap);
+                                log.info("Propagating span attributes: {}", propagatedSpanAttributes);
+                            }
+                        }
+
+                        // Create context with parent info in baggage for distributed tracing
+                        String parentValue = (new BraintrustUtils.Parent("experiment_id", objectId)).toParentValue();
+                        Baggage baggage = Baggage.fromContext(Context.current())
+                                .toBuilder()
+                                .put(BraintrustTracing.PARENT_KEY, parentValue)
+                                .build();
+                        Context parentContext = Context.current().with(baggage);
+
+                        // Build span attributes, merging propagated attributes with eval type
+                        Map<String, Object> spanAttributes = new java.util.HashMap<>();
+                        spanAttributes.put("type", "eval");
+                        spanAttributes.putAll(propagatedSpanAttributes);
+
+                        // Create eval span for this dataset case with parent context
                         var evalSpan =
                                 tracer.spanBuilder("eval")
-                                        .setNoParent() // each eval case is its own trace
-                                        .setAttribute("braintrust.span_attributes", json(Map.of("type", "eval")))
+                                        .setParent(parentContext)
+                                        .setAttribute("braintrust.span_attributes", json(spanAttributes))
                                         .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
                                         .setAttribute("braintrust.expected", json(datasetCase.expected()))
                                         .startSpan();
@@ -592,7 +624,8 @@ public class Devserver {
                             evalSpan.setAttribute("braintrust.metadata", json(datasetCase.metadata()));
                         }
 
-                        try (var rootScope = Context.current().with(evalSpan).makeCurrent()) {
+                        // Make the parent context (with baggage) and eval span current so child spans inherit both
+                        try (var rootScope = parentContext.with(evalSpan).makeCurrent()) {
                             final dev.braintrust.eval.TaskResult taskResult;
                             { // run task
                                 var taskSpan =
