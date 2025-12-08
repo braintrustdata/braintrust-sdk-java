@@ -2,6 +2,10 @@ package dev.braintrust.examples;
 
 import dev.braintrust.Braintrust;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter;
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
@@ -53,11 +57,18 @@ public class CustomOpenTelemetryExample {
         var braintrust = Braintrust.get();
         braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
 
+        // context propagation is required only if you wish to see distributed traces in Braintrust
+        var contextPropagator =
+                ContextPropagators.create(
+                        TextMapPropagator.composite(
+                                W3CTraceContextPropagator.getInstance(),
+                                W3CBaggagePropagator.getInstance()));
         var openTelemetry =
                 OpenTelemetrySdk.builder()
                         .setTracerProvider(tracerBuilder.build())
                         .setLoggerProvider(loggerBuilder.build())
                         .setMeterProvider(meterBuilder.build())
+                        .setPropagators(contextPropagator)
                         .build();
         GlobalOpenTelemetry.set(openTelemetry);
         registerShutdownHook(openTelemetry);

@@ -3,7 +3,11 @@ package dev.braintrust.trace;
 import dev.braintrust.config.BraintrustConfig;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
@@ -54,12 +58,18 @@ public final class BraintrustTracing {
         var tracerBuilder = SdkTracerProvider.builder();
         var loggerBuilder = SdkLoggerProvider.builder();
         var meterBuilder = SdkMeterProvider.builder();
+        var contextPropagator =
+                ContextPropagators.create(
+                        TextMapPropagator.composite(
+                                W3CTraceContextPropagator.getInstance(),
+                                W3CBaggagePropagator.getInstance()));
         enable(config, tracerBuilder, loggerBuilder, meterBuilder);
         var openTelemetry =
                 OpenTelemetrySdk.builder()
                         .setTracerProvider(tracerBuilder.build())
                         .setLoggerProvider(loggerBuilder.build())
                         .setMeterProvider(meterBuilder.build())
+                        .setPropagators(contextPropagator)
                         .build();
         if (registerGlobal) {
             GlobalOpenTelemetry.set(openTelemetry);
