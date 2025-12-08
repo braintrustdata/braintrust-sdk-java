@@ -66,9 +66,6 @@ public class Devserver {
     private static final String EXPOSED_HEADERS =
             "x-bt-cursor, x-bt-found-existing-experiment, x-bt-span-id, x-bt-span-export";
 
-    private static final AttributeKey<String> PARENT =
-            AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
-
     @Getter
     @Accessors(fluent = true)
     private final String host;
@@ -573,12 +570,15 @@ public class Devserver {
                         caseCount[0]++;
                         log.info("Processing dataset case #{}", caseCount[0]);
 
+                        // CLAUDE -- I need to set up the root span context with distributed trace info from the reqquest.getParent()
+                        // the value will look like this:
+                        // {"object_type":"playground_logs","object_id":"61738d9e-8c77-48db-bbb3-e69ef85a472f","propagated_event":{"span_attributes":{"generation":"470bb640-7dd7-4e5c-ba0f-7777365cbf46"}}}
+                        // See BraintrustContext.java for distributed tracing examples
+
                         // Create eval span for this dataset case (matches Eval.java pattern)
                         var evalSpan =
                                 tracer.spanBuilder("eval")
                                         .setNoParent() // each eval case is its own trace
-                                        .setSpanKind(SpanKind.CLIENT)
-                                        .setAttribute(PARENT, finalParentSpec)
                                         .setAttribute("braintrust.span_attributes", json(Map.of("type", "eval")))
                                         .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
                                         .setAttribute("braintrust.expected", json(datasetCase.expected()))
@@ -597,7 +597,6 @@ public class Devserver {
                             { // run task
                                 var taskSpan =
                                         tracer.spanBuilder("task")
-                                                .setAttribute(PARENT, finalParentSpec)
                                                 .setAttribute("braintrust.span_attributes", json(Map.of("type", "task")))
                                                 .startSpan();
                                 try (var unused = Context.current().with(taskSpan).makeCurrent()) {
@@ -627,7 +626,6 @@ public class Devserver {
                             { // run scorers - ONE score span for all scorers (matches Eval.java)
                                 var scoreSpan =
                                         tracer.spanBuilder("score")
-                                                .setAttribute(PARENT, finalParentSpec)
                                                 .setAttribute("braintrust.span_attributes", json(Map.of("type", "score")))
                                                 .startSpan();
                                 try (var unused = Context.current().with(scoreSpan).makeCurrent()) {
