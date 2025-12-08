@@ -165,31 +165,6 @@ public class DistributedTracingTest {
         assertEquals(parentValue, retrieved.get(), "Parent value should match");
     }
 
-    /** Tests parsing of parent strings in the format "type:id". */
-    @Test
-    void testParseParent() {
-        var parsed1 = BraintrustContext.parseParent("experiment_id:abc123");
-        assertEquals("experiment_id", parsed1.type());
-        assertEquals("abc123", parsed1.id());
-
-        var parsed2 = BraintrustContext.parseParent("project_name:my-project");
-        assertEquals("project_name", parsed2.type());
-        assertEquals("my-project", parsed2.id());
-
-        assertThrows(
-                Exception.class,
-                () -> BraintrustContext.parseParent("invalid-no-colon"),
-                "Should throw on invalid format");
-        assertThrows(
-                Exception.class,
-                () -> BraintrustContext.parseParent("invalid:too:many:colons"),
-                "Should throw on invalid format");
-        assertThrows(
-                Exception.class,
-                () -> BraintrustContext.parseParent(""),
-                "Should throw on empty string");
-    }
-
     /** TextMapGetter for extracting headers from a Map (case-insensitive for HTTP headers). */
     private enum MapGetter implements TextMapGetter<Map<String, String>> {
         INSTANCE;

@@ -1,5 +1,6 @@
 package dev.braintrust.trace;
 
+import dev.braintrust.BraintrustUtils;
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.baggage.BaggageBuilder;
 import io.opentelemetry.api.trace.Span;
@@ -51,7 +52,7 @@ public final class BraintrustContext {
     static Context setParentInBaggage(
             @Nonnull Context ctx, @Nonnull String parentType, @Nonnull String parentId) {
         try {
-            String parentValue = parentType + ":" + parentId;
+            String parentValue = (new BraintrustUtils.Parent(parentType, parentId)).toParentValue();
             Baggage existingBaggage = Baggage.fromContext(ctx);
             BaggageBuilder builder = existingBaggage.toBuilder();
             builder.put(BraintrustTracing.PARENT_KEY, parentValue);
@@ -96,22 +97,4 @@ public final class BraintrustContext {
     public Optional<String> experimentId() {
         return Optional.ofNullable(experimentId);
     }
-
-    /**
-     * Parses a parent string in the format "type:id" (e.g., "experiment_id:abc123").
-     *
-     * @param parentStr the parent string to parse
-     * @return a ParsedParent containing the type and ID
-     * @throws IllegalArgumentException if the format is invalid
-     */
-    static ParsedParent parseParent(@Nonnull String parentStr) {
-        String[] parts = parentStr.split(":");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid parent format: " + parentStr);
-        }
-        return new ParsedParent(parts[0], parts[1]);
-    }
-
-    /** Represents a parsed parent with type and ID. */
-    static record ParsedParent(String type, String id) {}
 }
