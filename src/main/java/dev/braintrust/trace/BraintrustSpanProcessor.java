@@ -42,16 +42,26 @@ class BraintrustSpanProcessor implements SpanProcessor {
             // Check if parent context has Braintrust attributes first
             var btContext = BraintrustContext.fromContext(parentContext);
             if (btContext == null) {
-                // Get parent from the config if otel doesn't have it
-                config.getBraintrustParentValue()
-                        .ifPresent(
-                                parentValue -> {
-                                    span.setAttribute(PARENT, parentValue);
-                                    log.debug(
-                                            "OnStart: set parent {} for span {}",
-                                            parentValue,
-                                            span.getName());
-                                });
+                // Check baggage for distributed tracing (cross-process parent propagation)
+                var parentFromBaggage = BraintrustContext.getParentFromBaggage(parentContext);
+                if (parentFromBaggage.isPresent()) {
+                    span.setAttribute(PARENT, parentFromBaggage.get());
+                    log.debug(
+                            "OnStart: set parent {} from baggage for span {}",
+                            parentFromBaggage.get(),
+                            span.getName());
+                } else {
+                    // Get parent from the config if otel doesn't have it
+                    config.getBraintrustParentValue()
+                            .ifPresent(
+                                    parentValue -> {
+                                        span.setAttribute(PARENT, parentValue);
+                                        log.debug(
+                                                "OnStart: set parent {} for span {}",
+                                                parentValue,
+                                                span.getName());
+                                    });
+                }
             } else {
                 btContext
                         .projectId()

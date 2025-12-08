@@ -6,6 +6,10 @@ import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.prompt.BraintrustPromptLoader;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
@@ -81,11 +85,17 @@ public class TestHarness {
         braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
         // Add the in-memory span exporter for testing
         tracerBuilder.addSpanProcessor(SimpleSpanProcessor.create(this.spanExporter));
+        var contextPropagator =
+                ContextPropagators.create(
+                        TextMapPropagator.composite(
+                                W3CTraceContextPropagator.getInstance(),
+                                W3CBaggagePropagator.getInstance()));
         var openTelemetry =
                 OpenTelemetrySdk.builder()
                         .setTracerProvider(tracerBuilder.build())
                         .setLoggerProvider(loggerBuilder.build())
                         .setMeterProvider(meterBuilder.build())
+                        .setPropagators(contextPropagator)
                         .build();
         this.openTelemetry = openTelemetry;
     }
