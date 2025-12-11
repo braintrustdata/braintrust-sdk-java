@@ -2,6 +2,8 @@ package dev.braintrust.eval;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.braintrust.Origin;
 import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.trace.BraintrustTracing;
@@ -10,12 +12,15 @@ import io.opentelemetry.api.trace.SpanId;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class EvalTest {
+    private static final ObjectMapper JSON_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
     private TestHarness testHarness;
 
     @BeforeEach
@@ -112,12 +117,12 @@ public class EvalTest {
                         .<String, String>evalBuilder()
                         .name(experimentName)
                         .cases(
-                                new DatasetCase<>(
+                                DatasetCase.of(
                                         "strawberry",
                                         "fruit",
                                         List.of("red", "sweet"),
                                         Map.of("calories", 32, "season", "summer")),
-                                new DatasetCase<>(
+                                DatasetCase.of(
                                         "asparagus",
                                         "vegetable",
                                         List.of("green", "savory"),
@@ -196,10 +201,64 @@ public class EvalTest {
                 assertTrue(
                         tags.contains("sweet") || tags.contains("savory"),
                         "tags should contain taste");
-
                 numRootSpans.incrementAndGet();
             }
         }
         assertEquals(2, numRootSpans.get(), "both cases should have tags and metadata");
+    }
+
+    @Test
+    @SneakyThrows
+    public void evalRootSpanPassesOriginIfPresent() {
+        var experimentName = "unit-test-eval-origin";
+        var testOrigin = new Origin("unit-test", "1234", "5678", "9", "whatever");
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name(experimentName)
+                        .cases(
+                                DatasetCase.of("no-origin", "whatever"),
+                                new DatasetCase<>(
+                                        "has-origin",
+                                        "whatever",
+                                        List.of(),
+                                        Map.of(),
+                                        Optional.of(testOrigin)))
+                        .taskFunction(food -> "fruit")
+                        .scorers(
+                                Scorer.of(
+                                        "exact_match",
+                                        (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
+                        .build();
+        var result = eval.run();
+        assertEquals(
+                "%s/experiments/%s"
+                        .formatted(testHarness.braintrust().projectUri(), experimentName),
+                result.getExperimentUrl());
+        var spans = testHarness.awaitExportedSpans();
+
+        final AtomicInteger numRootSpans = new AtomicInteger(0);
+        for (SpanData span : spans) {
+            if (span.getParentSpanId().equals(SpanId.getInvalid())) {
+                // This is a root span - check for origin
+                var inputJson =
+                        span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
+                assertNotNull(inputJson);
+                JSON_MAPPER.readValue(inputJson, Map.class);
+                var input = (String) (JSON_MAPPER.readValue(inputJson, Map.class)).get("input");
+                assertNotNull(input);
+                var origin = span.getAttributes().get(AttributeKey.stringKey("braintrust.origin"));
+                switch (input) {
+                    case "no-origin" -> assertNull(origin);
+                    case "has-origin" ->
+                            assertEquals(JSON_MAPPER.writeValueAsString(testOrigin), origin);
+                    default -> fail("unexpected input: " + input);
+                }
+                numRootSpans.incrementAndGet();
+            }
+        }
+        assertEquals(2, numRootSpans.get(), "should test for origin presence and absence");
     }
 }

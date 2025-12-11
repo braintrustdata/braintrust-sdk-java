@@ -91,7 +91,20 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
             }
 
             DatasetCase<INPUT, OUTPUT> datasetCase =
-                    new DatasetCase<>(input, expected, tags, metadata);
+                    new DatasetCase<>(
+                            input,
+                            expected,
+                            tags,
+                            metadata,
+                            Optional.of(
+                                    new dev.braintrust.Origin(
+                                            "dataset",
+                                            Objects.requireNonNull(
+                                                    (String) event.get("dataset_id")),
+                                            Objects.requireNonNull((String) event.get("id")),
+                                            Objects.requireNonNull((String) event.get("_xact_id")),
+                                            Objects.requireNonNull(
+                                                    (String) event.get("created")))));
 
             return Optional.of(datasetCase);
         }

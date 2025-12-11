@@ -37,7 +37,7 @@ public class ExperimentExample {
                         // NOTE: pre-existing experiment names will append results
                         .name("java-eval-x-" + System.currentTimeMillis())
                         .cases(
-                                new DatasetCase<>(
+                                DatasetCase.of(
                                         "strawberry",
                                         "fruit",
                                         // custom tags which appear in Braintrust UI
