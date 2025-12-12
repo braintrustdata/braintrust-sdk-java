@@ -34,12 +34,10 @@ public class ExperimentExample {
         var eval =
                 braintrust
                         .<String, String>evalBuilder()
-                        .name("java-eval-x-" + System.currentTimeMillis()) // NOTE: if you use a
-                        // constant, additional runs
-                        // will append new cases to
-                        // the same experiment
+                        // NOTE: pre-existing experiment names will append results
+                        .name("java-eval-x-" + System.currentTimeMillis())
                         .cases(
-                                new DatasetCase<>(
+                                DatasetCase.of(
                                         "strawberry",
                                         "fruit",
                                         // custom tags which appear in Braintrust UI
@@ -49,14 +47,13 @@ public class ExperimentExample {
                                 DatasetCase.of("asparagus", "vegetable"),
                                 DatasetCase.of("apple", "fruit"),
                                 DatasetCase.of("banana", "fruit"))
+                        // Or, to fetch a remote dataset:
+                        // .dataset(braintrust.fetchDataset("my-dataset-name"))
                         .taskFunction(getFoodType)
                         .scorers(
                                 Scorer.of(
-                                        "fruit_scorer",
-                                        result -> "fruit".equals(result) ? 1.0 : 0.0),
-                                Scorer.of(
-                                        "vegetable_scorer",
-                                        result -> "vegetable".equals(result) ? 1.0 : 0.0))
+                                        "exact_match",
+                                        (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
                         .build();
         var result = eval.run();
         System.out.println("\n\n" + result.createReportString());

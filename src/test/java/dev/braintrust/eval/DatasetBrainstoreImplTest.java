@@ -7,9 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -52,12 +50,20 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "events": [
                                     {
-                                      "id": "event-1",
+                                      "object_type": "dataset",
+                                      "dataset_id": "test-dataset-123",
+                                      "id": "123-1",
+                                      "created": "sometimestamp",
+                                      "_xact_id": "1",
                                       "input": "Question 1",
                                       "expected": "Answer 1"
                                     },
                                     {
-                                      "id": "event-2",
+                                      "object_type": "dataset",
+                                      "dataset_id": "test-dataset-123",
+                                      "id": "123-2",
+                                      "_xact_id": "1",
+                                      "created": "sometimestamp",
                                       "input": "Question 2",
                                       "expected": "Answer 2"
                                     }
@@ -79,7 +85,11 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "events": [
                                     {
-                                      "id": "event-3",
+                                      "object_type": "dataset",
+                                      "dataset_id": "test-dataset-123",
+                                      "id": "123-3",
+                                      "_xact_id": "1",
+                                      "created": "sometimestamp",
                                       "input": "Question 3",
                                       "expected": "Answer 3"
                                     }
@@ -97,9 +107,40 @@ public class DatasetBrainstoreImplTest {
 
         // Verify we got all 3 cases
         assertEquals(3, cases.size());
-        assertEquals("Question 1", cases.get(0).input());
+        List<String> tags = List.of();
+        Map<String, Object> metadata = Map.of();
+        assertEquals(
+                new DatasetCase<>(
+                        "Question 1",
+                        "Answer 1",
+                        tags,
+                        metadata,
+                        Optional.of(
+                                new dev.braintrust.Origin(
+                                        "dataset", datasetId, "123-1", "1", "sometimestamp"))),
+                cases.get(0));
         assertEquals("Question 2", cases.get(1).input());
+        assertEquals(
+                new DatasetCase<>(
+                        "Question 2",
+                        "Answer 2",
+                        tags,
+                        metadata,
+                        Optional.of(
+                                new dev.braintrust.Origin(
+                                        "dataset", datasetId, "123-2", "1", "sometimestamp"))),
+                cases.get(1));
         assertEquals("Question 3", cases.get(2).input());
+        assertEquals(
+                new DatasetCase<>(
+                        "Question 3",
+                        "Answer 3",
+                        tags,
+                        metadata,
+                        Optional.of(
+                                new dev.braintrust.Origin(
+                                        "dataset", datasetId, "123-3", "1", "sometimestamp"))),
+                cases.get(2));
 
         // Verify the API was called twice (once for each batch)
         wireMock.verify(2, postRequestedFor(urlEqualTo("/v1/dataset/" + datasetId + "/fetch")));
@@ -155,12 +196,16 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "objects": [
                                     {
+                                      "object_type": "dataset",
+                                      "dataset_id": "test-dataset-123",
                                       "id": "dataset-789",
                                       "project_id": "proj-456",
                                       "name": "test-dataset",
                                       "description": "Test dataset",
-                                      "created_at": "2024-01-01T00:00:00Z",
-                                      "updated_at": "2024-01-15T12:30:00Z"
+                                      "_xact_id": "12345",
+                                      "input": "test input",
+                                      "expected": "test output",
+                                      "created": "sometimestamp"
                                     }
                                   ]
                                 }
@@ -179,11 +224,15 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "events": [
                                     {
-                                      "id": "event-1",
+                                      "object_type": "dataset",
+                                      "dataset_id": "test-dataset-123",
+                                      "id": "some-row-id",
                                       "input": "test input",
                                       "expected": "test output",
                                       "metadata": {},
-                                      "tags": []
+                                      "tags": [],
+                                      "_xact_id": "12346",
+                                      "created": "sometimestamp"
                                     }
                                   ],
                                   "cursor": null
