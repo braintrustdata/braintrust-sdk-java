@@ -51,6 +51,12 @@ public final class BraintrustConfig extends BaseConfig {
     private final boolean exportSpansInMemoryForUnitTest =
             getConfig("BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", false);
 
+    /** CORS origins to allow when running remote eval devserver */
+    private final String devserverCorsOriginWhitelistCsv =
+            getConfig(
+                    "BRAINTRUST_DEVSERVER_CORS_ORIGIN_WHITELIST_CSV",
+                    "https://www.braintrust.dev,https://www.braintrustdata.com,http://localhost:3000");
+
     public static BraintrustConfig fromEnvironment() {
         return of();
     }
@@ -192,8 +198,8 @@ public final class BraintrustConfig extends BaseConfig {
             return this;
         }
 
-        // hiding visibility. only used for testing
-        Builder exportSpansInMemoryForUnitTest(boolean value) {
+        // only used for testing
+        public Builder exportSpansInMemoryForUnitTest(boolean value) {
             envOverrides.put(
                     "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", String.valueOf(value));
             return this;
@@ -206,6 +212,11 @@ public final class BraintrustConfig extends BaseConfig {
 
         public Builder x509TrustManager(X509TrustManager value) {
             this.x509TrustManager = value;
+            return this;
+        }
+
+        public Builder devserverCorsOriginWhitelistCsv(String csv) {
+            envOverrides.put("BRAINTRUST_DEVSERVER_CORS_ORIGIN_WHITELIST_CSV", csv);
             return this;
         }
 

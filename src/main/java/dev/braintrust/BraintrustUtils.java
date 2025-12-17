@@ -3,6 +3,9 @@ package dev.braintrust;
 import dev.braintrust.api.BraintrustApiClient;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class BraintrustUtils {
@@ -41,5 +44,19 @@ public class BraintrustUtils {
         public String toParentValue() {
             return type + ":" + id;
         }
+    }
+
+    public static List<String> parseCsv(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return List.of();
+        }
+
+        return Arrays.stream(csv.split("\\s*,\\s*")).toList();
+    }
+
+    public static <T> List<T> append(List<T> list, T value) {
+        List<T> result = new ArrayList<>(list);
+        result.add(value);
+        return result;
     }
 }
