@@ -25,7 +25,6 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -99,7 +98,6 @@ public class Devserver {
 
     // LRU cache for token -> Braintrust mappings (max 32 entries as per api.md)
     private final LRUCache<String, Braintrust> authCache = new LRUCache<>(32);
-    private final LRUCache<Braintrust, OpenTelemetry> otelCache = new LRUCache<>(32);
 
     private Devserver(Builder builder) {
         this.config = Objects.requireNonNull(builder.config);
@@ -474,10 +472,7 @@ public class Devserver {
                     throw new IllegalStateException("No dataset specification provided");
                 }
 
-                // TODO: flush otel upon cache eviction
-                var otel =
-                        otelCache.getOrCompute(braintrust, () -> createOpenTelemetry(braintrust));
-                var tracer = BraintrustTracing.getTracer(otel);
+                var tracer = BraintrustTracing.getTracer();
 
                 // Execute task and scorers for each case
                 Map<String, List<Double>> scoresByName = new LinkedHashMap<>();
@@ -1117,12 +1112,6 @@ public class Devserver {
 
         public Builder port(int port) {
             this.port = port;
-            return this;
-        }
-
-        /** hook to run for each open telemetry instance created by the devserver */
-        public Builder traceBuilderHook(Consumer<SdkTracerProviderBuilder> traceBuilderHook) {
-            this.traceBuilderHook = traceBuilderHook;
             return this;
         }
 

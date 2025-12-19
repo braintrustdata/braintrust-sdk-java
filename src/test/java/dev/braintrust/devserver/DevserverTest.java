@@ -29,7 +29,6 @@ class DevserverTest {
     private static Thread serverThread;
     private static TestHarness testHarness;
     private static HttpServer mockApiServer;
-    private static io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter devserverSpanExporter;
     private static final int TEST_PORT = 18300;
     private static final int MOCK_API_PORT = 18301;
     private static final String TEST_URL = "http://localhost:" + TEST_PORT;
@@ -134,25 +133,14 @@ class DevserverTest {
                         .scorer(Scorer.of("simple_scorer", (expected, result) -> 0.7))
                         .build();
 
-        // Create in-memory span exporter for devserver-created spans
-        devserverSpanExporter = io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter.create();
-
         server =
                 Devserver.builder()
                         .config(testHarness.braintrust().config())
                         .registerEval(testEval)
                         .host("localhost")
                         .port(TEST_PORT)
-                        .traceBuilderHook(
-                                tracerBuilder -> {
-                                    // Add in-memory exporter to capture spans from devserver
-                                    tracerBuilder.addSpanProcessor(
-                                            io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
-                                                    .create(devserverSpanExporter));
-                                })
                         .braintrustConfigBuilderHook(
                                 configBuilder -> {
-                                    // Enable in-memory span export for testing
                                     configBuilder.exportSpansInMemoryForUnitTest(true);
                                 })
                         .build();
