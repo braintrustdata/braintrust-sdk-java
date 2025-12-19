@@ -16,7 +16,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <V> Value type
  */
 @ThreadSafe
-public class LRUCache<K, V> {
+class LRUCache<K, V> {
     private final int maxSize;
     private final Map<K, V> cache;
 
