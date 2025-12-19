@@ -31,7 +31,7 @@ public class BraintrustUtils {
         }
     }
 
-    static Parent parseParent(@Nonnull String parentStr) {
+    public static Parent parseParent(@Nonnull String parentStr) {
         String[] parts = parentStr.split(":");
         if (parts.length != 2) {
             throw new IllegalArgumentException("Invalid parent format: " + parentStr);

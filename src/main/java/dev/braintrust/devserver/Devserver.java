@@ -9,13 +9,13 @@ import dev.braintrust.BraintrustUtils;
 import dev.braintrust.Origin;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.eval.Dataset;
-import dev.braintrust.eval.DatasetCase;
-import dev.braintrust.eval.Score;
+import dev.braintrust.eval.*;
+import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
@@ -31,9 +31,11 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -334,9 +336,6 @@ public class Devserver {
     private void handleStreamingEval(
             HttpExchange exchange, RemoteEval eval, EvalRequest request, RequestContext context)
             throws Exception {
-        // TODO: refactor some of these steps into utility methods (e.g. dataset extraction, span
-        // attribute setting)
-
         // Set SSE headers
         exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
         exchange.getResponseHeaders().set("Cache-Control", "no-cache");
@@ -350,294 +349,123 @@ public class Devserver {
                 BraintrustApiClient apiClient = braintrust.apiClient();
 
                 // Determine project name and ID from the authenticated Braintrust instance
-                var orgAndProject = apiClient.getOrCreateProjectAndOrgInfo(braintrust.config());
-                String projectName = orgAndProject.project().name();
-                String projectId = orgAndProject.project().id();
-
-                // Generate experiment name (same logic as non-streaming)
-                String experimentName =
+                final var orgAndProject =
+                        apiClient.getOrCreateProjectAndOrgInfo(braintrust.config());
+                final var projectName = orgAndProject.project().name();
+                final var projectId = orgAndProject.project().id();
+                final var experimentName =
                         request.getExperimentName() != null
                                 ? request.getExperimentName()
                                 : eval.getName();
-
-                String parentSpec = null;
-                String generation = null;
-
-                // Extract parent spec and generation from request
-                if (request.getParent() != null && request.getParent() instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
-                    String objectType = (String) parentMap.get("object_type");
-                    String objectId = (String) parentMap.get("object_id");
-
-                    // Extract generation from propagated_event.span_attributes.generation
-                    Object propEventObj = parentMap.get("propagated_event");
-                    if (propEventObj instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
-                        Object spanAttrsObj = propEvent.get("span_attributes");
-                        if (spanAttrsObj instanceof Map) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
-                            generation = (String) spanAttrs.get("generation");
-                        }
-                    }
-
-                    if (objectType != null && objectId != null) {
-                        parentSpec = "playground_id:" + objectId;
-                    }
-                }
-
-                // Build URLs
-                String experimentUrl =
+                final var experimentUrl =
                         BraintrustUtils.createProjectURI(
                                                 braintrust.config().appUrl(), orgAndProject)
                                         .toASCIIString()
                                 + "/experiments/"
                                 + experimentName;
-                String projectUrl =
+                final var projectUrl =
                         BraintrustUtils.createProjectURI(
                                         braintrust.config().appUrl(), orgAndProject)
                                 .toASCIIString();
 
-                // Send start event
-                // TODO: the browser doesn't understand this event. Should probably just remove it
-                sendStartEvent(
-                        os,
-                        projectName,
-                        projectId,
-                        experimentName,
-                        null, // experimentId - not created yet
-                        projectUrl,
-                        experimentUrl);
-
-                // Load dataset using one of three methods (same logic as executeEval)
-                Dataset<?, ?> dataset;
-                EvalRequest.DataSpec dataSpec = request.getData();
-
-                if (dataSpec.getData() != null && !dataSpec.getData().isEmpty()) {
-                    // Method 1: Inline data
-                    List<DatasetCase> cases = new ArrayList<>();
-                    for (EvalRequest.EvalCaseData caseData : dataSpec.getData()) {
-                        DatasetCase datasetCase =
-                                DatasetCase.of(
-                                        caseData.getInput(),
-                                        caseData.getExpected(),
-                                        caseData.getTags() != null ? caseData.getTags() : List.of(),
-                                        caseData.getMetadata() != null
-                                                ? caseData.getMetadata()
-                                                : Map.of());
-                        cases.add(datasetCase);
-                    }
-                    dataset = Dataset.of(cases.toArray(new DatasetCase[0]));
-                } else if (dataSpec.getProjectName() != null && dataSpec.getDatasetName() != null) {
-                    // Method 2: Fetch by project name and dataset name
-                    log.debug(
-                            "Fetching dataset from Braintrust: project={}, dataset={}",
-                            dataSpec.getProjectName(),
-                            dataSpec.getDatasetName());
-                    dataset =
-                            Dataset.fetchFromBraintrust(
-                                    apiClient,
-                                    dataSpec.getProjectName(),
-                                    dataSpec.getDatasetName(),
-                                    null);
-                } else if (dataSpec.getDatasetId() != null) {
-                    // Method 3: Fetch by dataset ID
-                    log.debug(
-                            "Fetching dataset from Braintrust by ID: {}", dataSpec.getDatasetId());
-                    var datasetMetadata = apiClient.getDataset(dataSpec.getDatasetId());
-                    if (datasetMetadata.isEmpty()) {
-                        throw new IllegalArgumentException(
-                                "Dataset not found: " + dataSpec.getDatasetId());
-                    }
-
-                    var project = apiClient.getProject(datasetMetadata.get().projectId());
-                    if (project.isEmpty()) {
-                        throw new IllegalArgumentException(
-                                "Project not found: " + datasetMetadata.get().projectId());
-                    }
-
-                    String fetchedProjectName = project.get().name();
-                    String fetchedDatasetName = datasetMetadata.get().name();
-                    log.debug(
-                            "Resolved dataset ID to project={}, dataset={}",
-                            fetchedProjectName,
-                            fetchedDatasetName);
-
-                    dataset =
-                            Dataset.fetchFromBraintrust(
-                                    apiClient, fetchedProjectName, fetchedDatasetName, null);
-                } else {
-                    throw new IllegalStateException("No dataset specification provided");
-                }
-
                 var tracer = BraintrustTracing.getTracer();
 
                 // Execute task and scorers for each case
-                Map<String, List<Double>> scoresByName = new LinkedHashMap<>();
-                int[] caseCount = {0}; // Use array for mutability in lambda
-                final String finalParentSpec = parentSpec; // Make effectively final for lambda
-                final String finalGeneration = generation; // Make effectively final for lambda
-                if (finalParentSpec == null) {
-                    throw new RuntimeException("parent required");
-                }
+                final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
+                final var parentInfo = extractParentInfo(request);
+                final var braintrustParent = parentInfo.braintrustParent();
+                final var braintrustGeneration = parentInfo.generation();
 
-                dataset.forEach(
-                        datasetCase -> {
-                            caseCount[0]++;
-                            log.debug("Processing dataset case #{}", caseCount[0]);
-
-                            // Build span attributes with exec_counter and generation (eval span)
-                            Map<String, Object> evalSpanAttrs = new LinkedHashMap<>();
-                            evalSpanAttrs.put("type", "eval");
-                            evalSpanAttrs.put("name", "eval");
-                            if (finalGeneration != null) {
-                                evalSpanAttrs.put("generation", finalGeneration);
-                            }
-
-                            // Create eval span for this dataset case (matches Eval.java pattern)
-                            // TODO: take another pass through python playground and make sure we're
-                            // setting the same attributes
-                            var evalSpan =
-                                    tracer.spanBuilder("eval")
-                                            .setNoParent() // each eval case is its own trace
-                                            .setSpanKind(SpanKind.CLIENT)
-                                            .setAttribute(PARENT, finalParentSpec)
-                                            .setAttribute(
-                                                    "braintrust.span_attributes",
-                                                    json(evalSpanAttrs))
-                                            .setAttribute(
-                                                    "braintrust.input_json",
-                                                    json(Map.of("input", datasetCase.input())))
-                                            .setAttribute(
-                                                    "braintrust.expected_json",
-                                                    json(datasetCase.expected()))
-                                            .startSpan();
-
-                            // Set parent in baggage for distributed tracing
-                            // Parse parent format "type:id" (e.g., "playground_id:abc123")
-                            io.opentelemetry.context.Context evalContext =
-                                    io.opentelemetry.context.Context.current().with(evalSpan);
-                            String[] parentParts = finalParentSpec.split(":", 2);
-                            if (parentParts.length == 2) {
-                                evalContext =
-                                        dev.braintrust.trace.BraintrustContext.setParentInBaggage(
-                                                evalContext, parentParts[0], parentParts[1]);
-                            }
-
-                            if (datasetCase.origin().isPresent()) {
-                                evalSpan.setAttribute(
-                                        "braintrust.origin", json(datasetCase.origin().get()));
-                            }
-                            if (!datasetCase.tags().isEmpty()) {
-                                evalSpan.setAttribute(
-                                        AttributeKey.stringArrayKey("braintrust.tags"),
-                                        datasetCase.tags());
-                            }
-                            if (!datasetCase.metadata().isEmpty()) {
-                                evalSpan.setAttribute(
-                                        "braintrust.metadata", json(datasetCase.metadata()));
-                            }
-
-                            // Make the eval context (with span and baggage) current
-                            try (var rootScope = evalContext.makeCurrent()) {
-                                final dev.braintrust.eval.TaskResult taskResult;
-                                { // run task
-                                    // Build task span attributes with exec_counter and generation
-                                    Map<String, Object> taskSpanAttrs = new LinkedHashMap<>();
-                                    taskSpanAttrs.put("type", "task");
-                                    taskSpanAttrs.put("name", "task");
-                                    if (finalGeneration != null) {
-                                        taskSpanAttrs.put("generation", finalGeneration);
-                                    }
-
-                                    var taskSpan =
-                                            tracer.spanBuilder("task")
-                                                    .setAttribute(PARENT, finalParentSpec)
+                extractDataset(request, apiClient)
+                        .forEach(
+                                datasetCase -> {
+                                    var evalSpan =
+                                            tracer.spanBuilder("eval")
+                                                    .setNoParent()
+                                                    .setSpanKind(SpanKind.CLIENT)
                                                     .setAttribute(
-                                                            "braintrust.span_attributes",
-                                                            json(taskSpanAttrs))
+                                                            PARENT,
+                                                            braintrustParent.toParentValue())
                                                     .startSpan();
-                                    taskSpan.setAttribute(
-                                            "braintrust.input_json",
-                                            json(Map.of("input", datasetCase.input())));
-                                    try (var unused =
-                                            Context.current().with(taskSpan).makeCurrent()) {
-                                        var task = eval.getTask();
-                                        taskResult = task.apply(datasetCase);
-                                        // Send progress event for task completion
-                                        sendProgressEvent(
-                                                os,
-                                                evalSpan.getSpanContext().getSpanId(),
-                                                datasetCase.origin(),
-                                                eval.getName(),
-                                                taskResult.result());
-                                    } finally {
-                                        taskSpan.end();
-                                    }
-                                    taskSpan.setAttribute(
-                                            "braintrust.output_json",
-                                            json(Map.of("output", taskResult.result())));
-                                    evalSpan.setAttribute(
-                                            "braintrust.output_json",
-                                            json(Map.of("output", taskResult.result())));
-                                }
-                                { // run scorers - one score span per scorer
-                                    var scorers = eval.getScorers();
-                                    log.debug("Running {} scorers", scorers.size());
-
-                                    for (Object scorerObj : scorers) {
-                                        dev.braintrust.eval.Scorer scorer =
-                                                (dev.braintrust.eval.Scorer) scorerObj;
-
-                                        // Build score span attributes with scorer name and
-                                        // generation
-                                        Map<String, Object> scoreSpanAttrs = new LinkedHashMap<>();
-                                        scoreSpanAttrs.put("type", "score");
-                                        scoreSpanAttrs.put("name", scorer.getName());
-                                        if (finalGeneration != null) {
-                                            scoreSpanAttrs.put("generation", finalGeneration);
-                                        }
-
-                                        var scoreSpan =
-                                                tracer.spanBuilder("score")
-                                                        .setAttribute(PARENT, finalParentSpec)
-                                                        .setAttribute(
-                                                                "braintrust.span_attributes",
-                                                                json(scoreSpanAttrs))
-                                                        .startSpan();
-                                        try (var unused =
-                                                Context.current().with(scoreSpan).makeCurrent()) {
-                                            List<Score> scores = scorer.score(taskResult);
-                                            log.debug(
-                                                    "Scorer '{}' produced {} scores",
-                                                    scorer.getName(),
-                                                    scores.size());
-
-                                            Map<String, Double> scorerScores =
-                                                    new LinkedHashMap<>();
-                                            for (Score score : scores) {
-                                                scoresByName
-                                                        .computeIfAbsent(
-                                                                score.name(),
-                                                                k -> new ArrayList<>())
-                                                        .add(score.value());
-                                                scorerScores.put(score.name(), score.value());
+                                    Context evalContext = Context.current().with(evalSpan);
+                                    evalContext =
+                                            BraintrustContext.setParentInBaggage(
+                                                    evalContext,
+                                                    braintrustParent.type(),
+                                                    braintrustParent.id());
+                                    // Make the eval context (with span and baggage) current
+                                    try (var rootScope = evalContext.makeCurrent()) {
+                                        final dev.braintrust.eval.TaskResult taskResult;
+                                        { // run task
+                                            var taskSpan = tracer.spanBuilder("task").startSpan();
+                                            try (var unused =
+                                                    Context.current()
+                                                            .with(taskSpan)
+                                                            .makeCurrent()) {
+                                                var task = eval.getTask();
+                                                taskResult = task.apply(datasetCase);
+                                                // Send progress event for task completion
+                                                sendProgressEvent(
+                                                        os,
+                                                        evalSpan.getSpanContext().getSpanId(),
+                                                        datasetCase.origin(),
+                                                        eval.getName(),
+                                                        taskResult.result());
+                                                setTaskSpanAttributes(
+                                                        taskSpan,
+                                                        braintrustParent,
+                                                        braintrustGeneration,
+                                                        datasetCase,
+                                                        taskResult);
+                                            } finally {
+                                                taskSpan.end();
                                             }
-                                            scoreSpan.setAttribute(
-                                                    "braintrust.output_json", json(scorerScores));
-                                        } finally {
-                                            scoreSpan.end();
+                                            // setting eval span attributes here because we need the
+                                            // task output
+                                            setEvalSpanAttributes(
+                                                    evalSpan,
+                                                    braintrustParent,
+                                                    braintrustGeneration,
+                                                    datasetCase,
+                                                    taskResult);
                                         }
+                                        // run scorers - one score span per scorer
+                                        for (var scorer : (List<Scorer<?, ?>>) eval.getScorers()) {
+                                            var scoreSpan = tracer.spanBuilder("score").startSpan();
+                                            try (var unused =
+                                                    Context.current()
+                                                            .with(scoreSpan)
+                                                            .makeCurrent()) {
+                                                List<Score> scores = scorer.score(taskResult);
+
+                                                Map<String, Double> scorerScores =
+                                                        new LinkedHashMap<>();
+                                                for (Score score : scores) {
+                                                    scoresByName
+                                                            .computeIfAbsent(
+                                                                    score.name(),
+                                                                    k -> new ArrayList<>())
+                                                            .add(score.value());
+                                                    scorerScores.put(score.name(), score.value());
+                                                }
+                                                // Set score span attributes before ending span
+                                                setScoreSpanAttributes(
+                                                        scoreSpan,
+                                                        braintrustParent,
+                                                        braintrustGeneration,
+                                                        scorer.getName(),
+                                                        scorerScores);
+                                            } finally {
+                                                scoreSpan.end();
+                                            }
+                                        }
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(
+                                                "Failed to send progress event", e);
+                                    } finally {
+                                        evalSpan.end();
                                     }
-                                }
-                            } catch (IOException e) {
-                                throw new RuntimeException("Failed to send progress event", e);
-                            } finally {
-                                evalSpan.end();
-                            }
-                        });
+                                });
 
                 // Aggregate scores
                 Map<String, EvalResponse.ScoreSummary> scoreSummaries = new LinkedHashMap<>();
@@ -658,7 +486,6 @@ public class Devserver {
                                     .build());
                 }
 
-                // Send summary event
                 sendSummaryEvent(
                         os,
                         projectName,
@@ -667,10 +494,7 @@ public class Devserver {
                         projectUrl,
                         experimentUrl,
                         scoreSummaries);
-
-                // Send done event
                 sendDoneEvent(os);
-
             } catch (Exception e) {
                 // Send error event via SSE
                 log.error("Error during streaming evaluation", e);
@@ -680,6 +504,7 @@ public class Devserver {
                 } catch (IOException ioException) {
                     log.error("Failed to send error event", ioException);
                 }
+                throw e;
             } finally {
                 try {
                     os.flush();
@@ -689,6 +514,76 @@ public class Devserver {
                 }
             }
         }
+    }
+
+    private void setEvalSpanAttributes(
+            Span evalSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            DatasetCase<?, ?> datasetCase,
+            TaskResult<?, ?> taskResult) {
+        var spanAttrs = new LinkedHashMap<>();
+        spanAttrs.put("type", "eval");
+        spanAttrs.put("name", "eval");
+        if (braintrustGeneration != null) {
+            spanAttrs.put("generation", braintrustGeneration);
+        }
+        evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
+                .setAttribute("braintrust.span_attributes", json(spanAttrs))
+                .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.expected_json", json(datasetCase.expected()));
+
+        if (datasetCase.origin().isPresent()) {
+            evalSpan.setAttribute("braintrust.origin", json(datasetCase.origin().get()));
+        }
+        if (!datasetCase.tags().isEmpty()) {
+            evalSpan.setAttribute(
+                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
+        }
+        if (!datasetCase.metadata().isEmpty()) {
+            evalSpan.setAttribute("braintrust.metadata", json(datasetCase.metadata()));
+        }
+        evalSpan.setAttribute(
+                "braintrust.output_json", json(Map.of("output", taskResult.result())));
+    }
+
+    private void setTaskSpanAttributes(
+            Span taskSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            DatasetCase<?, ?> datasetCase,
+            TaskResult<?, ?> taskResult) {
+        Map<String, Object> taskSpanAttrs = new LinkedHashMap<>();
+        taskSpanAttrs.put("type", "task");
+        taskSpanAttrs.put("name", "task");
+        if (braintrustGeneration != null) {
+            taskSpanAttrs.put("generation", braintrustGeneration);
+        }
+
+        taskSpan.setAttribute(PARENT, braintrustParent.toParentValue())
+                .setAttribute("braintrust.span_attributes", json(taskSpanAttrs))
+                .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
+                .setAttribute(
+                        "braintrust.output_json", json(Map.of("output", taskResult.result())));
+    }
+
+    private void setScoreSpanAttributes(
+            Span scoreSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            String scorerName,
+            Map<String, Double> scorerScores) {
+        Map<String, Object> scoreSpanAttrs = new LinkedHashMap<>();
+        scoreSpanAttrs.put("type", "score");
+        scoreSpanAttrs.put("name", scorerName);
+        if (braintrustGeneration != null) {
+            scoreSpanAttrs.put("generation", braintrustGeneration);
+        }
+
+        scoreSpan
+                .setAttribute(PARENT, braintrustParent.toParentValue())
+                .setAttribute("braintrust.span_attributes", json(scoreSpanAttrs))
+                .setAttribute("braintrust.output_json", json(scorerScores));
     }
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {
@@ -707,9 +602,7 @@ public class Devserver {
         progressData.put("id", spanId);
         progressData.put("object_type", "task");
 
-        if (origin.isPresent()) {
-            progressData.put("origin", origin.get());
-        }
+        origin.ifPresent(value -> progressData.put("origin", value));
         progressData.put("name", evalName);
         progressData.put("format", "code");
         progressData.put("output_type", "completion");
@@ -738,7 +631,6 @@ public class Devserver {
         summary.put("experimentUrl", null);
         summary.put("comparisonExperimentName", null);
 
-        // Add scores with additional Python-specific fields
         Map<String, Object> scoresWithMeta = new LinkedHashMap<>();
         for (Map.Entry<String, EvalResponse.ScoreSummary> entry : scoreSummaries.entrySet()) {
             Map<String, Object> scoreData = new LinkedHashMap<>();
@@ -758,28 +650,6 @@ public class Devserver {
 
     private void sendDoneEvent(OutputStream os) throws IOException {
         sendSSEEvent(os, "done", "");
-    }
-
-    private void sendStartEvent(
-            OutputStream os,
-            String projectName,
-            String projectId,
-            String experimentName,
-            String experimentId,
-            String projectUrl,
-            String experimentUrl)
-            throws IOException {
-        Map<String, Object> startData = new LinkedHashMap<>();
-        startData.put("experimentName", experimentName);
-        startData.put("projectName", projectName);
-        startData.put("projectId", projectId);
-        startData.put("experimentId", experimentId);
-        startData.put("experimentUrl", experimentUrl);
-        startData.put("projectUrl", projectUrl);
-        startData.put("comparisonExperimentName", null);
-        startData.put("scores", Map.of());
-
-        sendSSEEvent(os, "start", JSON_MAPPER.writeValueAsString(startData));
     }
 
     private String json(Object o) {
@@ -1073,6 +943,127 @@ public class Devserver {
         Map<String, String> error = Map.of("error", message);
         String json = JSON_MAPPER.writeValueAsString(error);
         sendResponse(exchange, statusCode, "application/json", json);
+    }
+
+    /**
+     * Container for parent information extracted from eval request.
+     *
+     * @param braintrustParent The parent specification in "type:id" format (e.g.,
+     *     "playground_id:abc123")
+     * @param generation The generation identifier from the request
+     */
+    private record ParentInfo(
+            @Nonnull BraintrustUtils.Parent braintrustParent, @Nullable String generation) {}
+
+    /**
+     * Extracts parent information from the eval request.
+     *
+     * @param request The eval request
+     * @return ParentInfo containing braintrustParent and generation
+     */
+    private static ParentInfo extractParentInfo(EvalRequest request) {
+        String parentSpec = null;
+        String generation = null;
+
+        // Extract parent spec and generation from request
+        if (request.getParent() != null && request.getParent() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
+            String objectType = (String) parentMap.get("object_type");
+            String objectId = (String) parentMap.get("object_id");
+
+            // Extract generation from propagated_event.span_attributes.generation
+            Object propEventObj = parentMap.get("propagated_event");
+            if (propEventObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
+                Object spanAttrsObj = propEvent.get("span_attributes");
+                if (spanAttrsObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
+                    generation = (String) spanAttrs.get("generation");
+                }
+            }
+
+            if (objectType != null && objectId != null) {
+                parentSpec = "playground_id:" + objectId;
+            }
+        }
+
+        if (parentSpec == null) {
+            throw new IllegalArgumentException("braintrust parent (playground_id) not found");
+        }
+        return new ParentInfo(BraintrustUtils.parseParent(parentSpec), generation);
+    }
+
+    /**
+     * Extracts and loads the dataset from the eval request.
+     *
+     * <p>Supports three methods of loading data:
+     *
+     * <ol>
+     *   <li>Inline data provided in the request
+     *   <li>Fetch by project name and dataset name
+     *   <li>Fetch by dataset ID
+     * </ol>
+     *
+     * @param request The eval request containing dataset specification
+     * @param apiClient The Braintrust API client for fetching datasets
+     * @return The loaded dataset
+     * @throws IllegalStateException if no dataset specification is provided
+     * @throws IllegalArgumentException if dataset or project is not found
+     */
+    private static Dataset<?, ?> extractDataset(
+            EvalRequest request, BraintrustApiClient apiClient) {
+        EvalRequest.DataSpec dataSpec = request.getData();
+
+        if (dataSpec.getData() != null && !dataSpec.getData().isEmpty()) {
+            // Method 1: Inline data
+            List<DatasetCase> cases = new ArrayList<>();
+            for (EvalRequest.EvalCaseData caseData : dataSpec.getData()) {
+                DatasetCase datasetCase =
+                        DatasetCase.of(
+                                caseData.getInput(),
+                                caseData.getExpected(),
+                                caseData.getTags() != null ? caseData.getTags() : List.of(),
+                                caseData.getMetadata() != null ? caseData.getMetadata() : Map.of());
+                cases.add(datasetCase);
+            }
+            return Dataset.of(cases.toArray(new DatasetCase[0]));
+        } else if (dataSpec.getProjectName() != null && dataSpec.getDatasetName() != null) {
+            // Method 2: Fetch by project name and dataset name
+            log.debug(
+                    "Fetching dataset from Braintrust: project={}, dataset={}",
+                    dataSpec.getProjectName(),
+                    dataSpec.getDatasetName());
+            return Dataset.fetchFromBraintrust(
+                    apiClient, dataSpec.getProjectName(), dataSpec.getDatasetName(), null);
+        } else if (dataSpec.getDatasetId() != null) {
+            // Method 3: Fetch by dataset ID
+            log.debug("Fetching dataset from Braintrust by ID: {}", dataSpec.getDatasetId());
+            var datasetMetadata = apiClient.getDataset(dataSpec.getDatasetId());
+            if (datasetMetadata.isEmpty()) {
+                throw new IllegalArgumentException("Dataset not found: " + dataSpec.getDatasetId());
+            }
+
+            var project = apiClient.getProject(datasetMetadata.get().projectId());
+            if (project.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Project not found: " + datasetMetadata.get().projectId());
+            }
+
+            String fetchedProjectName = project.get().name();
+            String fetchedDatasetName = datasetMetadata.get().name();
+            log.debug(
+                    "Resolved dataset ID to project={}, dataset={}",
+                    fetchedProjectName,
+                    fetchedDatasetName);
+
+            return Dataset.fetchFromBraintrust(
+                    apiClient, fetchedProjectName, fetchedDatasetName, null);
+        } else {
+            throw new IllegalStateException("No dataset specification provided");
+        }
     }
 
     public static class Builder {

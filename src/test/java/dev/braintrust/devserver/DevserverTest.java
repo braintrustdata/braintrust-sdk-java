@@ -265,34 +265,19 @@ class DevserverTest {
         assertFalse(events.isEmpty(), "Should have received events");
 
         // Count events by type
-        long startCount = events.stream().filter(e -> "start".equals(e.get("event"))).count();
-        long progressCount = events.stream().filter(e -> "progress".equals(e.get("event"))).count();
-        long summaryCount = events.stream().filter(e -> "summary".equals(e.get("event"))).count();
-        long doneCount = events.stream().filter(e -> "done".equals(e.get("event"))).count();
-
-        // Should have 1 start event, 2 progress events (one per dataset case), 1 summary, 1 done
-        assertEquals(1, startCount, "Should have 1 start event");
-        assertEquals(2, progressCount, "Should have 2 progress events");
-        assertEquals(1, summaryCount, "Should have 1 summary event");
-        assertEquals(1, doneCount, "Should have 1 done event");
-
-        // Verify start event is first and has expected structure
-        assertEquals("start", events.get(0).get("event"), "First event should be start");
-        Map<String, String> startEvent = events.get(0);
-        JsonNode startData = JSON_MAPPER.readTree(startEvent.get("data"));
-
-        assertEquals("test-project", startData.get("projectName").asText());
-        assertTrue(startData.has("projectId"));
-        assertEquals("food-type-classifier", startData.get("experimentName").asText());
-        assertTrue(startData.has("experimentUrl"));
-        assertTrue(startData.has("projectUrl"));
-        assertTrue(startData.has("scores"));
-        assertTrue(startData.get("experimentId").isNull());
-
-        // Verify progress events match expected structure
         List<Map<String, String>> progressEvents =
                 events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        List<Map<String, String>> doneEvents =
+                events.stream().filter(e -> "done".equals(e.get("event"))).toList();
 
+        // Should have 1 start event, 2 progress events (one per dataset case), 1 summary, 1 done
+        assertEquals(2, progressEvents.size(), "Should have 2 progress events");
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+        assertEquals(1, doneEvents.size(), "Should have 1 done event");
+
+        // Verify progress events match expected structure
         for (Map<String, String> progressEvent : progressEvents) {
             String dataJson = progressEvent.get("data");
             JsonNode progressData = JSON_MAPPER.readTree(dataJson);
@@ -310,25 +295,22 @@ class DevserverTest {
             assertEquals("\"java-fruit\"", taskResultJson);
         }
 
-        // Verify summary event
-        Map<String, String> summaryEvent =
-                events.stream()
-                        .filter(e -> "summary".equals(e.get("event")))
-                        .findFirst()
-                        .orElseThrow();
-        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvent.get("data"));
+        { // Verify summary event
+            Map<String, String> summaryEvent = summaryEvents.get(0);
+            JsonNode summaryData = JSON_MAPPER.readTree(summaryEvent.get("data"));
 
-        assertEquals("test-project", summaryData.get("projectName").asText());
-        assertTrue(summaryData.has("projectId"));
-        assertEquals("food-type-classifier", summaryData.get("experimentName").asText());
+            assertEquals("test-project", summaryData.get("projectName").asText());
+            assertTrue(summaryData.has("projectId"));
+            assertEquals("food-type-classifier", summaryData.get("experimentName").asText());
 
-        // Verify scores in summary
-        assertTrue(summaryData.has("scores"));
-        JsonNode scores = summaryData.get("scores");
-        assertTrue(scores.has("simple_scorer"));
-        JsonNode simpleScorer = scores.get("simple_scorer");
-        assertEquals("simple_scorer", simpleScorer.get("name").asText());
-        assertEquals(0.7, simpleScorer.get("score").asDouble(), 0.001);
+            // Verify scores in summary
+            assertTrue(summaryData.has("scores"));
+            JsonNode scores = summaryData.get("scores");
+            assertTrue(scores.has("simple_scorer"));
+            JsonNode simpleScorer = scores.get("simple_scorer");
+            assertEquals("simple_scorer", simpleScorer.get("name").asText());
+            assertEquals(0.7, simpleScorer.get("score").asDouble(), 0.001);
+        }
 
         // Get exported spans from test harness (since devserver uses global tracer)
         List<SpanData> exportedSpans = testHarness.awaitExportedSpans();
@@ -342,53 +324,145 @@ class DevserverTest {
         assertEquals(8, exportedSpans.size(), "Should have 8 spans (4 per dataset case)");
 
         // Verify span types
-        long evalSpans = exportedSpans.stream().filter(s -> s.getName().equals("eval")).count();
-        long taskSpans = exportedSpans.stream().filter(s -> s.getName().equals("task")).count();
-        long scoreSpans = exportedSpans.stream().filter(s -> s.getName().equals("score")).count();
-        long customSpans =
-                exportedSpans.stream().filter(s -> s.getName().equals("custom-task-span")).count();
+        var evalSpans = exportedSpans.stream().filter(s -> s.getName().equals("eval")).toList();
+        var taskSpans = exportedSpans.stream().filter(s -> s.getName().equals("task")).toList();
+        var scoreSpans = exportedSpans.stream().filter(s -> s.getName().equals("score")).toList();
+        var customSpans =
+                exportedSpans.stream().filter(s -> s.getName().equals("custom-task-span")).toList();
 
-        assertEquals(2, evalSpans, "Should have 2 eval spans");
-        assertEquals(2, taskSpans, "Should have 2 task spans");
-        assertEquals(2, scoreSpans, "Should have 2 score spans");
-        assertEquals(2, customSpans, "Should have 2 custom-task-span spans");
+        assertEquals(2, evalSpans.size(), "Should have 2 eval spans");
+        assertEquals(2, taskSpans.size(), "Should have 2 task spans");
+        assertEquals(2, scoreSpans.size(), "Should have 2 score spans");
+        assertEquals(2, customSpans.size(), "Should have 2 custom-task-span spans");
 
-        // Verify each eval span has playground_id parent
-        for (SpanData span : exportedSpans) {
-            if (span.getName().equals("eval")) {
-                String parent =
-                        span.getAttributes()
-                                .get(
-                                        io.opentelemetry.api.common.AttributeKey.stringKey(
-                                                "braintrust.parent"));
-                assertNotNull(parent, "Eval span should have parent attribute");
-                assertTrue(
-                        parent.contains("playground_id:test-playground-id-123"),
-                        "Parent should contain playground_id");
-            }
-        }
+        // Verify eval spans have all required attributes
+        for (SpanData evalSpan : evalSpans) {
+            // Verify braintrust.parent
+            String parent =
+                    evalSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.parent"));
+            assertNotNull(parent, "Eval span should have parent attribute");
+            assertTrue(
+                    parent.contains("playground_id:test-playground-id-123"),
+                    "Parent should contain playground_id");
 
-        // Verify span attributes contain generation
-        for (SpanData span : exportedSpans) {
             String spanAttrsJson =
-                    span.getAttributes()
+                    evalSpan.getAttributes()
                             .get(
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.span_attributes"));
-            if (spanAttrsJson != null) {
-                JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
-                if (spanAttrs.has("generation")) {
-                    assertEquals("test-gen-1", spanAttrs.get("generation").asText());
-                }
-            }
+            assertNotNull(spanAttrsJson, "Eval span should have span_attributes");
+            JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
+            assertEquals("eval", spanAttrs.get("type").asText());
+            assertEquals("eval", spanAttrs.get("name").asText());
+            assertEquals("test-gen-1", spanAttrs.get("generation").asText());
+
+            String inputJson =
+                    evalSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.input_json"));
+            assertNotNull(inputJson, "Eval span should have input_json");
+
+            String expectedJson =
+                    evalSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.expected_json"));
+            assertNotNull(expectedJson, "Eval span should have expected_json");
+
+            String outputJson =
+                    evalSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.output_json"));
+            assertNotNull(outputJson, "Eval span should have output_json");
+            JsonNode output = JSON_MAPPER.readTree(outputJson);
+            assertEquals("java-fruit", output.get("output").asText());
         }
 
-        // Verify custom span created in task function has proper parent propagation
-        List<SpanData> customSpansList =
-                exportedSpans.stream().filter(s -> s.getName().equals("custom-task-span")).toList();
-        assertEquals(2, customSpansList.size(), "Should have 2 custom spans");
+        for (SpanData taskSpan : taskSpans) {
+            // Verify braintrust.parent
+            String parent =
+                    taskSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.parent"));
+            assertNotNull(parent, "Task span should have parent attribute");
+            assertTrue(
+                    parent.contains("playground_id:test-playground-id-123"),
+                    "Parent should contain playground_id");
 
-        for (SpanData customSpan : customSpansList) {
+            String spanAttrsJson =
+                    taskSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.span_attributes"));
+            assertNotNull(spanAttrsJson, "Task span should have span_attributes");
+            JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
+            assertEquals("task", spanAttrs.get("type").asText());
+            assertEquals("task", spanAttrs.get("name").asText());
+            assertEquals("test-gen-1", spanAttrs.get("generation").asText());
+
+            String inputJson =
+                    taskSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.input_json"));
+            assertNotNull(inputJson, "Task span should have input_json");
+
+            String outputJson =
+                    taskSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.output_json"));
+            assertNotNull(outputJson, "Task span should have output_json");
+            JsonNode output = JSON_MAPPER.readTree(outputJson);
+            assertEquals("java-fruit", output.get("output").asText());
+        }
+
+        for (SpanData scoreSpan : scoreSpans) {
+            // Verify braintrust.parent
+            String parent =
+                    scoreSpan
+                            .getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.parent"));
+            assertNotNull(parent, "Score span should have parent attribute");
+            assertTrue(
+                    parent.contains("playground_id:test-playground-id-123"),
+                    "Parent should contain playground_id");
+
+            // Verify braintrust.span_attributes
+            String spanAttrsJson =
+                    scoreSpan
+                            .getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.span_attributes"));
+            assertNotNull(spanAttrsJson, "Score span should have span_attributes");
+            JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
+            assertEquals("score", spanAttrs.get("type").asText());
+            assertEquals("simple_scorer", spanAttrs.get("name").asText());
+            assertEquals("test-gen-1", spanAttrs.get("generation").asText());
+
+            // Verify braintrust.output_json contains scores
+            String outputJson =
+                    scoreSpan
+                            .getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.output_json"));
+            assertNotNull(outputJson, "Score span should have output_json");
+            JsonNode output = JSON_MAPPER.readTree(outputJson);
+            assertTrue(output.has("simple_scorer"), "Output should contain scorer results");
+            assertEquals(0.7, output.get("simple_scorer").asDouble(), 0.001);
+        }
+
+        for (SpanData customSpan : customSpans) {
             // Verify it has a parent span (is not a root span)
             assertTrue(
                     customSpan.getParentSpanContext().isValid(),
@@ -411,5 +485,116 @@ class DevserverTest {
                     parent.contains("playground_id:test-playground-id-123"),
                     "Custom span parent should contain playground_id from baggage propagation");
         }
+    }
+
+    @Test
+    void testEvaluatorNotFound() throws Exception {
+        EvalRequest request = new EvalRequest();
+        request.setName("non-existent-eval");
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("test");
+        dataSpec.setData(List.of(case1));
+        request.setData(dataSpec);
+
+        String requestJson = JSON_MAPPER.writeValueAsString(request);
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest httpRequest =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(TEST_URL + "/eval"))
+                        .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                        .header("Content-Type", "application/json")
+                        .header("x-bt-auth-token", "test-token")
+                        .header("x-bt-project-id", "test-project-id")
+                        .header("x-bt-org-name", "test-org")
+                        .build();
+
+        HttpResponse<String> response =
+                client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(404, response.statusCode());
+        assertTrue(response.body().contains("Evaluator not found"));
+    }
+
+    @Test
+    void testEvalMethodNotAllowed() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request =
+                HttpRequest.newBuilder().uri(URI.create(TEST_URL + "/eval")).GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(405, response.statusCode());
+    }
+
+    @Test
+    void testListEndpoint() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(TEST_URL + "/list"))
+                        .GET()
+                        .header("x-bt-auth-token", "test-token")
+                        .header("x-bt-project-id", "test-project-id")
+                        .header("x-bt-org-name", "test-org")
+                        .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertEquals(
+                "application/json", response.headers().firstValue("Content-Type").orElse(null));
+
+        // Parse and validate JSON response
+        JsonNode root = JSON_MAPPER.readTree(response.body());
+
+        // Should have one evaluator
+        assertTrue(root.has("food-type-classifier"));
+
+        JsonNode eval = root.get("food-type-classifier");
+
+        // Check scores
+        assertTrue(eval.has("scores"));
+        JsonNode scores = eval.get("scores");
+        assertEquals(1, scores.size());
+
+        assertEquals("simple_scorer", scores.get(0).get("name").asText());
+    }
+
+    @Test
+    void testListMethodNotAllowed() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(TEST_URL + "/list"))
+                        .POST(HttpRequest.BodyPublishers.noBody())
+                        .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(405, response.statusCode());
+    }
+
+    @Test
+    void testListEndpointWithCors() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(TEST_URL + "/list"))
+                        .GET()
+                        .header("Origin", "https://www.braintrust.dev")
+                        .header("x-bt-auth-token", "test-token")
+                        .header("x-bt-project-id", "test-project-id")
+                        .header("x-bt-org-name", "test-org")
+                        .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertEquals(
+                "https://www.braintrust.dev",
+                response.headers().firstValue("Access-Control-Allow-Origin").orElse(null));
     }
 }
