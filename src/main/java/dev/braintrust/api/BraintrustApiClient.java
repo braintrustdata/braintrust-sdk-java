@@ -26,6 +26,14 @@ import lombok.extern.slf4j.Slf4j;
  * {@link dev.braintrust.eval.Eval} or {@link dev.braintrust.trace.BraintrustTracing}
  */
 public interface BraintrustApiClient {
+    /**
+     * Attempt Braintrust login
+     *
+     * @return LoginResponse containing organization info
+     * @throws LoginException if login fails due to invalid credentials or network errors
+     */
+    LoginResponse login() throws LoginException;
+
     /** Creates or gets a project by name. */
     Project getOrCreateProject(String projectName);
 
@@ -117,7 +125,8 @@ public interface BraintrustApiClient {
             }
         }
 
-        private LoginResponse login() {
+        @Override
+        public LoginResponse login() throws LoginException {
             try {
                 return postAsync(
                                 "/api/apikey/login",
@@ -125,7 +134,7 @@ public interface BraintrustApiClient {
                                 LoginResponse.class)
                         .get();
             } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+                throw new LoginException("Failed to login to Braintrust", e);
             }
         }
 
@@ -401,6 +410,12 @@ public interface BraintrustApiClient {
                 List<Prompt> prompts) {
             this.organizationAndProjectInfos = new ArrayList<>(organizationAndProjectInfos);
             this.prompts.addAll(prompts);
+        }
+
+        @Override
+        public LoginResponse login() {
+            return new LoginResponse(
+                    organizationAndProjectInfos.stream().map(o -> o.orgInfo).toList());
         }
 
         @Override

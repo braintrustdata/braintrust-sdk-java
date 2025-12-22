@@ -98,7 +98,7 @@ public class Devserver {
                             com.fasterxml.jackson.core.JsonParser.Feature
                                     .INCLUDE_SOURCE_IN_LOCATION);
 
-    // LRU cache for token -> Braintrust mappings (max 32 entries as per api.md)
+    // LRU cache for token -> Braintrust mappings
     private final LRUCache<String, Braintrust> authCache = new LRUCache<>(32);
 
     private Devserver(Builder builder) {
@@ -504,7 +504,8 @@ public class Devserver {
                 } catch (IOException ioException) {
                     log.error("Failed to send error event", ioException);
                 }
-                throw e;
+                // no need to re-throw. We've already sent 200 because we're streaming and the
+                // client will see the error event
             } finally {
                 try {
                     os.flush();
@@ -865,9 +866,6 @@ public class Devserver {
                 authCache.getOrCompute(
                         cacheKey,
                         () -> {
-                            // Cache miss - would validate token with Braintrust API here
-                            // TODO: Implement actual token validation with
-                            // loginToState(token, orgName)
                             log.debug(
                                     "Cached login state for org='{}', projectId='{}' (cache"
                                             + " size={})",
@@ -889,7 +887,9 @@ public class Devserver {
                                 configBuilderHook.accept(configBuilder);
                             }
 
-                            return Braintrust.of(configBuilder.build());
+                            var bt = Braintrust.of(configBuilder.build());
+                            bt.apiClient().login();
+                            return bt;
                         });
 
         log.debug(
