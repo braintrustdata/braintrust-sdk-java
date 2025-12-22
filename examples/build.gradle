@@ -35,6 +35,9 @@ dependencies {
   implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
     exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
   }
+  // to run langchain4j examples
+  implementation 'dev.langchain4j:langchain4j:1.9.1'
+  implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
 }
 
 application {
@@ -142,12 +145,25 @@ task runSpringAI(type: JavaExec) {
   }
 }
 
-
 task runRemoteEval(type: JavaExec) {
   group = 'Braintrust SDK Examples'
   description = 'Run the remote eval example'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.braintrust.examples.RemoteEvalExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
+
+task runLangchain(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the LangChain4j instrumentation example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.LangchainExample'
   systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
   debugOptions {
     enabled = true

@@ -46,6 +46,7 @@ ext {
   jacksonVersion = '2.16.1'
   junitVersion = '5.11.4'
   slf4jVersion = '2.0.17'
+  langchainVersion = '1.9.1'
 }
 
 dependencies {
@@ -86,6 +87,14 @@ dependencies {
   // Google GenAI Instrumentation
   compileOnly "com.google.genai:google-genai:1.20.0"
   testImplementation "com.google.genai:google-genai:1.20.0"
+
+  // LangChain4j Instrumentation
+  compileOnly "dev.langchain4j:langchain4j:${langchainVersion}"
+  compileOnly "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
+  compileOnly "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
+  testImplementation "dev.langchain4j:langchain4j:${langchainVersion}"
+  testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
+  testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
 }
 
 /**
