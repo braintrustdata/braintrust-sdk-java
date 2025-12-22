@@ -22,10 +22,18 @@ public class RemoteEval<INPUT, OUTPUT> {
     /** The name of this evaluator (used as identifier) */
     @Nonnull private final String name;
 
-    /** The task function that performs the evaluation */
+    /**
+     * The task function that performs the evaluation
+     *
+     * <p>The task function must be thread safe.
+     */
     @Nonnull private final Task<INPUT, OUTPUT> task;
 
-    /** List of scorers for this evaluator */
+    /**
+     * List of scorers for this evaluator
+     *
+     * <p>The score function must be thread safe.
+     */
     @Singular @Nonnull private final List<Scorer<INPUT, OUTPUT>> scorers;
 
     /** Optional parameters that can be configured from the UI */

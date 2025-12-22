@@ -376,6 +376,8 @@ public class Devserver {
                 final var braintrustParent = parentInfo.braintrustParent();
                 final var braintrustGeneration = parentInfo.generation();
 
+                // NOTE: this code is serial but written in a thread-safe manner to support
+                // concurrent dataset fetching and eval execution
                 extractDataset(request, apiClient)
                         .forEach(
                                 datasetCase -> {
@@ -589,7 +591,9 @@ public class Devserver {
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {
         String event = "event: " + eventType + "\n" + "data: " + data + "\n\n";
-        os.write(event.getBytes(StandardCharsets.UTF_8));
+        synchronized (this) {
+            os.write(event.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     private void sendProgressEvent(
