@@ -12,19 +12,10 @@ import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.*;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
-import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.context.propagation.TextMapPropagator;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.logs.SdkLoggerProvider;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -907,30 +898,6 @@ public class Devserver {
                 .appOrigin(context.getAppOrigin())
                 .token(apiKey)
                 .braintrust(braintrust)
-                .build();
-    }
-
-    private OpenTelemetry createOpenTelemetry(Braintrust braintrust) {
-        var tracerBuilder = SdkTracerProvider.builder();
-        var loggerBuilder = SdkLoggerProvider.builder();
-        var meterBuilder = SdkMeterProvider.builder();
-        var contextPropagator =
-                ContextPropagators.create(
-                        TextMapPropagator.composite(
-                                W3CTraceContextPropagator.getInstance(),
-                                W3CBaggagePropagator.getInstance()));
-        braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
-
-        // Invoke hook if present to allow customization (e.g., adding span processors)
-        if (traceBuilderHook != null) {
-            traceBuilderHook.accept(tracerBuilder);
-        }
-
-        return OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerBuilder.build())
-                .setLoggerProvider(loggerBuilder.build())
-                .setMeterProvider(meterBuilder.build())
-                .setPropagators(contextPropagator)
                 .build();
     }
 
