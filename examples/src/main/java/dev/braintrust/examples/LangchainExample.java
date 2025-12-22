@@ -1,7 +1,10 @@
 package dev.braintrust.examples;
 
 import dev.braintrust.Braintrust;
+import dev.braintrust.instrumentation.langchain.BraintrustLangchain;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.http.client.HttpClientBuilder;
+import dev.langchain4j.http.client.HttpClientBuilderLoader;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 
@@ -16,14 +19,16 @@ public class LangchainExample {
         var braintrust = Braintrust.get();
         var openTelemetry = braintrust.openTelemetryCreate();
 
-        // TODO: Wrap with Braintrust instrumentation once available
-        // ChatModel model = BraintrustLangchain.wrap(openTelemetry, ...);
+        HttpClientBuilder clientBuilder =
+                BraintrustLangchain.wrap(
+                        openTelemetry, HttpClientBuilderLoader.loadHttpClientBuilder());
 
         ChatModel model =
                 OpenAiChatModel.builder()
                         .apiKey(System.getenv("OPENAI_API_KEY"))
                         .modelName("gpt-4o-mini")
                         .temperature(0.0)
+                        .httpClientBuilder(clientBuilder)
                         .build();
 
         var rootSpan =

@@ -86,6 +86,13 @@ dependencies {
   // Google GenAI Instrumentation
   compileOnly "com.google.genai:google-genai:1.20.0"
   testImplementation "com.google.genai:google-genai:1.20.0"
+
+  // LangChain4j Instrumentation
+  compileOnly 'dev.langchain4j:langchain4j:1.9.1'
+  compileOnly 'dev.langchain4j:langchain4j-http-client:1.9.1'
+  testImplementation 'dev.langchain4j:langchain4j:1.9.1'
+  testImplementation 'dev.langchain4j:langchain4j-http-client:1.9.1'
+  testImplementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
 }
 
 /**
