@@ -141,3 +141,18 @@ task runSpringAI(type: JavaExec) {
     suspend = false
   }
 }
+
+
+task runRemoteEval(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the remote eval example'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.RemoteEvalExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
