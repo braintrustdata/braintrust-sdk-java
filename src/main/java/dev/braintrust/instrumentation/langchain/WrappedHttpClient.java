@@ -155,8 +155,9 @@ class WrappedHttpClient implements HttpClient {
             // Set span type to llm (in span_attributes, not metadata)
             span.setAttribute("braintrust.span_attributes.type", "llm");
 
-            // Set provider in metadata
-            span.setAttribute("braintrust.metadata.provider", providerInfo.provider);
+            // Build metadata map
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put("provider", providerInfo.provider);
 
             // Parse request body to extract model and messages
             String body = request.body();
@@ -166,7 +167,7 @@ class WrappedHttpClient implements HttpClient {
                 // Extract model
                 if (requestJson.has("model")) {
                     String model = requestJson.get("model").asText();
-                    span.setAttribute("braintrust.metadata.model", model);
+                    metadata.put("model", model);
                 }
 
                 // Extract messages array for input
@@ -175,6 +176,9 @@ class WrappedHttpClient implements HttpClient {
                     span.setAttribute("braintrust.input_json", messagesJson);
                 }
             }
+
+            // Serialize metadata as JSON
+            span.setAttribute("braintrust.metadata", JSON_MAPPER.writeValueAsString(metadata));
         } catch (Exception e) {
             log.debug("Failed to parse request for span tagging", e);
         }
@@ -186,8 +190,9 @@ class WrappedHttpClient implements HttpClient {
     private static void tagSpan(
             Span span, SuccessfulHttpResponse response, ProviderInfo providerInfo, double timeToFirstToken) {
         try {
-            // Set time to first token
-            span.setAttribute("braintrust.metrics.time_to_first_token", timeToFirstToken);
+            // Build metrics map
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("time_to_first_token", timeToFirstToken);
 
             String body = response.body();
             if (body != null && !body.isEmpty()) {
@@ -203,20 +208,19 @@ class WrappedHttpClient implements HttpClient {
                 if (responseJson.has("usage")) {
                     JsonNode usage = responseJson.get("usage");
                     if (usage.has("prompt_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.prompt_tokens", usage.get("prompt_tokens").asLong());
+                        metrics.put("prompt_tokens", usage.get("prompt_tokens").asLong());
                     }
                     if (usage.has("completion_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.completion_tokens",
-                                usage.get("completion_tokens").asLong());
+                        metrics.put("completion_tokens", usage.get("completion_tokens").asLong());
                     }
                     if (usage.has("total_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.tokens", usage.get("total_tokens").asLong());
+                        metrics.put("tokens", usage.get("total_tokens").asLong());
                     }
                 }
             }
+
+            // Serialize metrics as JSON
+            span.setAttribute("braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
         } catch (Exception e) {
             log.debug("Failed to parse response for span tagging", e);
         }
@@ -277,8 +281,6 @@ class WrappedHttpClient implements HttpClient {
             // Track time to first token
             if (firstTokenTime == 0) {
                 firstTokenTime = System.nanoTime();
-                double timeToFirstToken = (firstTokenTime - startTime) / 1_000_000_000.0;
-                span.setAttribute("braintrust.metrics.time_to_first_token", timeToFirstToken);
             }
 
             // Buffer the data for final processing
@@ -329,6 +331,15 @@ class WrappedHttpClient implements HttpClient {
         }
 
         private void finalizeSpan() {
+            // Build metrics map for streaming
+            Map<String, Object> metrics = new HashMap<>();
+
+            // Add time to first token if we have it
+            if (firstTokenTime > 0) {
+                double timeToFirstToken = (firstTokenTime - startTime) / 1_000_000_000.0;
+                metrics.put("time_to_first_token", timeToFirstToken);
+            }
+
             // Reconstruct output as a choices array for streaming
             // Format: [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "..."}}]
             if (outputBuffer.length() > 0) {
@@ -357,22 +368,26 @@ class WrappedHttpClient implements HttpClient {
             if (usageData != null) {
                 try {
                     if (usageData.has("prompt_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.prompt_tokens",
-                                usageData.get("prompt_tokens").asLong());
+                        metrics.put("prompt_tokens", usageData.get("prompt_tokens").asLong());
                     }
                     if (usageData.has("completion_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.completion_tokens",
-                                usageData.get("completion_tokens").asLong());
+                        metrics.put("completion_tokens", usageData.get("completion_tokens").asLong());
                     }
                     if (usageData.has("total_tokens")) {
-                        span.setAttribute(
-                                "braintrust.metrics.tokens", usageData.get("total_tokens").asLong());
+                        metrics.put("tokens", usageData.get("total_tokens").asLong());
                     }
                 } catch (Exception e) {
                     log.debug("Failed to extract usage metrics from streaming data", e);
                 }
+            }
+
+            // Serialize metrics as JSON
+            try {
+                if (!metrics.isEmpty()) {
+                    span.setAttribute("braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
+                }
+            } catch (Exception e) {
+                log.debug("Failed to serialize metrics", e);
             }
         }
     }
