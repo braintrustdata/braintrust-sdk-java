@@ -21,7 +21,9 @@ public class LangchainExample {
 
         HttpClientBuilder clientBuilder =
                 BraintrustLangchain.wrap(
-                        openTelemetry, HttpClientBuilderLoader.loadHttpClientBuilder());
+                        openTelemetry,
+                        HttpClientBuilderLoader.loadHttpClientBuilder(),
+                        new BraintrustLangchain.Options("openai"));
 
         ChatModel model =
                 OpenAiChatModel.builder()

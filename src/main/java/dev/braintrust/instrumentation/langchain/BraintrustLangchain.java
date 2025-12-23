@@ -6,6 +6,13 @@ import io.opentelemetry.api.OpenTelemetry;
 /** Braintrust LangChain4j client instrumentation. */
 public final class BraintrustLangchain {
     public static HttpClientBuilder wrap(OpenTelemetry otel, HttpClientBuilder builder) {
-        return new WrappedHttpClientBuilder(otel, builder);
+        return new WrappedHttpClientBuilder(otel, builder, null);
     }
+
+    public static HttpClientBuilder wrap(
+            OpenTelemetry otel, HttpClientBuilder builder, Options options) {
+        return new WrappedHttpClientBuilder(otel, builder, options);
+    }
+
+    public record Options(String providerName) {}
 }

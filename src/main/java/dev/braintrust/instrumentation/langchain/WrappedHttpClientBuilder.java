@@ -8,10 +8,15 @@ import java.time.Duration;
 class WrappedHttpClientBuilder implements HttpClientBuilder {
     private final OpenTelemetry openTelemetry;
     private final HttpClientBuilder underlying;
+    private final BraintrustLangchain.Options options;
 
-    public WrappedHttpClientBuilder(OpenTelemetry openTelemetry, HttpClientBuilder underlying) {
+    public WrappedHttpClientBuilder(
+            OpenTelemetry openTelemetry,
+            HttpClientBuilder underlying,
+            BraintrustLangchain.Options options) {
         this.openTelemetry = openTelemetry;
         this.underlying = underlying;
+        this.options = options;
     }
 
     @Override
@@ -38,6 +43,6 @@ class WrappedHttpClientBuilder implements HttpClientBuilder {
 
     @Override
     public HttpClient build() {
-        return new WrappedHttpClient(openTelemetry, underlying.build());
+        return new WrappedHttpClient(openTelemetry, underlying.build(), options);
     }
 }

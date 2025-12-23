@@ -73,7 +73,8 @@ public class BraintrustLangchainTest {
         var clientBuilder =
                 BraintrustLangchain.wrap(
                         testHarness.openTelemetry(),
-                        HttpClientBuilderLoader.loadHttpClientBuilder());
+                        HttpClientBuilderLoader.loadHttpClientBuilder(),
+                        new BraintrustLangchain.Options("openai"));
 
         ChatModel model =
                 OpenAiChatModel.builder()
@@ -98,10 +99,67 @@ public class BraintrustLangchainTest {
         assertEquals(1, spans.size(), "Expected one span for sync chat completion");
         var span = spans.get(0);
 
-        // Basic span verification - just ensure a span was created
-        assertNotNull(span);
-        assertNotNull(span.getName());
-        assertFalse(span.getName().isEmpty(), "Span name should not be empty");
+        // Verify span name
+        assertEquals("Chat Completion", span.getName(), "Span name should be 'Chat Completion'");
+
+        // Verify span attributes
+        var attributes = span.getAttributes();
+
+        // Verify span type
+        assertEquals(
+                "llm",
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.span_attributes.type")),
+                "Span type should be 'llm'");
+
+        // Verify metadata
+        String metadataJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson, "Metadata should be present");
+        assertTrue(
+                metadataJson.contains("\"provider\":\"openai\""),
+                "Metadata should contain provider");
+        assertTrue(
+                metadataJson.contains("\"model\":\"gpt-4o-mini\""),
+                "Metadata should contain model");
+
+        // Verify metrics
+        String metricsJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson, "Metrics should be present");
+        assertTrue(metricsJson.contains("\"tokens\":28"), "Metrics should contain tokens");
+        assertTrue(
+                metricsJson.contains("\"prompt_tokens\":20"),
+                "Metrics should contain prompt_tokens");
+        assertTrue(
+                metricsJson.contains("\"completion_tokens\":8"),
+                "Metrics should contain completion_tokens");
+        assertTrue(
+                metricsJson.contains("time_to_first_token"),
+                "Metrics should contain time_to_first_token");
+
+        // Verify input
+        String inputJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.input_json"));
+        assertNotNull(inputJson, "Input should be present");
+        assertTrue(
+                inputJson.contains("What is the capital of France"),
+                "Input should contain the user message");
+
+        // Verify output
+        String outputJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.output_json"));
+        assertNotNull(outputJson, "Output should be present");
+        assertTrue(
+                outputJson.contains("The capital of France is Paris"),
+                "Output should contain the assistant response");
     }
 
     @Test
@@ -146,7 +204,8 @@ public class BraintrustLangchainTest {
         var clientBuilder =
                 BraintrustLangchain.wrap(
                         testHarness.openTelemetry(),
-                        HttpClientBuilderLoader.loadHttpClientBuilder());
+                        HttpClientBuilderLoader.loadHttpClientBuilder(),
+                        new BraintrustLangchain.Options("openai"));
 
         StreamingChatModel model =
                 OpenAiStreamingChatModel.builder()
@@ -189,14 +248,73 @@ public class BraintrustLangchainTest {
         wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/chat/completions")));
 
         // Verify spans were exported
-        // NOTE: This will likely fail because streaming instrumentation isn't implemented yet
-        var spans = testHarness.awaitExportedSpans();
+        var spans = testHarness.awaitExportedSpans(1);
         assertEquals(1, spans.size(), "Expected one span for streaming chat completion");
         var span = spans.get(0);
 
-        // Basic span verification - just ensure a span was created
-        assertNotNull(span);
-        assertNotNull(span.getName());
-        assertFalse(span.getName().isEmpty(), "Span name should not be empty");
+        // Verify span name
+        assertEquals("Chat Completion", span.getName(), "Span name should be 'Chat Completion'");
+
+        // Verify span attributes
+        var attributes = span.getAttributes();
+
+        // Verify span type
+        assertEquals(
+                "llm",
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.span_attributes.type")),
+                "Span type should be 'llm'");
+
+        // Verify metadata
+        String metadataJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson, "Metadata should be present");
+        assertTrue(
+                metadataJson.contains("\"provider\":\"openai\""),
+                "Metadata should contain provider");
+        assertTrue(
+                metadataJson.contains("\"model\":\"gpt-4o-mini\""),
+                "Metadata should contain model");
+
+        // Verify metrics for streaming
+        String metricsJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson, "Metrics should be present");
+        assertTrue(metricsJson.contains("\"tokens\":28"), "Metrics should contain tokens");
+        assertTrue(
+                metricsJson.contains("\"prompt_tokens\":20"),
+                "Metrics should contain prompt_tokens");
+        assertTrue(
+                metricsJson.contains("\"completion_tokens\":8"),
+                "Metrics should contain completion_tokens");
+        assertTrue(
+                metricsJson.contains("time_to_first_token"),
+                "Metrics should contain time_to_first_token for streaming");
+
+        // Verify input
+        String inputJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.input_json"));
+        assertNotNull(inputJson, "Input should be present");
+        assertTrue(
+                inputJson.contains("What is the capital of France"),
+                "Input should contain the user message");
+
+        // Verify output (streaming reconstructs the output)
+        String outputJson =
+                attributes.get(
+                        io.opentelemetry.api.common.AttributeKey.stringKey(
+                                "braintrust.output_json"));
+        assertNotNull(outputJson, "Output should be present");
+        assertTrue(
+                outputJson.contains("The capital of France is Paris"),
+                "Output should contain the complete streamed response");
+        assertTrue(
+                outputJson.contains("\"finish_reason\":\"stop\""),
+                "Output should contain finish_reason");
     }
 }

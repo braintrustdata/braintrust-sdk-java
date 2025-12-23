@@ -1,6 +1,7 @@
 package dev.braintrust;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
 public class TestHarness {
@@ -109,6 +111,30 @@ public class TestHarness {
                         .join(10, TimeUnit.SECONDS)
                         .isSuccess());
         return spanExporter.getFinishedSpanItems();
+    }
+
+    /**
+     * flush all pending spans and return all spans which have been exported so far
+     *
+     * <p>repeat the process until the number of exported spans equals or exceeds `minSpanCount`
+     */
+    @SneakyThrows
+    public List<SpanData> awaitExportedSpans(int minSpanCount) {
+        var spans = awaitExportedSpans();
+        int attempts = 0;
+        while (spans.size() < minSpanCount) {
+            attempts++;
+            if (attempts > 30) {
+                fail(
+                        String.format(
+                                "Timeout waiting for spans: expected at least %d spans, but got %d"
+                                        + " after %d attempts",
+                                minSpanCount, spans.size(), attempts));
+            }
+            Thread.sleep(1000);
+            spans = awaitExportedSpans();
+        }
+        return spans;
     }
 
     private static BraintrustApiClient.InMemoryImpl createApiClient() {

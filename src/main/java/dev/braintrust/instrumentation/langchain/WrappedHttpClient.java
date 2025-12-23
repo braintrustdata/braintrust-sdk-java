@@ -12,7 +12,6 @@ import dev.langchain4j.http.client.sse.ServerSentEventContext;
 import dev.langchain4j.http.client.sse.ServerSentEventListener;
 import dev.langchain4j.http.client.sse.ServerSentEventParser;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
@@ -28,16 +27,21 @@ class WrappedHttpClient implements HttpClient {
 
     private final Tracer tracer;
     private final HttpClient underlying;
+    private final BraintrustLangchain.Options options;
 
-    public WrappedHttpClient(OpenTelemetry openTelemetry, HttpClient underlying) {
+    public WrappedHttpClient(
+            OpenTelemetry openTelemetry,
+            HttpClient underlying,
+            BraintrustLangchain.Options options) {
         this.tracer = BraintrustTracing.getTracer(openTelemetry);
         this.underlying = underlying;
+        this.options = options;
     }
 
     @Override
     public SuccessfulHttpResponse execute(HttpRequest request)
             throws HttpException, RuntimeException {
-        ProviderInfo providerInfo = detectProvider(request);
+        ProviderInfo providerInfo = detectProvider(request, options);
         String spanName = getSpanName(providerInfo);
         Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
         long startTime = System.nanoTime();
@@ -63,7 +67,7 @@ class WrappedHttpClient implements HttpClient {
             underlying.execute(request, listener);
             return;
         }
-        ProviderInfo providerInfo = detectProvider(request);
+        ProviderInfo providerInfo = detectProvider(request, options);
         String spanName = getSpanName(providerInfo);
         Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
         try (Scope scope = span.makeCurrent()) {
@@ -85,13 +89,15 @@ class WrappedHttpClient implements HttpClient {
             underlying.execute(request, parser, listener);
             return;
         }
-        ProviderInfo providerInfo = detectProvider(request);
+        ProviderInfo providerInfo = detectProvider(request, options);
         String spanName = getSpanName(providerInfo);
         Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
         try {
             tagSpan(span, request, providerInfo);
             underlying.execute(
-                    request, parser, new WrappedServerSentEventListener(listener, span, providerInfo));
+                    request,
+                    parser,
+                    new WrappedServerSentEventListener(listener, span, providerInfo));
         } catch (Throwable t) {
             tagSpan(span, t);
             span.end();
@@ -99,30 +105,36 @@ class WrappedHttpClient implements HttpClient {
         }
     }
 
-    /**
-     * Detect provider and endpoint from the request URL.
-     */
-    private static ProviderInfo detectProvider(HttpRequest request) {
+    /** Detect provider and endpoint from the request URL. */
+    private static ProviderInfo detectProvider(
+            HttpRequest request, BraintrustLangchain.Options options) {
         String url = request.url();
         String provider = "unknown";
         String endpoint = "";
+
+        // If options is provided and has a provider name, use it
+        if (options != null && options.providerName() != null) {
+            provider = options.providerName();
+        }
 
         // Extract endpoint from URL path
         try {
             java.net.URI uri = new java.net.URI(url);
             endpoint = uri.getPath();
 
-            // Detect provider from hostname
-            String host = uri.getHost();
-            if (host != null) {
-                if (host.contains("api.openai.com")) {
-                    provider = "openai";
-                } else if (host.contains("api.anthropic.com")) {
-                    provider = "anthropic";
-                } else if (host.contains("generativelanguage.googleapis.com")) {
-                    provider = "google";
+            // Only detect provider from hostname if not explicitly provided via options
+            if (options == null || options.providerName() == null) {
+                String host = uri.getHost();
+                if (host != null) {
+                    if (host.contains("api.openai.com")) {
+                        provider = "openai";
+                    } else if (host.contains("api.anthropic.com")) {
+                        provider = "anthropic";
+                    } else if (host.contains("generativelanguage.googleapis.com")) {
+                        provider = "google";
+                    }
+                    // Add more providers here as needed
                 }
-                // Add more providers here as needed
             }
         } catch (Exception e) {
             log.debug("Failed to parse URL: {}", url, e);
@@ -131,12 +143,11 @@ class WrappedHttpClient implements HttpClient {
         return new ProviderInfo(provider, endpoint);
     }
 
-    /**
-     * Get span name based on the provider and endpoint.
-     */
+    /** Get span name based on the provider and endpoint. */
     private static String getSpanName(ProviderInfo info) {
         // Map endpoints to human-readable names
-        if (info.endpoint.contains("/chat/completions") || info.endpoint.contains("/v1/completions")) {
+        if (info.endpoint.contains("/chat/completions")
+                || info.endpoint.contains("/v1/completions")) {
             return "Chat Completion";
         } else if (info.endpoint.contains("/embeddings")) {
             return "Embeddings";
@@ -147,9 +158,7 @@ class WrappedHttpClient implements HttpClient {
         return "LLM Request";
     }
 
-    /**
-     * Tag span with request data: input messages, model, provider.
-     */
+    /** Tag span with request data: input messages, model, provider. */
     private static void tagSpan(Span span, HttpRequest request, ProviderInfo providerInfo) {
         try {
             // Set span type to llm (in span_attributes, not metadata)
@@ -172,7 +181,8 @@ class WrappedHttpClient implements HttpClient {
 
                 // Extract messages array for input
                 if (requestJson.has("messages")) {
-                    String messagesJson = JSON_MAPPER.writeValueAsString(requestJson.get("messages"));
+                    String messagesJson =
+                            JSON_MAPPER.writeValueAsString(requestJson.get("messages"));
                     span.setAttribute("braintrust.input_json", messagesJson);
                 }
             }
@@ -184,11 +194,12 @@ class WrappedHttpClient implements HttpClient {
         }
     }
 
-    /**
-     * Tag span with response data: output messages, usage metrics.
-     */
+    /** Tag span with response data: output messages, usage metrics. */
     private static void tagSpan(
-            Span span, SuccessfulHttpResponse response, ProviderInfo providerInfo, double timeToFirstToken) {
+            Span span,
+            SuccessfulHttpResponse response,
+            ProviderInfo providerInfo,
+            double timeToFirstToken) {
         try {
             // Build metrics map
             Map<String, Object> metrics = new HashMap<>();
@@ -200,7 +211,8 @@ class WrappedHttpClient implements HttpClient {
 
                 // Extract choices array for output
                 if (responseJson.has("choices")) {
-                    String choicesJson = JSON_MAPPER.writeValueAsString(responseJson.get("choices"));
+                    String choicesJson =
+                            JSON_MAPPER.writeValueAsString(responseJson.get("choices"));
                     span.setAttribute("braintrust.output_json", choicesJson);
                 }
 
@@ -226,9 +238,7 @@ class WrappedHttpClient implements HttpClient {
         }
     }
 
-    /**
-     * Tag span with error information.
-     */
+    /** Tag span with error information. */
     private static void tagSpan(Span span, Throwable t) {
         span.setStatus(StatusCode.ERROR, t.getMessage());
         span.recordException(t);
@@ -341,7 +351,8 @@ class WrappedHttpClient implements HttpClient {
             }
 
             // Reconstruct output as a choices array for streaming
-            // Format: [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "..."}}]
+            // Format: [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant",
+            // "content": "..."}}]
             if (outputBuffer.length() > 0) {
                 try {
                     // Create a proper choice object matching OpenAI API format
@@ -371,7 +382,8 @@ class WrappedHttpClient implements HttpClient {
                         metrics.put("prompt_tokens", usageData.get("prompt_tokens").asLong());
                     }
                     if (usageData.has("completion_tokens")) {
-                        metrics.put("completion_tokens", usageData.get("completion_tokens").asLong());
+                        metrics.put(
+                                "completion_tokens", usageData.get("completion_tokens").asLong());
                     }
                     if (usageData.has("total_tokens")) {
                         metrics.put("tokens", usageData.get("total_tokens").asLong());
@@ -384,7 +396,8 @@ class WrappedHttpClient implements HttpClient {
             // Serialize metrics as JSON
             try {
                 if (!metrics.isEmpty()) {
-                    span.setAttribute("braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
+                    span.setAttribute(
+                            "braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
                 }
             } catch (Exception e) {
                 log.debug("Failed to serialize metrics", e);
