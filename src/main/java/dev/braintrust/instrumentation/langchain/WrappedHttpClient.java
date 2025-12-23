@@ -1,5 +1,7 @@
 package dev.braintrust.instrumentation.langchain;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.trace.BraintrustTracing;
 import dev.langchain4j.exception.HttpException;
 import dev.langchain4j.http.client.HttpClient;
@@ -10,12 +12,20 @@ import dev.langchain4j.http.client.sse.ServerSentEventContext;
 import dev.langchain4j.http.client.sse.ServerSentEventListener;
 import dev.langchain4j.http.client.sse.ServerSentEventParser;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import java.util.HashMap;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 class WrappedHttpClient implements HttpClient {
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
     private final Tracer tracer;
     private final HttpClient underlying;
 
@@ -27,11 +37,16 @@ class WrappedHttpClient implements HttpClient {
     @Override
     public SuccessfulHttpResponse execute(HttpRequest request)
             throws HttpException, RuntimeException {
-        Span span = tracer.spanBuilder("TODO").setSpanKind(SpanKind.CLIENT).startSpan();
+        ProviderInfo providerInfo = detectProvider(request);
+        String spanName = getSpanName(providerInfo);
+        Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
+        long startTime = System.nanoTime();
         try (Scope scope = span.makeCurrent()) {
-            tagSpan(span, request);
+            tagSpan(span, request, providerInfo);
             var response = underlying.execute(request);
-            tagSpan(span, response);
+            long endTime = System.nanoTime();
+            double timeToFirstToken = (endTime - startTime) / 1_000_000_000.0;
+            tagSpan(span, response, providerInfo, timeToFirstToken);
             return response;
         } catch (Throwable t) {
             tagSpan(span, t);
@@ -48,10 +63,13 @@ class WrappedHttpClient implements HttpClient {
             underlying.execute(request, listener);
             return;
         }
-        Span span = tracer.spanBuilder("TODO").setSpanKind(SpanKind.CLIENT).startSpan();
+        ProviderInfo providerInfo = detectProvider(request);
+        String spanName = getSpanName(providerInfo);
+        Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
         try (Scope scope = span.makeCurrent()) {
-            tagSpan(span, request);
-            underlying.execute(request, new WrappedServerSentEventListener(listener, span));
+            tagSpan(span, request, providerInfo);
+            underlying.execute(
+                    request, new WrappedServerSentEventListener(listener, span, providerInfo));
         } catch (Throwable t) {
             tagSpan(span, t);
             span.end();
@@ -67,10 +85,13 @@ class WrappedHttpClient implements HttpClient {
             underlying.execute(request, parser, listener);
             return;
         }
-        Span span = tracer.spanBuilder("TODO").setSpanKind(SpanKind.CLIENT).startSpan();
+        ProviderInfo providerInfo = detectProvider(request);
+        String spanName = getSpanName(providerInfo);
+        Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).startSpan();
         try {
-            tagSpan(span, request);
-            underlying.execute(request, parser, new WrappedServerSentEventListener(listener, span));
+            tagSpan(span, request, providerInfo);
+            underlying.execute(
+                    request, parser, new WrappedServerSentEventListener(listener, span, providerInfo));
         } catch (Throwable t) {
             tagSpan(span, t);
             span.end();
@@ -78,28 +99,156 @@ class WrappedHttpClient implements HttpClient {
         }
     }
 
-    private static void tagSpan(Span span, HttpRequest request) {
-        // TODO
+    /**
+     * Detect provider and endpoint from the request URL.
+     */
+    private static ProviderInfo detectProvider(HttpRequest request) {
+        String url = request.url();
+        String provider = "unknown";
+        String endpoint = "";
+
+        // Extract endpoint from URL path
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            endpoint = uri.getPath();
+
+            // Detect provider from hostname
+            String host = uri.getHost();
+            if (host != null) {
+                if (host.contains("api.openai.com")) {
+                    provider = "openai";
+                } else if (host.contains("api.anthropic.com")) {
+                    provider = "anthropic";
+                } else if (host.contains("generativelanguage.googleapis.com")) {
+                    provider = "google";
+                }
+                // Add more providers here as needed
+            }
+        } catch (Exception e) {
+            log.debug("Failed to parse URL: {}", url, e);
+        }
+
+        return new ProviderInfo(provider, endpoint);
     }
 
-    private static void tagSpan(Span span, SuccessfulHttpResponse response) {
-        // TODO
+    /**
+     * Get span name based on the provider and endpoint.
+     */
+    private static String getSpanName(ProviderInfo info) {
+        // Map endpoints to human-readable names
+        if (info.endpoint.contains("/chat/completions") || info.endpoint.contains("/v1/completions")) {
+            return "Chat Completion";
+        } else if (info.endpoint.contains("/embeddings")) {
+            return "Embeddings";
+        } else if (info.endpoint.contains("/messages")) {
+            return "Messages";
+        }
+        // Default to generic name
+        return "LLM Request";
     }
 
+    /**
+     * Tag span with request data: input messages, model, provider.
+     */
+    private static void tagSpan(Span span, HttpRequest request, ProviderInfo providerInfo) {
+        try {
+            // Set span type to llm (in span_attributes, not metadata)
+            span.setAttribute("braintrust.span_attributes.type", "llm");
+
+            // Set provider in metadata
+            span.setAttribute("braintrust.metadata.provider", providerInfo.provider);
+
+            // Parse request body to extract model and messages
+            String body = request.body();
+            if (body != null && !body.isEmpty()) {
+                JsonNode requestJson = JSON_MAPPER.readTree(body);
+
+                // Extract model
+                if (requestJson.has("model")) {
+                    String model = requestJson.get("model").asText();
+                    span.setAttribute("braintrust.metadata.model", model);
+                }
+
+                // Extract messages array for input
+                if (requestJson.has("messages")) {
+                    String messagesJson = JSON_MAPPER.writeValueAsString(requestJson.get("messages"));
+                    span.setAttribute("braintrust.input_json", messagesJson);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to parse request for span tagging", e);
+        }
+    }
+
+    /**
+     * Tag span with response data: output messages, usage metrics.
+     */
+    private static void tagSpan(
+            Span span, SuccessfulHttpResponse response, ProviderInfo providerInfo, double timeToFirstToken) {
+        try {
+            // Set time to first token
+            span.setAttribute("braintrust.metrics.time_to_first_token", timeToFirstToken);
+
+            String body = response.body();
+            if (body != null && !body.isEmpty()) {
+                JsonNode responseJson = JSON_MAPPER.readTree(body);
+
+                // Extract choices array for output
+                if (responseJson.has("choices")) {
+                    String choicesJson = JSON_MAPPER.writeValueAsString(responseJson.get("choices"));
+                    span.setAttribute("braintrust.output_json", choicesJson);
+                }
+
+                // Extract usage metrics if present
+                if (responseJson.has("usage")) {
+                    JsonNode usage = responseJson.get("usage");
+                    if (usage.has("prompt_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.prompt_tokens", usage.get("prompt_tokens").asLong());
+                    }
+                    if (usage.has("completion_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.completion_tokens",
+                                usage.get("completion_tokens").asLong());
+                    }
+                    if (usage.has("total_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.tokens", usage.get("total_tokens").asLong());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to parse response for span tagging", e);
+        }
+    }
+
+    /**
+     * Tag span with error information.
+     */
     private static void tagSpan(Span span, Throwable t) {
-        // TODO
+        span.setStatus(StatusCode.ERROR, t.getMessage());
+        span.recordException(t);
     }
 
     /**
      * Wraps a ServerSentEventListener to properly end the span when streaming completes or errors.
+     * Also buffers streaming chunks to extract usage data.
      */
     private static class WrappedServerSentEventListener implements ServerSentEventListener {
         private final ServerSentEventListener delegate;
         private final Span span;
+        private final ProviderInfo providerInfo;
+        private final StringBuilder outputBuffer = new StringBuilder();
+        private long firstTokenTime = 0;
+        private final long startTime;
+        private JsonNode usageData = null;
 
-        WrappedServerSentEventListener(ServerSentEventListener delegate, Span span) {
+        WrappedServerSentEventListener(
+                ServerSentEventListener delegate, Span span, ProviderInfo providerInfo) {
             this.delegate = delegate;
             this.span = span;
+            this.providerInfo = providerInfo;
+            this.startTime = System.nanoTime();
         }
 
         @Override
@@ -120,7 +269,42 @@ class WrappedHttpClient implements HttpClient {
         }
 
         private void instrumentEvent(ServerSentEvent event) {
-            event.data();
+            String data = event.data();
+            if (data == null || data.isEmpty() || "[DONE]".equals(data)) {
+                return;
+            }
+
+            // Track time to first token
+            if (firstTokenTime == 0) {
+                firstTokenTime = System.nanoTime();
+                double timeToFirstToken = (firstTokenTime - startTime) / 1_000_000_000.0;
+                span.setAttribute("braintrust.metrics.time_to_first_token", timeToFirstToken);
+            }
+
+            // Buffer the data for final processing
+            try {
+                JsonNode chunk = JSON_MAPPER.readTree(data);
+
+                // For streaming, we accumulate deltas into the complete message
+                // Just track if we have any content
+                if (chunk.has("choices") && chunk.get("choices").size() > 0) {
+                    JsonNode choice = chunk.get("choices").get(0);
+                    if (choice.has("delta")) {
+                        JsonNode delta = choice.get("delta");
+                        if (delta.has("content")) {
+                            String content = delta.get("content").asText();
+                            outputBuffer.append(content);
+                        }
+                    }
+                }
+
+                // Extract usage data if present (usually in the last chunk)
+                if (chunk.has("usage")) {
+                    usageData = chunk.get("usage");
+                }
+            } catch (Exception e) {
+                log.debug("Failed to parse streaming event: {}", data, e);
+            }
         }
 
         @Override
@@ -129,6 +313,7 @@ class WrappedHttpClient implements HttpClient {
                 delegate.onError(error);
             } finally {
                 tagSpan(span, error);
+                finalizeSpan();
                 span.end();
             }
         }
@@ -138,8 +323,56 @@ class WrappedHttpClient implements HttpClient {
             try {
                 delegate.onClose();
             } finally {
-                // End span on successful completion
+                finalizeSpan();
                 span.end();
+            }
+        }
+
+        private void finalizeSpan() {
+            // Reconstruct output as a choices array for streaming
+            // Format: [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "..."}}]
+            if (outputBuffer.length() > 0) {
+                try {
+                    // Create a proper choice object matching OpenAI API format
+                    var choiceBuilder = JSON_MAPPER.createObjectNode();
+                    choiceBuilder.put("index", 0);
+                    choiceBuilder.put("finish_reason", "stop");
+
+                    var messageNode = JSON_MAPPER.createObjectNode();
+                    messageNode.put("role", "assistant");
+                    messageNode.put("content", outputBuffer.toString());
+
+                    choiceBuilder.set("message", messageNode);
+
+                    var choicesArray = JSON_MAPPER.createArrayNode();
+                    choicesArray.add(choiceBuilder);
+
+                    span.setAttribute("braintrust.output_json", choicesArray.toString());
+                } catch (Exception e) {
+                    log.debug("Failed to reconstruct streaming output", e);
+                }
+            }
+
+            // Set usage metrics if we collected them
+            if (usageData != null) {
+                try {
+                    if (usageData.has("prompt_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.prompt_tokens",
+                                usageData.get("prompt_tokens").asLong());
+                    }
+                    if (usageData.has("completion_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.completion_tokens",
+                                usageData.get("completion_tokens").asLong());
+                    }
+                    if (usageData.has("total_tokens")) {
+                        span.setAttribute(
+                                "braintrust.metrics.tokens", usageData.get("total_tokens").asLong());
+                    }
+                } catch (Exception e) {
+                    log.debug("Failed to extract usage metrics from streaming data", e);
+                }
             }
         }
     }
