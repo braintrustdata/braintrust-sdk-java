@@ -45,11 +45,11 @@ public final class BraintrustContext {
      * parent context to flow across process boundaries.
      *
      * @param ctx the context to update
-     * @param parentType the type of parent (e.g., "experiment_id", "project_name")
+     * @param parentType the type of parent (e.g., "experiment_id", "project_name", "playground_id")
      * @param parentId the ID of the parent
      * @return updated context with baggage set
      */
-    static Context setParentInBaggage(
+    public static Context setParentInBaggage(
             @Nonnull Context ctx, @Nonnull String parentType, @Nonnull String parentId) {
         try {
             String parentValue = (new BraintrustUtils.Parent(parentType, parentId)).toParentValue();
