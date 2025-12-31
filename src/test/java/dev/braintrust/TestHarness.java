@@ -1,7 +1,6 @@
 package dev.braintrust;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
@@ -14,7 +13,6 @@ import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
@@ -87,12 +85,12 @@ public class TestHarness {
     @Accessors(fluent = true)
     private final Braintrust braintrust;
 
-    private final @Nonnull InMemorySpanExporter spanExporter;
+    private final @Nonnull UnitTestSpanExporter spanExporter;
 
     private TestHarness(@Nonnull Braintrust braintrust) {
         this.braintrust = braintrust;
         var tracerBuilder = SdkTracerProvider.builder();
-        this.spanExporter = InMemorySpanExporter.create();
+        this.spanExporter = new UnitTestSpanExporter();
         var loggerBuilder = SdkLoggerProvider.builder();
         var meterBuilder = SdkMeterProvider.builder();
         braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
@@ -155,22 +153,7 @@ public class TestHarness {
      */
     @SneakyThrows
     public List<SpanData> awaitExportedSpans(int minSpanCount) {
-        var spans = awaitExportedSpans();
-        int attempts = 0;
-        while (spans.size() < minSpanCount) {
-            attempts++;
-            if (attempts > 30) {
-                fail(
-                        String.format(
-                                "Timeout waiting for spans: expected at least %d spans, but got %d"
-                                        + " after %d attempts",
-                                minSpanCount, spans.size(), attempts));
-            }
-            // TODO: use concurrency primitives to wait instead of sleeping
-            Thread.sleep(1000);
-            spans = awaitExportedSpans();
-        }
-        return spans;
+        return spanExporter.getFinishedSpanItems(minSpanCount);
     }
 
     private static BraintrustApiClient.InMemoryImpl createApiClient() {
