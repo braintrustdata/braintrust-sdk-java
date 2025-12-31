@@ -1,7 +1,6 @@
 package dev.braintrust;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
@@ -14,7 +13,6 @@ import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
@@ -27,6 +25,18 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
 public class TestHarness {
+    private static final VCR vcr;
+
+    static {
+        vcr =
+                new VCR(
+                        java.util.Map.of(
+                                "https://api.openai.com/v1", "openai",
+                                "https://api.anthropic.com", "anthropic",
+                                "https://generativelanguage.googleapis.com", "google"));
+        vcr.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(vcr::stop));
+    }
 
     public static TestHarness setup() {
         return setup(createTestConfig());
@@ -75,13 +85,12 @@ public class TestHarness {
     @Accessors(fluent = true)
     private final Braintrust braintrust;
 
-    private final @Nonnull InMemorySpanExporter spanExporter;
+    private final @Nonnull UnitTestSpanExporter spanExporter;
 
     private TestHarness(@Nonnull Braintrust braintrust) {
         this.braintrust = braintrust;
-
         var tracerBuilder = SdkTracerProvider.builder();
-        this.spanExporter = InMemorySpanExporter.create();
+        this.spanExporter = new UnitTestSpanExporter();
         var loggerBuilder = SdkLoggerProvider.builder();
         var meterBuilder = SdkMeterProvider.builder();
         braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
@@ -102,6 +111,30 @@ public class TestHarness {
         this.openTelemetry = openTelemetry;
     }
 
+    public String openAiBaseUrl() {
+        return vcr.getUrlForTargetBase("https://api.openai.com/v1");
+    }
+
+    public String openAiApiKey() {
+        return getEnv("OPENAI_API_KEY", "test-key");
+    }
+
+    public String anthropicBaseUrl() {
+        return vcr.getUrlForTargetBase("https://api.anthropic.com");
+    }
+
+    public String anthropicApiKey() {
+        return getEnv("ANTHROPIC_API_KEY", "test-key");
+    }
+
+    public String googleBaseUrl() {
+        return vcr.getUrlForTargetBase("https://generativelanguage.googleapis.com");
+    }
+
+    public String googleApiKey() {
+        return getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "test-key"));
+    }
+
     /** flush all pending spans and return all spans which have been exported so far */
     public List<SpanData> awaitExportedSpans() {
         assertTrue(
@@ -120,21 +153,7 @@ public class TestHarness {
      */
     @SneakyThrows
     public List<SpanData> awaitExportedSpans(int minSpanCount) {
-        var spans = awaitExportedSpans();
-        int attempts = 0;
-        while (spans.size() < minSpanCount) {
-            attempts++;
-            if (attempts > 30) {
-                fail(
-                        String.format(
-                                "Timeout waiting for spans: expected at least %d spans, but got %d"
-                                        + " after %d attempts",
-                                minSpanCount, spans.size(), attempts));
-            }
-            Thread.sleep(1000);
-            spans = awaitExportedSpans();
-        }
-        return spans;
+        return spanExporter.getFinishedSpanItems(minSpanCount);
     }
 
     private static BraintrustApiClient.InMemoryImpl createApiClient() {
@@ -162,5 +181,10 @@ public class TestHarness {
                 "BRAINTRUST_API_URL", "https://testhost:8000",
                 "BRAINTRUST_APP_URL", "https://testhost:3000",
                 "BRAINTRUST_DEFAULT_PROJECT_NAME", defaultProjectName());
+    }
+
+    private static String getEnv(String envarName, String defaultValue) {
+        var envar = System.getenv(envarName);
+        return envar == null ? defaultValue : envar;
     }
 }

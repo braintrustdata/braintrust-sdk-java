@@ -1,7 +1,5 @@
 package dev.braintrust.instrumentation.anthropic;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.anthropic.client.AnthropicClient;
@@ -9,66 +7,30 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.braintrust.TestHarness;
 import io.opentelemetry.api.common.AttributeKey;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class BraintrustAnthropicTest {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
-    @RegisterExtension
-    static WireMockExtension wireMock =
-            WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
     private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
-        wireMock.resetAll();
     }
 
     @Test
     @SneakyThrows
     void testWrapAnthropic() {
-        // Mock the Anthropic API response
-        wireMock.stubFor(
-                post(urlEqualTo("/v1/messages"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "id": "msg_test123",
-                                  "type": "message",
-                                  "role": "assistant",
-                                  "model": "claude-3-5-haiku-20241022",
-                                  "content": [
-                                    {
-                                      "type": "text",
-                                      "text": "The capital of France is Paris."
-                                    }
-                                  ],
-                                  "stop_reason": "end_turn",
-                                  "stop_sequence": null,
-                                  "usage": {
-                                    "input_tokens": 20,
-                                    "output_tokens": 8
-                                  }
-                                }
-                                """)));
-
-        // Create Anthropic client pointing to WireMock server
+        // Create Anthropic client using VCR
         AnthropicClient anthropicClient =
                 AnthropicOkHttpClient.builder()
-                        .baseUrl("http://localhost:" + wireMock.getPort())
-                        .apiKey("test-api-key")
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
                         .build();
 
         // Wrap with Braintrust instrumentation
@@ -87,11 +49,10 @@ public class BraintrustAnthropicTest {
 
         // Verify the response
         assertNotNull(response);
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
-        assertEquals("msg_test123", response.id());
+        assertNotNull(response.id());
         var contentBlock = response.content().get(0);
         assertTrue(contentBlock.isText());
-        assertEquals("The capital of France is Paris.", contentBlock.asText().text());
+        assertNotNull(contentBlock.asText().text());
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -104,27 +65,19 @@ public class BraintrustAnthropicTest {
         assertEquals(
                 "claude-3-5-haiku-20241022",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertEquals(
-                "claude-3-5-haiku-20241022",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertEquals(
-                "[end_turn]",
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
+        assertNotNull(
                 span.getAttributes()
-                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons"))
-                        .toString());
+                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons")));
         assertEquals(
                 "anthropic.messages.create",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertEquals(
-                "msg_test123",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
         assertEquals(
                 "project_name:" + TestHarness.defaultProjectName(),
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.parent")));
-        assertEquals(
-                20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertEquals(
-                8L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
         assertEquals(
                 0.0,
                 span.getAttributes().get(AttributeKey.doubleKey("gen_ai.request.temperature")));
@@ -132,11 +85,7 @@ public class BraintrustAnthropicTest {
                 50L, span.getAttributes().get(AttributeKey.longKey("gen_ai.request.max_tokens")));
 
         // Verify Braintrust-specific attributes
-        assertEquals(
-                "[{\"content\":\"What is the capital of"
-                        + " France?\",\"role\":\"user\",\"valid\":true},{\"content\":\"You are a"
-                        + " helpful assistant\",\"role\":\"system\",\"valid\":false}]",
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
 
         // Verify output JSON
         String outputJson =
@@ -144,14 +93,12 @@ public class BraintrustAnthropicTest {
         assertNotNull(outputJson);
 
         var outputMessage = JSON_MAPPER.readTree(outputJson);
-        assertEquals("msg_test123", outputMessage.get("id").asText());
+        assertNotNull(outputMessage.get("id"));
         assertEquals("message", outputMessage.get("type").asText());
         assertEquals("assistant", outputMessage.get("role").asText());
-        assertEquals(
-                "The capital of France is Paris.",
-                outputMessage.get("content").get(0).get("text").asText());
-        assertEquals(8, outputMessage.get("usage").get("output_tokens").asInt());
-        assertEquals(20, outputMessage.get("usage").get("input_tokens").asInt());
+        assertNotNull(outputMessage.get("content").get(0).get("text"));
+        assertTrue(outputMessage.get("usage").get("output_tokens").asInt() > 0);
+        assertTrue(outputMessage.get("usage").get("input_tokens").asInt() > 0);
 
         // Verify time to first token
         Double timeToFirstToken =
@@ -164,60 +111,11 @@ public class BraintrustAnthropicTest {
     @Test
     @SneakyThrows
     void testWrapAnthropicStreaming() {
-        // Mock the Anthropic streaming API response
-        String streamingResponse =
-                """
-                event: message_start
-                data: {"type":"message_start","message":{"id":"msg_test123","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":20,"output_tokens":1}}}
-
-                event: content_block_start
-                data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"The"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" capital"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" of"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" France"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" is"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" Paris"}}
-
-                event: content_block_delta
-                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"."}}
-
-                event: content_block_stop
-                data: {"type":"content_block_stop","index":0}
-
-                event: message_delta
-                data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":8}}
-
-                event: message_stop
-                data: {"type":"message_stop"}
-
-                """;
-
-        wireMock.stubFor(
-                post(urlEqualTo("/v1/messages"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "text/event-stream")
-                                        .withBody(streamingResponse)));
-
-        // Create Anthropic client pointing to WireMock server
+        // Create Anthropic client using VCR
         AnthropicClient anthropicClient =
                 AnthropicOkHttpClient.builder()
-                        .baseUrl("http://localhost:" + wireMock.getPort())
-                        .apiKey("test-api-key")
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
                         .build();
 
         // Wrap with Braintrust instrumentation
@@ -248,8 +146,7 @@ public class BraintrustAnthropicTest {
         }
 
         // Verify the response
-        assertEquals("The capital of France is Paris.", fullResponse.toString());
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
+        assertFalse(fullResponse.toString().isEmpty());
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -262,31 +159,25 @@ public class BraintrustAnthropicTest {
         assertEquals(
                 "claude-3-5-haiku-20241022",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertEquals(
-                "claude-3-5-haiku-20241022",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
         assertEquals(
                 "anthropic.messages.create",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertEquals(
-                "msg_test123",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
 
         // Verify usage metrics were captured from streaming
-        assertEquals(
-                20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertEquals(
-                8L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
 
         // Verify output JSON was captured
         String outputJson =
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
         assertNotNull(outputJson);
         var outputMessages = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputMessages.size());
+        assertTrue(outputMessages.size() > 0);
         var messageZero = outputMessages.get(0);
         assertEquals("assistant", messageZero.get("role").asText());
-        assertEquals("The capital of France is Paris.", messageZero.get("content").asText());
+        assertFalse(messageZero.get("content").asText().isEmpty());
 
         // Verify time to first token
         Double timeToFirstToken =

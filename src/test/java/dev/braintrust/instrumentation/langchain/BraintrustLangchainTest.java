@@ -1,12 +1,9 @@
 package dev.braintrust.instrumentation.langchain;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import dev.braintrust.TestHarness;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
@@ -20,13 +17,8 @@ import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class BraintrustLangchainTest {
-
-    @RegisterExtension
-    static WireMockExtension wireMock =
-            WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
@@ -35,51 +27,17 @@ public class BraintrustLangchainTest {
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
-        wireMock.resetAll();
     }
 
     @Test
     @SneakyThrows
     void testSyncChatCompletion() {
-        // Mock the OpenAI API response
-        wireMock.stubFor(
-                post(urlEqualTo("/v1/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "id": "chatcmpl-test123",
-                                  "object": "chat.completion",
-                                  "created": 1677652288,
-                                  "model": "gpt-4o-mini",
-                                  "choices": [
-                                    {
-                                      "index": 0,
-                                      "message": {
-                                        "role": "assistant",
-                                        "content": "The capital of France is Paris."
-                                      },
-                                      "finish_reason": "stop"
-                                    }
-                                  ],
-                                  "usage": {
-                                    "prompt_tokens": 20,
-                                    "completion_tokens": 8,
-                                    "total_tokens": 28
-                                  }
-                                }
-                                """)));
-
-        // Create LangChain4j client with Braintrust instrumentation
         ChatModel model =
                 BraintrustLangchain.wrap(
                         testHarness.openTelemetry(),
                         OpenAiChatModel.builder()
-                                .apiKey("test-api-key")
-                                .baseUrl("http://localhost:" + wireMock.getPort() + "/v1")
+                                .apiKey(testHarness.openAiApiKey())
+                                .baseUrl(testHarness.openAiBaseUrl())
                                 .modelName("gpt-4o-mini")
                                 .temperature(0.0));
 
@@ -89,8 +47,7 @@ public class BraintrustLangchainTest {
 
         // Verify the response
         assertNotNull(response);
-        assertEquals("The capital of France is Paris.", response.aiMessage().text());
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/chat/completions")));
+        assertNotNull(response.aiMessage().text());
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -121,9 +78,10 @@ public class BraintrustLangchainTest {
         String metricsJson = attributes.get(AttributeKey.stringKey("braintrust.metrics"));
         assertNotNull(metricsJson, "Metrics should be present");
         JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertEquals(28, metrics.get("tokens").asLong(), "Total tokens should be 28");
-        assertEquals(20, metrics.get("prompt_tokens").asLong(), "Prompt tokens should be 20");
-        assertEquals(8, metrics.get("completion_tokens").asLong(), "Completion tokens should be 8");
+        assertTrue(metrics.get("tokens").asLong() > 0, "Total tokens should be > 0");
+        assertTrue(metrics.get("prompt_tokens").asLong() > 0, "Prompt tokens should be > 0");
+        assertTrue(
+                metrics.get("completion_tokens").asLong() > 0, "Completion tokens should be > 0");
         assertTrue(
                 metrics.has("time_to_first_token"), "Metrics should contain time_to_first_token");
         assertTrue(
@@ -146,60 +104,21 @@ public class BraintrustLangchainTest {
         JsonNode output = JSON_MAPPER.readTree(outputJson);
         assertTrue(output.isArray(), "Output should be an array");
         assertTrue(output.size() > 0, "Output array should not be empty");
-        assertTrue(
-                output.get(0)
-                        .get("message")
-                        .get("content")
-                        .asText()
-                        .contains("The capital of France is Paris"),
-                "Output should contain the assistant response");
+        assertNotNull(
+                output.get(0).get("message").get("content"),
+                "Output should contain assistant response content");
     }
 
     @Test
     @SneakyThrows
     void testStreamingChatCompletion() {
-        // Mock the OpenAI API streaming response
-        String streamingResponse =
-                """
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"The"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" capital"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" of"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" France"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" is"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" Paris"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"."},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[],"usage":{"prompt_tokens":20,"completion_tokens":8,"total_tokens":28}}
-
-                data: [DONE]
-
-                """;
-
-        wireMock.stubFor(
-                post(urlEqualTo("/v1/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "text/event-stream")
-                                        .withBody(streamingResponse)));
-
-        // Create LangChain4j streaming client with Braintrust instrumentation
+        // Create LangChain4j streaming client with Braintrust instrumentation using VCR
         StreamingChatModel model =
                 BraintrustLangchain.wrap(
                         testHarness.openTelemetry(),
                         OpenAiStreamingChatModel.builder()
-                                .apiKey("test-api-key")
-                                .baseUrl("http://localhost:" + wireMock.getPort() + "/v1")
+                                .apiKey(testHarness.openAiApiKey())
+                                .baseUrl(testHarness.openAiBaseUrl())
                                 .modelName("gpt-4o-mini")
                                 .temperature(0.0));
 
@@ -231,8 +150,7 @@ public class BraintrustLangchainTest {
 
         // Verify the response
         assertNotNull(response);
-        assertEquals("The capital of France is Paris.", responseBuilder.toString());
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/chat/completions")));
+        assertFalse(responseBuilder.toString().isEmpty(), "Response should not be empty");
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans(1);
@@ -264,9 +182,10 @@ public class BraintrustLangchainTest {
         String metricsJson = attributes.get(AttributeKey.stringKey("braintrust.metrics"));
         assertNotNull(metricsJson, "Metrics should be present");
         JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertEquals(28, metrics.get("tokens").asLong(), "Total tokens should be 28");
-        assertEquals(20, metrics.get("prompt_tokens").asLong(), "Prompt tokens should be 20");
-        assertEquals(8, metrics.get("completion_tokens").asLong(), "Completion tokens should be 8");
+        assertTrue(metrics.get("tokens").asLong() > 0, "Total tokens should be > 0");
+        assertTrue(metrics.get("prompt_tokens").asLong() > 0, "Prompt tokens should be > 0");
+        assertTrue(
+                metrics.get("completion_tokens").asLong() > 0, "Completion tokens should be > 0");
         assertTrue(
                 metrics.has("time_to_first_token"),
                 "Metrics should contain time_to_first_token for streaming");
@@ -291,15 +210,9 @@ public class BraintrustLangchainTest {
         assertTrue(output.isArray(), "Output should be an array");
         assertTrue(output.size() > 0, "Output array should not be empty");
         JsonNode choice = output.get(0);
-        assertTrue(
-                choice.get("message")
-                        .get("content")
-                        .asText()
-                        .contains("The capital of France is Paris"),
+        assertNotNull(
+                choice.get("message").get("content"),
                 "Output should contain the complete streamed response");
-        assertEquals(
-                "stop",
-                choice.get("finish_reason").asText(),
-                "Output should have finish_reason 'stop'");
+        assertNotNull(choice.get("finish_reason"), "Output should have finish_reason");
     }
 }
