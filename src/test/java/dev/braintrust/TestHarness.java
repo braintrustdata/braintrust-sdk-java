@@ -27,6 +27,18 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
 public class TestHarness {
+    private static final VCR vcr;
+
+    static {
+        vcr =
+                new VCR(
+                        java.util.Map.of(
+                                "https://api.openai.com/v1", "openai",
+                                "https://api.anthropic.com", "anthropic",
+                                "https://generativelanguage.googleapis.com", "google"));
+        vcr.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(vcr::stop));
+    }
 
     public static TestHarness setup() {
         return setup(createTestConfig());
@@ -79,7 +91,6 @@ public class TestHarness {
 
     private TestHarness(@Nonnull Braintrust braintrust) {
         this.braintrust = braintrust;
-
         var tracerBuilder = SdkTracerProvider.builder();
         this.spanExporter = InMemorySpanExporter.create();
         var loggerBuilder = SdkLoggerProvider.builder();
@@ -100,6 +111,30 @@ public class TestHarness {
                         .setPropagators(contextPropagator)
                         .build();
         this.openTelemetry = openTelemetry;
+    }
+
+    public String openAiBaseUrl() {
+        return vcr.getUrlForTargetBase("https://api.openai.com/v1");
+    }
+
+    public String openAiApiKey() {
+        return getEnv("OPENAI_API_KEY", "test-key");
+    }
+
+    public String anthropicBaseUrl() {
+        return vcr.getUrlForTargetBase("https://api.anthropic.com");
+    }
+
+    public String anthropicApiKey() {
+        return getEnv("ANTHROPIC_API_KEY", "test-key");
+    }
+
+    public String googleBaseUrl() {
+        return vcr.getUrlForTargetBase("https://generativelanguage.googleapis.com");
+    }
+
+    public String googleApiKey() {
+        return getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "test-key"));
     }
 
     /** flush all pending spans and return all spans which have been exported so far */
@@ -131,6 +166,7 @@ public class TestHarness {
                                         + " after %d attempts",
                                 minSpanCount, spans.size(), attempts));
             }
+            // TODO: use concurrency primitives to wait instead of sleeping
             Thread.sleep(1000);
             spans = awaitExportedSpans();
         }
@@ -162,5 +198,10 @@ public class TestHarness {
                 "BRAINTRUST_API_URL", "https://testhost:8000",
                 "BRAINTRUST_APP_URL", "https://testhost:3000",
                 "BRAINTRUST_DEFAULT_PROJECT_NAME", defaultProjectName());
+    }
+
+    private static String getEnv(String envarName, String defaultValue) {
+        var envar = System.getenv(envarName);
+        return envar == null ? defaultValue : envar;
     }
 }
