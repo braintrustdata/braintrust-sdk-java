@@ -1,11 +1,8 @@
 package dev.braintrust.instrumentation.genai;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.HttpOptions;
@@ -14,67 +11,31 @@ import io.opentelemetry.api.common.AttributeKey;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class BraintrustGenAITest {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
-    @RegisterExtension
-    static WireMockExtension wireMock =
-            WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
     private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
-        wireMock.resetAll();
     }
 
     @Test
     @SneakyThrows
     void testWrapGemini() {
-        // Mock the Gemini API response
-        wireMock.stubFor(
-                post(urlPathMatching("/v1beta/models/.*:generateContent"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "candidates": [
-                                    {
-                                      "content": {
-                                        "parts": [
-                                          {
-                                            "text": "The capital of France is Paris."
-                                          }
-                                        ],
-                                        "role": "model"
-                                      },
-                                      "finishReason": "STOP"
-                                    }
-                                  ],
-                                  "usageMetadata": {
-                                    "promptTokenCount": 10,
-                                    "candidatesTokenCount": 8,
-                                    "totalTokenCount": 18
-                                  },
-                                  "modelVersion": "gemini-2.0-flash-lite"
-                                }
-                                """)));
-
-        // Create Gemini client pointing to WireMock server
+        // Create Gemini client using VCR
         HttpOptions httpOptions =
-                HttpOptions.builder().baseUrl("http://localhost:" + wireMock.getPort()).build();
+                HttpOptions.builder().baseUrl(testHarness.googleBaseUrl()).build();
 
         // Wrap with Braintrust instrumentation
         var geminiClient =
                 BraintrustGenAI.wrap(
                         testHarness.openTelemetry(),
-                        new Client.Builder().apiKey("test-api-key").httpOptions(httpOptions));
+                        new Client.Builder()
+                                .apiKey(testHarness.googleApiKey())
+                                .httpOptions(httpOptions));
 
         var config = GenerateContentConfig.builder().temperature(0.0f).maxOutputTokens(50).build();
 
@@ -84,8 +45,7 @@ public class BraintrustGenAITest {
 
         // Verify the response
         assertNotNull(response);
-        wireMock.verify(1, postRequestedFor(urlPathMatching("/v1beta/models/.*:generateContent")));
-        assertEquals("The capital of France is Paris.", response.text());
+        assertNotNull(response.text());
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -109,9 +69,9 @@ public class BraintrustGenAITest {
         String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
         assertNotNull(metricsJson, "braintrust.metrics should be set");
         var metrics = JSON_MAPPER.readTree(metricsJson);
-        assertEquals(10, metrics.get("prompt_tokens").asInt());
-        assertEquals(8, metrics.get("completion_tokens").asInt());
-        assertEquals(18, metrics.get("tokens").asInt());
+        assertTrue(metrics.get("prompt_tokens").asInt() > 0, "prompt_tokens should be > 0");
+        assertTrue(metrics.get("completion_tokens").asInt() > 0, "completion_tokens should be > 0");
+        assertTrue(metrics.get("tokens").asInt() > 0, "tokens should be > 0");
 
         // Verify braintrust.span_attributes marks this as an LLM span
         String spanAttributesJson =
@@ -135,62 +95,25 @@ public class BraintrustGenAITest {
         assertNotNull(outputJson, "braintrust.output_json should be set");
         var output = JSON_MAPPER.readTree(outputJson);
         assertTrue(output.has("candidates"), "output should have candidates");
-        assertEquals("STOP", output.get("candidates").get(0).get("finishReason").asText());
-        assertEquals(
-                "The capital of France is Paris.",
-                output.get("candidates")
-                        .get(0)
-                        .get("content")
-                        .get("parts")
-                        .get(0)
-                        .get("text")
-                        .asText());
+        assertNotNull(output.get("candidates").get(0).get("finishReason"));
+        assertNotNull(
+                output.get("candidates").get(0).get("content").get("parts").get(0).get("text"));
     }
 
     @Test
     @SneakyThrows
     void testWrapGeminiAsync() {
-        // Mock the Gemini API response
-        wireMock.stubFor(
-                post(urlPathMatching("/v1beta/models/.*:generateContent"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "candidates": [
-                                    {
-                                      "content": {
-                                        "parts": [
-                                          {
-                                            "text": "The capital of Germany is Berlin."
-                                          }
-                                        ],
-                                        "role": "model"
-                                      },
-                                      "finishReason": "STOP"
-                                    }
-                                  ],
-                                  "usageMetadata": {
-                                    "promptTokenCount": 10,
-                                    "candidatesTokenCount": 8,
-                                    "totalTokenCount": 18
-                                  },
-                                  "modelVersion": "gemini-2.0-flash-lite"
-                                }
-                                """)));
-
-        // Create Gemini client pointing to WireMock server
+        // Create Gemini client using VCR
         HttpOptions httpOptions =
-                HttpOptions.builder().baseUrl("http://localhost:" + wireMock.getPort()).build();
+                HttpOptions.builder().baseUrl(testHarness.googleBaseUrl()).build();
 
         // Wrap with Braintrust instrumentation
         var geminiClient =
                 BraintrustGenAI.wrap(
                         testHarness.openTelemetry(),
-                        new Client.Builder().apiKey("test-api-key").httpOptions(httpOptions));
+                        new Client.Builder()
+                                .apiKey(testHarness.googleApiKey())
+                                .httpOptions(httpOptions));
 
         var config = GenerateContentConfig.builder().temperature(0.0f).maxOutputTokens(50).build();
 
@@ -203,8 +126,7 @@ public class BraintrustGenAITest {
 
         // Verify the response
         assertNotNull(response);
-        wireMock.verify(1, postRequestedFor(urlPathMatching("/v1beta/models/.*:generateContent")));
-        assertEquals("The capital of Germany is Berlin.", response.text());
+        assertNotNull(response.text());
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -228,9 +150,9 @@ public class BraintrustGenAITest {
         String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
         assertNotNull(metricsJson, "braintrust.metrics should be set");
         var metrics = JSON_MAPPER.readTree(metricsJson);
-        assertEquals(10, metrics.get("prompt_tokens").asInt());
-        assertEquals(8, metrics.get("completion_tokens").asInt());
-        assertEquals(18, metrics.get("tokens").asInt());
+        assertTrue(metrics.get("prompt_tokens").asInt() > 0, "prompt_tokens should be > 0");
+        assertTrue(metrics.get("completion_tokens").asInt() > 0, "completion_tokens should be > 0");
+        assertTrue(metrics.get("tokens").asInt() > 0, "tokens should be > 0");
 
         // Verify braintrust.span_attributes marks this as an LLM span
         String spanAttributesJson =
@@ -254,15 +176,8 @@ public class BraintrustGenAITest {
         assertNotNull(outputJson, "braintrust.output_json should be set");
         var output = JSON_MAPPER.readTree(outputJson);
         assertTrue(output.has("candidates"), "output should have candidates");
-        assertEquals("STOP", output.get("candidates").get(0).get("finishReason").asText());
-        assertEquals(
-                "The capital of Germany is Berlin.",
-                output.get("candidates")
-                        .get(0)
-                        .get("content")
-                        .get("parts")
-                        .get(0)
-                        .get("text")
-                        .asText());
+        assertNotNull(output.get("candidates").get(0).get("finishReason"));
+        assertNotNull(
+                output.get("candidates").get(0).get("content").get("parts").get(0).get("text"));
     }
 }

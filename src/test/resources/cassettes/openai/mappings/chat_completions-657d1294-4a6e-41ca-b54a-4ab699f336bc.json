@@ -1,0 +1,50 @@
+{
+  "id" : "657d1294-4a6e-41ca-b54a-4ab699f336bc",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"What is the capital of France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : true
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-657d1294-4a6e-41ca-b54a-4ab699f336bc.json",
+    "headers" : {
+      "Date" : "Wed, 31 Dec 2025 05:49:58 GMT",
+      "Content-Type" : "application/json",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "790",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "x-envoy-upstream-service-time" : "803",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999990",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_3494dddb4ff04d71b4e04c8bdd849238",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Set-Cookie" : [ "__cf_bm=xs7eo1iqAzPmMEWkRX2as3txeen9VmfNgdgv4NUA5Gk-1767160198-1.0.1.1-N41Aszum8iDWzU8bHrVs1qe0sTi_604F4U.i0IuTVFzIcaimCZU8aStvawypaumbIqZsNXtcgdBq68oJc1OOYyp5.g5O4g_Hma.Vbnu_kPs; path=/; expires=Wed, 31-Dec-25 06:19:58 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=fQPpTctWYUE6rgjuAT4gZWj9pkxzQhXeDAVonakGCw0-1767160198559-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "Server" : "cloudflare",
+      "CF-RAY" : "9b677f237ecaba4c-SEA",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "657d1294-4a6e-41ca-b54a-4ab699f336bc",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

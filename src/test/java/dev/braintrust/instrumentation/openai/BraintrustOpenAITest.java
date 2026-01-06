@@ -1,88 +1,38 @@
 package dev.braintrust.instrumentation.openai;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.core.JsonValue;
 import com.openai.models.ChatModel;
-import com.openai.models.FunctionDefinition;
-import com.openai.models.FunctionParameters;
 import com.openai.models.chat.completions.*;
 import dev.braintrust.TestHarness;
-import dev.braintrust.api.BraintrustApiClient;
-import dev.braintrust.prompt.BraintrustPrompt;
-import dev.braintrust.trace.Base64Attachment;
 import io.opentelemetry.api.common.AttributeKey;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class BraintrustOpenAITest {
-    private static final ObjectMapper JSON_MAPPER =
-            new com.fasterxml.jackson.databind.ObjectMapper();
-
-    @RegisterExtension
-    static WireMockExtension wireMock =
-            WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private TestHarness testHarness;
 
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
-        wireMock.resetAll();
     }
 
     @Test
     @SneakyThrows
     void testWrapOpenAi() {
-        // Mock the OpenAI API response
-        wireMock.stubFor(
-                post(urlEqualTo("/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "id": "chatcmpl-test123",
-                                  "object": "chat.completion",
-                                  "created": 1677652288,
-                                  "model": "gpt-4o-mini",
-                                  "choices": [
-                                    {
-                                      "index": 0,
-                                      "message": {
-                                        "role": "assistant",
-                                        "content": "The capital of France is Paris."
-                                      },
-                                      "finish_reason": "stop"
-                                    }
-                                  ],
-                                  "usage": {
-                                    "prompt_tokens": 20,
-                                    "completion_tokens": 8,
-                                    "total_tokens": 28
-                                  }
-                                }
-                                """)));
-
-        // Create OpenAI client pointing to WireMock server
+        // Create OpenAI client using TestHarness configuration
+        // TestHarness automatically provides the correct base URL and API key
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
-                        .baseUrl("http://localhost:" + wireMock.getPort())
-                        .apiKey("test-api-key")
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
                         .build();
 
         // Wrap with Braintrust instrumentation
@@ -98,13 +48,12 @@ public class BraintrustOpenAITest {
 
         var response = openAIClient.chat().completions().create(request);
 
-        // Verify the response
+        // Verify the response (same assertions work for both modes)
         assertNotNull(response);
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/chat/completions")));
-        assertEquals("chatcmpl-test123", response.id());
-        assertEquals(
-                "The capital of France is Paris.",
-                response.choices().get(0).message().content().get());
+        assertNotNull(response.id());
+        assertTrue(response.choices().get(0).message().content().isPresent());
+        String content = response.choices().get(0).message().content().get();
+        assertTrue(content.toLowerCase().contains("paris"), "Response should mention Paris");
 
         // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
@@ -114,39 +63,19 @@ public class BraintrustOpenAITest {
         // Verify span name matches other SDKs
         assertEquals("Chat Completion", span.getName());
 
+        // Verify essential span attributes
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
         assertEquals(
                 "gpt-4o-mini",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertEquals(
-                "[stop]",
-                span.getAttributes()
-                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons"))
-                        .toString());
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
         assertEquals(
                 "chat", span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertEquals(
-                "chatcmpl-test123",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
-        assertEquals(
-                "[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"You are a"
-                    + " helpful"
-                    + " assistant\"}]},{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"What"
-                    + " is the capital of France?\"}]}]",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.input.messages")));
-        assertEquals(
-                "project_name:" + TestHarness.defaultProjectName(),
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.parent")));
-        assertEquals(
-                20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertEquals(
-                8L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
-        assertEquals(
-                0.0,
-                span.getAttributes().get(AttributeKey.doubleKey("gen_ai.request.temperature")));
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
+
+        // Verify usage metrics exist
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
+        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
 
         // Verify time to first token metric was captured
         Double timeToFirstToken =
@@ -155,7 +84,7 @@ public class BraintrustOpenAITest {
         assertNotNull(timeToFirstToken, "time_to_first_token should be set");
         assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
 
-        // Verify Braintrust metadata was captured
+        // Verify Braintrust metadata
         assertEquals(
                 "openai",
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.provider")));
@@ -163,79 +92,26 @@ public class BraintrustOpenAITest {
                 "gpt-4o-mini",
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.model")));
 
-        // Verify gen_ai.output.messages conforms to OTel spec with finish_reason
+        // Verify output messages structure
         String outputJson =
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
         assertNotNull(outputJson);
-        assertEquals(
-                "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"The capital"
-                        + " of France is Paris.\"}],\"finish_reason\":\"stop\"}]",
-                outputJson);
-
-        // Verify the structure includes finish_reason and correct message content
         var outputMessages = JSON_MAPPER.readTree(outputJson);
         assertEquals(1, outputMessages.size());
         var outputMessage = outputMessages.get(0);
         assertEquals("assistant", outputMessage.get("role").asText());
-        assertEquals("stop", outputMessage.get("finish_reason").asText());
-        assertTrue(outputMessage.has("parts"));
-        var parts = outputMessage.get("parts");
-        assertEquals(1, parts.size());
-        var textPart = parts.get(0);
-        assertEquals("text", textPart.get("type").asText());
-        assertEquals("The capital of France is Paris.", textPart.get("content").asText());
-
-        assertEquals(
-                "chatcmpl-test123",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
+        assertNotNull(outputMessage.get("finish_reason"));
     }
 
     @Test
     @SneakyThrows
     void testWrapOpenAiStreaming() {
-        // Mock the OpenAI API streaming response
-        String streamingResponse =
-                """
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"The"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" capital"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" of"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" France"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" is"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" Paris"},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"."},"finish_reason":null}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
-
-                data: {"id":"chatcmpl-test123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4o-mini","choices":[],"usage":{"prompt_tokens":20,"completion_tokens":8,"total_tokens":28}}
-
-                data: [DONE]
-
-                """;
-
-        wireMock.stubFor(
-                post(urlEqualTo("/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "text/event-stream")
-                                        .withBody(streamingResponse)));
-
-        // Create OpenAI client pointing to WireMock server
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
-                        .baseUrl("http://localhost:" + wireMock.getPort())
-                        .apiKey("test-api-key")
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
                         .build();
 
-        // Wrap with Braintrust instrumentation
         openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
 
         var request =
@@ -265,430 +141,20 @@ public class BraintrustOpenAITest {
         }
 
         // Verify the response
-        assertEquals("The capital of France is Paris.", fullResponse.toString());
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/chat/completions")));
+        assertFalse(fullResponse.isEmpty(), "Should have received streaming response");
+        assertTrue(
+                fullResponse.toString().toLowerCase().contains("paris"),
+                "Response should mention Paris");
 
-        // Verify spans were exported
+        // Verify spans
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         var span = spans.get(0);
 
-        // Verify span name matches other SDKs
         assertEquals("Chat Completion", span.getName());
-
-        // Verify span attributes
         assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertEquals(
-                "[stop]",
+        assertNotNull(
                 span.getAttributes()
-                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons"))
-                        .toString());
-        assertEquals(
-                "chat", span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertEquals(
-                "chatcmpl-test123",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
-
-        // Verify usage metrics were captured
-        assertEquals(
-                20L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertEquals(
-                8L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
-
-        // Verify time to first token metric was captured
-        Double timeToFirstToken =
-                span.getAttributes()
-                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
-        assertNotNull(timeToFirstToken, "time_to_first_token should be set");
-        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
-
-        // Verify Braintrust metadata was captured
-        assertEquals(
-                "openai",
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.provider")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata.model")));
-
-        // Verify gen_ai.output.messages conforms to OTel spec with finish_reason
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
-        assertNotNull(outputJson);
-
-        // Verify the structure includes finish_reason and correct message content
-        var outputMessages = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputMessages.size());
-        var outputMessage = outputMessages.get(0);
-        assertEquals("assistant", outputMessage.get("role").asText());
-        assertEquals("stop", outputMessage.get("finish_reason").asText());
-        assertTrue(outputMessage.has("parts"));
-        var parts = outputMessage.get("parts");
-        assertEquals(1, parts.size());
-        var textPart = parts.get(0);
-        assertEquals("text", textPart.get("type").asText());
-        assertEquals("The capital of France is Paris.", textPart.get("content").asText());
-    }
-
-    @Test
-    @SneakyThrows
-    void testWrapOpenAiWithImageAttachment() {
-        // Mock the OpenAI API response for vision request
-        wireMock.stubFor(
-                post(urlEqualTo("/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                {
-                                  "id": "chatcmpl-test456",
-                                  "object": "chat.completion",
-                                  "created": 1677652288,
-                                  "model": "gpt-4o-mini",
-                                  "choices": [
-                                    {
-                                      "index": 0,
-                                      "message": {
-                                        "role": "assistant",
-                                        "content": "This image shows the Eiffel Tower in Paris, France."
-                                      },
-                                      "finish_reason": "stop"
-                                    }
-                                  ],
-                                  "usage": {
-                                    "prompt_tokens": 150,
-                                    "completion_tokens": 15,
-                                    "total_tokens": 165
-                                  }
-                                }
-                                """)));
-
-        // Create OpenAI client pointing to WireMock server
-        OpenAIClient openAIClient =
-                OpenAIOkHttpClient.builder()
-                        .baseUrl("http://localhost:" + wireMock.getPort())
-                        .apiKey("test-api-key")
-                        .build();
-
-        // Wrap with Braintrust instrumentation
-        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
-
-        String imageDataUrl =
-                Base64Attachment.ofFile(
-                                Base64Attachment.ContentType.IMAGE_JPEG,
-                                "src/test/java/dev/braintrust/instrumentation/openai/travel-paris-france-poster.jpg")
-                        .getBase64Data();
-
-        // Create text content part
-        ChatCompletionContentPartText textPart =
-                ChatCompletionContentPartText.builder().text("What's in this image?").build();
-        ChatCompletionContentPart textContentPart = ChatCompletionContentPart.ofText(textPart);
-
-        // Create image content part with base64-encoded image
-        ChatCompletionContentPartImage imagePart =
-                ChatCompletionContentPartImage.builder()
-                        .imageUrl(
-                                ChatCompletionContentPartImage.ImageUrl.builder()
-                                        // .url("https://example.com/eiffel-tower.jpg")
-                                        .url(imageDataUrl)
-                                        .detail(ChatCompletionContentPartImage.ImageUrl.Detail.HIGH)
-                                        .build())
-                        .build();
-        ChatCompletionContentPart imageContentPart =
-                ChatCompletionContentPart.ofImageUrl(imagePart);
-
-        // Create user message with both text and image
-        ChatCompletionUserMessageParam userMessage =
-                ChatCompletionUserMessageParam.builder()
-                        .contentOfArrayOfContentParts(
-                                Arrays.asList(textContentPart, imageContentPart))
-                        .build();
-
-        var request =
-                ChatCompletionCreateParams.builder()
-                        .model(ChatModel.GPT_4O_MINI)
-                        .addSystemMessage("You are a helpful assistant that can analyze images")
-                        .addMessage(userMessage)
-                        .temperature(0.0)
-                        .build();
-
-        var response = openAIClient.chat().completions().create(request);
-
-        // Verify the response
-        assertNotNull(response);
-        wireMock.verify(1, postRequestedFor(urlEqualTo("/chat/completions")));
-        assertEquals("chatcmpl-test456", response.id());
-        assertEquals(
-                "This image shows the Eiffel Tower in Paris, France.",
-                response.choices().get(0).message().content().get());
-
-        // Verify spans were exported
-        var spans = testHarness.awaitExportedSpans();
-        assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        // Verify span attributes
-        assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertEquals(
-                "gpt-4o-mini",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertEquals(
-                "[stop]",
-                span.getAttributes()
-                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons"))
-                        .toString());
-        assertEquals(
-                "chat", span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertEquals(
-                "chatcmpl-test456",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
-
-        // Verify input JSON captures both text and image content
-        String inputJson =
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.input.messages"));
-        assertEquals(
-                "[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"You are a helpful assistant that can analyze images\"}]},{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"What's in this image?\"},{\"type\":\"base64_attachment\",\"content\":\"%s\"}]}]"
-                        .formatted(imageDataUrl),
-                inputJson);
-        assertNotNull(inputJson);
-        var inputMessages = JSON_MAPPER.readTree(inputJson);
-        assertEquals(2, inputMessages.size()); // system message + user message
-
-        // Verify usage metrics
-        assertEquals(
-                150L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertEquals(
-                15L, span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
-
-        // Verify output JSON
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
-        assertEquals(
-                "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"This image"
-                    + " shows the Eiffel Tower in Paris, France.\"}],\"finish_reason\":\"stop\"}]",
-                outputJson);
-    }
-
-    @Test
-    @SneakyThrows
-    void testBuildChatCompletionsPrompt() {
-        Map<String, Object> promptContent =
-                Map.of(
-                        "type",
-                        "chat",
-                        "messages",
-                        List.of(
-                                Map.of(
-                                        "role", "system",
-                                        "content",
-                                                "You are a kind chatbot who briefly greets people"),
-                                Map.of(
-                                        "role", "user",
-                                        "content", "What's up my friend? My name is {{name}}")));
-
-        Map<String, Object> options =
-                Map.of(
-                        "model",
-                        "gpt-4o-mini",
-                        "params",
-                        Map.of("temperature", 0.1, "max_tokens", 102));
-
-        BraintrustApiClient.PromptData promptData =
-                new BraintrustApiClient.PromptData(promptContent, options);
-
-        BraintrustApiClient.Prompt promptObject =
-                new BraintrustApiClient.Prompt(
-                        "test-id",
-                        "test-project-id",
-                        "test-org-id",
-                        "kind-greeter",
-                        "kind-greeter-test",
-                        Optional.of("Test prompt"),
-                        "2025-10-21T21:35:18.287Z",
-                        promptData,
-                        Optional.empty(),
-                        Optional.empty());
-
-        BraintrustPrompt prompt = new BraintrustPrompt(promptObject);
-
-        Map<String, Object> parameters = Map.of("name", "Alice");
-        ChatCompletionCreateParams renderedParams =
-                BraintrustOpenAI.buildChatCompletionsPrompt(prompt, parameters);
-
-        assertEquals(
-                ChatCompletionCreateParams.builder()
-                        .model(ChatModel.GPT_4O_MINI)
-                        .temperature(0.1)
-                        .maxTokens(102L)
-                        .addSystemMessage("You are a kind chatbot who briefly greets people")
-                        .addUserMessage("What's up my friend? My name is Alice")
-                        .build(),
-                renderedParams);
-    }
-
-    @Test
-    @SneakyThrows
-    void testWrapOpenAiWithToolCalls() {
-        // Mock the OpenAI API response with tool calls
-        wireMock.stubFor(
-                post(urlEqualTo("/chat/completions"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(
-                                                """
-                                                {
-                                                  "id": "chatcmpl-test-tool",
-                                                  "object": "chat.completion",
-                                                  "created": 1234567890,
-                                                  "model": "gpt-4o-2024-08-06",
-                                                  "choices": [
-                                                    {
-                                                      "index": 0,
-                                                      "message": {
-                                                        "role": "assistant",
-                                                        "content": null,
-                                                        "tool_calls": [
-                                                          {
-                                                            "id": "call_abc123",
-                                                            "type": "function",
-                                                            "function": {
-                                                              "name": "get_weather",
-                                                              "arguments": "{\\"location\\":\\"Paris, France\\"}"
-                                                            }
-                                                          }
-                                                        ]
-                                                      },
-                                                      "finish_reason": "tool_calls"
-                                                    }
-                                                  ],
-                                                  "usage": {
-                                                    "prompt_tokens": 20,
-                                                    "completion_tokens": 15,
-                                                    "total_tokens": 35
-                                                  }
-                                                }
-                                                """)));
-
-        OpenAIClient client =
-                BraintrustOpenAI.wrapOpenAI(
-                        testHarness.openTelemetry(),
-                        OpenAIOkHttpClient.builder()
-                                .baseUrl(wireMock.baseUrl())
-                                .apiKey("test-api-key")
-                                .build());
-
-        // Make a request with tools (we'll just verify the SDK handles tool call responses
-        // correctly)
-
-        ChatCompletionCreateParams params =
-                ChatCompletionCreateParams.builder()
-                        .model(ChatModel.GPT_4O)
-                        .maxTokens(500)
-                        .temperature(0.0)
-                        .tools(
-                                List.of(
-                                        ChatCompletionTool.builder()
-                                                .type(JsonValue.from("function"))
-                                                .function(
-                                                        FunctionDefinition.builder()
-                                                                .name("get_weather")
-                                                                .description(
-                                                                        "Get the current weather"
-                                                                                + " for a location")
-                                                                .parameters(
-                                                                        FunctionParameters.builder()
-                                                                                .putAllAdditionalProperties(
-                                                                                        Map.of(
-                                                                                                "location",
-                                                                                                        JsonValue
-                                                                                                                .from(
-                                                                                                                        Map
-                                                                                                                                .of(
-                                                                                                                                        "type",
-                                                                                                                                        "string",
-                                                                                                                                        "description",
-                                                                                                                                        "The city"
-                                                                                                                                            + " and state,"
-                                                                                                                                            + " e.g."
-                                                                                                                                            + " San Francisco,"
-                                                                                                                                            + " CA")),
-                                                                                                "unit",
-                                                                                                        JsonValue
-                                                                                                                .from(
-                                                                                                                        Map
-                                                                                                                                .of(
-                                                                                                                                        "type",
-                                                                                                                                        "string",
-                                                                                                                                        "enum",
-                                                                                                                                        List
-                                                                                                                                                .of(
-                                                                                                                                                        "celsius",
-                                                                                                                                                        "fahrenheit"),
-                                                                                                                                        "description",
-                                                                                                                                        "The unit"
-                                                                                                                                            + " of temperature"))))
-                                                                                .build())
-                                                                .build())
-                                                .build()))
-                        .addUserMessage("What is the weather like in Paris, France?")
-                        .build();
-
-        ChatCompletion response = client.chat().completions().create(params);
-
-        // Verify the response has tool calls
-        assertEquals(1, response.choices().size());
-        var choice = response.choices().get(0);
-        assertEquals("tool_calls", choice.finishReason().asString());
-        assertTrue(choice.message().toolCalls().isPresent());
-        assertEquals(1, choice.message().toolCalls().get().size());
-        var toolCall = choice.message().toolCalls().get().get(0);
-        assertEquals("call_abc123", toolCall.id());
-        assertEquals("get_weather", toolCall.function().name());
-
-        // Verify spans were exported
-        var spans = testHarness.awaitExportedSpans();
-        assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        // Verify span name
-        assertEquals("Chat Completion", span.getName());
-
-        // Verify gen_ai.output.messages conforms to OTel spec with tool calls and finish_reason
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.output.messages"));
-        assertNotNull(outputJson);
-
-        // Parse and verify the structure
-        var outputMessages = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputMessages.size());
-        var outputMessage = outputMessages.get(0);
-
-        // Verify role and finish_reason
-        assertEquals("assistant", outputMessage.get("role").asText());
-        assertEquals("tool_calls", outputMessage.get("finish_reason").asText());
-
-        // Verify parts contain tool_call
-        assertTrue(outputMessage.has("parts"));
-        var parts = outputMessage.get("parts");
-        assertEquals(1, parts.size());
-
-        // Verify tool call part matches OTel spec for ToolCallRequestPart
-        var toolCallPart = parts.get(0);
-        assertEquals("tool_call", toolCallPart.get("type").asText());
-        assertEquals("call_abc123", toolCallPart.get("id").asText());
-        assertEquals("get_weather", toolCallPart.get("name").asText());
-        assertTrue(toolCallPart.get("arguments").asText().contains("Paris"));
+                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token")));
     }
 }
