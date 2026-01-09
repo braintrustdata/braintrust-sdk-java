@@ -13,6 +13,7 @@ import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -214,5 +215,107 @@ public class BraintrustLangchainTest {
                 choice.get("message").get("content"),
                 "Output should contain the complete streamed response");
         assertNotNull(choice.get("finish_reason"), "Output should have finish_reason");
+    }
+
+    @Test
+    @SneakyThrows
+    void testToolWrapping() {
+        // Create and wrap tools
+        TestTools tools = new TestTools();
+        TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
+
+        // Call wrapped tool method directly
+        String result = wrappedTools.getWeather("Paris");
+        assertNotNull(result);
+        assertTrue(result.contains("Paris"));
+
+        // Verify span was created
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size(), "Expected one span for tool execution");
+        var span = spans.get(0);
+
+        // Verify span name
+        assertEquals("getWeather", span.getName());
+
+        // Verify span type
+        var attributes = span.getAttributes();
+        String spanAttrsJson = attributes.get(AttributeKey.stringKey("braintrust.span_attributes"));
+        JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
+        assertEquals("tool", spanAttrs.get("type").asText());
+        assertEquals("getWeather", spanAttrs.get("name").asText());
+
+        // Verify input (parameter names may be arg0, arg1, etc without -parameters flag)
+        String inputJson = attributes.get(AttributeKey.stringKey("braintrust.input_json"));
+        assertNotNull(inputJson);
+        JsonNode input = JSON_MAPPER.readTree(inputJson);
+        assertTrue(input.isObject(), "Input should be an object");
+        assertTrue(input.size() > 0, "Input should have at least one parameter");
+        // Check if parameter value is present (either as "location" or "arg0")
+        String paramValue = input.has("location")
+            ? input.get("location").asText()
+            : input.elements().next().asText();
+        assertEquals("Paris", paramValue);
+
+        // Verify output
+        String outputJson = attributes.get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson);
+        JsonNode output = JSON_MAPPER.readTree(outputJson);
+        assertTrue(output.asText().contains("Paris"));
+        assertTrue(output.asText().contains("72"));
+
+        // Verify metrics
+        String metricsJson = attributes.get(AttributeKey.stringKey("braintrust.metrics"));
+        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+        assertTrue(metrics.has("execution_time"));
+        assertTrue(metrics.get("execution_time").asDouble() >= 0);
+    }
+
+    @Test
+    @SneakyThrows
+    void testToolWrappingWithException() {
+        TestTools tools = new TestTools();
+        TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
+
+        // Execute and expect exception
+        assertThrows(RuntimeException.class, () -> {
+            wrappedTools.throwError();
+        });
+
+        // Verify span with error status
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+        assertTrue(
+                span.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
+                "Span should have exception event");
+    }
+
+    @Test
+    @SneakyThrows
+    void testToolWrappingWithMultipleCalls() {
+        TestTools tools = new TestTools();
+        TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
+
+        // Call multiple tool methods
+        wrappedTools.getWeather("Tokyo");
+        int sum = wrappedTools.calculateSum(5, 7);
+        assertEquals(12, sum);
+
+        // Verify two spans created
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(2, spans.size(), "Expected two spans");
+
+        // Verify first span (getWeather)
+        var weatherSpan = spans.get(0);
+        assertEquals("getWeather", weatherSpan.getName());
+
+        // Verify second span (calculateSum)
+        var sumSpan = spans.get(1);
+        assertEquals("calculateSum", sumSpan.getName());
+        String sumOutput =
+                sumSpan.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertEquals("12", sumOutput);
     }
 }
