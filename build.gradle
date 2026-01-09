@@ -95,6 +95,8 @@ dependencies {
   testImplementation "dev.langchain4j:langchain4j:${langchainVersion}"
   testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
   testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
+
+  implementation 'net.bytebuddy:byte-buddy:1.14.11'     // ByteBuddy for LangChain4j tool wrapping
 }
 
 /**
