@@ -72,6 +72,10 @@ public class BraintrustGenAITest {
         assertTrue(metrics.get("prompt_tokens").asInt() > 0, "prompt_tokens should be > 0");
         assertTrue(metrics.get("completion_tokens").asInt() > 0, "completion_tokens should be > 0");
         assertTrue(metrics.get("tokens").asInt() > 0, "tokens should be > 0");
+        assertTrue(metrics.has("time_to_first_token"), "time_to_first_token should be present");
+        assertTrue(
+                metrics.get("time_to_first_token").asDouble() >= 0.0,
+                "time_to_first_token should be >= 0");
 
         // Verify braintrust.span_attributes marks this as an LLM span
         String spanAttributesJson =
@@ -153,6 +157,10 @@ public class BraintrustGenAITest {
         assertTrue(metrics.get("prompt_tokens").asInt() > 0, "prompt_tokens should be > 0");
         assertTrue(metrics.get("completion_tokens").asInt() > 0, "completion_tokens should be > 0");
         assertTrue(metrics.get("tokens").asInt() > 0, "tokens should be > 0");
+        assertTrue(metrics.has("time_to_first_token"), "time_to_first_token should be present");
+        assertTrue(
+                metrics.get("time_to_first_token").asDouble() >= 0.0,
+                "time_to_first_token should be >= 0");
 
         // Verify braintrust.span_attributes marks this as an LLM span
         String spanAttributesJson =

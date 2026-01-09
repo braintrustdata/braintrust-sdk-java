@@ -51,7 +51,8 @@ class BraintrustApiClient extends ApiClient {
             @Nullable String genAIEndpoint,
             @Nullable String requestMethod,
             @Nullable String requestBody,
-            @Nullable String responseBody) {
+            @Nullable String responseBody,
+            double timeToFirstToken) {
         try {
             Map<String, Object> metadata = new java.util.HashMap<>();
             metadata.put("provider", "gemini");
@@ -126,9 +127,13 @@ class BraintrustApiClient extends ApiClient {
                         "braintrust.output_json", JSON_MAPPER.writeValueAsString(responseJson));
 
                 // Parse usage metadata for metrics
+                Map<String, Number> metrics = new java.util.HashMap<>();
+
+                // Always add time_to_first_token
+                metrics.put("time_to_first_token", timeToFirstToken);
+
                 if (responseJson.get("usageMetadata") instanceof Map) {
                     var usage = (Map<String, Object>) responseJson.get("usageMetadata");
-                    Map<String, Number> metrics = new java.util.HashMap<>();
 
                     if (usage.containsKey("promptTokenCount")) {
                         metrics.put("prompt_tokens", (Number) usage.get("promptTokenCount"));
@@ -145,10 +150,10 @@ class BraintrustApiClient extends ApiClient {
                                 "prompt_cached_tokens",
                                 (Number) usage.get("cachedContentTokenCount"));
                     }
-
-                    span.setAttribute(
-                            "braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
                 }
+
+                // Always set metrics (at minimum with time_to_first_token)
+                span.setAttribute("braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
             }
 
             // Set metadata
@@ -195,10 +200,19 @@ class BraintrustApiClient extends ApiClient {
         Span span =
                 tracer.spanBuilder(getOperation(genAIUrl)).setSpanKind(SpanKind.CLIENT).startSpan();
         try (Scope scope = span.makeCurrent()) {
+            long startTimeNanos = System.nanoTime();
             ApiResponse response = delegate.request(requestMethod, genAIUrl, requestBody, options);
+            double timeToFirstToken = (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
+
             BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
             span.setStatus(StatusCode.OK);
-            tagSpan(span, genAIUrl, requestMethod, requestBody, bufferedResponse.getBodyAsString());
+            tagSpan(
+                    span,
+                    genAIUrl,
+                    requestMethod,
+                    requestBody,
+                    bufferedResponse.getBodyAsString(),
+                    timeToFirstToken);
             return bufferedResponse;
         } catch (Throwable t) {
             span.setStatus(StatusCode.ERROR, t.getMessage());
@@ -219,8 +233,11 @@ class BraintrustApiClient extends ApiClient {
         Span span =
                 tracer.spanBuilder(getOperation(genAIUrl)).setSpanKind(SpanKind.CLIENT).startSpan();
         try (Scope scope = span.makeCurrent()) {
+            long startTimeNanos = System.nanoTime();
             ApiResponse response =
                     delegate.request(requestMethod, genAIUrl, requestBodyBytes, options);
+            double timeToFirstToken = (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
+
             BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
             span.setStatus(StatusCode.OK);
             tagSpan(
@@ -228,7 +245,8 @@ class BraintrustApiClient extends ApiClient {
                     genAIUrl,
                     requestMethod,
                     new String(requestBodyBytes),
-                    bufferedResponse.getBodyAsString());
+                    bufferedResponse.getBodyAsString(),
+                    timeToFirstToken);
             return bufferedResponse;
         } catch (Throwable t) {
             span.setStatus(StatusCode.ERROR, t.getMessage());
@@ -244,6 +262,7 @@ class BraintrustApiClient extends ApiClient {
             String method, String url, String body, Optional<HttpOptions> options) {
         Span span = tracer.spanBuilder(getOperation(url)).setSpanKind(SpanKind.CLIENT).startSpan();
         Context context = Context.current().with(span);
+        long startTimeNanos = System.nanoTime();
 
         return delegate.asyncRequest(method, url, body, options)
                 .handle(
@@ -256,6 +275,9 @@ class BraintrustApiClient extends ApiClient {
                                 }
 
                                 try {
+                                    double timeToFirstToken =
+                                            (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
+
                                     // Buffer the response so we can read it for instrumentation
                                     BufferedApiResponse bufferedResponse =
                                             new BufferedApiResponse(response);
@@ -265,7 +287,8 @@ class BraintrustApiClient extends ApiClient {
                                             url,
                                             method,
                                             body,
-                                            bufferedResponse.getBodyAsString());
+                                            bufferedResponse.getBodyAsString(),
+                                            timeToFirstToken);
                                     return (ApiResponse) bufferedResponse;
                                 } catch (Exception e) {
                                     span.setStatus(StatusCode.ERROR, e.getMessage());
@@ -283,6 +306,7 @@ class BraintrustApiClient extends ApiClient {
             String method, String url, byte[] body, Optional<HttpOptions> options) {
         Span span = tracer.spanBuilder(getOperation(url)).setSpanKind(SpanKind.CLIENT).startSpan();
         Context context = Context.current().with(span);
+        long startTimeNanos = System.nanoTime();
 
         return delegate.asyncRequest(method, url, body, options)
                 .handle(
@@ -295,6 +319,9 @@ class BraintrustApiClient extends ApiClient {
                                 }
 
                                 try {
+                                    double timeToFirstToken =
+                                            (System.nanoTime() - startTimeNanos) / 1_000_000_000.0;
+
                                     // Buffer the response so we can read it for instrumentation
                                     BufferedApiResponse bufferedResponse =
                                             new BufferedApiResponse(response);
@@ -304,7 +331,8 @@ class BraintrustApiClient extends ApiClient {
                                             url,
                                             method,
                                             new String(body),
-                                            bufferedResponse.getBodyAsString());
+                                            bufferedResponse.getBodyAsString(),
+                                            timeToFirstToken);
                                     return (ApiResponse) bufferedResponse;
                                 } catch (Exception e) {
                                     span.setStatus(StatusCode.ERROR, e.getMessage());
