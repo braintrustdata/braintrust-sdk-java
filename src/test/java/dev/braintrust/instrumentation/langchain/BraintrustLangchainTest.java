@@ -14,6 +14,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.StatusCode;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -251,9 +252,10 @@ public class BraintrustLangchainTest {
         assertTrue(input.isObject(), "Input should be an object");
         assertTrue(input.size() > 0, "Input should have at least one parameter");
         // Check if parameter value is present (either as "location" or "arg0")
-        String paramValue = input.has("location")
-            ? input.get("location").asText()
-            : input.elements().next().asText();
+        String paramValue =
+                input.has("location")
+                        ? input.get("location").asText()
+                        : input.elements().next().asText();
         assertEquals("Paris", paramValue);
 
         // Verify output
@@ -277,9 +279,11 @@ public class BraintrustLangchainTest {
         TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
 
         // Execute and expect exception
-        assertThrows(RuntimeException.class, () -> {
-            wrappedTools.throwError();
-        });
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    wrappedTools.throwError();
+                });
 
         // Verify span with error status
         var spans = testHarness.awaitExportedSpans();
@@ -317,5 +321,114 @@ public class BraintrustLangchainTest {
         String sumOutput =
                 sumSpan.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
         assertEquals("12", sumOutput);
+    }
+
+    @Test
+    @SneakyThrows
+    void testToolWrappingAllBraintrustAttributesPresent() {
+        // This test verifies ALL required Braintrust attributes are present
+        // to catch issues that would cause UI problems
+        TestTools tools = new TestTools();
+        TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
+
+        wrappedTools.getWeather("London");
+
+        var spans = testHarness.awaitExportedSpans();
+        var span = spans.get(0);
+        var attributes = span.getAttributes();
+
+        // CRITICAL: These attributes MUST be present for Braintrust UI to display properly
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.span_attributes")),
+                "braintrust.span_attributes is required for UI");
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.input_json")),
+                "braintrust.input_json is required for UI to show inputs");
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.output_json")),
+                "braintrust.output_json is required for UI to show outputs");
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.metrics")),
+                "braintrust.metrics is required for UI to show metrics");
+
+        // Verify span_attributes has correct structure
+        String spanAttrsJson = attributes.get(AttributeKey.stringKey("braintrust.span_attributes"));
+        JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
+        assertTrue(spanAttrs.has("type"), "span_attributes must have 'type' field");
+        assertTrue(spanAttrs.has("name"), "span_attributes must have 'name' field");
+        assertEquals("tool", spanAttrs.get("type").asText(), "Tool spans must have type='tool'");
+    }
+
+    @Test
+    @SneakyThrows
+    void testToolWrappingIntegrationWithConversationHierarchy() {
+        // This test simulates a realistic usage pattern like the example
+        // and verifies ALL spans in the hierarchy have input/output for UI
+        var tracer = testHarness.openTelemetry().getTracer("test");
+        TestTools tools = new TestTools();
+        TestTools wrappedTools = BraintrustLangchain.wrapTools(testHarness.openTelemetry(), tools);
+
+        // Create conversation span (like example does)
+        var conversationSpan = tracer.spanBuilder("conversation").startSpan();
+        conversationSpan.setAttribute(
+                "braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"conversation\"}");
+        conversationSpan.setAttribute(
+                "braintrust.input_json", "{\"description\":\"test conversation\"}");
+
+        try (var ignored = conversationSpan.makeCurrent()) {
+            // Create turn span (like example does)
+            var turnSpan = tracer.spanBuilder("turn_1").startSpan();
+            turnSpan.setAttribute(
+                    "braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"turn_1\"}");
+            turnSpan.setAttribute("braintrust.input_json", "{\"user_message\":\"test query\"}");
+
+            try (var turnScope = turnSpan.makeCurrent()) {
+                // Call tool within turn (tool wrapper should create tool span)
+                String result = wrappedTools.getWeather("Paris");
+                turnSpan.setAttribute(
+                        "braintrust.output_json", "{\"assistant_message\":\"" + result + "\"}");
+            } finally {
+                turnSpan.end();
+            }
+        } finally {
+            conversationSpan.setAttribute("braintrust.output_json", "{\"status\":\"completed\"}");
+            conversationSpan.end();
+        }
+
+        // Verify all 3 spans exist and have required attributes
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(3, spans.size(), "Expected 3 spans: conversation, turn, and tool");
+
+        // Find each span type
+        var toolSpan =
+                spans.stream().filter(s -> s.getName().equals("getWeather")).findFirst().get();
+        var turnSpanData =
+                spans.stream().filter(s -> s.getName().equals("turn_1")).findFirst().get();
+        var convSpan =
+                spans.stream().filter(s -> s.getName().equals("conversation")).findFirst().get();
+
+        // CRITICAL: Every span must have input/output for UI to display properly
+        for (var span : List.of(toolSpan, turnSpanData, convSpan)) {
+            var attrs = span.getAttributes();
+            assertNotNull(
+                    attrs.get(AttributeKey.stringKey("braintrust.span_attributes")),
+                    span.getName() + " missing braintrust.span_attributes");
+            assertNotNull(
+                    attrs.get(AttributeKey.stringKey("braintrust.input_json")),
+                    span.getName() + " missing braintrust.input_json - UI won't show input!");
+            assertNotNull(
+                    attrs.get(AttributeKey.stringKey("braintrust.output_json")),
+                    span.getName() + " missing braintrust.output_json - UI won't show output!");
+        }
+
+        // Verify span hierarchy (parent-child relationships)
+        assertEquals(
+                convSpan.getSpanId(),
+                turnSpanData.getParentSpanId(),
+                "Turn should be child of conversation");
+        assertEquals(
+                turnSpanData.getSpanId(),
+                toolSpan.getParentSpanId(),
+                "Tool should be child of turn");
     }
 }

@@ -43,7 +43,9 @@ class ByteBuddyToolWrapper {
                         .intercept(
                                 MethodDelegation.to(
                                         new ToolMethodInterceptor(tracer, originalTools)))
-                        .attribute(net.bytebuddy.implementation.attribute.MethodAttributeAppender.ForInstrumentedMethod.INCLUDING_RECEIVER)
+                        .attribute(
+                                net.bytebuddy.implementation.attribute.MethodAttributeAppender
+                                        .ForInstrumentedMethod.INCLUDING_RECEIVER)
                         .make()
                         .load(toolClass.getClassLoader())
                         .getLoaded();
@@ -64,9 +66,7 @@ class ByteBuddyToolWrapper {
 
         @RuntimeType
         public Object intercept(
-                @Origin Method method,
-                @AllArguments Object[] args,
-                @SuperCall Callable<?> zuper)
+                @Origin Method method, @AllArguments Object[] args, @SuperCall Callable<?> zuper)
                 throws Exception {
 
             String toolName = method.getName();
@@ -82,7 +82,8 @@ class ByteBuddyToolWrapper {
             try (Scope scope = span.makeCurrent()) {
                 // Set Braintrust span attributes
                 span.setAttribute(
-                        "braintrust.span_attributes", json(Map.of("type", "tool", "name", toolName)));
+                        "braintrust.span_attributes",
+                        json(Map.of("type", "tool", "name", toolName)));
 
                 // Set input
                 span.setAttribute("braintrust.input_json", json(inputMap));
@@ -97,7 +98,8 @@ class ByteBuddyToolWrapper {
 
                 // Set metrics
                 double executionTime = (endTime - startTime) / 1_000_000_000.0;
-                span.setAttribute("braintrust.metrics", json(Map.of("execution_time", executionTime)));
+                span.setAttribute(
+                        "braintrust.metrics", json(Map.of("execution_time", executionTime)));
 
                 return result;
             } catch (Throwable t) {

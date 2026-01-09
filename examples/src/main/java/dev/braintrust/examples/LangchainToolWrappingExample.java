@@ -28,8 +28,7 @@ public class LangchainToolWrappingExample {
         @Tool("Get current weather for a location")
         public String getWeather(String location) {
             // Simulate a weather API call
-            return String.format(
-                    "The weather in %s is sunny with 72°F temperature.", location);
+            return String.format("The weather in %s is sunny with 72°F temperature.", location);
         }
 
         @Tool("Get weather forecast for next N days")
@@ -60,6 +59,11 @@ public class LangchainToolWrappingExample {
 
         // Create root span for the conversation
         var conversationSpan = tracer.spanBuilder("weather-assistant-conversation").startSpan();
+        conversationSpan.setAttribute(
+                "braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"conversation\"}");
+        conversationSpan.setAttribute(
+                "braintrust.input_json",
+                "{\"description\":\"Weather assistant with tool wrapping\",\"turns\":2}");
 
         try (var ignored = conversationSpan.makeCurrent()) {
             // Wrap the LLM with Braintrust instrumentation
@@ -86,34 +90,48 @@ public class LangchainToolWrappingExample {
                             .build();
 
             // Example 1: Single tool call
-            conversationTurn(
-                    tracer,
-                    "turn_1",
-                    () -> {
-                        System.out.println("--- Turn 1: Single Tool Call ---");
-                        String query = "What's the weather in San Francisco?";
-                        System.out.println("User: " + query);
-                        String response = assistant.chat(query);
-                        System.out.println("Assistant: " + response);
-                        System.out.println();
-                        return response;
-                    });
+            System.out.println("--- Turn 1: Single Tool Call ---");
+            String query1 = "What's the weather in San Francisco?";
+            System.out.println("User: " + query1);
+            Span turn1 = tracer.spanBuilder("turn_1").startSpan();
+            turn1.setAttribute(
+                    "braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"turn_1\"}");
+            turn1.setAttribute("braintrust.input_json", "{\"user_message\":\"" + query1 + "\"}");
+            String response1;
+            try (Scope scope = turn1.makeCurrent()) {
+                response1 = assistant.chat(query1);
+                System.out.println("Assistant: " + response1);
+                turn1.setAttribute(
+                        "braintrust.output_json",
+                        "{\"assistant_message\":\"" + response1.replace("\"", "\\\"") + "\"}");
+            } finally {
+                turn1.end();
+            }
+            System.out.println();
 
             // Example 2: Tool with multiple parameters
-            conversationTurn(
-                    tracer,
-                    "turn_2",
-                    () -> {
-                        System.out.println("--- Turn 2: Multiple Parameters ---");
-                        String query = "What's the 5-day forecast for Tokyo?";
-                        System.out.println("User: " + query);
-                        String response = assistant.chat(query);
-                        System.out.println("Assistant: " + response);
-                        System.out.println();
-                        return response;
-                    });
+            System.out.println("--- Turn 2: Multiple Parameters ---");
+            String query2 = "What's the 5-day forecast for Tokyo?";
+            System.out.println("User: " + query2);
+            Span turn2 = tracer.spanBuilder("turn_2").startSpan();
+            turn2.setAttribute(
+                    "braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"turn_2\"}");
+            turn2.setAttribute("braintrust.input_json", "{\"user_message\":\"" + query2 + "\"}");
+            String response2;
+            try (Scope scope = turn2.makeCurrent()) {
+                response2 = assistant.chat(query2);
+                System.out.println("Assistant: " + response2);
+                turn2.setAttribute(
+                        "braintrust.output_json",
+                        "{\"assistant_message\":\"" + response2.replace("\"", "\\\"") + "\"}");
+            } finally {
+                turn2.end();
+            }
+            System.out.println();
 
         } finally {
+            conversationSpan.setAttribute(
+                    "braintrust.output_json", "{\"status\":\"completed\",\"turns\":2}");
             conversationSpan.end();
         }
 
@@ -136,22 +154,5 @@ public class LangchainToolWrappingExample {
         System.out.println("  • LLM call spans (from BraintrustLangchain.wrap())");
         System.out.println("  • Tool execution spans (from BraintrustLangchain.wrapTools())");
         System.out.println("\n  View your traces: " + url + "\n");
-    }
-
-    /**
-     * Helper method to create a conversation turn span
-     *
-     * @param tracer OpenTelemetry tracer
-     * @param turnName Name of the conversation turn
-     * @param action Lambda to execute within the turn span
-     */
-    private static void conversationTurn(
-            io.opentelemetry.api.trace.Tracer tracer, String turnName, Runnable action) {
-        Span turnSpan = tracer.spanBuilder(turnName).startSpan();
-        try (Scope scope = turnSpan.makeCurrent()) {
-            action.run();
-        } finally {
-            turnSpan.end();
-        }
     }
 }

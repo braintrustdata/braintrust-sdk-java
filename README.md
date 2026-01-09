@@ -129,6 +129,18 @@ Each tool call will automatically create an OpenTelemetry span in Braintrust wit
 - Return values
 - Any exceptions thrown
 
+**Note:** For proper display in the Braintrust UI, ensure parent spans (conversation, turn, etc.) also set the required Braintrust attributes:
+```java
+var span = tracer.spanBuilder("my-span").startSpan();
+span.setAttribute("braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"my-span\"}");
+span.setAttribute("braintrust.input_json", "{\"user_message\":\"...\"}");
+// ... do work ...
+span.setAttribute("braintrust.output_json", "{\"result\":\"...\"}");
+span.end();
+```
+
+See [LangchainToolWrappingExample.java](./examples/src/main/java/dev/braintrust/examples/LangchainToolWrappingExample.java) for a complete example with proper span hierarchy.
+
 ## Running Examples
 
 Example source code can be found [here](./examples/src/main/java/dev/braintrust/examples)
