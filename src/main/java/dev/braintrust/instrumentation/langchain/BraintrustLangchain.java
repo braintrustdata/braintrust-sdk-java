@@ -49,28 +49,6 @@ public final class BraintrustLangchain {
         }
     }
 
-    /**
-     * Wrap a tools object to instrument @Tool method executions with Braintrust traces. Returns a
-     * proxy that intercepts all @Tool annotated methods and creates OpenTelemetry spans.
-     *
-     * <p>Usage: StoryTools tools = new StoryTools(); StoryTools instrumented =
-     * BraintrustLangchain.wrapTools(openTelemetry, tools);
-     * AiServices.builder(Assistant.class).chatModel(model).tools(instrumented).build()
-     *
-     * @param otel OpenTelemetry instance from braintrust.openTelemetryCreate()
-     * @param tools Tool object with @Tool annotated methods
-     * @return Proxied tool object that creates spans for each @Tool method call
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T wrapTools(OpenTelemetry otel, T tools) {
-        try {
-            return (T) new ByteBuddyToolWrapper(otel).wrap(tools);
-        } catch (Exception e) {
-            log.warn("Failed to wrap tools with instrumentation, returning original", e);
-            return tools;
-        }
-    }
-
     private static HttpClientBuilder wrap(
             OpenTelemetry otel, HttpClientBuilder builder, Options options) {
         return new WrappedHttpClientBuilder(otel, builder, options);
