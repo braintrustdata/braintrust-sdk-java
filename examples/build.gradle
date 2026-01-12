@@ -172,3 +172,17 @@ task runLangchain(type: JavaExec) {
     suspend = false
   }
 }
+
+task runLangchainToolWrapping(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the LangChain4j tool wrapping example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.LangchainToolWrappingExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

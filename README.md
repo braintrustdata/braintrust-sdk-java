@@ -82,6 +82,65 @@ var request =
 var response = openAIClient.chat().completions().create(request);
 ```
 
+### LangChain4j Instrumentation
+
+```java
+var braintrust = Braintrust.get();
+var openTelemetry = braintrust.openTelemetryCreate();
+
+// Wrap the chat model to trace LLM calls
+ChatModel model = BraintrustLangchain.wrap(
+    openTelemetry,
+    OpenAiChatModel.builder()
+        .apiKey(System.getenv("OPENAI_API_KEY"))
+        .modelName("gpt-4o-mini")
+        .temperature(0.0));
+
+var response = model.chat("What is the capital of France?");
+```
+
+#### Tool Wrapping
+
+Use `BraintrustLangchain.wrapTools()` to automatically trace tool executions in your LangChain4j agents:
+
+```java
+// Create your tool class
+public class WeatherTools {
+    @Tool("Get current weather for a location")
+    public String getWeather(String location) {
+        return "The weather in " + location + " is sunny.";
+    }
+}
+
+// Wrap tools to create spans for each tool execution
+WeatherTools tools = new WeatherTools();
+WeatherTools instrumentedTools = BraintrustLangchain.wrapTools(openTelemetry, tools);
+
+// Use instrumented tools in your AI service
+Assistant assistant = AiServices.builder(Assistant.class)
+    .chatModel(model)
+    .tools(instrumentedTools)
+    .build();
+```
+
+Each tool call will automatically create an OpenTelemetry span in Braintrust with:
+- Tool name and parameters
+- Execution duration
+- Return values
+- Any exceptions thrown
+
+**Note:** For proper display in the Braintrust UI, ensure parent spans (conversation, turn, etc.) also set the required Braintrust attributes:
+```java
+var span = tracer.spanBuilder("my-span").startSpan();
+span.setAttribute("braintrust.span_attributes", "{\"type\":\"task\",\"name\":\"my-span\"}");
+span.setAttribute("braintrust.input_json", "{\"user_message\":\"...\"}");
+// ... do work ...
+span.setAttribute("braintrust.output_json", "{\"result\":\"...\"}");
+span.end();
+```
+
+See [LangchainToolWrappingExample.java](./examples/src/main/java/dev/braintrust/examples/LangchainToolWrappingExample.java) for a complete example with proper span hierarchy.
+
 ## Running Examples
 
 Example source code can be found [here](./examples/src/main/java/dev/braintrust/examples)
