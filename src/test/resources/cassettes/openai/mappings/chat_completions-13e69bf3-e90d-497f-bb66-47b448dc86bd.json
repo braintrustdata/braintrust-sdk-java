@@ -1,5 +1,5 @@
 {
-  "id" : "9b6e1d09-eeff-4c08-a479-9a1cd5b9913a",
+  "id" : "13e69bf3-e90d-497f-bb66-47b448dc86bd",
   "name" : "chat_completions",
   "request" : {
     "url" : "/chat/completions",
@@ -12,39 +12,39 @@
     "bodyPatterns" : [ {
       "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
       "ignoreArrayOrder" : true,
-      "ignoreExtraElements" : true
+      "ignoreExtraElements" : false
     } ]
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "chat_completions-9b6e1d09-eeff-4c08-a479-9a1cd5b9913a.json",
+    "bodyFileName" : "chat_completions-13e69bf3-e90d-497f-bb66-47b448dc86bd.json",
     "headers" : {
-      "Date" : "Wed, 31 Dec 2025 05:50:00 GMT",
+      "Date" : "Tue, 13 Jan 2026 18:55:49 GMT",
       "Content-Type" : "application/json",
       "access-control-expose-headers" : "X-Request-ID",
       "openai-organization" : "braintrust-data",
-      "openai-processing-ms" : "370",
+      "openai-processing-ms" : "414",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "openai-version" : "2020-10-01",
-      "x-envoy-upstream-service-time" : "393",
+      "x-envoy-upstream-service-time" : "553",
       "x-ratelimit-limit-requests" : "30000",
       "x-ratelimit-limit-tokens" : "150000000",
       "x-ratelimit-remaining-requests" : "29999",
       "x-ratelimit-remaining-tokens" : "149999982",
       "x-ratelimit-reset-requests" : "2ms",
       "x-ratelimit-reset-tokens" : "0s",
-      "x-request-id" : "req_94fe822d95b044a58cd2eacccc013d5c",
+      "x-request-id" : "req_bc56bf172e1b41cda76cb06a5ca73ed0",
       "x-openai-proxy-wasm" : "v0.1",
       "cf-cache-status" : "DYNAMIC",
-      "Set-Cookie" : [ "__cf_bm=juuIFMD6qt989prqR27aGApTMecE9BUuvTAD5dGhPho-1767160200-1.0.1.1-bRt_lonT2SPEwJm2Bi9EWUnJFZnsrG_3QbGf8P4OOf_f_EqfTyG0NVAh_WmPpJ1t0u039SVg1XyUd1FEjz_oE3ZlIzf3VE8oCktjReFCkKg; path=/; expires=Wed, 31-Dec-25 06:20:00 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=x5FoQ1I.0RMSh8W0juh1zeyYg.Oi1sc2Da4deU27gUM-1767160200105-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
+      "Set-Cookie" : [ "__cf_bm=KnxsdeOSd50kaFk76pJ9ETxarjO99vDibkW9gcRSZF0-1768330549-1.0.1.1-WjfuxAjZSzqtvv3lnyq9bnx3pxzRUbCjfXzeXwBJKRzcvutTMQfCl6z4L1pE42fFq93ODxppcSpBpRt.84GY4apv7AufWbLfugBz5mnyZp0; path=/; expires=Tue, 13-Jan-26 19:25:49 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=ACDXQn3j61tpIi9gPK9jM.jFHQdh0jpS7JKxLogWKpY-1768330549707-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "X-Content-Type-Options" : "nosniff",
       "Server" : "cloudflare",
-      "CF-RAY" : "9b677f2fc891eb6b-SEA",
+      "CF-RAY" : "9bd71c2bbc74b9c4-SEA",
       "alt-svc" : "h3=\":443\"; ma=86400"
     }
   },
-  "uuid" : "9b6e1d09-eeff-4c08-a479-9a1cd5b9913a",
+  "uuid" : "13e69bf3-e90d-497f-bb66-47b448dc86bd",
   "persistent" : true,
-  "insertionIndex" : 4
+  "insertionIndex" : 6
 }

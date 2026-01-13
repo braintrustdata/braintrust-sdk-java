@@ -1,5 +1,5 @@
 {
-  "id" : "db51abc2-016e-4cd2-b863-3c55bd20dc10",
+  "id" : "68182ecb-89f2-4d6d-9d6a-49cb3f036357",
   "name" : "v1_messages",
   "request" : {
     "url" : "/v1/messages",
@@ -12,39 +12,39 @@
     "bodyPatterns" : [ {
       "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-3-5-haiku-20241022\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0,\"stream\":true}",
       "ignoreArrayOrder" : true,
-      "ignoreExtraElements" : true
+      "ignoreExtraElements" : false
     } ]
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "v1_messages-db51abc2-016e-4cd2-b863-3c55bd20dc10.txt",
+    "bodyFileName" : "v1_messages-68182ecb-89f2-4d6d-9d6a-49cb3f036357.txt",
     "headers" : {
-      "Date" : "Wed, 31 Dec 2025 05:49:53 GMT",
+      "Date" : "Tue, 13 Jan 2026 18:55:41 GMT",
       "Content-Type" : "text/event-stream; charset=utf-8",
       "Cache-Control" : "no-cache",
       "anthropic-ratelimit-requests-limit" : "10000",
       "anthropic-ratelimit-requests-remaining" : "9999",
-      "anthropic-ratelimit-requests-reset" : "2025-12-31T05:49:53Z",
+      "anthropic-ratelimit-requests-reset" : "2026-01-13T18:55:40Z",
       "anthropic-ratelimit-input-tokens-limit" : "5000000",
       "anthropic-ratelimit-input-tokens-remaining" : "5000000",
-      "anthropic-ratelimit-input-tokens-reset" : "2025-12-31T05:49:53Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-01-13T18:55:40Z",
       "anthropic-ratelimit-output-tokens-limit" : "1000000",
       "anthropic-ratelimit-output-tokens-remaining" : "1000000",
-      "anthropic-ratelimit-output-tokens-reset" : "2025-12-31T05:49:53Z",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-01-13T18:55:40Z",
       "anthropic-ratelimit-tokens-limit" : "6000000",
       "anthropic-ratelimit-tokens-remaining" : "6000000",
-      "anthropic-ratelimit-tokens-reset" : "2025-12-31T05:49:53Z",
-      "request-id" : "req_011CWeEvkNUico2HESGkzLt2",
+      "anthropic-ratelimit-tokens-reset" : "2026-01-13T18:55:40Z",
+      "request-id" : "req_011CX5tN5bEBPFm9bcjPAmud",
       "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
       "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
       "Server" : "cloudflare",
-      "x-envoy-upstream-service-time" : "461",
+      "x-envoy-upstream-service-time" : "371",
       "cf-cache-status" : "DYNAMIC",
       "X-Robots-Tag" : "none",
-      "CF-RAY" : "9b677f08d98ca3c8-SEA"
+      "CF-RAY" : "9bd71bf7499f347d-SEA"
     }
   },
-  "uuid" : "db51abc2-016e-4cd2-b863-3c55bd20dc10",
+  "uuid" : "68182ecb-89f2-4d6d-9d6a-49cb3f036357",
   "persistent" : true,
   "insertionIndex" : 2
 }

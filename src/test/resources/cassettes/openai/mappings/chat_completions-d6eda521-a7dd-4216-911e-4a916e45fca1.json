@@ -1,0 +1,50 @@
+{
+  "id" : "d6eda521-a7dd-4216-911e-4a916e45fca1",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"is it hotter in Paris or New York right now?\"\n  }, {\n    \"role\" : \"assistant\",\n    \"tool_calls\" : [ {\n      \"id\" : \"call_O0vPA17lB2sSTvNui5KkMr7E\",\n      \"type\" : \"function\",\n      \"function\" : {\n        \"name\" : \"getWeather\",\n        \"arguments\" : \"{\\\"arg0\\\": \\\"Paris\\\"}\"\n      }\n    }, {\n      \"id\" : \"call_gVz1cYvAomaPcTrheam72S8H\",\n      \"type\" : \"function\",\n      \"function\" : {\n        \"name\" : \"getWeather\",\n        \"arguments\" : \"{\\\"arg0\\\": \\\"New York\\\"}\"\n      }\n    } ]\n  }, {\n    \"role\" : \"tool\",\n    \"tool_call_id\" : \"call_O0vPA17lB2sSTvNui5KkMr7E\",\n    \"content\" : \"The weather in Paris is sunny with 72°F temperature.\"\n  }, {\n    \"role\" : \"tool\",\n    \"tool_call_id\" : \"call_gVz1cYvAomaPcTrheam72S8H\",\n    \"content\" : \"The weather in New York is sunny with 72°F temperature.\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getForecast\",\n      \"description\" : \"Get weather forecast for next N days\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          },\n          \"arg1\" : {\n            \"type\" : \"integer\"\n          }\n        },\n        \"required\" : [ \"arg0\", \"arg1\" ]\n      }\n    }\n  }, {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getWeather\",\n      \"description\" : \"Get current weather for a location\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          }\n        },\n        \"required\" : [ \"arg0\" ]\n      }\n    }\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-d6eda521-a7dd-4216-911e-4a916e45fca1.json",
+    "headers" : {
+      "Date" : "Tue, 13 Jan 2026 18:55:47 GMT",
+      "Content-Type" : "application/json",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "725",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "x-envoy-upstream-service-time" : "782",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999955",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_3fd434fe36e5457387641e91bddd872e",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Set-Cookie" : [ "__cf_bm=GqbfmxZoOlS1Ff1BF3Pbb7tWbU6gizh68j2IIgjH.CE-1768330547-1.0.1.1-X3.JfC8E_qdMD_um.SLG7_uLhhxfj3letN8jGjFgDK2ZPDWk.lQYUWqkOUoshTf8UIxpi7UBmB2_C68nkATEom3o5SMBkYQ6I9bBYW32Y00; path=/; expires=Tue, 13-Jan-26 19:25:47 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=bEAnkV1ZOc_LuPfi3M1oNKr3OyHkhoGrgkd6IxqpeK0-1768330547136-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "Server" : "cloudflare",
+      "CF-RAY" : "9bd71c1a3ce5d44f-SEA",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "d6eda521-a7dd-4216-911e-4a916e45fca1",
+  "persistent" : true,
+  "insertionIndex" : 3
+}
