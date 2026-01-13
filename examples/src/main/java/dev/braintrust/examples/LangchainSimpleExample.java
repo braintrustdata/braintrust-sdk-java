@@ -7,7 +7,7 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 
 /** Basic OTel + LangChain4j instrumentation example */
-public class LangchainExample {
+public class LangchainSimpleExample {
 
     public static void main(String[] args) throws Exception {
         if (null == System.getenv("OPENAI_API_KEY")) {
@@ -46,8 +46,7 @@ public class LangchainExample {
     }
 
     private static void chatExample(ChatModel model) {
-        var message = UserMessage.from("What is the capital of France?");
-        var response = model.chat(message);
+        var response = model.chat(UserMessage.from("What is the capital of France?"));
         System.out.println(
                 "\n~~~ LANGCHAIN4J CHAT RESPONSE: %s\n".formatted(response.aiMessage().text()));
     }

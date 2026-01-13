@@ -137,7 +137,11 @@ public class VCR {
                         .captureHeader("Content-Type")
                         // .captureHeader("Authorization", true)
                         .extractTextBodiesOver(0) // Always extract bodies
-                        .makeStubsPersistent(true); // Save to disk
+                        .makeStubsPersistent(true) // Save to disk
+                        // Use JSON matching:
+                        // - ignoreArrayOrder=true
+                        // - ignoreExtraElements=false
+                        .matchRequestBodyWithEqualToJson(true, false);
 
         wireMock.startRecording(recordSpec);
     }

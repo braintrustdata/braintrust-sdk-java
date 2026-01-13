@@ -71,7 +71,7 @@ class WrappedHttpClient implements HttpClient {
         ProviderInfo providerInfo =
                 new ProviderInfo(options.providerName(), extractEndpoint(request));
         Span span = startNewSpan(getSpanName(providerInfo));
-        try (Scope scope = span.makeCurrent()) {
+        try (Scope ignored = span.makeCurrent()) {
             tagSpan(span, request, providerInfo);
             underlying.execute(
                     request, new WrappedServerSentEventListener(listener, span, providerInfo));
@@ -94,7 +94,7 @@ class WrappedHttpClient implements HttpClient {
         ProviderInfo providerInfo =
                 new ProviderInfo(options.providerName(), extractEndpoint(request));
         Span span = startNewSpan(getSpanName(providerInfo));
-        try {
+        try (Scope ignored = span.makeCurrent()) {
             tagSpan(span, request, providerInfo);
             underlying.execute(
                     request,
@@ -235,6 +235,7 @@ class WrappedHttpClient implements HttpClient {
         private long firstTokenTime = 0;
         private final long startTime;
         private JsonNode usageData = null;
+        private String finishReason = null;
 
         WrappedServerSentEventListener(
                 ServerSentEventListener delegate, Span span, ProviderInfo providerInfo) {
@@ -246,19 +247,25 @@ class WrappedHttpClient implements HttpClient {
 
         @Override
         public void onOpen(SuccessfulHttpResponse response) {
-            delegate.onOpen(response);
+            try (Scope ignored = span.makeCurrent()) {
+                delegate.onOpen(response);
+            }
         }
 
         @Override
         public void onEvent(ServerSentEvent event, ServerSentEventContext context) {
-            instrumentEvent(event);
-            delegate.onEvent(event, context);
+            try (Scope ignored = span.makeCurrent()) {
+                instrumentEvent(event);
+                delegate.onEvent(event, context);
+            }
         }
 
         @Override
         public void onEvent(ServerSentEvent event) {
-            instrumentEvent(event);
-            delegate.onEvent(event);
+            try (Scope ignored = span.makeCurrent()) {
+                instrumentEvent(event);
+                delegate.onEvent(event);
+            }
         }
 
         private void instrumentEvent(ServerSentEvent event) {
@@ -287,6 +294,10 @@ class WrappedHttpClient implements HttpClient {
                             outputBuffer.append(content);
                         }
                     }
+                    // Capture finish_reason when present (usually in the last chunk)
+                    if (choice.has("finish_reason") && !choice.get("finish_reason").isNull()) {
+                        finishReason = choice.get("finish_reason").asText();
+                    }
                 }
 
                 // Extract usage data if present (usually in the last chunk)
@@ -300,7 +311,7 @@ class WrappedHttpClient implements HttpClient {
 
         @Override
         public void onError(Throwable error) {
-            try {
+            try (Scope ignored = span.makeCurrent()) {
                 delegate.onError(error);
             } finally {
                 tagSpan(span, error);
@@ -311,7 +322,7 @@ class WrappedHttpClient implements HttpClient {
 
         @Override
         public void onClose() {
-            try {
+            try (Scope ignored = span.makeCurrent()) {
                 delegate.onClose();
             } finally {
                 finalizeSpan();
@@ -332,12 +343,14 @@ class WrappedHttpClient implements HttpClient {
             // Reconstruct output as a choices array for streaming
             // Format: [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant",
             // "content": "..."}}]
-            if (outputBuffer.length() > 0) {
+            if (outputBuffer.length() > 0 || finishReason != null) {
                 try {
                     // Create a proper choice object matching OpenAI API format
                     var choiceBuilder = JSON_MAPPER.createObjectNode();
                     choiceBuilder.put("index", 0);
-                    choiceBuilder.put("finish_reason", "stop");
+                    if (finishReason != null) {
+                        choiceBuilder.put("finish_reason", finishReason);
+                    }
 
                     var messageNode = JSON_MAPPER.createObjectNode();
                     messageNode.put("role", "assistant");
