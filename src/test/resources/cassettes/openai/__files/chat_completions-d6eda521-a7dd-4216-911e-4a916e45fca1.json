@@ -1,14 +1,14 @@
 {
-  "id": "chatcmpl-CsjNlSbOA9QyFPqBHuOJ7rNGTbHGS",
+  "id": "chatcmpl-CxdqMP3DDF5hyKQhHBRTrBCTtd0BE",
   "object": "chat.completion",
-  "created": 1767160197,
+  "created": 1768330546,
   "model": "gpt-4o-mini-2024-07-18",
   "choices": [
     {
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "The capital of France is Paris.",
+        "content": "The current temperature is the same in both Paris and New York, at 72°F, and both cities are experiencing sunny weather.",
         "refusal": null,
         "annotations": []
       },
@@ -17,9 +17,9 @@
     }
   ],
   "usage": {
-    "prompt_tokens": 14,
-    "completion_tokens": 7,
-    "total_tokens": 21,
+    "prompt_tokens": 177,
+    "completion_tokens": 27,
+    "total_tokens": 204,
     "prompt_tokens_details": {
       "cached_tokens": 0,
       "audio_tokens": 0

@@ -159,11 +159,25 @@ task runRemoteEval(type: JavaExec) {
   }
 }
 
-task runLangchain(type: JavaExec) {
+task runLangchainSimple(type: JavaExec) {
   group = 'Braintrust SDK Examples'
   description = 'Run the LangChain4j instrumentation example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
   classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.LangchainExample'
+  mainClass = 'dev.braintrust.examples.LangchainSimpleExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
+
+task runLangchainAIServices(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the LangChain4j AI Services example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.LangchainAIServicesExample'
   systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
   debugOptions {
     enabled = true

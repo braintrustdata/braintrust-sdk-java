@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.TestHarness;
+import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -12,8 +13,14 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.langchain4j.service.AiServices;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +34,14 @@ public class BraintrustLangchainTest {
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
+    }
+
+    @Test
+    @SneakyThrows
+    void typeToolJsonCorrect() {
+        assertEquals(
+                JSON_MAPPER.writeValueAsString(Map.of("type", "tool")),
+                TracingToolExecutor.TYPE_TOOL_JSON);
     }
 
     @Test
@@ -112,7 +127,8 @@ public class BraintrustLangchainTest {
     @Test
     @SneakyThrows
     void testStreamingChatCompletion() {
-        // Create LangChain4j streaming client with Braintrust instrumentation using VCR
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+
         StreamingChatModel model =
                 BraintrustLangchain.wrap(
                         testHarness.openTelemetry(),
@@ -125,12 +141,19 @@ public class BraintrustLangchainTest {
         // Execute streaming chat request
         var future = new CompletableFuture<ChatResponse>();
         var responseBuilder = new StringBuilder();
+        var callbackCount = new AtomicInteger(0);
 
         model.chat(
                 "What is the capital of France?",
                 new StreamingChatResponseHandler() {
                     @Override
                     public void onPartialResponse(String token) {
+                        // Create a child span during the callback to verify parenting
+                        Span childSpan =
+                                tracer.spanBuilder(
+                                                "callback-span-" + callbackCount.incrementAndGet())
+                                        .startSpan();
+                        childSpan.end();
                         responseBuilder.append(token);
                     }
 
@@ -152,16 +175,44 @@ public class BraintrustLangchainTest {
         assertNotNull(response);
         assertFalse(responseBuilder.toString().isEmpty(), "Response should not be empty");
 
-        // Verify spans were exported
-        var spans = testHarness.awaitExportedSpans(1);
-        assertEquals(1, spans.size(), "Expected one span for streaming chat completion");
-        var span = spans.get(0);
+        // We expect at least 2 spans: 1 LLM span + at least 1 callback span
+        int expectedMinSpans = 1 + callbackCount.get();
+        var spans = testHarness.awaitExportedSpans(expectedMinSpans);
+        assertTrue(
+                spans.size() >= expectedMinSpans,
+                "Expected at least " + expectedMinSpans + " spans, got " + spans.size());
 
-        // Verify span name
-        assertEquals("Chat Completion", span.getName(), "Span name should be 'Chat Completion'");
+        // Find the LLM span and callback spans
+        SpanData llmSpan = null;
+        List<SpanData> callbackSpans = new java.util.ArrayList<>();
 
-        // Verify span attributes
-        var attributes = span.getAttributes();
+        for (var span : spans) {
+            if (span.getName().equals("Chat Completion")) {
+                llmSpan = span;
+            } else if (span.getName().startsWith("callback-span-")) {
+                callbackSpans.add(span);
+            }
+        }
+
+        assertNotNull(llmSpan, "Should have an LLM span named 'Chat Completion'");
+        assertEquals(
+                callbackCount.get(),
+                callbackSpans.size(),
+                "Should have one callback span per onPartialResponse invocation");
+
+        // Verify all callback spans are parented under the LLM span
+        String llmSpanId = llmSpan.getSpanId();
+        for (var callbackSpan : callbackSpans) {
+            assertEquals(
+                    llmSpanId,
+                    callbackSpan.getParentSpanId(),
+                    "Callback span '"
+                            + callbackSpan.getName()
+                            + "' should be parented under LLM span");
+        }
+
+        // Verify LLM span attributes
+        var attributes = llmSpan.getAttributes();
 
         var braintrustSpanAttributesJson =
                 attributes.get(AttributeKey.stringKey("braintrust.span_attributes"));
@@ -214,5 +265,91 @@ public class BraintrustLangchainTest {
                 choice.get("message").get("content"),
                 "Output should contain the complete streamed response");
         assertNotNull(choice.get("finish_reason"), "Output should have finish_reason");
+    }
+
+    @Test
+    @SneakyThrows
+    void testAiServicesWithTools() {
+        Assistant assistant =
+                BraintrustLangchain.wrap(
+                        testHarness.openTelemetry(),
+                        AiServices.builder(Assistant.class)
+                                .chatModel(
+                                        OpenAiChatModel.builder()
+                                                .apiKey(testHarness.openAiApiKey())
+                                                .baseUrl(testHarness.openAiBaseUrl())
+                                                .modelName("gpt-4o-mini")
+                                                .temperature(0.0)
+                                                .build())
+                                .tools(new WeatherTools())
+                                .executeToolsConcurrently());
+
+        // This should trigger two (concurrent) tool calls
+        var response = assistant.chat("is it hotter in Paris or New York right now?");
+
+        // Verify the response
+        assertNotNull(response);
+
+        // Verify spans were exported - should have at least:
+        // - one AI service method span ("chat")
+        // - at least two LLM calls (one to request the tool calls, and another to analyze)
+        // - at least two tool call spans
+        var spans = testHarness.awaitExportedSpans(3);
+        assertTrue(spans.size() >= 3, "Expected at least 3 spans for AI Services with tools");
+
+        // Verify we have the expected span types
+        int numServiceMethodSpans = 0;
+        int numLLMSpans = 0;
+        int numToolCallSpans = 0;
+
+        for (var span : spans) {
+            String spanName = span.getName();
+            var attributes = span.getAttributes();
+
+            if (spanName.equals("chat")) {
+                numServiceMethodSpans++;
+            } else if (spanName.equals("Chat Completion")) {
+                numLLMSpans++;
+                // Verify LLM span has proper attributes
+                var spanAttributesJson =
+                        attributes.get(AttributeKey.stringKey("braintrust.span_attributes"));
+                assertNotNull(spanAttributesJson, "LLM span should have span_attributes");
+                JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
+                assertEquals(
+                        "llm", spanAttributes.get("type").asText(), "Span type should be 'llm'");
+            } else if (spanName.equals("getWeather")) {
+                numToolCallSpans++;
+                // Verify tool span has proper attributes
+                var spanAttributesJson =
+                        attributes.get(AttributeKey.stringKey("braintrust.span_attributes"));
+                assertNotNull(spanAttributesJson, "Tool span should have span_attributes");
+                JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
+                assertEquals(
+                        "tool", spanAttributes.get("type").asText(), "Span type should be 'tool'");
+            }
+        }
+        assertEquals(1, numServiceMethodSpans, "should be exactly one service call");
+        assertTrue(numLLMSpans >= 2, "should be at least two llm spans");
+        assertTrue(numToolCallSpans >= 2, "should be at least two tool call spans");
+    }
+
+    /** AI Service interface for the assistant */
+    interface Assistant {
+        String chat(String userMessage);
+    }
+
+    /** Example tool class with weather-related methods */
+    public static class WeatherTools {
+        @Tool("Get current weather for a location")
+        public String getWeather(String location) {
+            return String.format("The weather in %s is sunny with 72°F temperature.", location);
+        }
+
+        @Tool("Get weather forecast for next N days")
+        public String getForecast(String location, int days) {
+            return String.format(
+                    "The %d-day forecast for %s: Mostly sunny with temperatures between 65-75°F.",
+                    days, location);
+        }
     }
 }
