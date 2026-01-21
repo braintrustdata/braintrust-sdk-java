@@ -28,12 +28,22 @@ public class TestHarness {
     private static final VCR vcr;
 
     static {
+        // Collect all API keys that should never appear in recorded cassettes
+        List<String> apiKeysToNeverRecord =
+                List.of(
+                        getEnv("OPENAI_API_KEY", ""),
+                        getEnv("ANTHROPIC_API_KEY", ""),
+                        getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "")),
+                        getEnv("BRAINTRUST_API_KEY", ""));
+
         vcr =
                 new VCR(
                         java.util.Map.of(
                                 "https://api.openai.com/v1", "openai",
                                 "https://api.anthropic.com", "anthropic",
-                                "https://generativelanguage.googleapis.com", "google"));
+                                "https://generativelanguage.googleapis.com", "google",
+                                "https://api.braintrust.dev", "braintrust"),
+                        apiKeysToNeverRecord);
         vcr.start();
         Runtime.getRuntime().addShutdownHook(new Thread(vcr::stop));
     }
@@ -61,19 +71,19 @@ public class TestHarness {
 
     @Getter
     @Accessors(fluent = true)
-    private static final String defaultProjectId = "01234";
+    private static final String defaultProjectId = "6ae68365-7620-4630-921b-bac416634fc8";
 
     @Getter
     @Accessors(fluent = true)
-    private static final String defaultProjectName = "Unit Test";
+    private static final String defaultProjectName = "java-unit-test";
 
     @Getter
     @Accessors(fluent = true)
-    private static final String defaultOrgId = "567890";
+    private static final String defaultOrgId = "5d7c97d7-fef1-4cb7-bda6-7e3756a0ca8e";
 
     @Getter
     @Accessors(fluent = true)
-    private static final String defaultOrgName = "Test Org";
+    private static final String defaultOrgName = "braintrustdata.com";
 
     private static final AtomicReference<TestHarness> INSTANCE = new AtomicReference<>();
 
@@ -133,6 +143,14 @@ public class TestHarness {
 
     public String googleApiKey() {
         return getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "test-key"));
+    }
+
+    public String braintrustApiBaseUrl() {
+        return vcr.getUrlForTargetBase("https://api.braintrust.dev");
+    }
+
+    public String braintrustApiKey() {
+        return getEnv("BRAINTRUST_API_KEY", "test-key");
     }
 
     /** flush all pending spans and return all spans which have been exported so far */

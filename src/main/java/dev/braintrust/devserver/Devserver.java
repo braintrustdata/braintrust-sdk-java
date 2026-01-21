@@ -288,7 +288,18 @@ public class Devserver {
                 return;
             }
 
-            // TODO: support remote scorers
+            // Resolve remote scorers from the request
+            List<Scorer<Object, Object>> remoteScorers = new ArrayList<>();
+            if (request.getScores() != null) {
+                var apiClient = context.getBraintrust().apiClient();
+                for (var remoteScorer : request.getScores()) {
+                    remoteScorers.add(resolveRemoteScorer(remoteScorer, apiClient));
+                }
+                log.debug(
+                        "Resolved {} remote scorer(s): {}",
+                        remoteScorers.size(),
+                        remoteScorers.stream().map(Scorer::getName).toList());
+            }
 
             String datasetDescription =
                     hasInlineData
@@ -308,7 +319,7 @@ public class Devserver {
             if (isStreaming) {
                 // SSE streaming response - errors handled inside
                 log.debug("Starting streaming evaluation for '{}'", request.getName());
-                handleStreamingEval(exchange, eval, request, context);
+                handleStreamingEval(exchange, eval, request, context, remoteScorers);
             } else {
                 throw new NotSupportedYetException("non-streaming responses");
             }
@@ -325,7 +336,11 @@ public class Devserver {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void handleStreamingEval(
-            HttpExchange exchange, RemoteEval eval, EvalRequest request, RequestContext context)
+            HttpExchange exchange,
+            RemoteEval eval,
+            EvalRequest request,
+            RequestContext context,
+            List<Scorer<Object, Object>> remoteScorers)
             throws Exception {
         // Set SSE headers
         exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
@@ -423,7 +438,12 @@ public class Devserver {
                                                     taskResult);
                                         }
                                         // run scorers - one score span per scorer
-                                        for (var scorer : (List<Scorer<?, ?>>) eval.getScorers()) {
+                                        // Combine local scorers from RemoteEval with remote scorers
+                                        // from request
+                                        List<Scorer<?, ?>> allScorers =
+                                                new ArrayList<>(eval.getScorers());
+                                        allScorers.addAll(remoteScorers);
+                                        for (var scorer : allScorers) {
                                             var scoreSpan = tracer.spanBuilder("score").startSpan();
                                             try (var unused =
                                                     Context.current()
@@ -1035,6 +1055,30 @@ public class Devserver {
         } else {
             throw new IllegalStateException("No dataset specification provided");
         }
+    }
+
+    /**
+     * Resolve a remote scorer from the eval request into a Scorer instance.
+     *
+     * @param remoteScorer the remote scorer specification from the request
+     * @param apiClient the API client to use for invoking the scorer function
+     * @return a Scorer that invokes the remote function
+     * @throws IllegalArgumentException if the function_id is missing
+     */
+    private static Scorer<Object, Object> resolveRemoteScorer(
+            EvalRequest.RemoteScorer remoteScorer, BraintrustApiClient apiClient) {
+        var functionIdSpec = remoteScorer.getFunctionId();
+
+        if (functionIdSpec == null || functionIdSpec.getFunctionId() == null) {
+            throw new IllegalArgumentException(
+                    "Remote scorer '" + remoteScorer.getName() + "' missing function_id");
+        }
+
+        return new ScorerBrainstoreImpl<>(
+                apiClient,
+                functionIdSpec.getFunctionId(),
+                remoteScorer.getName(),
+                functionIdSpec.getVersion());
     }
 
     public static class Builder {

@@ -1,0 +1,50 @@
+{
+  "id" : "8120a850-75ab-4fe2-8c4b-f0367beada3a",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-3-5-haiku-20241022\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-8120a850-75ab-4fe2-8c4b-f0367beada3a.txt",
+    "headers" : {
+      "Date" : "Fri, 23 Jan 2026 05:36:12 GMT",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "Cache-Control" : "no-cache",
+      "anthropic-ratelimit-requests-limit" : "10000",
+      "anthropic-ratelimit-requests-remaining" : "9999",
+      "anthropic-ratelimit-requests-reset" : "2026-01-23T05:36:11Z",
+      "anthropic-ratelimit-input-tokens-limit" : "5000000",
+      "anthropic-ratelimit-input-tokens-remaining" : "5000000",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-01-23T05:36:11Z",
+      "anthropic-ratelimit-output-tokens-limit" : "1000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "1000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-01-23T05:36:11Z",
+      "anthropic-ratelimit-tokens-limit" : "6000000",
+      "anthropic-ratelimit-tokens-remaining" : "6000000",
+      "anthropic-ratelimit-tokens-reset" : "2026-01-23T05:36:11Z",
+      "request-id" : "req_011CXPmVFdRQeFhPG37DhYW6",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "x-envoy-upstream-service-time" : "346",
+      "cf-cache-status" : "DYNAMIC",
+      "X-Robots-Tag" : "none",
+      "CF-RAY" : "9c24ee9a8aadec98-SEA"
+    }
+  },
+  "uuid" : "8120a850-75ab-4fe2-8c4b-f0367beada3a",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

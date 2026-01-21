@@ -4,6 +4,7 @@ import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.Dataset;
 import dev.braintrust.eval.Eval;
+import dev.braintrust.eval.Scorer;
 import dev.braintrust.prompt.BraintrustPromptLoader;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.OpenTelemetry;
@@ -172,5 +173,41 @@ public class Braintrust {
             String datasetName, @Nullable String datasetVersion) {
         var projectName = apiClient.getOrCreateProjectAndOrgInfo(config).project().name();
         return Dataset.fetchFromBraintrust(apiClient(), projectName, datasetName, datasetVersion);
+    }
+
+    /**
+     * Fetch a scorer from Braintrust by slug, using the default project from configuration.
+     *
+     * @param scorerSlug the unique slug identifier for the scorer
+     * @return a Scorer that invokes the remote function
+     */
+    public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(String scorerSlug) {
+        return fetchScorer(scorerSlug, null);
+    }
+
+    /**
+     * Fetch a scorer from Braintrust by slug, using the default project from configuration.
+     *
+     * @param scorerSlug the unique slug identifier for the scorer
+     * @param version optional version of the scorer to fetch
+     * @return a Scorer that invokes the remote function
+     */
+    public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
+            String scorerSlug, @Nullable String version) {
+        var projectName = apiClient.getOrCreateProjectAndOrgInfo(config).project().name();
+        return Scorer.fetchFromBraintrust(apiClient, projectName, scorerSlug, version);
+    }
+
+    /**
+     * Fetch a scorer from Braintrust by project name and slug.
+     *
+     * @param projectName the name of the project containing the scorer
+     * @param scorerSlug the unique slug identifier for the scorer
+     * @param version optional version of the scorer to fetch
+     * @return a Scorer that invokes the remote function
+     */
+    public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
+            String projectName, String scorerSlug, @Nullable String version) {
+        return Scorer.fetchFromBraintrust(apiClient, projectName, scorerSlug, version);
     }
 }
