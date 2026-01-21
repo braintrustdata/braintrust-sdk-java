@@ -2,6 +2,8 @@
 
 This file documents developing the SDK itself. If you simply wish to use the SDK or run examples, see [README.md](./README.md)
 
+Because the SDK is new and under active development, third-party contribution best-practices are still being established. If you wish to contribute please open a github issue explaining what you'd like to achieve and a developer will follow-up with you.
+
 ## Setup
 
 - Install JDK 17
@@ -15,7 +17,9 @@ This file documents developing the SDK itself. If you simply wish to use the SDK
   - These hooks automatically run common checks for you but CI also runs the same checks before merging to the main branch is allowed
   - NOTE: this will overwrite existing hooks. Take backups before running
 
-## Running a local OpenTelemetry collector
+## Misc Tips
+
+### Running a local OpenTelemetry collector
 
 OpenTelemetry provides a local collector with a debug exporter which logs all traces, logs, and metrics to stdout.
 
