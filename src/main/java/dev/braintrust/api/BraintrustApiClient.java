@@ -66,6 +66,26 @@ public interface BraintrustApiClient {
     /** Query datasets by project name and dataset name */
     List<Dataset> queryDatasets(String projectName, String datasetName);
 
+    /**
+     * Get a function by project name and slug, with optional version.
+     *
+     * @param projectName the name of the project containing the function
+     * @param slug the unique slug identifier for the function
+     * @param version optional version identifier (transaction id or version string)
+     * @return the function if found
+     */
+    Optional<Function> getFunction(
+            @Nonnull String projectName, @Nonnull String slug, @Nullable String version);
+
+    /**
+     * Invoke a function (scorer, prompt, or tool) by its ID.
+     *
+     * @param functionId the ID of the function to invoke
+     * @param request the invocation request containing input, expected output, etc.
+     * @return the result of the function invocation
+     */
+    Object invokeFunction(@Nonnull String functionId, @Nonnull FunctionInvokeRequest request);
+
     static BraintrustApiClient of(BraintrustConfig config) {
         return new HttpImpl(config);
     }
@@ -296,6 +316,54 @@ public interface BraintrustApiClient {
             }
         }
 
+        @Override
+        public Optional<Function> getFunction(
+                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
+            Objects.requireNonNull(projectName, "projectName must not be null");
+            Objects.requireNonNull(slug, "slug must not be null");
+            try {
+                var uriBuilder = new StringBuilder("/v1/function?");
+                uriBuilder.append("slug=").append(slug);
+                uriBuilder.append("&project_name=").append(projectName);
+
+                if (version != null && !version.isEmpty()) {
+                    uriBuilder.append("&version=").append(version);
+                }
+
+                FunctionListResponse response =
+                        getAsync(uriBuilder.toString(), FunctionListResponse.class).get();
+
+                if (response.objects() == null || response.objects().isEmpty()) {
+                    return Optional.empty();
+                }
+
+                if (response.objects().size() > 1) {
+                    throw new ApiException(
+                            "Multiple functions found for slug: "
+                                    + slug
+                                    + ", projectName: "
+                                    + projectName);
+                }
+
+                return Optional.of(response.objects().get(0));
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public Object invokeFunction(
+                @Nonnull String functionId, @Nonnull FunctionInvokeRequest request) {
+            Objects.requireNonNull(functionId, "functionId must not be null");
+            Objects.requireNonNull(request, "request must not be null");
+            try {
+                String path = "/v1/function/" + functionId + "/invoke";
+                return postAsync(path, request, Object.class).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new ApiException("Failed to invoke function: " + functionId, e);
+            }
+        }
+
         private <T> CompletableFuture<T> getAsync(String path, Class<T> responseType) {
             var request =
                     HttpRequest.newBuilder()
@@ -399,6 +467,9 @@ public interface BraintrustApiClient {
         private final Set<Experiment> experiments =
                 Collections.newSetFromMap(new ConcurrentHashMap<>());
         private final List<Prompt> prompts = new ArrayList<>();
+        private final List<Function> functions = new ArrayList<>();
+        private final Map<String, java.util.function.Function<FunctionInvokeRequest, Object>>
+                functionInvokers = new ConcurrentHashMap<>();
 
         public InMemoryImpl(OrganizationAndProjectInfo... organizationAndProjectInfos) {
             this.organizationAndProjectInfos =
@@ -583,6 +654,18 @@ public interface BraintrustApiClient {
         public List<Dataset> queryDatasets(String projectName, String datasetName) {
             return List.of();
         }
+
+        @Override
+        public Optional<Function> getFunction(
+                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
+            throw new RuntimeException("will not be invoked");
+        }
+
+        @Override
+        public Object invokeFunction(
+                @Nonnull String functionId, @Nonnull FunctionInvokeRequest request) {
+            throw new RuntimeException("will not be invoked");
+        }
     }
 
     // Request/Response DTOs
@@ -681,4 +764,80 @@ public interface BraintrustApiClient {
             Optional<Object> metadata) {}
 
     record PromptListResponse(List<Prompt> objects) {}
+
+    // Function models for remote scorers/prompts/tools
+
+    /**
+     * Represents a Braintrust function (scorer, prompt, tool, or task). Functions can be invoked
+     * remotely via the API.
+     */
+    record Function(
+            String id,
+            String projectId,
+            String orgId,
+            String name,
+            String slug,
+            Optional<String> description,
+            String created,
+            Optional<Object> functionData,
+            Optional<Object> promptData,
+            Optional<List<String>> tags,
+            Optional<Object> metadata,
+            Optional<String> functionType,
+            Optional<Object> origin,
+            Optional<Object> functionSchema) {}
+
+    record FunctionListResponse(List<Function> objects) {}
+
+    /**
+     * Request body for invoking a function. The input field wraps the function arguments.
+     *
+     * <p>For remote Python/TypeScript scorers, the scorer handler parameters (input, output,
+     * expected, metadata) must be wrapped in the outer input field.
+     */
+    record FunctionInvokeRequest(@Nullable Object input, @Nullable String version) {
+
+        /** Create a simple invoke request with just input */
+        public static FunctionInvokeRequest of(Object input) {
+            return new FunctionInvokeRequest(input, null);
+        }
+
+        /** Create a simple invoke request with input and version */
+        public static FunctionInvokeRequest of(Object input, @Nullable String version) {
+            return new FunctionInvokeRequest(input, version);
+        }
+
+        /**
+         * Create an invoke request for a scorer with input, output, expected, and metadata. This
+         * maps to the standard scorer handler signature: handler(input, output, expected, metadata)
+         *
+         * <p>The scorer args are wrapped in the outer input field as required by the invoke API.
+         */
+        public static FunctionInvokeRequest forScorer(
+                Object input, Object output, Object expected, Object metadata) {
+            return forScorer(input, output, expected, metadata, null);
+        }
+
+        /**
+         * Create an invoke request for a scorer with input, output, expected, metadata, and
+         * version. This maps to the standard scorer handler signature: handler(input, output,
+         * expected, metadata)
+         *
+         * <p>The scorer args are wrapped in the outer input field as required by the invoke API.
+         */
+        public static FunctionInvokeRequest forScorer(
+                Object input,
+                Object output,
+                Object expected,
+                Object metadata,
+                @Nullable String version) {
+            // Wrap scorer args in an inner map that becomes the outer "input" field
+            var scorerArgs = new java.util.LinkedHashMap<String, Object>();
+            scorerArgs.put("input", input);
+            scorerArgs.put("output", output);
+            scorerArgs.put("expected", expected);
+            scorerArgs.put("metadata", metadata);
+            return new FunctionInvokeRequest(scorerArgs, version);
+        }
+    }
 }

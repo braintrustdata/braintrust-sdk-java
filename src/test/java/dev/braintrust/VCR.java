@@ -4,13 +4,16 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
+import javax.annotation.concurrent.ThreadSafe;
 import lombok.extern.slf4j.Slf4j;
-import opennlp.tools.commons.ThreadSafe;
 
 /** VCR (Video Cassette Recorder) for recording and replaying HTTP interactions. */
 @Slf4j
@@ -30,17 +33,29 @@ public class VCR {
     private final Map<String, WireMockServer> proxyMap;
     private final VcrMode mode;
     private final Map<String, String> targetUrlToMappingsDir;
+    private final List<String> textToNeverRecord;
     private boolean recordingStarted = false;
 
     public VCR(Map<String, String> targetUrlToCassettesDir) {
-        this(
-                VcrMode.valueOf(System.getenv().getOrDefault("VCR_MODE", "replay").toUpperCase()),
-                targetUrlToCassettesDir);
+        this(targetUrlToCassettesDir, List.of());
     }
 
-    private VCR(VcrMode mode, Map<String, String> targetUrlToCassettesDir) {
+    public VCR(Map<String, String> targetUrlToCassettesDir, List<String> textToNeverRecord) {
+        this(
+                VcrMode.valueOf(System.getenv().getOrDefault("VCR_MODE", "replay").toUpperCase()),
+                targetUrlToCassettesDir,
+                textToNeverRecord);
+    }
+
+    private VCR(
+            VcrMode mode,
+            Map<String, String> targetUrlToCassettesDir,
+            List<String> textToNeverRecord) {
         this.mode = mode;
         this.targetUrlToMappingsDir = Map.copyOf(targetUrlToCassettesDir);
+        // Filter out null/empty strings
+        this.textToNeverRecord =
+                textToNeverRecord.stream().filter(s -> s != null && !s.isEmpty()).toList();
 
         // Create a WireMockServer for each provider
         this.proxyMap = new LinkedHashMap<>();
@@ -53,7 +68,13 @@ public class VCR {
 
             WireMockServer wireMock =
                     new WireMockServer(
-                            wireMockConfig().dynamicPort().usingFilesUnderDirectory(cassettesDir));
+                            wireMockConfig()
+                                    .dynamicPort()
+                                    .usingFilesUnderDirectory(cassettesDir)
+                                    .extensions(
+                                            new LoginBodyRedactingTransformer(),
+                                            new ForbiddenTextCheckingTransformer(
+                                                    this.textToNeverRecord)));
             proxyMap.put(targetUrl, wireMock);
         }
     }
@@ -141,7 +162,12 @@ public class VCR {
                         // Use JSON matching:
                         // - ignoreArrayOrder=true
                         // - ignoreExtraElements=false
-                        .matchRequestBodyWithEqualToJson(true, false);
+                        .matchRequestBodyWithEqualToJson(true, false)
+                        // Remove API keys from login endpoint recordings, then check for forbidden
+                        // text
+                        .transformers(
+                                LoginBodyRedactingTransformer.NAME,
+                                ForbiddenTextCheckingTransformer.NAME);
 
         wireMock.startRecording(recordSpec);
     }
@@ -255,14 +281,57 @@ public class VCR {
         if (mode == VcrMode.RECORD && recordingStarted) {
             for (Map.Entry<String, WireMockServer> entry : proxyMap.entrySet()) {
                 String targetUrl = entry.getKey();
+                String mappingsDir = targetUrlToMappingsDir.get(targetUrl);
                 WireMockServer wireMock = entry.getValue();
                 wireMock.stopRecording();
+                validateNoForbiddenText(mappingsDir);
                 log.info("Recording saved for {}", targetUrl);
             }
             recordingStarted = false;
         }
         // Note: We don't stop the WireMock servers here because they're shared across tests.
         // The servers will be stopped when the JVM shuts down via the shutdown hook.
+    }
+
+    /**
+     * Validate that no forbidden text (e.g., API keys) appears in recorded cassettes. Throws an
+     * exception if any forbidden text is found, preventing accidental commit of secrets.
+     */
+    private void validateNoForbiddenText(String mappingsDir) {
+        if (textToNeverRecord.isEmpty()) {
+            return;
+        }
+
+        Path cassettesPath = Paths.get(CASSETTES_ROOT, mappingsDir);
+        if (!Files.exists(cassettesPath)) {
+            return;
+        }
+
+        try (Stream<Path> files = Files.walk(cassettesPath)) {
+            files.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".json"))
+                    .forEach(this::validateFileContainsNoForbiddenText);
+        } catch (IOException e) {
+            log.warn("Failed to validate cassettes for forbidden text: {}", e.getMessage());
+        }
+    }
+
+    private void validateFileContainsNoForbiddenText(Path file) {
+        try {
+            String content = Files.readString(file);
+            for (String forbidden : textToNeverRecord) {
+                if (content.contains(forbidden)) {
+                    throw new IllegalStateException(
+                            "SECURITY: Cassette file contains forbidden text (likely an API key). "
+                                    + "File: "
+                                    + file
+                                    + ". This cassette should not be committed. Please delete it"
+                                    + " and ensure the LoginBodyRedactingTransformer is working.");
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Failed to read cassette file {}: {}", file, e.getMessage());
+        }
     }
 
     private void assertStarted() {

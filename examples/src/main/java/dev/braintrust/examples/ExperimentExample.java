@@ -51,6 +51,8 @@ public class ExperimentExample {
                         // .dataset(braintrust.fetchDataset("my-dataset-name"))
                         .taskFunction(getFoodType)
                         .scorers(
+                                // to fetch a remote scorer:
+                                // braintrust.fetchScorer("my-remote-scorer-6d9f"),
                                 Scorer.of(
                                         "exact_match",
                                         (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
