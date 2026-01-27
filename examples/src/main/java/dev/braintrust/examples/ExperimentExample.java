@@ -4,6 +4,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.Braintrust;
+import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.DatasetCase;
 import dev.braintrust.eval.Scorer;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
@@ -13,7 +14,9 @@ import java.util.function.Function;
 
 public class ExperimentExample {
     public static void main(String[] args) throws Exception {
-        var braintrust = Braintrust.get();
+        var braintrust = Braintrust.get(BraintrustConfig.builder()
+                        .defaultProjectName("foobar")
+                .build());
         var openTelemetry = braintrust.openTelemetryCreate();
         var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
 
