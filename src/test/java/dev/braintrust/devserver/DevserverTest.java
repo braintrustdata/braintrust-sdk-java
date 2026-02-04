@@ -4,9 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.braintrust.BraintrustUtils;
 import dev.braintrust.TestHarness;
-import dev.braintrust.TestUtils;
-import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.Scorer;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.BufferedReader;
@@ -20,15 +19,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 
+@Slf4j
 class DevserverTest {
     private static Devserver server;
     private static Thread serverThread;
     private static TestHarness testHarness;
-    private static final int TEST_PORT = TestUtils.getRandomOpenPort();
+    // private static final int TEST_PORT = TestUtils.getRandomOpenPort();
+    private static final int TEST_PORT = 8301;
     private static final String TEST_URL = "http://localhost:" + TEST_PORT;
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
+    private static final String REMOTE_EVAL_NAME = "food-type-classifier";
+    private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
+            new BraintrustUtils.Parent("playground_id", "ceea7422-3507-4d1c-a5f7-7acf41d9fac2");
 
     // Remote scorer from java-unit-test project (returns 1.0 for exact match, 0.0 otherwise)
     private static final String REMOTE_SCORER_FUNCTION_ID = "efa5f9c3-6ece-4726-a9d6-4ba792980b3f";
@@ -39,18 +46,10 @@ class DevserverTest {
         // Set up test harness with VCR (records/replays HTTP interactions)
         testHarness = TestHarness.setup();
 
-        // Create config pointing to VCR-proxied Braintrust API
-        BraintrustConfig testConfig =
-                BraintrustConfig.of(
-                        "BRAINTRUST_API_KEY", testHarness.braintrustApiKey(),
-                        "BRAINTRUST_API_URL", testHarness.braintrustApiBaseUrl(),
-                        "BRAINTRUST_DEFAULT_PROJECT_NAME", TestHarness.defaultProjectName(),
-                        "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", "true");
-
         // Create a shared eval for all tests
         RemoteEval<String, String> testEval =
                 RemoteEval.<String, String>builder()
-                        .name("food-type-classifier")
+                        .name(REMOTE_EVAL_NAME)
                         .taskFunction(
                                 input -> {
                                     // Create a span inside the task to test baggage propagation
@@ -71,14 +70,10 @@ class DevserverTest {
 
         server =
                 Devserver.builder()
-                        .config(testConfig)
+                        .config(testHarness.braintrust().config())
                         .registerEval(testEval)
                         .host("localhost")
                         .port(TEST_PORT)
-                        .braintrustConfigBuilderHook(
-                                configBuilder -> {
-                                    configBuilder.exportSpansInMemoryForUnitTest(true);
-                                })
                         .build();
 
         // Start server in background thread
@@ -88,7 +83,7 @@ class DevserverTest {
                             try {
                                 server.start();
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                log.error("unable to start dev server", e);
                             }
                         });
         serverThread.start();
@@ -98,12 +93,16 @@ class DevserverTest {
     }
 
     @AfterAll
+    @SneakyThrows
     static void tearDown() {
         if (server != null) {
             server.stop();
         }
         if (serverThread != null) {
-            serverThread.interrupt();
+            serverThread.join(30_000);
+            if (serverThread.isAlive()) {
+                serverThread.interrupt();
+            }
         }
     }
 
@@ -125,7 +124,7 @@ class DevserverTest {
     void testStreamingEval() throws Exception {
         // Create eval request with inline data using EvalRequest types
         EvalRequest evalRequest = new EvalRequest();
-        evalRequest.setName("food-type-classifier");
+        evalRequest.setName(REMOTE_EVAL_NAME);
         evalRequest.setStream(true);
 
         // Create inline data
@@ -142,11 +141,10 @@ class DevserverTest {
         dataSpec.setData(List.of(case1, case2));
         evalRequest.setData(dataSpec);
 
-        // Set parent with playground_id and generation
         Map<String, Object> parentSpec =
                 Map.of(
-                        "object_type", "experiment",
-                        "object_id", "test-playground-id-123",
+                        "object_type", PLAYGROUND_PARENT.type(),
+                        "object_id", PLAYGROUND_PARENT.id(),
                         "propagated_event",
                                 Map.of("span_attributes", Map.of("generation", "test-gen-1")));
         evalRequest.setParent(parentSpec);
@@ -226,7 +224,7 @@ class DevserverTest {
             // Assert expected fields in progress event
             assertTrue(progressData.has("id"), "Progress event should have id");
             assertEquals("task", progressData.get("object_type").asText());
-            assertEquals("food-type-classifier", progressData.get("name").asText());
+            assertEquals(REMOTE_EVAL_NAME, progressData.get("name").asText());
             assertEquals("code", progressData.get("format").asText());
             assertEquals("completion", progressData.get("output_type").asText());
             assertEquals("json_delta", progressData.get("event").asText());
@@ -242,7 +240,7 @@ class DevserverTest {
 
             assertEquals(TestHarness.defaultProjectName(), summaryData.get("projectName").asText());
             assertTrue(summaryData.has("projectId"));
-            assertEquals("food-type-classifier", summaryData.get("experimentName").asText());
+            assertEquals(REMOTE_EVAL_NAME, summaryData.get("experimentName").asText());
 
             // Verify scores in summary
             assertTrue(summaryData.has("scores"));
@@ -294,10 +292,10 @@ class DevserverTest {
                             .get(
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.parent"));
-            assertNotNull(parent, "Eval span should have parent attribute");
-            assertTrue(
-                    parent.contains("playground_id:test-playground-id-123"),
-                    "Parent should contain playground_id");
+            assertEquals(
+                    PLAYGROUND_PARENT.toParentValue(),
+                    parent,
+                    "Eval span should have parent attribute");
 
             String spanAttrsJson =
                     evalSpan.getAttributes()
@@ -341,10 +339,7 @@ class DevserverTest {
                             .get(
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.parent"));
-            assertNotNull(parent, "Task span should have parent attribute");
-            assertTrue(
-                    parent.contains("playground_id:test-playground-id-123"),
-                    "Parent should contain playground_id");
+            assertEquals(PLAYGROUND_PARENT.toParentValue(), parent);
 
             String spanAttrsJson =
                     taskSpan.getAttributes()
@@ -382,10 +377,7 @@ class DevserverTest {
                             .get(
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.parent"));
-            assertNotNull(parent, "Score span should have parent attribute");
-            assertTrue(
-                    parent.contains("playground_id:test-playground-id-123"),
-                    "Parent should contain playground_id");
+            assertEquals(PLAYGROUND_PARENT.toParentValue(), parent);
 
             // Verify braintrust.span_attributes
             String spanAttrsJson =
@@ -444,11 +436,7 @@ class DevserverTest {
                             .get(
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.parent"));
-            assertNotNull(
-                    parent, "Custom span should have braintrust.parent attribute from baggage");
-            assertTrue(
-                    parent.contains("playground_id:test-playground-id-123"),
-                    "Custom span parent should contain playground_id from baggage propagation");
+            assertEquals(PLAYGROUND_PARENT.toParentValue(), parent);
         }
     }
 
@@ -516,9 +504,9 @@ class DevserverTest {
         JsonNode root = JSON_MAPPER.readTree(response.body());
 
         // Should have one evaluator
-        assertTrue(root.has("food-type-classifier"));
+        assertTrue(root.has(REMOTE_EVAL_NAME));
 
-        JsonNode eval = root.get("food-type-classifier");
+        JsonNode eval = root.get(REMOTE_EVAL_NAME);
 
         // Check scores
         assertTrue(eval.has("scores"));

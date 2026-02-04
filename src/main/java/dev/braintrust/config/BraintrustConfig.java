@@ -37,7 +37,6 @@ public final class BraintrustConfig extends BaseConfig {
     private final boolean enableTraceConsoleLog =
             getConfig("BRAINTRUST_ENABLE_TRACE_CONSOLE_LOG", false);
     private final boolean debug = getConfig("BRAINTRUST_DEBUG", false);
-    private final boolean experimentalOtelLogs = getConfig("BRAINTRUST_X_OTEL_LOGS", false);
     private final Duration requestTimeout =
             Duration.ofSeconds(getConfig("BRAINTRUST_REQUEST_TIMEOUT", 30));
 
@@ -46,10 +45,6 @@ public final class BraintrustConfig extends BaseConfig {
 
     /** Custom X509 trust manager for OTLP exporter. Builder-only field, not backed by envars. */
     private final X509TrustManager x509TrustManager;
-
-    /** Setting for unit testing. Do not use in production. */
-    private final boolean exportSpansInMemoryForUnitTest =
-            getConfig("BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", false);
 
     /** CORS origins to allow when running remote eval devserver */
     private final String devserverCorsOriginWhitelistCsv =
@@ -189,19 +184,6 @@ public final class BraintrustConfig extends BaseConfig {
 
         public Builder requestTimeout(Duration value) {
             envOverrides.put("BRAINTRUST_REQUEST_TIMEOUT", String.valueOf(value.getSeconds()));
-            return this;
-        }
-
-        // hiding visibility. only used for testing
-        Builder experimentalOtelLogs(boolean value) {
-            envOverrides.put("BRAINTRUST_X_OTEL_LOGS", String.valueOf(value));
-            return this;
-        }
-
-        // only used for testing
-        public Builder exportSpansInMemoryForUnitTest(boolean value) {
-            envOverrides.put(
-                    "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", String.valueOf(value));
             return this;
         }
 

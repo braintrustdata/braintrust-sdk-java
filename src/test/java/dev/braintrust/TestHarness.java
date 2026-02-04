@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.prompt.BraintrustPromptLoader;
+import dev.braintrust.trace.UnitTestShutdownHook;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -45,24 +45,29 @@ public class TestHarness {
                                 "https://api.braintrust.dev", "braintrust"),
                         apiKeysToNeverRecord);
         vcr.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(vcr::stop));
+        UnitTestShutdownHook.addShutdownHook(1, vcr::stop);
     }
 
     public static TestHarness setup() {
-        return setup(createTestConfig());
+        var configBuilder =
+                BraintrustConfig.builder()
+                        .apiUrl(vcr.getUrlForTargetBase("https://api.braintrust.dev"))
+                        .defaultProjectName(defaultProjectName());
+        if (vcr.getMode() == VCR.VcrMode.REPLAY) {
+            // tolerate missing api key in replay mode
+            configBuilder.apiKey(
+                    getEnv(
+                            "BRAINTRUST_API_KEY",
+                            "sk-000000000000000000000000000000000000000000000000"));
+        }
+        return setup(configBuilder.build());
     }
 
-    public static synchronized TestHarness setup(BraintrustConfig config) {
+    private static synchronized TestHarness setup(BraintrustConfig config) {
         GlobalOpenTelemetry.resetForTest();
         Braintrust.resetForTest();
 
-        var apiClient = createApiClient();
-        Braintrust braintrust =
-                Braintrust.set(
-                        new Braintrust(
-                                config,
-                                createApiClient(),
-                                BraintrustPromptLoader.of(config, apiClient)));
+        var braintrust = Braintrust.of(config);
         var harness = new TestHarness(braintrust);
         INSTANCE.set(harness);
         GlobalOpenTelemetry.set(harness.openTelemetry());
@@ -146,11 +151,11 @@ public class TestHarness {
     }
 
     public String braintrustApiBaseUrl() {
-        return vcr.getUrlForTargetBase("https://api.braintrust.dev");
+        return braintrust.config().apiUrl();
     }
 
     public String braintrustApiKey() {
-        return getEnv("BRAINTRUST_API_KEY", "test-key");
+        return braintrust.config().apiKey();
     }
 
     /** flush all pending spans and return all spans which have been exported so far */
@@ -189,16 +194,6 @@ public class TestHarness {
                 new dev.braintrust.api.BraintrustApiClient.OrganizationAndProjectInfo(
                         orgInfo, project);
         return new dev.braintrust.api.BraintrustApiClient.InMemoryImpl(orgAndProjectInfo);
-    }
-
-    public static BraintrustConfig createTestConfig() {
-        return BraintrustConfig.of(
-                "BRAINTRUST_API_KEY", "foobar",
-                "BRAINTRUST_JAVA_EXPORT_SPANS_IN_MEMORY_FOR_UNIT_TEST", "true",
-                // NOTE: testhost is not real, just a placeholder value
-                "BRAINTRUST_API_URL", "https://testhost:8000",
-                "BRAINTRUST_APP_URL", "https://testhost:3000",
-                "BRAINTRUST_DEFAULT_PROJECT_NAME", defaultProjectName());
     }
 
     private static String getEnv(String envarName, String defaultValue) {

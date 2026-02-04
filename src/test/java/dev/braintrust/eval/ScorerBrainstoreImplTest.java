@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
-import dev.braintrust.config.BraintrustConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,14 +24,8 @@ public class ScorerBrainstoreImplTest {
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
-
-        var config =
-                BraintrustConfig.builder()
-                        .apiKey(testHarness.braintrustApiKey())
-                        .apiUrl(testHarness.braintrustApiBaseUrl())
-                        .build();
-
-        apiClient = BraintrustApiClient.of(config);
+        apiClient =
+                testHarness.braintrust().apiClient(); // TODO -- do we need a separate var for this?
     }
 
     @Test

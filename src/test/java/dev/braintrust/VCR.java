@@ -1,5 +1,6 @@
 package dev.braintrust;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /** VCR (Video Cassette Recorder) for recording and replaying HTTP interactions. */
@@ -31,7 +33,7 @@ public class VCR {
     private static final String CASSETTES_ROOT = "src/test/resources/cassettes/";
 
     private final Map<String, WireMockServer> proxyMap;
-    private final VcrMode mode;
+    @Getter private final VcrMode mode;
     private final Map<String, String> targetUrlToMappingsDir;
     private final List<String> textToNeverRecord;
     private boolean recordingStarted = false;
@@ -159,10 +161,12 @@ public class VCR {
                         // .captureHeader("Authorization", true)
                         .extractTextBodiesOver(0) // Always extract bodies
                         .makeStubsPersistent(true) // Save to disk
-                        // Use JSON matching:
-                        // - ignoreArrayOrder=true
-                        // - ignoreExtraElements=false
-                        .matchRequestBodyWithEqualToJson(true, false)
+                        // Auto-detect body matching based on Content-Type:
+                        // - JSON (application/json) -> equalToJson with ignoreArrayOrder=true,
+                        //   ignoreExtraElements=false
+                        // - XML -> equalToXml
+                        // - Binary (application/x-protobuf, etc.) -> equalTo (binary matching)
+                        .chooseBodyMatchTypeAutomatically(true, false, false)
                         // Remove API keys from login endpoint recordings, then check for forbidden
                         // text
                         .transformers(
@@ -210,6 +214,19 @@ public class VCR {
                                 + ": "
                                 + e.getMessage());
             }
+        }
+
+        // Add catch-all stub for OTLP trace exports.
+        // OTLP requests contain timestamps and dynamic data that change between runs,
+        // so we just return 200 OK without body matching. The actual span content
+        // is validated via UnitTestSpanExporter, not VCR.
+        WireMockServer braintrustWireMock = proxyMap.get("https://api.braintrust.dev");
+        if (braintrustWireMock != null) {
+            braintrustWireMock.stubFor(
+                    post(urlEqualTo("/otel/v1/traces"))
+                            .atPriority(Integer.MAX_VALUE) // lowest priority, fallback only
+                            .willReturn(aResponse().withStatus(200)));
+            log.info("Added catch-all stub for OTLP trace exports");
         }
     }
 
