@@ -196,6 +196,10 @@ public class TestHarness {
         return new dev.braintrust.api.BraintrustApiClient.InMemoryImpl(orgAndProjectInfo);
     }
 
+    public static VCR.VcrMode getVcrMode() {
+        return vcr.getMode();
+    }
+
     private static String getEnv(String envarName, String defaultValue) {
         var envar = System.getenv(envarName);
         return envar == null ? defaultValue : envar;

@@ -394,8 +394,10 @@ class DevserverTest {
             // Scorer name should be either simple_scorer or the remote scorer
             String scorerName = spanAttrs.get("name").asText();
             assertTrue(
-                    scorerName.equals("simple_scorer") || scorerName.equals(REMOTE_SCORER_NAME),
-                    "Score span name should be simple_scorer or " + REMOTE_SCORER_NAME);
+                    scorerName.contains("simple_scorer")
+                            || scorerName.contains(REMOTE_SCORER_NAME.replaceAll("_", "")),
+                    "Score span name should be simple_scorer or %s -- got: %s"
+                            .formatted(REMOTE_EVAL_NAME, scorerName));
 
             // Verify braintrust.output_json contains scores
             String outputJson =

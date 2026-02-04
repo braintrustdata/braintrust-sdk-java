@@ -78,6 +78,14 @@ public interface BraintrustApiClient {
             @Nonnull String projectName, @Nonnull String slug, @Nullable String version);
 
     /**
+     * Get a function by its ID.
+     *
+     * @param functionId the ID of the function
+     * @return the function if found
+     */
+    Optional<Function> getFunctionById(@Nonnull String functionId);
+
+    /**
      * Invoke a function (scorer, prompt, or tool) by its ID.
      *
      * @param functionId the ID of the function to invoke
@@ -85,6 +93,15 @@ public interface BraintrustApiClient {
      * @return the result of the function invocation
      */
     Object invokeFunction(@Nonnull String functionId, @Nonnull FunctionInvokeRequest request);
+
+    /**
+     * Execute a BTQL (Braintrust Query Language) query. Supports both BTQL pipe syntax and standard
+     * SQL syntax.
+     *
+     * @param query the BTQL/SQL query string
+     * @return the query result containing rows of data
+     */
+    BtqlQueryResponse btqlQuery(@Nonnull String query);
 
     static BraintrustApiClient of(BraintrustConfig config) {
         return new HttpImpl(config);
@@ -352,6 +369,21 @@ public interface BraintrustApiClient {
         }
 
         @Override
+        public Optional<Function> getFunctionById(@Nonnull String functionId) {
+            Objects.requireNonNull(functionId, "functionId must not be null");
+            try {
+                String path = "/v1/function/" + functionId;
+                return Optional.of(getAsync(path, Function.class).get());
+            } catch (InterruptedException | ExecutionException e) {
+                if (e.getCause() instanceof ApiException apiEx
+                        && apiEx.getMessage().contains("404")) {
+                    return Optional.empty();
+                }
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
         public Object invokeFunction(
                 @Nonnull String functionId, @Nonnull FunctionInvokeRequest request) {
             Objects.requireNonNull(functionId, "functionId must not be null");
@@ -361,6 +393,17 @@ public interface BraintrustApiClient {
                 return postAsync(path, request, Object.class).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new ApiException("Failed to invoke function: " + functionId, e);
+            }
+        }
+
+        @Override
+        public BtqlQueryResponse btqlQuery(@Nonnull String query) {
+            Objects.requireNonNull(query, "query must not be null");
+            try {
+                var request = new BtqlQueryRequest(query);
+                return postAsync("/btql", request, BtqlQueryResponse.class).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new ApiException("Failed to execute BTQL query", e);
             }
         }
 
@@ -662,8 +705,18 @@ public interface BraintrustApiClient {
         }
 
         @Override
+        public Optional<Function> getFunctionById(@Nonnull String functionId) {
+            throw new RuntimeException("will not be invoked");
+        }
+
+        @Override
         public Object invokeFunction(
                 @Nonnull String functionId, @Nonnull FunctionInvokeRequest request) {
+            throw new RuntimeException("will not be invoked");
+        }
+
+        @Override
+        public BtqlQueryResponse btqlQuery(@Nonnull String query) {
             throw new RuntimeException("will not be invoked");
         }
     }
@@ -794,50 +847,58 @@ public interface BraintrustApiClient {
      *
      * <p>For remote Python/TypeScript scorers, the scorer handler parameters (input, output,
      * expected, metadata) must be wrapped in the outer input field.
+     *
+     * <p>The parent field enables distributed tracing by linking the remote function's spans to the
+     * caller's span context. It can be either a base64-encoded SpanComponents string or an object
+     * with object_type, object_id, and row_ids.
      */
-    record FunctionInvokeRequest(@Nullable Object input, @Nullable String version) {
+    record FunctionInvokeRequest(
+            @Nullable Object input, @Nullable String version, @Nullable Object parent) {
 
         /** Create a simple invoke request with just input */
         public static FunctionInvokeRequest of(Object input) {
-            return new FunctionInvokeRequest(input, null);
+            return new FunctionInvokeRequest(input, null, null);
         }
 
         /** Create a simple invoke request with input and version */
         public static FunctionInvokeRequest of(Object input, @Nullable String version) {
-            return new FunctionInvokeRequest(input, version);
+            return new FunctionInvokeRequest(input, version, null);
         }
 
         /**
-         * Create an invoke request for a scorer with input, output, expected, and metadata. This
-         * maps to the standard scorer handler signature: handler(input, output, expected, metadata)
+         * Create an invoke request for a scorer with distributed tracing support.
          *
-         * <p>The scorer args are wrapped in the outer input field as required by the invoke API.
+         * @param input the input to the task being scored
+         * @param output the output from the task being scored
+         * @param expected the expected output
+         * @param metadata additional metadata
+         * @param version optional function version
+         * @param parent optional parent for distributed tracing - can be a base64-encoded
+         *     SpanComponents string or a Map with object_type, object_id, and row_ids
          */
-        public static FunctionInvokeRequest forScorer(
-                Object input, Object output, Object expected, Object metadata) {
-            return forScorer(input, output, expected, metadata, null);
-        }
-
-        /**
-         * Create an invoke request for a scorer with input, output, expected, metadata, and
-         * version. This maps to the standard scorer handler signature: handler(input, output,
-         * expected, metadata)
-         *
-         * <p>The scorer args are wrapped in the outer input field as required by the invoke API.
-         */
-        public static FunctionInvokeRequest forScorer(
+        public static FunctionInvokeRequest of(
                 Object input,
                 Object output,
                 Object expected,
                 Object metadata,
-                @Nullable String version) {
+                @Nullable String version,
+                @Nullable Object parent) {
             // Wrap scorer args in an inner map that becomes the outer "input" field
             var scorerArgs = new java.util.LinkedHashMap<String, Object>();
             scorerArgs.put("input", input);
             scorerArgs.put("output", output);
             scorerArgs.put("expected", expected);
             scorerArgs.put("metadata", metadata);
-            return new FunctionInvokeRequest(scorerArgs, version);
+            return new FunctionInvokeRequest(scorerArgs, version, parent);
         }
     }
+
+    /** Request body for BTQL queries. */
+    record BtqlQueryRequest(String query) {}
+
+    /**
+     * Response from a BTQL query. The data field contains the rows returned by the query, where
+     * each row is a map of column names to values.
+     */
+    record BtqlQueryResponse(List<Map<String, Object>> data) {}
 }

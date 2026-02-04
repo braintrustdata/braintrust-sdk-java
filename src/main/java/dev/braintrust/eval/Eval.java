@@ -116,32 +116,33 @@ public final class Eval<INPUT, OUTPUT> {
                     throw new RuntimeException(e);
                 }
             }
-            { // run scorers
+            // run scorers - one span per scorer
+            for (var scorer : scorers) {
                 var scoreSpan =
                         tracer.spanBuilder("score")
                                 .setAttribute(PARENT, "experiment_id:" + experimentId)
-                                .setAttribute(
-                                        "braintrust.span_attributes", json(Map.of("type", "score")))
                                 .startSpan();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
+                    var scores = scorer.score(taskResult);
                     // linked map to preserve ordering. Not in the spec but nice user experience
-                    final Map<String, Double> nameToScore = new LinkedHashMap<>();
-                    scorers.forEach(
-                            scorer -> {
-                                var scores = scorer.score(taskResult);
-                                scores.forEach(
-                                        score -> {
-                                            if (score.value() < 0.0 || score.value() > 1.0) {
-                                                throw new RuntimeException(
-                                                        "score must be between 0 and 1: %s : %s"
-                                                                .formatted(
-                                                                        scorer.getName(), score));
-                                            }
-                                            nameToScore.put(score.name(), score.value());
-                                        });
-                            });
-                    scoreSpan.setAttribute("braintrust.scores", json(nameToScore));
+                    final Map<String, Double> scorerScores = new LinkedHashMap<>();
+                    for (var score : scores) {
+                        if (score.value() < 0.0 || score.value() > 1.0) {
+                            throw new RuntimeException(
+                                    "score must be between 0 and 1: %s : %s"
+                                            .formatted(scorer.getName(), score));
+                        }
+                        scorerScores.put(score.name(), score.value());
+                    }
+                    // Set span attributes with scorer name
+                    Map<String, Object> spanAttrs = new LinkedHashMap<>();
+                    spanAttrs.put("type", "score");
+                    spanAttrs.put("name", scorer.getName());
+                    scoreSpan.setAttribute("braintrust.span_attributes", json(spanAttrs));
+                    var scoresJson = json(scorerScores);
+                    scoreSpan.setAttribute("braintrust.output_json", scoresJson);
+                    scoreSpan.setAttribute("braintrust.scores", scoresJson);
                 } finally {
                     scoreSpan.end();
                 }
