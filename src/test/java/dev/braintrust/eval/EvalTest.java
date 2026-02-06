@@ -98,8 +98,11 @@ public class EvalTest {
             }
         }
         assertEquals(2, numRootSpans.get(), "each case should make a root span");
+        // 1 root span + 1 task span + 2 scorer spans (one per scorer)
         assertEquals(
-                numRootSpans.get() * 3, spans.size(), "each eval case should make three spans");
+                numRootSpans.get() * 4,
+                spans.size(),
+                "each eval case should make four spans (one per scorer)");
     }
 
     boolean isFruitOrVegetable(String str) {

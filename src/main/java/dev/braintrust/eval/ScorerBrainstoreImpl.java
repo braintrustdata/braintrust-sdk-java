@@ -1,10 +1,18 @@
 package dev.braintrust.eval;
 
+import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.trace.BraintrustTracing;
+import dev.braintrust.trace.SpanComponents;
+import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * A scorer that invokes a remote Braintrust function to compute scores.
@@ -12,50 +20,118 @@ import javax.annotation.Nullable;
  * <p>This implementation fetches a scorer function from Braintrust and invokes it via the API for
  * each task result. The remote function receives the input, output, expected, and metadata as
  * arguments.
+ *
+ * <p>Supports distributed tracing: if an object ID is available in OTEL baggage and a valid span
+ * context exists, the scorer will pass parent span information to the remote function, enabling the
+ * remote function's spans to appear as children of the local scorer span.
  */
+@Slf4j
 public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT> {
     private final BraintrustApiClient apiClient;
     private final String functionId;
-    private final String scorerName;
     private final @Nullable String version;
+    private final AtomicReference<BraintrustApiClient.Function> braintrustFunction =
+            new AtomicReference<>(null);
+    private final AtomicReference<String> scorerName = new AtomicReference<>(null);
 
     /**
      * Create a new remote scorer.
      *
      * @param apiClient the API client to use for invoking the function
-     * @param functionId the ID of the function to invoke
-     * @param scorerName the name of the scorer (used as default score name)
+     * @param functionId braintrust function id
      * @param version optional version of the function to invoke. null always invokes latest
      *     version.
      */
     public ScorerBrainstoreImpl(
-            BraintrustApiClient apiClient,
-            String functionId,
-            String scorerName,
-            @Nullable String version) {
+            BraintrustApiClient apiClient, String functionId, @Nullable String version) {
         this.apiClient = apiClient;
         this.functionId = functionId;
-        this.scorerName = scorerName;
         this.version = version;
     }
 
     @Override
     public String getName() {
-        return scorerName;
+        ensureFunctionInfoCached();
+        return scorerName.get();
     }
 
     @Override
     public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
+        // Build parent span components for distributed tracing (as object, not base64 string)
+        Object parent = buildParentSpanComponents();
+
         var request =
-                BraintrustApiClient.FunctionInvokeRequest.forScorer(
+                BraintrustApiClient.FunctionInvokeRequest.of(
                         taskResult.datasetCase().input(),
                         taskResult.result(),
                         taskResult.datasetCase().expected(),
                         taskResult.datasetCase().metadata(),
-                        version);
+                        version,
+                        parent);
 
-        Object result = apiClient.invokeFunction(functionId, request);
+        Object result = apiClient.invokeFunction(getFunctionId(), request);
         return parseScoreResult(result);
+    }
+
+    private String getFunctionName() {
+        ensureFunctionInfoCached();
+        return braintrustFunction.get().name();
+    }
+
+    private String getFunctionId() {
+        ensureFunctionInfoCached();
+        return braintrustFunction.get().id();
+    }
+
+    private void ensureFunctionInfoCached() {
+        if (scorerName.get() == null || braintrustFunction.get() == null) {
+            // we could get multiple threads in here but that's fine (just redundant work)
+            var function = apiClient.getFunctionById(functionId).orElseThrow();
+            var projectAndOrgInfo =
+                    apiClient.getProjectAndOrgInfo(function.projectId()).orElseThrow();
+            var functionVersion = this.version == null ? "latest" : this.version;
+            braintrustFunction.compareAndExchange(null, function);
+            scorerName.compareAndExchange(
+                    null,
+                    "invoke-%s-%s-%s"
+                            .formatted(
+                                    projectAndOrgInfo.project().name(),
+                                    function.slug(),
+                                    functionVersion));
+        }
+    }
+
+    /**
+     * Builds the parent span components for distributed tracing.
+     *
+     * <p>Extracts the experiment ID from OTEL baggage and span/trace IDs from the current span
+     * context. Returns the parent as a Map that can be serialized directly (the API accepts both
+     * base64-encoded strings and object format).
+     *
+     * @return parent object for distributed tracing, or null if tracing context not available
+     */
+    @Nullable
+    private Map<String, Object> buildParentSpanComponents() {
+        try {
+            // Get current span context
+            SpanContext spanContext = Span.current().getSpanContext();
+            if (!spanContext.isValid()) {
+                return null;
+            }
+
+            // Get experiment ID from baggage (format: "experiment_id:abc123")
+            String parentValue = Baggage.current().getEntryValue(BraintrustTracing.PARENT_KEY);
+            if (parentValue == null || parentValue.isEmpty()) {
+                return null;
+            }
+
+            var rowIds =
+                    new SpanComponents.RowIds(spanContext.getSpanId(), spanContext.getTraceId());
+            return new SpanComponents(BraintrustUtils.parseParent(parentValue), rowIds).toMap();
+        } catch (Exception e) {
+            log.warn("Failed to build parent span components: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
     /**
@@ -81,7 +157,7 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
 
         // Handle a single number
         if (result instanceof Number number) {
-            return List.of(new Score(scorerName, number.doubleValue()));
+            return List.of(new Score(getFunctionName(), number.doubleValue()));
         }
 
         // Handle a list of scores
@@ -98,7 +174,7 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
             Map<String, Object> scoreMap = (Map<String, Object>) map;
 
             // Extract name (use scorer name as fallback)
-            String name = scorerName;
+            String name = getFunctionName();
             Object nameValue = scoreMap.get("name");
             if (nameValue instanceof String s) {
                 name = s;

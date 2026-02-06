@@ -1,0 +1,35 @@
+{
+  "id" : "9270516e-455e-4e54-a319-08763684b9e1",
+  "name" : "v1_function",
+  "request" : {
+    "url" : "/v1/function?slug=close-enough-judge-d31b&project_name=java-unit-test",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function-9270516e-455e-4e54-a319-08763684b9e1.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=utf-8",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Fri, 06 Feb 2026 01:36:01 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "bfb5c125-3c4c-455b-bb95-3df914cd1ff1",
+      "x-amzn-Remapped-content-length" : "970",
+      "x-bt-internal-trace-id" : "69854581000000001bfb343680f881aa",
+      "x-amz-apigw-id" : "YVfMVEZuoAMETRQ=",
+      "vary" : "Origin, Accept-Encoding",
+      "etag" : "W/\"3ca-U7pLamkO1Ncw3QGMXz5hnQvgnvk\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan",
+      "X-Amzn-Trace-Id" : "Root=1-69854581-200d61213a8e6b4a146c32b3;Parent=117f6341be68dd3d;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 ec62626c4e205f1980b4ed65142b10d8.cloudfront.net (CloudFront), 1.1 ffe9646b2ea911744e2d51fc0715cedc.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "MBOHaFmCY2bQ0VEaiORd6AKrI890SQVfh7vKr-HKUroCYnTVKbCstg=="
+    }
+  },
+  "uuid" : "9270516e-455e-4e54-a319-08763684b9e1",
+  "persistent" : true,
+  "scenarioName" : "scenario-7-v1-function",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-7-v1-function-2",
+  "insertionIndex" : 45
+}

@@ -88,29 +88,23 @@ class BraintrustSpanExporter implements SpanExporter {
                                 return exporterBuilder.build();
                             });
 
-            if (config.exportSpansInMemoryForUnitTest()) {
-                // unit test harness hooks up an in-memory exporter so we don't need to do anything
-                // here
-                return CompletableResultCode.ofSuccess();
-            } else {
-                var result = exporter.export(spans);
-                // NOTE: whenComplete mutates the original object. does not copy.
-                return result.whenComplete(
-                        () -> {
-                            if (result.isSuccess()) {
-                                log.debug(
-                                        "Successfully exported {} spans with x-bt-parent: {}",
-                                        spans.size(),
-                                        parent);
-                            } else {
-                                log.warn(
-                                        "Failed to export {} spans to endpoint {}",
-                                        spans.size(),
-                                        tracesEndpoint,
-                                        result.getFailureThrowable());
-                            }
-                        });
-            }
+            var result = exporter.export(spans);
+            // NOTE: whenComplete mutates the original object. does not copy.
+            return result.whenComplete(
+                    () -> {
+                        if (result.isSuccess()) {
+                            log.debug(
+                                    "Successfully exported {} spans with x-bt-parent: {}",
+                                    spans.size(),
+                                    parent);
+                        } else {
+                            log.warn(
+                                    "Failed to export {} spans to endpoint {}",
+                                    spans.size(),
+                                    tracesEndpoint,
+                                    result.getFailureThrowable());
+                        }
+                    });
         } catch (Exception e) {
             log.error("Failed to export spans", e);
             return CompletableResultCode.ofFailure();

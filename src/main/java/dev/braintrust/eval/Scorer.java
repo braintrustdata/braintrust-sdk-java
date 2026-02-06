@@ -78,6 +78,6 @@ public interface Scorer<INPUT, OUTPUT> {
                                                         + ", slug="
                                                         + scorerSlug));
 
-        return new ScorerBrainstoreImpl<>(apiClient, function.id(), function.name(), version);
+        return new ScorerBrainstoreImpl<>(apiClient, function.id(), version);
     }
 }

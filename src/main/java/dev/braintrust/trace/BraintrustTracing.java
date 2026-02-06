@@ -130,30 +130,20 @@ public final class BraintrustTracing {
         // but it's included in the method signature so we can do so in the future without
         // introducing a breaking change
 
-        Runtime.getRuntime()
-                .addShutdownHook(
-                        new Thread(
-                                () -> {
-                                    log.debug("Shutting down. Force-Flushing all otel data.");
-                                    var result =
-                                            CompletableResultCode.ofAll(
-                                                    // run all flushes in parallel. Should (rarely)
-                                                    // block for approx 10 seconds max
-                                                    Stream.of(
-                                                                    spanProcessor.shutdown(),
-                                                                    logProcessor.shutdown())
-                                                            .map(
-                                                                    operation ->
-                                                                            operation.join(
-                                                                                    10,
-                                                                                    TimeUnit
-                                                                                            .SECONDS))
-                                                            .toList());
-                                    log.debug(
-                                            "otel shutdown complete. Flush done: %s, Flush successful: %s"
-                                                    .formatted(
-                                                            result.isDone(), result.isSuccess()));
-                                }));
+        BraintrustShutdownHook.addShutdownHook(
+                () -> {
+                    log.debug("Shutting down. Force-Flushing all otel data.");
+                    var result =
+                            CompletableResultCode.ofAll(
+                                    // run all flushes in parallel. Should (rarely)
+                                    // block for approx 10 seconds max
+                                    Stream.of(spanProcessor.shutdown(), logProcessor.shutdown())
+                                            .map(operation -> operation.join(10, TimeUnit.SECONDS))
+                                            .toList());
+                    log.debug(
+                            "otel shutdown complete. Flush done: %s, Flush successful: %s"
+                                    .formatted(result.isDone(), result.isSuccess()));
+                });
     }
 
     /** Gets a tracer with Braintrust instrumentation scope. */

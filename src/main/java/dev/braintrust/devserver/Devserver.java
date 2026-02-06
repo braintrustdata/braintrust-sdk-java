@@ -594,10 +594,12 @@ public class Devserver {
             scoreSpanAttrs.put("generation", braintrustGeneration);
         }
 
+        var scoresJson = json(scorerScores);
         scoreSpan
                 .setAttribute(PARENT, braintrustParent.toParentValue())
                 .setAttribute("braintrust.span_attributes", json(scoreSpanAttrs))
-                .setAttribute("braintrust.output_json", json(scorerScores));
+                .setAttribute("braintrust.output_json", scoresJson)
+                .setAttribute("braintrust.scores", scoresJson);
     }
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {
@@ -1075,10 +1077,7 @@ public class Devserver {
         }
 
         return new ScorerBrainstoreImpl<>(
-                apiClient,
-                functionIdSpec.getFunctionId(),
-                remoteScorer.getName(),
-                functionIdSpec.getVersion());
+                apiClient, functionIdSpec.getFunctionId(), functionIdSpec.getVersion());
     }
 
     public static class Builder {
