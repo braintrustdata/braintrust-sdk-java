@@ -1,0 +1,49 @@
+{
+  "id" : "7095a20a-de09-4685-a809-36df048b9fec",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"What is the capital of France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-7095a20a-de09-4685-a809-36df048b9fec.json",
+    "headers" : {
+      "Date" : "Fri, 06 Feb 2026 01:36:18 GMT",
+      "Content-Type" : "application/json",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "335",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999990",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_63f1f31969a24392b9321e22c78c6f07",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Set-Cookie" : [ "__cf_bm=MIWH2y1CU2R.5YhpQ28fiRZW6Ir87kbrxPOhtrDPkss-1770341778-1.0.1.1-x36TgiErdgmJTLFBciUOWnRjSyR8jFpN9x34ZvpvJeqZbnIBBYCwFaRHq00Q3NEN6tSl4t6OiTP5IbXOSEJ.h6srxo._BK8aY6WKL325VAM; path=/; expires=Fri, 06-Feb-26 02:06:18 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=gn.6SFFpnXGacoiMQaYElP0BuDhpJEtZJ2ITHVQyZ68-1770341778868-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "Server" : "cloudflare",
+      "CF-RAY" : "9c96ea734b1bdef1-SEA",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "7095a20a-de09-4685-a809-36df048b9fec",
+  "persistent" : true,
+  "insertionIndex" : 4
+}
