@@ -33,6 +33,8 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull Dataset<INPUT, OUTPUT> dataset;
     private final @Nonnull Task<INPUT, OUTPUT> task;
     private final @Nonnull List<Scorer<INPUT, OUTPUT>> scorers;
+    private final @Nonnull List<String> tags;
+    private final @Nonnull Map<String, Object> metadata;
 
     private Eval(Builder<INPUT, OUTPUT> builder) {
         this.experimentName = builder.experimentName;
@@ -52,6 +54,8 @@ public final class Eval<INPUT, OUTPUT> {
         this.dataset = builder.dataset;
         this.task = Objects.requireNonNull(builder.task);
         this.scorers = List.copyOf(builder.scorers);
+        this.tags = List.copyOf(builder.tags);
+        this.metadata = Map.copyOf(builder.metadata);
     }
 
     /** Runs the evaluation and returns results. */
@@ -62,7 +66,9 @@ public final class Eval<INPUT, OUTPUT> {
                                 orgAndProject.project().id(),
                                 experimentName,
                                 Optional.empty(),
-                                Optional.empty()));
+                                Optional.empty(),
+                                tags.isEmpty() ? Optional.empty() : Optional.of(tags),
+                                metadata.isEmpty() ? Optional.empty() : Optional.of(metadata)));
         dataset.forEach(datasetCase -> evalOne(experiment.id(), datasetCase));
         var experimentUrl =
                 "%s/experiments/%s"
@@ -163,6 +169,8 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nullable Tracer tracer = null;
         private @Nullable Task<INPUT, OUTPUT> task;
         private @Nonnull List<Scorer<INPUT, OUTPUT>> scorers = List.of();
+        private @Nonnull List<String> tags = List.of();
+        private @Nonnull Map<String, Object> metadata = Map.of();
 
         public Eval<INPUT, OUTPUT> build() {
             if (config == null) {
@@ -254,6 +262,24 @@ public final class Eval<INPUT, OUTPUT> {
         @SafeVarargs
         public final Builder<INPUT, OUTPUT> scorers(Scorer<INPUT, OUTPUT>... scorers) {
             this.scorers = List.of(scorers);
+            return this;
+        }
+
+        /** Sets tags for the experiment. */
+        public Builder<INPUT, OUTPUT> tags(List<String> tags) {
+            this.tags = List.copyOf(tags);
+            return this;
+        }
+
+        /** Sets tags for the experiment (varargs convenience method). */
+        public Builder<INPUT, OUTPUT> tags(String... tags) {
+            this.tags = List.of(tags);
+            return this;
+        }
+
+        /** Sets metadata for the experiment. */
+        public Builder<INPUT, OUTPUT> metadata(Map<String, Object> metadata) {
+            this.metadata = Map.copyOf(metadata);
             return this;
         }
     }
