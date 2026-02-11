@@ -99,6 +99,10 @@ public final class Eval<INPUT, OUTPUT> {
             rootSpan.setAttribute(
                     AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
         }
+        if (!datasetCase.metadata().isEmpty()) {
+            rootSpan.setAttribute(
+                    AttributeKey.stringKey("braintrust.metadata"), toJson(datasetCase.metadata()));
+        }
         try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
             final TaskResult<INPUT, OUTPUT> taskResult;
             { // run task
