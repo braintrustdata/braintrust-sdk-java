@@ -1,6 +1,8 @@
 package dev.braintrust.devserver;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -83,11 +85,6 @@ public class Devserver {
     private final @Nullable Consumer<io.opentelemetry.sdk.trace.SdkTracerProviderBuilder>
             traceBuilderHook;
     private final @Nullable Consumer<BraintrustConfig.Builder> configBuilderHook;
-    private static final ObjectMapper JSON_MAPPER =
-            new ObjectMapper()
-                    .enable(
-                            com.fasterxml.jackson.core.JsonParser.Feature
-                                    .INCLUDE_SOURCE_IN_LOCATION);
 
     // LRU cache for token -> Braintrust mappings
     private final LRUCache<String, Braintrust> authCache = new LRUCache<>(32);
@@ -219,7 +216,7 @@ public class Devserver {
                 response.put(evalName, metadata);
             }
 
-            String jsonResponse = JSON_MAPPER.writeValueAsString(response);
+            String jsonResponse = toJson(response);
             sendResponse(exchange, 200, "application/json", jsonResponse);
         } catch (Exception e) {
             log.error("Error generating /list response", e);
@@ -245,7 +242,7 @@ public class Devserver {
         try {
             InputStream requestBody = exchange.getRequestBody();
             var requestBodyString = new String(requestBody.readAllBytes(), StandardCharsets.UTF_8);
-            EvalRequest request = JSON_MAPPER.readValue(requestBodyString, EvalRequest.class);
+            EvalRequest request = fromJson(requestBodyString, EvalRequest.class);
 
             // Validate evaluator exists
             RemoteEval eval = evals.get(request.getName());
@@ -543,22 +540,22 @@ public class Devserver {
             spanAttrs.put("generation", braintrustGeneration);
         }
         evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", json(spanAttrs))
-                .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
-                .setAttribute("braintrust.expected_json", json(datasetCase.expected()));
+                .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
+                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
 
         if (datasetCase.origin().isPresent()) {
-            evalSpan.setAttribute("braintrust.origin", json(datasetCase.origin().get()));
+            evalSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
         }
         if (!datasetCase.tags().isEmpty()) {
             evalSpan.setAttribute(
                     AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
         }
         if (!datasetCase.metadata().isEmpty()) {
-            evalSpan.setAttribute("braintrust.metadata", json(datasetCase.metadata()));
+            evalSpan.setAttribute("braintrust.metadata", toJson(datasetCase.metadata()));
         }
         evalSpan.setAttribute(
-                "braintrust.output_json", json(Map.of("output", taskResult.result())));
+                "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
     }
 
     private void setTaskSpanAttributes(
@@ -575,10 +572,10 @@ public class Devserver {
         }
 
         taskSpan.setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", json(taskSpanAttrs))
-                .setAttribute("braintrust.input_json", json(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.span_attributes", toJson(taskSpanAttrs))
+                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
                 .setAttribute(
-                        "braintrust.output_json", json(Map.of("output", taskResult.result())));
+                        "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
     }
 
     private void setScoreSpanAttributes(
@@ -594,10 +591,10 @@ public class Devserver {
             scoreSpanAttrs.put("generation", braintrustGeneration);
         }
 
-        var scoresJson = json(scorerScores);
+        var scoresJson = toJson(scorerScores);
         scoreSpan
                 .setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", json(scoreSpanAttrs))
+                .setAttribute("braintrust.span_attributes", toJson(scoreSpanAttrs))
                 .setAttribute("braintrust.output_json", scoresJson)
                 .setAttribute("braintrust.scores", scoresJson);
     }
@@ -625,9 +622,9 @@ public class Devserver {
         progressData.put("format", "code");
         progressData.put("output_type", "completion");
         progressData.put("event", "json_delta");
-        progressData.put("data", JSON_MAPPER.writeValueAsString(taskResult));
+        progressData.put("data", toJson(taskResult));
 
-        String progressJson = JSON_MAPPER.writeValueAsString(progressData);
+        String progressJson = toJson(progressData);
         sendSSEEvent(os, "progress", progressJson);
     }
 
@@ -663,19 +660,11 @@ public class Devserver {
         summary.put("scores", scoresWithMeta);
         summary.put("metrics", Map.of());
 
-        sendSSEEvent(os, "summary", JSON_MAPPER.writeValueAsString(summary));
+        sendSSEEvent(os, "summary", toJson(summary));
     }
 
     private void sendDoneEvent(OutputStream os) throws IOException {
         sendSSEEvent(os, "done", "");
-    }
-
-    private String json(Object o) {
-        try {
-            return JSON_MAPPER.writeValueAsString(o);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize to JSON", e);
-        }
     }
 
     private void sendResponse(
@@ -934,8 +923,7 @@ public class Devserver {
     private void sendErrorResponse(HttpExchange exchange, int statusCode, String message)
             throws IOException {
         Map<String, String> error = Map.of("error", message);
-        String json = JSON_MAPPER.writeValueAsString(error);
-        sendResponse(exchange, statusCode, "application/json", json);
+        sendResponse(exchange, statusCode, "application/json", toJson(error));
     }
 
     /**

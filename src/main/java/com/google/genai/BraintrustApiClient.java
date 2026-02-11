@@ -1,6 +1,8 @@
 package com.google.genai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import com.google.genai.types.HttpOptions;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -27,8 +29,6 @@ import okhttp3.ResponseBody;
  */
 @Slf4j
 class BraintrustApiClient extends ApiClient {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
     private final ApiClient delegate;
     private final Tracer tracer;
 
@@ -58,7 +58,7 @@ class BraintrustApiClient extends ApiClient {
 
             // Parse request
             if (requestBody != null) {
-                var requestJson = JSON_MAPPER.readValue(requestBody, Map.class);
+                var requestJson = fromJson(requestBody, Map.class);
 
                 // Extract metadata fields
                 for (String field :
@@ -108,13 +108,12 @@ class BraintrustApiClient extends ApiClient {
                     inputJson.put("config", requestJson.get("generationConfig"));
                 }
 
-                span.setAttribute(
-                        "braintrust.input_json", JSON_MAPPER.writeValueAsString(inputJson));
+                span.setAttribute("braintrust.input_json", toJson(inputJson));
             }
 
             // Parse response
             if (responseBody != null) {
-                var responseJson = JSON_MAPPER.readValue(responseBody, Map.class);
+                var responseJson = fromJson(responseBody, Map.class);
 
                 // Extract model version from response
                 if (responseJson.containsKey("modelVersion")) {
@@ -122,8 +121,7 @@ class BraintrustApiClient extends ApiClient {
                 }
 
                 // Set full response as output_json
-                span.setAttribute(
-                        "braintrust.output_json", JSON_MAPPER.writeValueAsString(responseJson));
+                span.setAttribute("braintrust.output_json", toJson(responseJson));
 
                 // Parse usage metadata for metrics
                 if (responseJson.get("usageMetadata") instanceof Map) {
@@ -146,18 +144,15 @@ class BraintrustApiClient extends ApiClient {
                                 (Number) usage.get("cachedContentTokenCount"));
                     }
 
-                    span.setAttribute(
-                            "braintrust.metrics", JSON_MAPPER.writeValueAsString(metrics));
+                    span.setAttribute("braintrust.metrics", toJson(metrics));
                 }
             }
 
             // Set metadata
-            span.setAttribute("braintrust.metadata", JSON_MAPPER.writeValueAsString(metadata));
+            span.setAttribute("braintrust.metadata", toJson(metadata));
 
             // Set span_attributes to mark as LLM span
-            span.setAttribute(
-                    "braintrust.span_attributes",
-                    JSON_MAPPER.writeValueAsString(Map.of("type", "llm")));
+            span.setAttribute("braintrust.span_attributes", toJson(Map.of("type", "llm")));
 
         } catch (Throwable t) {
             log.warn("failed to tag gemini span", t);

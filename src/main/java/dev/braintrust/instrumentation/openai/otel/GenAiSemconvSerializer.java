@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.openai.models.chat.completions.*;
+import dev.braintrust.json.BraintrustJsonMapper;
 import dev.braintrust.trace.Base64Attachment;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
@@ -30,8 +31,8 @@ final class GenAiSemconvSerializer {
     private static ObjectMapper createObjectMapper() {
         final JsonSerializer<Base64Attachment> attachmentSerializer =
                 Base64Attachment.createSerializer();
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        // Start with the base mapper configuration and add OpenAI-specific serializers
+        ObjectMapper mapper = BraintrustJsonMapper.get().copy();
         SimpleModule module = new SimpleModule();
         module.addSerializer(
                 ChatCompletionContentPartImage.class,

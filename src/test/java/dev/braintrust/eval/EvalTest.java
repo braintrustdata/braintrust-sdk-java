@@ -1,8 +1,9 @@
 package dev.braintrust.eval;
 
+import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.Origin;
 import dev.braintrust.TestHarness;
 import dev.braintrust.api.BraintrustApiClient;
@@ -19,8 +20,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class EvalTest {
-    private static final ObjectMapper JSON_MAPPER =
-            new com.fasterxml.jackson.databind.ObjectMapper();
     private TestHarness testHarness;
 
     @BeforeEach
@@ -74,21 +73,21 @@ public class EvalTest {
             if (span.getParentSpanId().equals(SpanId.getInvalid())) {
                 numRootSpans.incrementAndGet();
                 var inputJson =
-                        Eval.JSON_MAPPER.readValue(
+                        fromJson(
                                 span.getAttributes()
                                         .get(AttributeKey.stringKey("braintrust.input_json")),
                                 Map.class);
                 assertNotNull(inputJson.get("input"), "invlaid input: " + inputJson);
 
                 var expected =
-                        Eval.JSON_MAPPER.readValue(
+                        fromJson(
                                 span.getAttributes()
                                         .get(AttributeKey.stringKey("braintrust.expected")),
                                 String.class);
                 assertTrue(isFruitOrVegetable(expected), "invalid expected: " + expected);
 
                 var outputJson =
-                        Eval.JSON_MAPPER.readValue(
+                        fromJson(
                                 span.getAttributes()
                                         .get(AttributeKey.stringKey("braintrust.output_json")),
                                 Map.class);
@@ -249,14 +248,13 @@ public class EvalTest {
                 var inputJson =
                         span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
                 assertNotNull(inputJson);
-                JSON_MAPPER.readValue(inputJson, Map.class);
-                var input = (String) (JSON_MAPPER.readValue(inputJson, Map.class)).get("input");
+                fromJson(inputJson, Map.class);
+                var input = (String) (fromJson(inputJson, Map.class)).get("input");
                 assertNotNull(input);
                 var origin = span.getAttributes().get(AttributeKey.stringKey("braintrust.origin"));
                 switch (input) {
                     case "no-origin" -> assertNull(origin);
-                    case "has-origin" ->
-                            assertEquals(JSON_MAPPER.writeValueAsString(testOrigin), origin);
+                    case "has-origin" -> assertEquals(toJson(testOrigin), origin);
                     default -> fail("unexpected input: " + input);
                 }
                 numRootSpans.incrementAndGet();

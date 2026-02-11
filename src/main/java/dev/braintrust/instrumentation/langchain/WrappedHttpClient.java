@@ -1,7 +1,9 @@
 package dev.braintrust.instrumentation.langchain;
 
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.braintrust.json.BraintrustJsonMapper;
 import dev.braintrust.trace.BraintrustTracing;
 import dev.langchain4j.exception.HttpException;
 import dev.langchain4j.http.client.HttpClient;
@@ -19,13 +21,10 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class WrappedHttpClient implements HttpClient {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
     private final Tracer tracer;
     private final HttpClient underlying;
     private final BraintrustLangchain.Options options;
@@ -139,7 +138,7 @@ class WrappedHttpClient implements HttpClient {
     /** Tag span with request data: input messages, model, provider. */
     private static void tagSpan(Span span, HttpRequest request, ProviderInfo providerInfo) {
         try {
-            span.setAttribute("braintrust.span_attributes", json(Map.of("type", "llm")));
+            span.setAttribute("braintrust.span_attributes", toJson(Map.of("type", "llm")));
 
             // Build metadata map
             Map<String, String> metadata = new HashMap<>();
@@ -148,7 +147,7 @@ class WrappedHttpClient implements HttpClient {
             // Parse request body to extract model and messages
             String body = request.body();
             if (body != null && !body.isEmpty()) {
-                JsonNode requestJson = JSON_MAPPER.readTree(body);
+                JsonNode requestJson = BraintrustJsonMapper.get().readTree(body);
 
                 // Extract model
                 if (requestJson.has("model")) {
@@ -158,13 +157,13 @@ class WrappedHttpClient implements HttpClient {
 
                 // Extract messages array for input
                 if (requestJson.has("messages")) {
-                    String messagesJson = json(requestJson.get("messages"));
+                    String messagesJson = toJson(requestJson.get("messages"));
                     span.setAttribute("braintrust.input_json", messagesJson);
                 }
             }
 
             // Serialize metadata as JSON
-            span.setAttribute("braintrust.metadata", json(metadata));
+            span.setAttribute("braintrust.metadata", toJson(metadata));
         } catch (Exception e) {
             log.debug("Failed to parse request for span tagging", e);
         }
@@ -183,11 +182,11 @@ class WrappedHttpClient implements HttpClient {
 
             String body = response.body();
             if (body != null && !body.isEmpty()) {
-                JsonNode responseJson = JSON_MAPPER.readTree(body);
+                JsonNode responseJson = BraintrustJsonMapper.get().readTree(body);
 
                 // Extract choices array for output
                 if (responseJson.has("choices")) {
-                    String choicesJson = json(responseJson.get("choices"));
+                    String choicesJson = toJson(responseJson.get("choices"));
                     span.setAttribute("braintrust.output_json", choicesJson);
                 }
 
@@ -206,7 +205,7 @@ class WrappedHttpClient implements HttpClient {
                 }
             }
 
-            span.setAttribute("braintrust.metrics", json(metrics));
+            span.setAttribute("braintrust.metrics", toJson(metrics));
         } catch (Exception e) {
             log.debug("Failed to parse response for span tagging", e);
         }
@@ -216,11 +215,6 @@ class WrappedHttpClient implements HttpClient {
     private static void tagSpan(Span span, Throwable t) {
         span.setStatus(StatusCode.ERROR, t.getMessage());
         span.recordException(t);
-    }
-
-    @SneakyThrows
-    private static String json(Object o) {
-        return JSON_MAPPER.writeValueAsString(o);
     }
 
     /**
@@ -281,7 +275,7 @@ class WrappedHttpClient implements HttpClient {
 
             // Buffer the data for final processing
             try {
-                JsonNode chunk = JSON_MAPPER.readTree(data);
+                JsonNode chunk = BraintrustJsonMapper.get().readTree(data);
 
                 // For streaming, we accumulate deltas into the complete message
                 // Just track if we have any content
@@ -346,19 +340,19 @@ class WrappedHttpClient implements HttpClient {
             if (outputBuffer.length() > 0 || finishReason != null) {
                 try {
                     // Create a proper choice object matching OpenAI API format
-                    var choiceBuilder = JSON_MAPPER.createObjectNode();
+                    var choiceBuilder = BraintrustJsonMapper.get().createObjectNode();
                     choiceBuilder.put("index", 0);
                     if (finishReason != null) {
                         choiceBuilder.put("finish_reason", finishReason);
                     }
 
-                    var messageNode = JSON_MAPPER.createObjectNode();
+                    var messageNode = BraintrustJsonMapper.get().createObjectNode();
                     messageNode.put("role", "assistant");
                     messageNode.put("content", outputBuffer.toString());
 
                     choiceBuilder.set("message", messageNode);
 
-                    var choicesArray = JSON_MAPPER.createArrayNode();
+                    var choicesArray = BraintrustJsonMapper.get().createArrayNode();
                     choicesArray.add(choiceBuilder);
 
                     span.setAttribute("braintrust.output_json", choicesArray.toString());
@@ -388,7 +382,7 @@ class WrappedHttpClient implements HttpClient {
             // Serialize metrics as JSON
             try {
                 if (!metrics.isEmpty()) {
-                    span.setAttribute("braintrust.metrics", json(metrics));
+                    span.setAttribute("braintrust.metrics", toJson(metrics));
                 }
             } catch (Exception e) {
                 log.debug("Failed to serialize metrics", e);

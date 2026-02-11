@@ -1,14 +1,16 @@
 package dev.braintrust.instrumentation.anthropic.otel;
 
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.MessageDeltaUsage;
 import com.anthropic.models.messages.Model;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.Usage;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
@@ -19,7 +21,6 @@ import javax.annotation.Nullable;
 import lombok.SneakyThrows;
 
 final class StreamListener {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private final Context context;
     private final MessageCreateParams request;
@@ -93,14 +94,14 @@ final class StreamListener {
 
         // Handle content_block_stop - write output
         if (event.contentBlockStop().isPresent()) {
-            ArrayNode outputArray = JSON_MAPPER.createArrayNode();
-            ObjectNode message = JSON_MAPPER.createObjectNode();
+            ArrayNode outputArray = BraintrustJsonMapper.get().createArrayNode();
+            ObjectNode message = BraintrustJsonMapper.get().createObjectNode();
             message.put("role", "assistant");
             message.put("content", contentBuilder.toString());
             outputArray.add(message);
 
             BraintrustAnthropicSpanAttributes.setOutputJson(
-                    Span.fromContext(context), JSON_MAPPER.writeValueAsString(outputArray));
+                    Span.fromContext(context), toJson(outputArray));
         }
     }
 
