@@ -204,6 +204,35 @@ public class EvalTest {
                 assertTrue(
                         tags.contains("sweet") || tags.contains("savory"),
                         "tags should contain taste");
+                var metadata =
+                        span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
+                assertNotNull(metadata, "root span should have metadata");
+
+                // Parse metadata JSON and verify values based on which case this is
+                @SuppressWarnings("unchecked")
+                Map<String, Object> metadataMap = fromJson(metadata, Map.class);
+                assertNotNull(metadataMap, "metadata should parse as a map");
+                assertTrue(metadataMap.containsKey("calories"), "metadata should contain calories");
+                assertTrue(metadataMap.containsKey("season"), "metadata should contain season");
+
+                if (tags.contains("red")) {
+                    // strawberry case
+                    assertEquals(
+                            32, metadataMap.get("calories"), "strawberry should have 32 calories");
+                    assertEquals(
+                            "summer",
+                            metadataMap.get("season"),
+                            "strawberry should be summer season");
+                } else {
+                    // asparagus case
+                    assertEquals(
+                            20, metadataMap.get("calories"), "asparagus should have 20 calories");
+                    assertEquals(
+                            "spring",
+                            metadataMap.get("season"),
+                            "asparagus should be spring season");
+                }
+
                 numRootSpans.incrementAndGet();
             }
         }
