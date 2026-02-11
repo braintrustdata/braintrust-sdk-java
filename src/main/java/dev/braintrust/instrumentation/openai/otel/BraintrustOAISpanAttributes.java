@@ -5,7 +5,6 @@
 
 package dev.braintrust.instrumentation.openai.otel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.models.chat.completions.ChatCompletion;
 import io.opentelemetry.api.trace.Span;
 import lombok.SneakyThrows;
@@ -14,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 /** Centralized class for setting all OpenAI-related span attributes. */
 @Slf4j
 final class BraintrustOAISpanAttributes {
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     // GenAI semantic convention constants
     static final String OPERATION_CHAT = "chat";

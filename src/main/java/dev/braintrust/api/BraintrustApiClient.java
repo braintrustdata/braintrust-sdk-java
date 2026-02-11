@@ -1,12 +1,9 @@
 package dev.braintrust.api;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import dev.braintrust.config.BraintrustConfig;
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -111,7 +108,6 @@ public interface BraintrustApiClient {
     class HttpImpl implements BraintrustApiClient {
         private final BraintrustConfig config;
         private final HttpClient httpClient;
-        private final ObjectMapper objectMapper;
 
         HttpImpl(BraintrustConfig config) {
             this(config, createDefaultHttpClient(config));
@@ -120,7 +116,6 @@ public interface BraintrustApiClient {
         private HttpImpl(BraintrustConfig config, HttpClient httpClient) {
             this.config = config;
             this.httpClient = httpClient;
-            this.objectMapper = createObjectMapper();
         }
 
         @Override
@@ -422,24 +417,19 @@ public interface BraintrustApiClient {
 
         private <T> CompletableFuture<T> postAsync(
                 String path, Object body, Class<T> responseType) {
-            try {
-                var jsonBody = objectMapper.writeValueAsString(body);
+            var jsonBody = toJson(body);
 
-                var request =
-                        HttpRequest.newBuilder()
-                                .uri(URI.create(config.apiUrl() + path))
-                                .header("Authorization", "Bearer " + config.apiKey())
-                                .header("Content-Type", "application/json")
-                                .header("Accept", "application/json")
-                                .timeout(config.requestTimeout())
-                                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                                .build();
+            var request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(config.apiUrl() + path))
+                            .header("Authorization", "Bearer " + config.apiKey())
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json")
+                            .timeout(config.requestTimeout())
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                            .build();
 
-                return sendAsync(request, responseType);
-            } catch (IOException e) {
-                return CompletableFuture.failedFuture(
-                        new ApiException("Failed to serialize request body", e));
-            }
+            return sendAsync(request, responseType);
         }
 
         private <T> CompletableFuture<T> sendAsync(HttpRequest request, Class<T> responseType) {
@@ -454,12 +444,7 @@ public interface BraintrustApiClient {
             log.debug("API Response: {} - {}", response.statusCode(), response.body());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                try {
-                    return objectMapper.readValue(response.body(), responseType);
-                } catch (IOException e) {
-                    log.warn("Failed to parse response body", e);
-                    throw new ApiException("Failed to parse response body", e);
-                }
+                return fromJson(response.body(), responseType);
             } else {
                 log.warn(
                         "API request failed with status {}: {}",
@@ -487,19 +472,6 @@ public interface BraintrustApiClient {
 
         private static HttpClient createDefaultHttpClient(BraintrustConfig config) {
             return HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        }
-
-        private static ObjectMapper createObjectMapper() {
-            return new ObjectMapper()
-                    .registerModule(new JavaTimeModule())
-                    .registerModule(new Jdk8Module()) // For Optional support
-                    .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-                    .setSerializationInclusion(
-                            JsonInclude.Include.NON_ABSENT) // Skip null and absent Optional
-                    .configure(
-                            com.fasterxml.jackson.databind.DeserializationFeature
-                                    .FAIL_ON_UNKNOWN_PROPERTIES,
-                            false); // Ignore unknown fields from API
         }
     }
 

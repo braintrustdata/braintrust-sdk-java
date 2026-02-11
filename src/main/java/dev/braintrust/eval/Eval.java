@@ -1,7 +1,7 @@
 package dev.braintrust.eval;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static dev.braintrust.json.BraintrustJsonMapper.toJson;
+
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
@@ -25,7 +25,6 @@ import lombok.SneakyThrows;
 public final class Eval<INPUT, OUTPUT> {
     private static final AttributeKey<String> PARENT =
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
-    static final ObjectMapper JSON_MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
     private final @Nonnull String experimentName;
     private final @Nonnull BraintrustConfig config;
     private final @Nonnull BraintrustApiClient client;
@@ -81,13 +80,14 @@ public final class Eval<INPUT, OUTPUT> {
                         .setNoParent() // each eval case is its own trace
                         .setSpanKind(SpanKind.CLIENT)
                         .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .setAttribute("braintrust.span_attributes", json(Map.of("type", "eval")))
+                        .setAttribute("braintrust.span_attributes", toJson(Map.of("type", "eval")))
                         .setAttribute(
-                                "braintrust.input_json", json(Map.of("input", datasetCase.input())))
-                        .setAttribute("braintrust.expected", json(datasetCase.expected()))
+                                "braintrust.input_json",
+                                toJson(Map.of("input", datasetCase.input())))
+                        .setAttribute("braintrust.expected", toJson(datasetCase.expected()))
                         .startSpan();
         if (datasetCase.origin().isPresent()) {
-            rootSpan.setAttribute("braintrust.origin", json(datasetCase.origin().get()));
+            rootSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
         }
         if (!datasetCase.tags().isEmpty()) {
             rootSpan.setAttribute(
@@ -100,7 +100,8 @@ public final class Eval<INPUT, OUTPUT> {
                         tracer.spanBuilder("task")
                                 .setAttribute(PARENT, "experiment_id:" + experimentId)
                                 .setAttribute(
-                                        "braintrust.span_attributes", json(Map.of("type", "task")))
+                                        "braintrust.span_attributes",
+                                        toJson(Map.of("type", "task")))
                                 .startSpan();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
@@ -108,13 +109,8 @@ public final class Eval<INPUT, OUTPUT> {
                 } finally {
                     taskSpan.end();
                 }
-                try {
-                    rootSpan.setAttribute(
-                            "braintrust.output_json",
-                            JSON_MAPPER.writeValueAsString(Map.of("output", taskResult.result())));
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
+                rootSpan.setAttribute(
+                        "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
             }
             // run scorers - one span per scorer
             for (var scorer : scorers) {
@@ -139,8 +135,8 @@ public final class Eval<INPUT, OUTPUT> {
                     Map<String, Object> spanAttrs = new LinkedHashMap<>();
                     spanAttrs.put("type", "score");
                     spanAttrs.put("name", scorer.getName());
-                    scoreSpan.setAttribute("braintrust.span_attributes", json(spanAttrs));
-                    var scoresJson = json(scorerScores);
+                    scoreSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
+                    var scoresJson = toJson(scorerScores);
                     scoreSpan.setAttribute("braintrust.output_json", scoresJson);
                     scoreSpan.setAttribute("braintrust.scores", scoresJson);
                 } finally {
@@ -150,11 +146,6 @@ public final class Eval<INPUT, OUTPUT> {
         } finally {
             rootSpan.end();
         }
-    }
-
-    @SneakyThrows
-    private String json(Object o) {
-        return JSON_MAPPER.writeValueAsString(o);
     }
 
     /** Creates a new eval builder. */
