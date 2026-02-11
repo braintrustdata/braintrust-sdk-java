@@ -40,6 +40,9 @@ public interface BraintrustApiClient {
     /** Creates an experiment. */
     Experiment getOrCreateExperiment(CreateExperimentRequest request);
 
+    /** Lists experiments for a project. */
+    List<Experiment> listExperiments(String projectId);
+
     /** Get project and org info for the default project ID */
     Optional<OrganizationAndProjectInfo> getProjectAndOrgInfo();
 
@@ -152,6 +155,17 @@ public interface BraintrustApiClient {
         public Experiment getOrCreateExperiment(CreateExperimentRequest request) {
             try {
                 return postAsync("/v1/experiment", request, Experiment.class).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new ApiException(e);
+            }
+        }
+
+        @Override
+        public List<Experiment> listExperiments(String projectId) {
+            try {
+                return getAsync("/v1/experiment?project_id=" + projectId, ExperimentList.class)
+                        .get()
+                        .objects();
             } catch (InterruptedException | ExecutionException e) {
                 throw new ApiException(e);
             }
@@ -546,15 +560,26 @@ public interface BraintrustApiClient {
                     experiments.stream()
                             .filter(exp -> exp.name().equals(request.name()))
                             .findFirst();
-            return existing.orElseGet(
-                    () ->
-                            new Experiment(
-                                    request.name().hashCode() + "",
-                                    request.projectId(),
-                                    request.name(),
-                                    request.description(),
-                                    "notused",
-                                    "notused"));
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+            var newExperiment =
+                    new Experiment(
+                            request.name().hashCode() + "",
+                            request.projectId(),
+                            request.name(),
+                            request.description(),
+                            request.tags().orElse(List.of()),
+                            request.metadata().orElse(Map.of()),
+                            "notused",
+                            "notused");
+            experiments.add(newExperiment);
+            return newExperiment;
+        }
+
+        @Override
+        public List<Experiment> listExperiments(String projectId) {
+            return experiments.stream().filter(exp -> exp.projectId().equals(projectId)).toList();
         }
 
         @Override
@@ -701,16 +726,24 @@ public interface BraintrustApiClient {
 
     record ProjectList(List<Project> projects) {}
 
-    record ExperimentList(List<Experiment> experiments) {}
+    record ExperimentList(List<Experiment> objects) {}
 
     record CreateExperimentRequest(
             String projectId,
             String name,
             Optional<String> description,
-            Optional<String> baseExperimentId) {
+            Optional<String> baseExperimentId,
+            Optional<List<String>> tags,
+            Optional<Map<String, Object>> metadata) {
 
         public CreateExperimentRequest(String projectId, String name) {
-            this(projectId, name, Optional.empty(), Optional.empty());
+            this(
+                    projectId,
+                    name,
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty());
         }
     }
 
@@ -719,6 +752,8 @@ public interface BraintrustApiClient {
             String projectId,
             String name,
             Optional<String> description,
+            List<String> tags,
+            Map<String, Object> metadata,
             String createdAt,
             String updatedAt) {}
 

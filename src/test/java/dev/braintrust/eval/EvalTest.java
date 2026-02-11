@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.braintrust.Origin;
 import dev.braintrust.TestHarness;
+import dev.braintrust.VCR;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
@@ -261,5 +262,49 @@ public class EvalTest {
             }
         }
         assertEquals(2, numRootSpans.get(), "should test for origin presence and absence");
+    }
+
+    @Test
+    @SneakyThrows
+    void evalWithExperimentTagsAndMetadata() {
+        // This test requires real API calls - skip in replay mode
+        if (TestHarness.getVcrMode() == VCR.VcrMode.REPLAY) {
+            // TODO: need a vcr solution for dynamically created objects
+            return;
+        }
+
+        var experimentName = "unit-test-eval-experiment-tags-metadata";
+        var expectedTags = List.of("java-sdk", "unit-test");
+        var expectedMetadata = Map.<String, Object>of("model", "gpt-4o", "version", "1.0");
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name(experimentName)
+                        .cases(DatasetCase.of("strawberry", "fruit"))
+                        .taskFunction(food -> "fruit")
+                        .scorers(Scorer.of("scorer", result -> 1.0))
+                        .tags(expectedTags)
+                        .metadata(expectedMetadata)
+                        .build();
+
+        eval.run();
+        testHarness.awaitExportedSpans();
+
+        // Query the experiment from Braintrust API to verify tags and metadata
+        var experiments =
+                testHarness
+                        .braintrust()
+                        .apiClient()
+                        .listExperiments(TestHarness.defaultProjectId());
+        var experiment =
+                experiments.stream()
+                        .filter(e -> e.name().equals(experimentName))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("Experiment not found"));
+
+        assertEquals(expectedTags, experiment.tags(), "Experiment should have tags");
+        assertEquals(expectedMetadata, experiment.metadata(), "Experiment should have metadata");
     }
 }
