@@ -33,7 +33,8 @@ public class VCR {
         OFF
     }
 
-    private static final String DEFAULT_CASSETTES_ROOT = "test-harness/src/testFixtures/resources/cassettes/";
+    private static final String DEFAULT_CASSETTES_ROOT =
+            "test-harness/src/testFixtures/resources/cassettes/";
 
     private final String cassettesRoot;
     private final Map<String, WireMockServer> proxyMap;

@@ -1,0 +1,12 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+// These are compile-time dependencies so bootstrap classes can reference OTel types.
+// At runtime, the actual OTel JARs are bundled as normal .class files in the agent JAR
+// and placed on the bootstrap classpath via Instrumentation.appendToBootstrapClassLoaderSearch().
+dependencies {
+  compileOnly "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+}
