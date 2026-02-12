@@ -1,0 +1,93 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+plugins {
+  id 'com.gradleup.shadow' version '8.3.6'
+  id 'io.freefair.lombok' version '9.2.0'
+}
+
+dependencies {
+  // The main Braintrust SDK — bundled into the agent's isolated classloader so the agent
+  // can use BraintrustConfig, BraintrustSpanExporter, instrumentations, etc.
+  implementation project(':')
+
+  // Bootstrap classes (e.g. BraintrustBridge) — available at runtime on the bootstrap
+  // classpath, so we only need them at compile time for javac resolution.
+  compileOnly project(':braintrust-java-agent:bootstrap')
+
+  // Instrumentation framework interfaces
+  implementation project(':braintrust-java-agent:instrumentation-api')
+
+  // AutoService for SPI registration (if any modules are defined directly in internal)
+  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+  // SLF4J API — needed at compile time for Lombok's @Slf4j annotation
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+
+  // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
+  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // OTel API + autoconfigure SPI — on the bootstrap classpath at runtime,
+  // so we compile against them but do NOT bundle them.
+  compileOnly "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+
+  // OTel SDK + autoconfigure engine — bundled into BraintrustClassLoader.
+  // These are no longer on the bootstrap classpath.
+  implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+
+  // OTLP exporter + its transitive deps (OkHttp, etc.) — bundled as .classdata
+  // These are the heavy deps that stay in BraintrustClassLoader, NOT on bootstrap.
+  implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
+
+  // Test dependencies
+  testImplementation project(':braintrust-java-agent:bootstrap')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Auto-discover all instrumentation subprojects and add them as implementation dependencies.
+// Any subproject under :braintrust-java-agent:instrumentation is automatically bundled
+// into the shadow JAR, and its META-INF/services entries are merged.
+project(':braintrust-java-agent').subprojects.each { subproject ->
+  if (subproject.path.startsWith(':braintrust-java-agent:instrumentation:')) {
+    dependencies.add('implementation', subproject)
+  }
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}
+
+// Build a fat JAR with all dependencies. No relocation needed because these
+// classes end up as .classdata entries in the final agent JAR, only loadable
+// by BraintrustClassLoader — completely invisible to the application.
+shadowJar {
+  archiveClassifier.set('all')
+
+  // Exclude OTel API + autoconfigure SPI — these are on the bootstrap classpath.
+  // The internal code references them by name and finds them via parent CL delegation.
+  // The full SDK + autoconfigure engine ARE bundled here in BraintrustClassLoader.
+  dependencies {
+    // These are on the bootstrap classpath (via bootstrapLibs transitive deps).
+    // Exclude them from the shadow JAR to avoid duplication.
+    exclude(dependency('io.opentelemetry:opentelemetry-api'))
+    exclude(dependency('io.opentelemetry:opentelemetry-api-incubator'))
+    exclude(dependency('io.opentelemetry:opentelemetry-context'))
+    exclude(dependency('io.opentelemetry:opentelemetry-common'))
+    exclude(dependency('io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi'))
+  }
+
+  mergeServiceFiles()
+
+  // Strip module-info that could confuse JPMS
+  exclude 'module-info.class'
+  exclude '**/module-info.class'
+}

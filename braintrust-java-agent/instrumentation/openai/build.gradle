@@ -1,0 +1,17 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+dependencies {
+  // Instrumentation framework interfaces
+  compileOnly project(':braintrust-java-agent:instrumentation-api')
+
+  // AutoService for SPI registration
+  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+  // ByteBuddy for ElementMatcher types used in instrumentation definitions
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Target library — compileOnly because it will be on the app classpath at runtime
+  compileOnly 'com.openai:openai-java:2.8.1'
+}

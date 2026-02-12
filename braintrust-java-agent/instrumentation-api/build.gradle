@@ -1,0 +1,21 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+dependencies {
+  // ByteBuddy for matcher types in interfaces and for the AgentBuilder in InstrumentationInstaller
+  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Test dependencies
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

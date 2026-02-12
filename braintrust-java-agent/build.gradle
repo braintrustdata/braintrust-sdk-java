@@ -1,0 +1,164 @@
+plugins {
+  id 'java'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+}
+
+repositories {
+  mavenCentral()
+}
+
+// Shared config for all agent subprojects (bootstrap, internal)
+subprojects {
+  apply plugin: 'java'
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      vendor = JvmVendorSpec.ADOPTIUM
+    }
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+  }
+
+  repositories {
+    mavenCentral()
+  }
+}
+
+// No main source code — this project only assembles the agent JAR and runs tests.
+sourceSets.main.java.srcDirs = []
+
+configurations {
+  // Bootstrap classes (BraintrustAgent, BraintrustClassLoader, BraintrustAutoConfigCustomizer)
+  // — our code + META-INF/services, bundled as normal .class files
+  bootstrap
+
+  // Bootstrap libraries — unshaded, added to bootstrap classpath at runtime via
+  // Instrumentation.appendToBootstrapClassLoaderSearch(). Includes:
+  //   - OTel API (Tracer, Span, Context, etc.)
+  //   - OTel SDK (SdkTracerProvider, SpanProcessor, etc.)
+  //   - OTel SDK autoconfigure (AutoConfiguredOpenTelemetrySdk)
+  //   - OTel SDK autoconfigure SPI (AutoConfigurationCustomizerProvider)
+  bootstrapLibs
+
+  // Agent internals (ByteBuddy, OTLP exporter, OkHttp, instrumentation code)
+  // — hidden as .classdata under internal/, only loadable by BraintrustClassLoader
+  internal
+}
+
+dependencies {
+  bootstrap project(':braintrust-java-agent:bootstrap')
+
+  // OTel API + SDK + autoconfigure on bootstrap classpath
+  bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-api-incubator:${otelVersion}-alpha"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+
+  internal project(path: ':braintrust-java-agent:internal', configuration: 'shadow')
+
+  // Test dependencies
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  testCompileOnly project(':braintrust-java-agent:bootstrap')
+}
+
+// Disable the default jar — we produce agentJar instead
+jar.enabled = false
+
+/**
+ * Assembles the final agent JAR with classloader isolation.
+ */
+task agentJar(type: Jar) {
+  dependsOn configurations.bootstrap, configurations.bootstrapLibs, configurations.internal
+
+  destinationDirectory.set(layout.buildDirectory.dir('libs'))
+  archiveBaseName.set('braintrust-java-agent')
+  archiveClassifier.set('')
+
+  manifest {
+    attributes(
+      'Premain-Class': 'dev.braintrust.system.AgentBootstrap',
+      'Agent-Class': 'dev.braintrust.system.AgentBootstrap',
+      'Can-Redefine-Classes': 'true',
+      'Can-Retransform-Classes': 'true',
+      'Implementation-Title': 'Braintrust Java Agent',
+      'Implementation-Version': project.version,
+      'Implementation-Vendor': 'Braintrust',
+    )
+  }
+
+  // 1) Include bootstrap classes as normal .class files (our code + META-INF/services)
+  from(provider { configurations.bootstrap.collect { zipTree(it) } }) {
+    // Keep META-INF/services (needed for ServiceLoader) but exclude other META-INF
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/maven/**'
+  }
+
+  // 2) Include bootstrap libraries as normal .class files (OTel API + SDK + autoconfigure)
+  from(provider { configurations.bootstrapLibs.collect { zipTree(it) } }) {
+    exclude 'META-INF/**'
+  }
+
+  // 3) Include internal classes as .classdata files under internal/
+  from(provider { configurations.internal.collect { zipTree(it) } }) {
+    into 'internal'
+    rename '(.*)\\.class$', '$1.classdata'
+    // Keep META-INF/services (needed by ServiceLoader in BraintrustClassLoader)
+    // but exclude everything else in META-INF
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+    exclude 'META-INF/DEPENDENCIES'
+    exclude 'META-INF/proguard/**'
+    exclude 'META-INF/versions/**'
+  }
+}
+
+assemble.dependsOn agentJar
+
+test {
+  dependsOn agentJar
+  useJUnitPlatform()
+
+  // Launch JUnit with the Braintrust Java Agent attached
+  jvmArgs "-javaagent:${agentJar.archiveFile.get().asFile.absolutePath}"
+
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}
+
+/**
+ * Runs GlobalLoggerTest as a standalone main() with the agent attached.
+ */
+task testGlobalLogger(type: JavaExec) {
+  dependsOn agentJar, testClasses
+
+  mainClass = 'dev.braintrust.system.GlobalLoggerTest'
+  classpath = sourceSets.test.runtimeClasspath
+  // jvmArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"
+  jvmArgs "-javaagent:${agentJar.archiveFile.get().asFile.absolutePath}"
+}
+
+test.dependsOn testGlobalLogger
