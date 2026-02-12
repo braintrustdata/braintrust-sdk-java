@@ -1,0 +1,122 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+  // dd-trace-api is provided at runtime by the DD agent on the bootstrap classpath,
+  // but we need it at compile time for TraceInterceptor / MutableSpan.
+  implementation 'com.datadoghq:dd-trace-api:1.60.1'
+}
+
+// ── Configuration to resolve the DD agent JAR from Maven Central ──
+configurations {
+  ddAgent
+}
+dependencies {
+  ddAgent 'com.datadoghq:dd-java-agent:1.60.1'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar')
+
+/**
+ * Smoke test: runs DdAgentSmokeTest with both agents attached.
+ *
+ * This is a JavaExec task (not JUnit) because it needs a clean JVM with two
+ * -javaagent flags in a specific order. It follows the same pattern as
+ * testGlobalLogger in :braintrust-java-agent.
+ *
+ * Agent ordering: DD first, Braintrust second.
+ * The process exit code signals pass (0) or fail (non-zero).
+ */
+task smokeTest(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.writer.type=LoggingWriter",
+    "-Ddd.trace.agent.url=unix:///dev/null",
+    "-Dotel.traces.exporter=none",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Ddd.service=bt-dd-smoke-test",
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  // Make sure OTEL/DD environment doesn't leak from the host
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  // ── Caching: declare inputs so Gradle can skip/cache this task ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  // A marker file as output so Gradle knows the task succeeded
+  def markerFile = layout.buildDirectory.file('test-results/dd-agent-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+/**
+ * Smoke test: DD agent only (no Braintrust agent).
+ * Verifies that DD-only assertions pass and OTel assertions are skipped.
+ */
+task smokeTestDdOnly(type: JavaExec) {
+  dependsOn classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.writer.type=LoggingWriter",
+    "-Ddd.trace.agent.url=unix:///dev/null",
+    "-Ddd.service=bt-dd-smoke-test",
+  ]
+
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/dd-only-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+// test.dependsOn smokeTest, smokeTestDdOnly
+test.dependsOn smokeTestDdOnly // FIXME: need to cover all uses of dd + bt. probably need to reverse the current approach

@@ -24,7 +24,10 @@ ext {
 
 dependencies {
   // testFixtures dependencies — everything lives in testFixtures source set
-  testFixturesImplementation project(":")  // SDK main source (for TestHarness -> Braintrust, BraintrustConfig)
+  testFixturesImplementation project(":braintrust-sdk")  // SDK main source (for TestHarness -> Braintrust, BraintrustConfig)
+  testFixturesImplementation project(":braintrust-java-agent:internal")
+  testFixturesImplementation project(":braintrust-java-agent:bootstrap")
+  testFixturesImplementation project(":braintrust-java-agent:instrumentation-api")
 
   testFixturesImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
   testFixturesImplementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"

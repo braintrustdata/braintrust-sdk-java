@@ -4,5 +4,14 @@ plugins {
 
 rootProject.name = 'braintrust-sdk-java'
 
+include 'braintrust-sdk'
 include 'test-harness'
 include 'examples'
+include 'braintrust-java-agent'
+include 'braintrust-java-agent:bootstrap'
+include 'braintrust-java-agent:internal'
+include 'braintrust-java-agent:instrumentation-api'
+include 'braintrust-java-agent:instrumentation:openai'
+include 'braintrust-java-agent:instrumentation:anthropic'
+include 'braintrust-java-agent:smoke-test:dd-agent'
+include 'braintrust-java-agent:smoke-test:otel-agent'
