@@ -5,3 +5,4 @@ plugins {
 rootProject.name = 'braintrust-sdk-java'
 
 include 'examples'
+include 'braintrust-java-agent'
