@@ -1,0 +1,75 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+}
+
+// ── Configuration to resolve the OTel Java agent JAR from Maven Central ──
+configurations {
+  otelAgent
+}
+dependencies {
+  otelAgent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.25.0'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar')
+
+/**
+ * Smoke test: runs OtelAgentSmokeTest with both agents attached.
+ *
+ * This is a JavaExec task (not JUnit) because it needs a clean JVM with two
+ * -javaagent flags in a specific order.
+ *
+ * Agent ordering: OTel agent first, Braintrust second.
+ * The process exit code signals pass (0) or fail (non-zero).
+ */
+task smokeTest(type: JavaExec) {
+  dependsOn braintrustAgentJar, jar
+
+  mainClass = 'dev.braintrust.smoketest.otelagent.OtelAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def otelAgentJar = configurations.otelAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${otelAgentJar.absolutePath}",
+    "-Dotel.javaagent.extensions=${jar.archiveFile.get().asFile.absolutePath}",
+    "-Dotel.java.global-autoconfigure.enabled=true",
+    "-Dotel.traces.exporter=none",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Dotel.service.name=bt-otel-smoke-test",
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  // Make sure OTel environment doesn't leak from the host
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(configurations.otelAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/otel-agent-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+// TODO: enable when otel agent compatibility is ready
+// test.dependsOn smokeTest

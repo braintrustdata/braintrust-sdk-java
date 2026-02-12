@@ -1,0 +1,27 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+plugins {
+  id 'io.freefair.lombok' version '9.2.0'
+}
+
+dependencies {
+  implementation 'com.google.code.findbugs:jsr305:3.0.2' // for @Nullable annotations
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Test dependencies
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

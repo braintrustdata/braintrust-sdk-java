@@ -19,7 +19,7 @@ repositories {
 def braintrustLogLevel = System.getenv('BRAINTRUST_LOG_LEVEL') ?: 'info'
 
 dependencies {
-  implementation project(':')
+  implementation project(':braintrust-sdk')
   runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   // To run otel examples
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
