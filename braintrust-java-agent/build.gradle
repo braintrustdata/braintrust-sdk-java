@@ -1,0 +1,58 @@
+plugins {
+  id 'java'
+  id 'com.gradleup.shadow' version '8.3.6'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  // ByteBuddy for bytecode manipulation
+  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+}
+
+// The shadow JAR is the agent artifact
+shadowJar {
+  archiveClassifier.set('')
+  archiveBaseName.set('braintrust-java-agent')
+
+  // Relocate ByteBuddy to avoid conflicts with app dependencies
+  relocate 'net.bytebuddy', 'dev.braintrust.agent.shaded.bytebuddy'
+
+  manifest {
+    attributes(
+      'Premain-Class': 'dev.braintrust.agent.BraintrustAgent',
+      'Agent-Class': 'dev.braintrust.agent.BraintrustAgent',
+      'Can-Redefine-Classes': 'true',
+      'Can-Retransform-Classes': 'true',
+      'Implementation-Title': 'Braintrust Java Agent',
+      'Implementation-Version': project.version,
+      'Implementation-Vendor': 'Braintrust',
+    )
+  }
+
+  mergeServiceFiles()
+
+  // Remove empty directory stubs left behind by relocation
+  exclude 'META-INF/versions/*/net/**'
+}
+
+// Make the default jar task produce the shadow jar
+jar {
+  enabled = false
+}
+
+// Make build depend on shadowJar
+assemble.dependsOn shadowJar
