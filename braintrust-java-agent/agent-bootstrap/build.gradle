@@ -1,0 +1,18 @@
+plugins {
+  id 'java'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+}
+
+// No external dependencies — bootstrap classes must be self-contained.
+// They are loaded by the system classloader and must not pull in anything
+// that could conflict with the application's classpath.

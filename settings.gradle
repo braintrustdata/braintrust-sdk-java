@@ -6,3 +6,5 @@ rootProject.name = 'braintrust-sdk-java'
 
 include 'examples'
 include 'braintrust-java-agent'
+include 'braintrust-java-agent:agent-bootstrap'
+include 'braintrust-java-agent:agent-internal'
