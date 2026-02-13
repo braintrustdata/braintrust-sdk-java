@@ -1,35 +1,32 @@
 plugins {
-  id 'java'
-  id 'com.gradleup.shadow' version '8.3.6'
+  id 'base'
 }
 
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(17)
-    vendor = JvmVendorSpec.ADOPTIUM
-  }
-}
-
-tasks.withType(JavaCompile).configureEach {
-  options.release = 17
-}
-
-repositories {
-  mavenCentral()
+configurations {
+  bootstrap
+  internal
 }
 
 dependencies {
-  // ByteBuddy for bytecode manipulation
-  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+  bootstrap project(':braintrust-java-agent:agent-bootstrap')
+  internal project(path: ':braintrust-java-agent:agent-internal', configuration: 'shadow')
 }
 
-// The shadow JAR is the agent artifact
-shadowJar {
-  archiveClassifier.set('')
-  archiveBaseName.set('braintrust-java-agent')
+/**
+ * Assembles the final agent JAR with classloader isolation.
+ *
+ * Layout:
+ *   dev/braintrust/agent/BraintrustAgent.class          <- bootstrap (normal .class)
+ *   dev/braintrust/agent/BraintrustClassLoader.class     <- bootstrap (normal .class)
+ *   inst/dev/braintrust/agent/internal/AgentInstaller.classdata  <- hidden from normal CL
+ *   inst/dev/braintrust/agent/shaded/bytebuddy/...classdata      <- hidden from normal CL
+ */
+task agentJar(type: Jar) {
+  dependsOn configurations.bootstrap, configurations.internal
 
-  // Relocate ByteBuddy to avoid conflicts with app dependencies
-  relocate 'net.bytebuddy', 'dev.braintrust.agent.shaded.bytebuddy'
+  destinationDirectory.set(layout.buildDirectory.dir('libs'))
+  archiveBaseName.set('braintrust-java-agent')
+  archiveClassifier.set('')
 
   manifest {
     attributes(
@@ -43,16 +40,17 @@ shadowJar {
     )
   }
 
-  mergeServiceFiles()
+  // 1) Include bootstrap classes as normal .class files
+  from(provider { configurations.bootstrap.collect { zipTree(it) } }) {
+    exclude 'META-INF/**'
+  }
 
-  // Remove empty directory stubs left behind by relocation
-  exclude 'META-INF/versions/*/net/**'
+  // 2) Include internal classes as .classdata files under inst/
+  from(provider { configurations.internal.collect { zipTree(it) } }) {
+    into 'inst'
+    rename '(.*)\\.class$', '$1.classdata'
+    exclude 'META-INF/**'
+  }
 }
 
-// Make the default jar task produce the shadow jar
-jar {
-  enabled = false
-}
-
-// Make build depend on shadowJar
-assemble.dependsOn shadowJar
+assemble.dependsOn agentJar

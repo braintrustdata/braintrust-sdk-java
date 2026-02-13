@@ -1,0 +1,41 @@
+plugins {
+  id 'java'
+  id 'com.gradleup.shadow' version '8.3.6'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  // ByteBuddy for bytecode manipulation
+  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+}
+
+// Build a shadow JAR with all dependencies relocated to avoid conflicts.
+// This JAR is NOT the final agent — it's an intermediate artifact whose
+// contents get repacked as .classdata entries in the final agent JAR.
+shadowJar {
+  archiveClassifier.set('all')
+
+  // Relocate all external deps under our namespace
+  relocate 'net.bytebuddy', 'dev.braintrust.agent.shaded.bytebuddy'
+
+  mergeServiceFiles()
+
+  // Strip out empty directory stubs left behind by relocation
+  exclude 'META-INF/versions/*/net/**'
+  // Strip module-info that could confuse JPMS
+  exclude 'module-info.class'
+}
