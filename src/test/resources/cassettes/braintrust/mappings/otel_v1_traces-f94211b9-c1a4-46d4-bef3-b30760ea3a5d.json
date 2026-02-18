@@ -1,0 +1,39 @@
+{
+  "id" : "f94211b9-c1a4-46d4-bef3-b30760ea3a5d",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CvEDCrgBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAooCg9zZXJ2aWNlLnZlcnNpb24SFQoTMC4yLjUtMTBhOTMyNi1ESVJUWQogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTQuMRKdAQoNCgt0ZXN0LXNlcnZlchKLAQoQVC9bKz6TwrEnRxkEZoOF3hII7qbggvvYI+IiCJo0evFcgOh6KhBzZXJ2ZXItb3BlcmF0aW9uMAE54Eo8vyY/lRhBXx9EvyY/lRhKNQoRYnJhaW50cnVzdC5wYXJlbnQSIAoeZXhwZXJpbWVudF9pZDphYmMxMjMtaHR0cC10ZXN0egCFAQEDAAASkwEKDQoLdGVzdC1jbGllbnQSgQEKEFQvWys+k8KxJ0cZBGaDhd4SCJo0evFcgOh6KhBjbGllbnQtb3BlcmF0aW9uMAE58ZHHviY/lRhBoiRPvyY/lRhKNQoRYnJhaW50cnVzdC5wYXJlbnQSIAoeZXhwZXJpbWVudF9pZDphYmMxMjMtaHR0cC10ZXN0egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 403,
+    "bodyFileName" : "otel_v1_traces-f94211b9-c1a4-46d4-bef3-b30760ea3a5d.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=utf-8",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:11:04 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "183c82ad-2c9c-4437-b5c8-10906adc80aa",
+      "x-bt-internal-trace-id" : "699549e8000000005de7de1125c2fb42",
+      "x-amz-apigw-id" : "Y9h8VFJPIAMElrw=",
+      "vary" : "Origin, Accept-Encoding",
+      "etag" : "W/\"13b-hn+NhXQ+iN6jtCTkkOGjmB6RJp8\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549e8-1c7dc4e6406ca16437fa7d2c;Parent=212f55b0ba4912c1;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 a642518ef4d5fb78c3190de112922a38.cloudfront.net (CloudFront), 1.1 d9d466ed70d93f34739969f91577ec74.cloudfront.net (CloudFront)",
+      "X-Cache" : "Error from cloudfront",
+      "X-Amz-Cf-Id" : "mgBHLmqpDZIKka8vu9wxHkjpyJDgvjugKlIvNe_aLGdhT8mVqEVjoA=="
+    }
+  },
+  "uuid" : "f94211b9-c1a4-46d4-bef3-b30760ea3a5d",
+  "persistent" : true,
+  "insertionIndex" : 103
+}

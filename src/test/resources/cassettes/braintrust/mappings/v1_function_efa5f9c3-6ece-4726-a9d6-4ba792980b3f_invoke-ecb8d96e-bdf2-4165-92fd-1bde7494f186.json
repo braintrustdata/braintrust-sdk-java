@@ -1,0 +1,39 @@
+{
+  "id" : "ecb8d96e-bdf2-4165-92fd-1bde7494f186",
+  "name" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke",
+  "request" : {
+    "url" : "/v1/function/efa5f9c3-6ece-4726-a9d6-4ba792980b3f/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"carrot\",\"output\":\"java-fruit\",\"expected\":\"vegetable\",\"metadata\":{}},\"parent\":{\"object_type\":\"playground_logs\",\"object_id\":\"ceea7422-3507-4d1c-a5f7-7acf41d9fac2\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"6290375b3f2213f1\",\"root_span_id\":\"684edeca82d7effdbce6fb922b964421\"}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke-ecb8d96e-bdf2-4165-92fd-1bde7494f186.json",
+    "headers" : {
+      "Content-Type" : "application/json",
+      "Date" : "Wed, 18 Feb 2026 05:10:08 GMT",
+      "X-Amzn-Trace-Id" : "Root=1-699549ae-2c74bbf26f998e8c0a6dd1bc;Parent=1102ebc64e794b2c;Sampled=0;Lineage=1:8be8f50d:0",
+      "x-bt-function-meta-cached" : "HIT",
+      "x-amzn-RequestId" : "ceb793de-9e07-492e-a154-77c6bd73cc87",
+      "x-bt-span-export" : "AwMDAc7qdCI1B00cpfd6z0HZ+sICEVxhfosGTKKPlwJIPZAdNgNheLwQgRZFc7B7tl5mkzuweyJwcm9wYWdhdGVkX2V2ZW50Ijp7InNwYW5fYXR0cmlidXRlcyI6eyJwdXJwb3NlIjoic2NvcmVyIn19LCJyb290X3NwYW5faWQiOiI2ODRlZGVjYTgyZDdlZmZkYmNlNmZiOTIyYjk2NDQyMSJ9",
+      "x-bt-span-id" : "115c617e-8b06-4ca2-8f97-02483d901d36",
+      "x-bt-function-creds-cached" : "HIT",
+      "X-Cache" : "Miss from cloudfront",
+      "Via" : "1.1 d525041695bdb6325f78ebba5c11b8a2.cloudfront.net (CloudFront)",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "X-Amz-Cf-Id" : "1cJUsWk2JEe4GdKKYtLL0k4WvY6KSaSV5LEJj9YYA6Rrb1h7OOC2Lw=="
+    }
+  },
+  "uuid" : "ecb8d96e-bdf2-4165-92fd-1bde7494f186",
+  "persistent" : true,
+  "insertionIndex" : 12
+}

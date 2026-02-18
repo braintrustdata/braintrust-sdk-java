@@ -1,0 +1,35 @@
+{
+  "id" : "4618d477-16ee-42e3-977a-760014fcf317",
+  "name" : "api_apikey_login",
+  "request" : {
+    "url" : "/api/apikey/login",
+    "method" : "POST"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "api_apikey_login-4618d477-16ee-42e3-977a-760014fcf317.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=utf-8",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:10:11 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "fc4ef89a-79cf-4422-9440-9bbcd0fef9bd",
+      "x-amzn-Remapped-content-length" : "395",
+      "x-bt-internal-trace-id" : "699549b30000000049e69bb15662b0a1",
+      "x-amz-apigw-id" : "Y9h0GGL3IAMERew=",
+      "vary" : "Origin, Accept-Encoding",
+      "etag" : "W/\"18b-OPCBBHzVVuCPaglXVbFjmsFzOoE\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549b3-0493c155518537a06f0e15bd;Parent=2b035aa3a658eccc;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 940972e9e344075576fe20d5db482122.cloudfront.net (CloudFront), 1.1 ee5f8da78d4211a93c9dba8864a4067e.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "c9P3atiaSM0oRPBwYHaNHDsb0xPyZdj_lFh6mJF963O4GTSPVBw2Aw=="
+    }
+  },
+  "uuid" : "4618d477-16ee-42e3-977a-760014fcf317",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-api-apikey-login",
+  "requiredScenarioState" : "scenario-2-api-apikey-login-5",
+  "newScenarioState" : "scenario-2-api-apikey-login-6",
+  "insertionIndex" : 16
+}

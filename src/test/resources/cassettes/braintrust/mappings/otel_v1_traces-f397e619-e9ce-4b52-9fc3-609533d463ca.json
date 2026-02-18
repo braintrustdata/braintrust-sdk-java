@@ -1,0 +1,39 @@
+{
+  "id" : "f397e619-e9ce-4b52-9fc3-609533d463ca",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CuYCCrgBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAooCg9zZXJ2aWNlLnZlcnNpb24SFQoTMC4yLjUtMTBhOTMyNi1ESVJUWQogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTQuMRKoAQoWChRzb21lLWluc3RydW1lbnRhdGlvbhKNAQoQqZKri3FLhRl1cTbzvmuNzRIIPCAnPW+8FhMqDnVuaXQtdGVzdC1yb290MAE5J688WiY/lRhBodY9WiY/lRhKDwoJdW5pdC10ZXN0EgIQAUoyChFicmFpbnRydXN0LnBhcmVudBIdChtwcm9qZWN0X25hbWU6amF2YS11bml0LXRlc3R6AIUBAQEAAA=="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "Content-Type" : "application/x-protobuf",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:11:02 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "259f451d-c754-4547-83f6-4d328b48dff4",
+      "x-amzn-Remapped-content-length" : "0",
+      "x-bt-internal-trace-id" : "699549e60000000023a49e83af0c9db0",
+      "x-amz-apigw-id" : "Y9h8EHjvIAMEMXA=",
+      "vary" : "Origin",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549e6-02752ae15352842635cd5467;Parent=37501d24778e893c;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 487082619948f670d3b30fb3db8fbabc.cloudfront.net (CloudFront), 1.1 ffe9646b2ea911744e2d51fc0715cedc.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "VEvQOFTu_94_Injt1xJg-VwJYpLIuyn6y5MCPeyX7urL3-GlpC49PQ=="
+    }
+  },
+  "uuid" : "f397e619-e9ce-4b52-9fc3-609533d463ca",
+  "persistent" : true,
+  "insertionIndex" : 100
+}
