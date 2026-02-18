@@ -8,13 +8,15 @@ import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import java.util.*;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * An evaluation framework for testing AI models.
@@ -22,6 +24,7 @@ import lombok.SneakyThrows;
  * @param <INPUT> The type of input data for the evaluation
  * @param <OUTPUT> The type of output produced by the task
  */
+@Slf4j
 public final class Eval<INPUT, OUTPUT> {
     private static final AttributeKey<String> PARENT =
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
@@ -91,7 +94,6 @@ public final class Eval<INPUT, OUTPUT> {
         return new EvalResult(experimentUrl);
     }
 
-    @SneakyThrows
     private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
         var rootSpan =
                 tracer.spanBuilder("eval") // TODO: allow names for eval cases
@@ -128,46 +130,110 @@ public final class Eval<INPUT, OUTPUT> {
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
                     taskResult = task.apply(datasetCase);
-                } finally {
+                    rootSpan.setAttribute(
+                            "braintrust.output_json",
+                            toJson(Map.of("output", taskResult.result())));
+                } catch (Exception e) {
+                    taskSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                    taskSpan.recordException(e);
                     taskSpan.end();
+                    rootSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                    rootSpan.setAttribute(
+                            "braintrust.output_json",
+                            toJson(Collections.singletonMap("output", null)));
+                    log.debug("Task threw exception for input: " + datasetCase.input(), e);
+                    // run scoreForTaskException on each scorer
+                    for (var scorer : scorers) {
+                        runScoreForTaskException(experimentId, rootSpan, scorer, e, datasetCase);
+                    }
+                    return;
                 }
-                rootSpan.setAttribute(
-                        "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
+                taskSpan.end();
             }
             // run scorers - one span per scorer
             for (var scorer : scorers) {
-                var scoreSpan =
-                        tracer.spanBuilder("score")
-                                .setAttribute(PARENT, "experiment_id:" + experimentId)
-                                .startSpan();
-                try (var unused =
-                        BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
-                    var scores = scorer.score(taskResult);
-                    // linked map to preserve ordering. Not in the spec but nice user experience
-                    final Map<String, Double> scorerScores = new LinkedHashMap<>();
-                    for (var score : scores) {
-                        if (score.value() < 0.0 || score.value() > 1.0) {
-                            throw new RuntimeException(
-                                    "score must be between 0 and 1: %s : %s"
-                                            .formatted(scorer.getName(), score));
-                        }
-                        scorerScores.put(score.name(), score.value());
-                    }
-                    // Set span attributes with scorer name
-                    Map<String, Object> spanAttrs = new LinkedHashMap<>();
-                    spanAttrs.put("type", "score");
-                    spanAttrs.put("name", scorer.getName());
-                    scoreSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
-                    var scoresJson = toJson(scorerScores);
-                    scoreSpan.setAttribute("braintrust.output_json", scoresJson);
-                    scoreSpan.setAttribute("braintrust.scores", scoresJson);
-                } finally {
-                    scoreSpan.end();
-                }
+                runScorer(experimentId, rootSpan, scorer, taskResult);
             }
         } finally {
             rootSpan.end();
         }
+    }
+
+    /**
+     * Runs a scorer against a successful task result. If the scorer throws, falls back to {@link
+     * Scorer#scoreForScorerException}.
+     */
+    private void runScorer(
+            String experimentId,
+            Span rootSpan,
+            Scorer<INPUT, OUTPUT> scorer,
+            TaskResult<INPUT, OUTPUT> taskResult) {
+        var scoreSpan =
+                tracer.spanBuilder("score")
+                        .setAttribute(PARENT, "experiment_id:" + experimentId)
+                        .startSpan();
+        try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
+            List<Score> scores;
+            try {
+                scores = scorer.score(taskResult);
+            } catch (Exception e) {
+                scoreSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                scoreSpan.recordException(e);
+                log.debug("Scorer '{}' threw exception", scorer.getName(), e);
+                // fall back to scoreForScorerException — if this throws, eval aborts
+                scores = scorer.scoreForScorerException(e, taskResult);
+            }
+            recordScores(scoreSpan, rootSpan, scorer, scores);
+        } finally {
+            scoreSpan.end();
+        }
+    }
+
+    /**
+     * Runs {@link Scorer#scoreForTaskException} when the task threw. If the fallback throws, the
+     * eval aborts.
+     */
+    private void runScoreForTaskException(
+            String experimentId,
+            Span rootSpan,
+            Scorer<INPUT, OUTPUT> scorer,
+            Exception taskException,
+            DatasetCase<INPUT, OUTPUT> datasetCase) {
+        var scoreSpan =
+                tracer.spanBuilder("score")
+                        .setAttribute(PARENT, "experiment_id:" + experimentId)
+                        .startSpan();
+        try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
+            // if this throws, it propagates and the eval aborts
+            var scores = scorer.scoreForTaskException(taskException, datasetCase);
+            recordScores(scoreSpan, rootSpan, scorer, scores);
+        } finally {
+            scoreSpan.end();
+        }
+    }
+
+    /** Validates and records scores on the score span and root span. */
+    private void recordScores(
+            Span scoreSpan, Span rootSpan, Scorer<INPUT, OUTPUT> scorer, List<Score> scores) {
+        if (scores == null || scores.isEmpty()) {
+            return;
+        }
+        final Map<String, Double> scorerScores = new LinkedHashMap<>();
+        for (var score : scores) {
+            if (score.value() < 0.0 || score.value() > 1.0) {
+                throw new RuntimeException(
+                        "score must be between 0 and 1: %s : %s"
+                                .formatted(scorer.getName(), score));
+            }
+            scorerScores.put(score.name(), score.value());
+        }
+        Map<String, Object> spanAttrs = new LinkedHashMap<>();
+        spanAttrs.put("type", "score");
+        spanAttrs.put("name", scorer.getName());
+        scoreSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
+        var scoresJson = toJson(scorerScores);
+        scoreSpan.setAttribute("braintrust.output_json", scoresJson);
+        scoreSpan.setAttribute("braintrust.scores", scoresJson);
     }
 
     /** Creates a new eval builder. */
