@@ -336,4 +336,48 @@ public class EvalTest {
         assertEquals(expectedTags, experiment.tags(), "Experiment should have tags");
         assertEquals(expectedMetadata, experiment.metadata(), "Experiment should have metadata");
     }
+
+    @Test
+    @SneakyThrows
+    void evalLinksToRemoteDataset() {
+        if (TestHarness.getVcrMode() == VCR.VcrMode.REPLAY) {
+            return;
+        }
+
+        var experimentName = "test-dataset-linking";
+        Dataset<String, String> dataset = testHarness.braintrust().fetchDataset("food");
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name(experimentName)
+                        .dataset(dataset)
+                        .taskFunction(String::toUpperCase)
+                        .scorers(
+                                Scorer.of(
+                                        "exact",
+                                        (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
+                        .build();
+        eval.run();
+        testHarness.awaitExportedSpans();
+
+        // Verify the experiment is linked to the dataset
+        var experiments =
+                testHarness
+                        .braintrust()
+                        .apiClient()
+                        .listExperiments(TestHarness.defaultProjectId());
+        var experiment =
+                experiments.stream()
+                        .filter(e -> e.name().equals(experimentName))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("Experiment not found"));
+
+        assertTrue(experiment.datasetId().isPresent(), "Experiment should be linked to a dataset");
+        assertEquals(dataset.id(), experiment.datasetId().get(), "Dataset ID should match");
+        assertTrue(
+                experiment.datasetVersion().isPresent(),
+                "Experiment should have a dataset version");
+    }
 }

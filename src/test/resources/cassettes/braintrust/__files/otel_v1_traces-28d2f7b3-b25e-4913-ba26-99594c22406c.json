@@ -1,1 +1,0 @@
-{"Code":"ForbiddenError","Message":"Missing read access to experiment id abc123-http-test, or the experiment does not exist [user_email=andrew@braintrustdata.com] [user_org=braintrustdata.com] [timestamp=1770341784.956]","InternalTraceId":"69854598000000007331b16d970969f8","Path":"/otel/v1/traces","Service":"api"}
