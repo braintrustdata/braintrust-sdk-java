@@ -572,7 +572,9 @@ public interface BraintrustApiClient {
                             request.tags().orElse(List.of()),
                             request.metadata().orElse(Map.of()),
                             "notused",
-                            "notused");
+                            "notused",
+                            request.datasetId(),
+                            request.datasetVersion());
             experiments.add(newExperiment);
             return newExperiment;
         }
@@ -734,12 +736,16 @@ public interface BraintrustApiClient {
             Optional<String> description,
             Optional<String> baseExperimentId,
             Optional<List<String>> tags,
-            Optional<Map<String, Object>> metadata) {
+            Optional<Map<String, Object>> metadata,
+            Optional<String> datasetId,
+            Optional<String> datasetVersion) {
 
         public CreateExperimentRequest(String projectId, String name) {
             this(
                     projectId,
                     name,
+                    Optional.empty(),
+                    Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
@@ -755,7 +761,32 @@ public interface BraintrustApiClient {
             List<String> tags,
             Map<String, Object> metadata,
             String createdAt,
-            String updatedAt) {}
+            String updatedAt,
+            Optional<String> datasetId,
+            Optional<String> datasetVersion) {
+        /** Convenience constructor */
+        public Experiment(
+                String id,
+                String projectId,
+                String name,
+                Optional<String> description,
+                List<String> tags,
+                Map<String, Object> metadata,
+                String createdAt,
+                String updatedAt) {
+            this(
+                    id,
+                    projectId,
+                    name,
+                    description,
+                    tags,
+                    metadata,
+                    createdAt,
+                    updatedAt,
+                    Optional.empty(),
+                    Optional.empty());
+        }
+    }
 
     record CreateDatasetRequest(String projectId, String name, Optional<String> description) {
         public CreateDatasetRequest(String projectId, String name) {

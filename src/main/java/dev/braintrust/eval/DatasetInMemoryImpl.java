@@ -44,6 +44,11 @@ class DatasetInMemoryImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTPUT> {
             public void close() {
                 closed = true;
             }
+
+            @Override
+            public Optional<String> version() {
+                return Optional.empty();
+            }
         };
     }
 }

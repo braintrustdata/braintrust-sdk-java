@@ -60,16 +60,28 @@ public final class Eval<INPUT, OUTPUT> {
 
     /** Runs the evaluation and returns results. */
     public EvalResult run() {
-        var experiment =
-                client.getOrCreateExperiment(
-                        new BraintrustApiClient.CreateExperimentRequest(
-                                orgAndProject.project().id(),
-                                experimentName,
-                                Optional.empty(),
-                                Optional.empty(),
-                                tags.isEmpty() ? Optional.empty() : Optional.of(tags),
-                                metadata.isEmpty() ? Optional.empty() : Optional.of(metadata)));
-        dataset.forEach(datasetCase -> evalOne(experiment.id(), datasetCase));
+        try (var cursor = dataset.openCursor()) {
+            Optional<String> datasetVersion = Optional.empty();
+            Optional<String> datasetId = Optional.empty();
+            if (dataset instanceof DatasetBrainstoreImpl<INPUT, OUTPUT>) {
+                // TODO: come up with a means of expressing this naturally in the dataset api
+                datasetVersion = cursor.version();
+                datasetId = Optional.of(dataset.id());
+            }
+            var experiment =
+                    client.getOrCreateExperiment(
+                            new BraintrustApiClient.CreateExperimentRequest(
+                                    orgAndProject.project().id(),
+                                    experimentName,
+                                    Optional.empty(),
+                                    Optional.empty(),
+                                    tags.isEmpty() ? Optional.empty() : Optional.of(tags),
+                                    metadata.isEmpty() ? Optional.empty() : Optional.of(metadata),
+                                    datasetId,
+                                    datasetVersion));
+            cursor.forEach(datasetCase -> evalOne(experiment.id(), datasetCase));
+        }
+
         var experimentUrl =
                 "%s/experiments/%s"
                         .formatted(

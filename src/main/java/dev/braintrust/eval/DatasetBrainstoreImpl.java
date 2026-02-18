@@ -2,7 +2,9 @@ package dev.braintrust.eval;
 
 import dev.braintrust.api.BraintrustApiClient;
 import java.util.*;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.jspecify.annotations.NonNull;
 
 /** A dataset loaded externally from Braintrust using paginated API fetches */
 public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTPUT> {
@@ -39,7 +41,25 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
 
     @Override
     public Cursor<DatasetCase<INPUT, OUTPUT>> openCursor() {
-        return new BrainstoreCursor();
+        return new BrainstoreCursor(null == pinnedVersion ? fetchMaxVersion() : pinnedVersion);
+    }
+
+    private String fetchMaxVersion() {
+        var response =
+                apiClient.btqlQuery(
+                        "SELECT max(_xact_id) as version FROM dataset('%s')".formatted(datasetId));
+        if (response.data().isEmpty()) {
+            throw new RuntimeException(
+                    "Failed to fetch max version for dataset: " + datasetId + " (empty response)");
+        }
+        var version = response.data().get(0).get("version");
+        if (version == null) {
+            throw new RuntimeException(
+                    "Failed to fetch max version for dataset: "
+                            + datasetId
+                            + " (null version — dataset may be empty)");
+        }
+        return String.valueOf(version);
     }
 
     private class BrainstoreCursor implements Cursor<DatasetCase<INPUT, OUTPUT>> {
@@ -48,13 +68,15 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
         private @Nullable String cursor;
         private boolean exhausted;
         private boolean closed;
+        private final @Nonnull String cursorVersion;
 
-        BrainstoreCursor() {
+        BrainstoreCursor(@NonNull String cursorVersion) {
             this.currentBatch = new ArrayList<>();
             this.currentIndex = 0;
             this.cursor = null;
             this.exhausted = false;
             this.closed = false;
+            this.cursorVersion = cursorVersion;
         }
 
         @Override
@@ -111,7 +133,7 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
 
         private void fetchNextBatch() {
             var request =
-                    new BraintrustApiClient.DatasetFetchRequest(batchSize, cursor, pinnedVersion);
+                    new BraintrustApiClient.DatasetFetchRequest(batchSize, cursor, cursorVersion);
             var response = apiClient.fetchDatasetEvents(datasetId, request);
 
             currentBatch = new ArrayList<>(response.events());
@@ -128,6 +150,11 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
         public void close() {
             closed = true;
             currentBatch.clear();
+        }
+
+        @Override
+        public Optional<String> version() {
+            return Optional.of(cursorVersion);
         }
     }
 }

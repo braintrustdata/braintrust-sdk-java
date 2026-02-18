@@ -25,11 +25,7 @@ public interface Dataset<INPUT, OUTPUT> {
     /** Convenience method to safely iterate all items in a dataset. */
     default void forEach(Consumer<DatasetCase<INPUT, OUTPUT>> consumer) {
         try (var cursor = openCursor()) {
-            Optional<DatasetCase<INPUT, OUTPUT>> cursorCase = cursor.next();
-            while (cursorCase.isPresent()) {
-                consumer.accept(cursorCase.get());
-                cursorCase = cursor.next();
-            }
+            cursor.forEach(consumer);
         }
     }
 
@@ -47,6 +43,17 @@ public interface Dataset<INPUT, OUTPUT> {
 
         /** close all cursor resources */
         void close();
+
+        /** version of the dataset this cursor was opened against */
+        Optional<String> version();
+
+        default void forEach(Consumer<CASE> caseConsumer) {
+            Optional<CASE> c = next();
+            while (c.isPresent()) {
+                caseConsumer.accept(c.get());
+                c = next();
+            }
+        }
     }
 
     /** Create an in-memory Dataset containing the provided cases. */
