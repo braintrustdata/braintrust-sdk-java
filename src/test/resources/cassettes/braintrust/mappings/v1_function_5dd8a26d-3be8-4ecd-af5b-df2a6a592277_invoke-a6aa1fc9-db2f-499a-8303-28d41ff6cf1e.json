@@ -1,0 +1,58 @@
+{
+  "id" : "a6aa1fc9-db2f-499a-8303-28d41ff6cf1e",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"What is 2+2?\",\"output\":\"four\",\"expected\":\"4\",\"metadata\":{}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke-a6aa1fc9-db2f-499a-8303-28d41ff6cf1e.json",
+    "headers" : {
+      "Content-Type" : "application/json",
+      "Date" : "Wed, 18 Feb 2026 04:40:32 GMT",
+      "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "x-amzn-RequestId" : "5cf17df8-096a-4907-b75f-c1ade6fedb6b",
+      "cf-ray" : "9cfa0ff3a9347223-IAD",
+      "x-ratelimit-remaining-requests" : "29999",
+      "openai-processing-ms" : "8153",
+      "cf-cache-status" : "DYNAMIC",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "x-bt-cached" : "HIT",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-reset-requests" : "2ms",
+      "openai-organization" : "braintrust-data",
+      "x-request-id" : "req_16110a3df62e44e88e8fd6ca34b1d346",
+      "set-cookie" : "__cf_bm=lZkjNTI5VhzgC.C_QJtdvhmBp3TM.UNmwUAcMimLPuA-1771381404.750754-1.0.1.1-qEAcPZ.kAJ.NA4.Rjj9bMdSC92doykPylflFl4o5xl4tkz6C8N3wtHffQ0vIaN4ykHAQSU4RQ1NX01GttUakQ3yCW68uEa6kSIKiaVooHeQ.0fWYWjE93_UWJ4X30ubf; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 18 Feb 2026 02:53:33 GMT",
+      "cache-control" : "max-age=604800",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "x-content-type-options" : "nosniff",
+      "x-ratelimit-remaining-tokens" : "179999943",
+      "x-bt-function-creds-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-699542c0-2e3fca864c6226e862d246b4;Parent=66f595b66787d130;Sampled=0;Lineage=1:8be8f50d:0",
+      "x-bt-function-meta-cached" : "HIT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "openai-version" : "2020-10-01",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-project" : "proj_wMRY6YpEiASXMxPIIcI9nQRi",
+      "X-Cache" : "Miss from cloudfront",
+      "Via" : "1.1 74e8c76139b8c7f9b11d5e4441c2a7a2.cloudfront.net (CloudFront)",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "X-Amz-Cf-Id" : "Sw0ttQYJbF_khVnLgo3hGwJLtrcmughjFu1elG9NNM5fYN_EYgw2Fw==",
+      "Age" : "8217"
+    }
+  },
+  "uuid" : "a6aa1fc9-db2f-499a-8303-28d41ff6cf1e",
+  "persistent" : true,
+  "insertionIndex" : 74
+}
