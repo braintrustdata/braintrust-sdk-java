@@ -1,12 +1,16 @@
 package dev.braintrust.devserver;
 
+import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.TestHarness;
+import dev.braintrust.eval.Score;
 import dev.braintrust.eval.Scorer;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -34,6 +38,8 @@ class DevserverTest {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private static final String REMOTE_EVAL_NAME = "food-type-classifier";
+    private static final String TASK_ERROR_EVAL_NAME = "task-error-eval";
+    private static final String SCORER_ERROR_EVAL_NAME = "scorer-error-eval";
     private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
             new BraintrustUtils.Parent("playground_id", "ceea7422-3507-4d1c-a5f7-7acf41d9fac2");
 
@@ -68,10 +74,48 @@ class DevserverTest {
                         .scorer(Scorer.of("simple_scorer", (expected, result) -> 0.7))
                         .build();
 
+        // Eval whose task throws for "bad-input"
+        RemoteEval<String, String> taskErrorEval =
+                RemoteEval.<String, String>builder()
+                        .name(TASK_ERROR_EVAL_NAME)
+                        .taskFunction(
+                                input -> {
+                                    if ("bad-input".equals(input)) {
+                                        throw new RuntimeException("task failed on bad-input");
+                                    }
+                                    return "result";
+                                })
+                        .scorer(Scorer.of("exact_match", (expected, result) -> 0.7))
+                        .build();
+
+        // Eval with a scorer that always throws
+        RemoteEval<String, String> scorerErrorEval =
+                RemoteEval.<String, String>builder()
+                        .name(SCORER_ERROR_EVAL_NAME)
+                        .taskFunction(input -> "result")
+                        .scorer(
+                                new Scorer<String, String>() {
+                                    @Override
+                                    public String getName() {
+                                        return "broken_scorer";
+                                    }
+
+                                    @Override
+                                    public List<Score> score(
+                                            dev.braintrust.eval.TaskResult<String, String>
+                                                    taskResult) {
+                                        throw new RuntimeException("scorer is broken");
+                                    }
+                                })
+                        .scorer(Scorer.of("working_scorer", (expected, result) -> 1.0))
+                        .build();
+
         server =
                 Devserver.builder()
                         .config(testHarness.braintrust().config())
                         .registerEval(testEval)
+                        .registerEval(taskErrorEval)
+                        .registerEval(scorerErrorEval)
                         .host("localhost")
                         .port(TEST_PORT)
                         .build();
@@ -551,5 +595,359 @@ class DevserverTest {
         assertEquals(
                 "https://www.braintrust.dev",
                 response.headers().firstValue("Access-Control-Allow-Origin").orElse(null));
+    }
+
+    @Test
+    void testTaskErrorHandling() throws Exception {
+        // Send an eval request with two cases: one good input and one that triggers a task error
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(TASK_ERROR_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+
+        EvalRequest.EvalCaseData goodCase = new EvalRequest.EvalCaseData();
+        goodCase.setInput("good-input");
+        goodCase.setExpected("expected");
+
+        EvalRequest.EvalCaseData badCase = new EvalRequest.EvalCaseData();
+        badCase.setInput("bad-input");
+        badCase.setExpected("expected");
+
+        dataSpec.setData(List.of(goodCase, badCase));
+        evalRequest.setData(dataSpec);
+
+        Map<String, Object> parentSpec =
+                Map.of(
+                        "object_type", PLAYGROUND_PARENT.type(),
+                        "object_id", PLAYGROUND_PARENT.id(),
+                        "propagated_event",
+                                Map.of("span_attributes", Map.of("generation", "test-gen-err")));
+        evalRequest.setParent(parentSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        // Read SSE response
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        // Should complete with summary + done (eval continues despite the task error)
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        List<Map<String, String>> doneEvents =
+                events.stream().filter(e -> "done".equals(e.get("event"))).toList();
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+        assertEquals(1, doneEvents.size(), "Should have 1 done event");
+
+        // Only the good case should produce a progress event (bad case task throws before progress)
+        List<Map<String, String>> progressEvents =
+                events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        assertEquals(1, progressEvents.size(), "Only the successful case should send a progress");
+
+        // Verify summary includes the fallback score from scoreForTaskException (default 0.0)
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
+        assertTrue(summaryData.has("scores"));
+        JsonNode scores = summaryData.get("scores");
+        assertTrue(scores.has("exact_match"), "Summary should include exact_match scorer");
+
+        // Verify spans
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        // Filter eval spans belonging to this test: either has generation tag (success path)
+        // or has error status with our specific message (error path, since setEvalSpanAttributes
+        // is not reached when the task throws)
+        List<SpanData> evalSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("eval"))
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    boolean hasGenTag =
+                                            attrs != null && attrs.contains("test-gen-err");
+                                    boolean isOurError =
+                                            s.getStatus().getStatusCode() == StatusCode.ERROR
+                                                    && s.getStatus()
+                                                            .getDescription()
+                                                            .contains("task failed on bad-input");
+                                    return hasGenTag || isOurError;
+                                })
+                        .toList();
+        assertEquals(2, evalSpans.size(), "Should have 2 eval spans (one per case)");
+
+        // Find the errored eval span
+        var erroredEvalSpan =
+                evalSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored eval span"));
+        assertTrue(
+                erroredEvalSpan.getStatus().getDescription().contains("task failed on bad-input"),
+                "eval span error should contain the exception message");
+
+        // The errored eval span should have output: null
+        @SuppressWarnings("unchecked")
+        Map<String, Object> erroredOutputJson =
+                fromJson(
+                        erroredEvalSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.output_json")),
+                        Map.class);
+        assertNull(erroredOutputJson.get("output"), "errored case output should be null");
+
+        // Find the task span for the errored case (should have ERROR status)
+        var erroredTaskSpan =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("task"))
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(
+                                                        erroredEvalSpan
+                                                                .getSpanContext()
+                                                                .getSpanId()))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored task span"));
+        assertFalse(
+                erroredTaskSpan.getEvents().isEmpty(), "task span should have exception events");
+        assertTrue(
+                erroredTaskSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
+                "task span should have an exception event");
+
+        // The errored case should still have a score span (from scoreForTaskException default 0.0)
+        // The score span is a child of the task span (since the task scope is still active when
+        // runScoreForTaskException is called from the catch block)
+        var erroredScoreSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("score"))
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(
+                                                        erroredTaskSpan
+                                                                .getSpanContext()
+                                                                .getSpanId()))
+                        .toList();
+        assertEquals(1, erroredScoreSpans.size(), "errored case should have a score span");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> fallbackScoresJson =
+                fromJson(
+                        erroredScoreSpans
+                                .get(0)
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                0.0,
+                ((Number) fallbackScoresJson.get("exact_match")).doubleValue(),
+                "scoreForTaskException default should produce 0.0");
+
+        // Verify the successful case has a non-error eval span
+        var successEvalSpan =
+                evalSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected a successful eval span"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> successOutputJson =
+                fromJson(
+                        successEvalSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.output_json")),
+                        Map.class);
+        assertEquals(
+                "result", successOutputJson.get("output"), "successful case should have output");
+    }
+
+    @Test
+    void testScorerErrorHandling() throws Exception {
+        // Send an eval request where one scorer throws
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(SCORER_ERROR_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("apple");
+        case1.setExpected("fruit");
+        dataSpec.setData(List.of(case1));
+        evalRequest.setData(dataSpec);
+
+        Map<String, Object> parentSpec =
+                Map.of(
+                        "object_type", PLAYGROUND_PARENT.type(),
+                        "object_id", PLAYGROUND_PARENT.id(),
+                        "propagated_event",
+                                Map.of(
+                                        "span_attributes",
+                                        Map.of("generation", "test-gen-scorer-err")));
+        evalRequest.setParent(parentSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        // Read SSE response — eval should complete despite the broken scorer
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        // Should complete with summary + done
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        List<Map<String, String>> doneEvents =
+                events.stream().filter(e -> "done".equals(e.get("event"))).toList();
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+        assertEquals(1, doneEvents.size(), "Should have 1 done event");
+
+        // Verify summary has both scorers' results
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
+        JsonNode summaryScores = summaryData.get("scores");
+
+        // broken_scorer should have a fallback score of 0.0 (from scoreForScorerException default)
+        assertTrue(summaryScores.has("broken_scorer"), "Summary should have broken_scorer");
+        assertEquals(
+                0.0,
+                summaryScores.get("broken_scorer").get("score").asDouble(),
+                0.001,
+                "broken_scorer should fall back to 0.0");
+
+        // working_scorer should have score 1.0
+        assertTrue(summaryScores.has("working_scorer"), "Summary should have working_scorer");
+        assertEquals(
+                1.0,
+                summaryScores.get("working_scorer").get("score").asDouble(),
+                0.001,
+                "working_scorer should produce 1.0");
+
+        // Verify spans
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+
+        // Filter score spans for this eval by generation tag on the parent eval span
+        var evalSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("eval"))
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("test-gen-scorer-err");
+                                })
+                        .toList();
+        assertEquals(1, evalSpans.size(), "Should have 1 eval span");
+        var evalSpan = evalSpans.get(0);
+
+        // Find score spans under this eval
+        var scoreSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("score"))
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(evalSpan.getSpanContext().getSpanId()))
+                        .toList();
+        assertEquals(2, scoreSpans.size(), "Should have 2 score spans (one per scorer)");
+
+        // Find the broken scorer's span — should have ERROR status
+        var brokenScoreSpan =
+                scoreSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored score span"));
+        assertTrue(
+                brokenScoreSpan.getStatus().getDescription().contains("scorer is broken"),
+                "score span error should contain the exception message");
+        assertTrue(
+                brokenScoreSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
+                "score span should have an exception event");
+
+        // The broken scorer should still have fallback scores (default 0.0)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> brokenScoresJson =
+                fromJson(
+                        brokenScoreSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                0.0,
+                ((Number) brokenScoresJson.get("broken_scorer")).doubleValue(),
+                "scoreForScorerException default should produce 0.0");
+
+        // Find the working scorer's span — should NOT have ERROR status
+        var workingScoreSpan =
+                scoreSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected a working score span"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> workingScoresJson =
+                fromJson(
+                        workingScoreSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                1.0,
+                ((Number) workingScoresJson.get("working_scorer")).doubleValue(),
+                "working scorer should produce 1.0");
+    }
+
+    /** Helper to read SSE events from an HttpURLConnection response. */
+    private List<Map<String, String>> readSSEEvents(HttpURLConnection conn) throws Exception {
+        BufferedReader reader =
+                new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+
+        List<Map<String, String>> events = new ArrayList<>();
+        String line;
+        String currentEvent = null;
+        StringBuilder currentData = new StringBuilder();
+
+        while ((line = reader.readLine()) != null) {
+            if (line.startsWith("event: ")) {
+                currentEvent = line.substring(7);
+            } else if (line.startsWith("data: ")) {
+                currentData.append(line.substring(6));
+            } else if (line.isEmpty() && currentEvent != null) {
+                events.add(Map.of("event", currentEvent, "data", currentData.toString()));
+                currentEvent = null;
+                currentData = new StringBuilder();
+            }
+        }
+        reader.close();
+        return events;
     }
 }

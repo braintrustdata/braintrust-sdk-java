@@ -18,5 +18,5 @@ public interface Task<INPUT, OUTPUT> {
      * @throws Exception if the task fails, the error will be recorded on the span and scoring will
      *     fall back to {@link Scorer#scoreForTaskException}
      */
-    TaskResult<INPUT, OUTPUT> apply(DatasetCase<INPUT, OUTPUT> datasetCase);
+    TaskResult<INPUT, OUTPUT> apply(DatasetCase<INPUT, OUTPUT> datasetCase) throws Exception;
 }

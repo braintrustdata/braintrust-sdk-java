@@ -21,7 +21,7 @@ public interface Scorer<INPUT, OUTPUT> {
      *
      * @param taskResult the task output and originating dataset case
      * @return one or more scores, each with a value between 0 and 1 inclusive
-     * @throws Exception if scoring fails, the error will be recorded on the span and {@link
+     *     <p>If this method thows, the error will be recorded on the span and {@link
      *     #scoreForScorerException} will be called as a fallback
      */
     List<Score> score(TaskResult<INPUT, OUTPUT> taskResult);
@@ -33,7 +33,6 @@ public interface Scorer<INPUT, OUTPUT> {
      * @param taskException the exception thrown by the task
      * @param datasetCase the dataset case that was being evaluated
      * @return fallback scores, or an empty list to skip scoring for this case
-     * @throws Exception if this method throws, the entire eval run is aborted
      */
     default List<Score> scoreForTaskException(
             Exception taskException, DatasetCase<INPUT, OUTPUT> datasetCase) {
@@ -46,7 +45,6 @@ public interface Scorer<INPUT, OUTPUT> {
      * @param scorerException the exception thrown by {@link #score}
      * @param taskResult the task result that was being scored
      * @return fallback scores, or an empty list to skip scoring for this case
-     * @throws Exception if this method throws, the entire eval run is aborted
      */
     default List<Score> scoreForScorerException(
             Exception scorerException, TaskResult<INPUT, OUTPUT> taskResult) {
