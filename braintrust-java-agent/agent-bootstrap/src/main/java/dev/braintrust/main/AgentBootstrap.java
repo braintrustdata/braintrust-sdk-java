@@ -48,13 +48,19 @@ public class AgentBootstrap {
             File agentJarFile = new File(agentJarURL.toURI());
             log("Agent JAR: " + agentJarFile);
 
+            // Enable OTel autoconfigure BEFORE adding to bootstrap, so system properties
+            // are set before anything can trigger GlobalOpenTelemetry.get().
+            enableOtelSDKAutoconfiguration();
+
             inst.appendToBootstrapClassLoaderSearch(new JarFile(agentJarFile, false));
             log("Added agent JAR to bootstrap classpath.");
 
             // Create the isolated braintrust classloader.
-            // Parent is bootstrap CL so the agent internals can see bootstrap classes
-            // (OTel API/SDK, JDK) but NOT application classes.
-            BraintrustClassLoader btClassLoader = new BraintrustClassLoader(agentJarURL, null);
+            // Parent is the platform classloader so agent internals can see:
+            //   - Bootstrap classes (OTel API/SDK added via appendToBootstrapClassLoaderSearch)
+            //   - JDK platform modules (java.net.http, java.sql, etc.)
+            // but NOT application classes (those are on the system/app classloader).
+            BraintrustClassLoader btClassLoader = new BraintrustClassLoader(agentJarURL, ClassLoader.getPlatformClassLoader());
             BraintrustBridge.setAgentClassloaderIfAbsent(btClassLoader);
 
 

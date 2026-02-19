@@ -6,10 +6,6 @@ import dev.braintrust.Braintrust;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.utility.JavaModule;
 
 /**
  * The real agent installation logic
@@ -24,6 +20,7 @@ public class AgentInstaller {
                 + AgentInstaller.class.getClassLoader().getClass().getName());
         log("Agent args: " + agentArgs);
         log("Instrumentation: retransform=" + inst.isRetransformClassesSupported());
+        Braintrust.get(); // call this now so we'll fail fast if there are any issues using the braintrust sdk
 
         /*
         var agentBuilder =
