@@ -1,0 +1,39 @@
+{
+  "id" : "765369c4-2783-45af-99af-a3800fdd7006",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CvYCCrgBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAooCg9zZXJ2aWNlLnZlcnNpb24SFQoTMC4yLjUtMTBhOTMyNi1ESVJUWQogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTQuMRK4AQomCg9icmFpbnRydXN0LWphdmESEzAuMi41LTEwYTkzMjYtRElSVFkSjQEKEA1/ZBCcMfXNrOtBJ0TCCNMSCE+rwnFbQtL6Kg51bml0LXRlc3Qtcm9vdDABOSDqdZ0mP5UYQZaudp0mP5UYSg8KCXVuaXQtdGVzdBICEAFKMgoRYnJhaW50cnVzdC5wYXJlbnQSHQobcHJvamVjdF9uYW1lOmphdmEtdW5pdC10ZXN0egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "Content-Type" : "application/x-protobuf",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:11:03 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "0e8609fd-4148-460c-af0a-1ed69be5c463",
+      "x-amzn-Remapped-content-length" : "0",
+      "x-bt-internal-trace-id" : "699549e70000000044ccc7f1705f06e1",
+      "x-amz-apigw-id" : "Y9h8PG6zIAMEV-A=",
+      "vary" : "Origin",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549e7-7aef1e1a61c9d8f4271b78d6;Parent=14abdf2683d040d1;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 5e599a9eda8861379cfef6a522da18e4.cloudfront.net (CloudFront), 1.1 0df7f27a01014ab815259ca2d88193c6.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "tRITGeOupTQM5HESgsyEkfWgUVIVYYeWneBDnpndTCxVLgraKTyf_g=="
+    }
+  },
+  "uuid" : "765369c4-2783-45af-99af-a3800fdd7006",
+  "persistent" : true,
+  "insertionIndex" : 102
+}

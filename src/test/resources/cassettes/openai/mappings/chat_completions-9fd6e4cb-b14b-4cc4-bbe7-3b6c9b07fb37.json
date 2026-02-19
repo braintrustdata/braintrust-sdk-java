@@ -1,0 +1,49 @@
+{
+  "id" : "9fd6e4cb-b14b-4cc4-bbe7-3b6c9b07fb37",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"What is the capital of France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : true,\n  \"stream_options\" : {\n    \"include_usage\" : true\n  }\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-9fd6e4cb-b14b-4cc4-bbe7-3b6c9b07fb37.txt",
+    "headers" : {
+      "Date" : "Wed, 18 Feb 2026 05:10:54 GMT",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "149",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999992",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_139c3fc747ee44cd8cc0c80b0d1e520e",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Set-Cookie" : [ "__cf_bm=izdA_g49Z9eiVCd0YAGclGPIhQswulPqoE3ixMhA1W0-1771391454-1.0.1.1-HJoqdY.jOvw5U0V.Pl_sEcnMxjERqS9zedhtm4G_1bWrQNs6SYmG1FGhVA1FNXB0l_ryqKlZE4rZjHASeUpXRDkpzuixomd2v3wxRfHU3Gg; path=/; expires=Wed, 18-Feb-26 05:40:54 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None", "_cfuvid=FxV5dFO1OTWP2lipApIINRIyjCcAJj7ux9ZDDQAnZFg-1771391454738-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "Server" : "cloudflare",
+      "CF-RAY" : "9cfb054e9a387548-SEA",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "9fd6e4cb-b14b-4cc4-bbe7-3b6c9b07fb37",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

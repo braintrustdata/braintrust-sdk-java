@@ -1,0 +1,51 @@
+{
+  "id" : "491eefc7-3731-4f09-8d82-ae822cb5f000",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-3-5-haiku-20241022\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-491eefc7-3731-4f09-8d82-ae822cb5f000.txt",
+    "headers" : {
+      "Date" : "Wed, 18 Feb 2026 05:10:50 GMT",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "Cache-Control" : "no-cache",
+      "anthropic-ratelimit-requests-limit" : "10000",
+      "anthropic-ratelimit-requests-remaining" : "9999",
+      "anthropic-ratelimit-requests-reset" : "2026-02-18T05:10:50Z",
+      "anthropic-ratelimit-input-tokens-limit" : "5000000",
+      "anthropic-ratelimit-input-tokens-remaining" : "5000000",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-02-18T05:10:50Z",
+      "anthropic-ratelimit-output-tokens-limit" : "1000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "1000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-02-18T05:10:50Z",
+      "anthropic-ratelimit-tokens-limit" : "6000000",
+      "anthropic-ratelimit-tokens-remaining" : "6000000",
+      "anthropic-ratelimit-tokens-reset" : "2026-02-18T05:10:50Z",
+      "request-id" : "req_011CYExastbwMUQAdyueUmp9",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "x-envoy-upstream-service-time" : "361",
+      "X-Robots-Tag" : "none",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "cf-cache-status" : "DYNAMIC",
+      "CF-RAY" : "9cfb0532e855ea78-SEA"
+    }
+  },
+  "uuid" : "491eefc7-3731-4f09-8d82-ae822cb5f000",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

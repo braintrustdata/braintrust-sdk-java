@@ -1,0 +1,32 @@
+{
+  "id" : "4aee3b04-16ec-41e1-b008-e824d594ac7a",
+  "name" : "v1_dataset",
+  "request" : {
+    "url" : "/v1/dataset?project_name=java-unit-test&dataset_name=food",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset-4aee3b04-16ec-41e1-b008-e824d594ac7a.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=utf-8",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:10:14 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "0b3b1839-eec8-4edd-aa81-cc162facaf33",
+      "x-amzn-Remapped-content-length" : "282",
+      "x-bt-internal-trace-id" : "699549b6000000004485829930e45777",
+      "x-amz-apigw-id" : "Y9h0hFcJoAMEQ4w=",
+      "vary" : "Origin, Accept-Encoding",
+      "etag" : "W/\"11a-VTu/kyvc23XF0GPfrJpypCH3or0\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549b6-5d1113503670e5f96629b7de;Parent=6b050fe4dfcba2bd;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 5e599a9eda8861379cfef6a522da18e4.cloudfront.net (CloudFront), 1.1 77f3c89ffd619275648d49ad13868570.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "jteU7AL_kvEERSacgPfNeD0UtnZl4CkFSF_VCPfUtXUKqtaWdFl5HA=="
+    }
+  },
+  "uuid" : "4aee3b04-16ec-41e1-b008-e824d594ac7a",
+  "persistent" : true,
+  "insertionIndex" : 23
+}

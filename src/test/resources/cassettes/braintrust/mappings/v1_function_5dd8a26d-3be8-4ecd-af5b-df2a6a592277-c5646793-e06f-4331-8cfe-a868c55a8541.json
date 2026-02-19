@@ -1,0 +1,34 @@
+{
+  "id" : "c5646793-e06f-4331-8cfe-a868c55a8541",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277-c5646793-e06f-4331-8cfe-a868c55a8541.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=utf-8",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "Date" : "Wed, 18 Feb 2026 05:10:43 GMT",
+      "access-control-allow-credentials" : "true",
+      "x-amzn-RequestId" : "902e04a6-8fb1-4d15-9c10-96d6b4473096",
+      "x-amzn-Remapped-content-length" : "956",
+      "x-bt-internal-trace-id" : "699549d30000000041384024b09110d1",
+      "x-amz-apigw-id" : "Y9h5EFnzIAMEm5w=",
+      "vary" : "Origin, Accept-Encoding",
+      "etag" : "W/\"3bc-0HC9bz/IZOgDBh9bN2bxOI+hIfI\"",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "X-Amzn-Trace-Id" : "Root=1-699549d3-6b5aeca7476cbd2a7fb9ac38;Parent=15321005da80be40;Sampled=0;Lineage=1:24be3d11:0",
+      "Via" : "1.1 2c24d855455b80190edd9e2dcdca3ee8.cloudfront.net (CloudFront), 1.1 a624be98cd5b264f373d8ac17f78ee50.cloudfront.net (CloudFront)",
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Id" : "Gk3s3lbSyQGDk_F6Go3oINrXrassyHMVi_h1R-ON7JAj1jY_IW-4dg=="
+    }
+  },
+  "uuid" : "c5646793-e06f-4331-8cfe-a868c55a8541",
+  "persistent" : true,
+  "scenarioName" : "scenario-9-v1-function-5dd8a26d-3be8-4ecd-af5b-df2a6a592277",
+  "requiredScenarioState" : "scenario-9-v1-function-5dd8a26d-3be8-4ecd-af5b-df2a6a592277-2",
+  "insertionIndex" : 82
+}

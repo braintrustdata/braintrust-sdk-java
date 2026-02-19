@@ -7,8 +7,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 /**
- * A scorer evaluates the result of a test case with a score between 0 (inclusive) and 1
- * (inclusive).
+ * A scorer evaluates the result of a task against a dataset case, producing a score between 0
+ * (inclusive) and 1 (inclusive).
  *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
@@ -16,7 +16,42 @@ import javax.annotation.Nullable;
 public interface Scorer<INPUT, OUTPUT> {
     String getName();
 
+    /**
+     * Scores the result of a successful task execution.
+     *
+     * @param taskResult the task output and originating dataset case
+     * @return one or more scores, each with a value between 0 and 1 inclusive
+     * @throws Exception if scoring fails, the error will be recorded on the span and {@link
+     *     #scoreForScorerException} will be called as a fallback
+     */
     List<Score> score(TaskResult<INPUT, OUTPUT> taskResult);
+
+    /**
+     * Provides fallback scores when the task function threw an exception. Called instead of {@link
+     * #score} for each scorer.
+     *
+     * @param taskException the exception thrown by the task
+     * @param datasetCase the dataset case that was being evaluated
+     * @return fallback scores, or an empty list to skip scoring for this case
+     * @throws Exception if this method throws, the entire eval run is aborted
+     */
+    default List<Score> scoreForTaskException(
+            Exception taskException, DatasetCase<INPUT, OUTPUT> datasetCase) {
+        return List.of(new Score(getName(), 0.0));
+    }
+
+    /**
+     * Provides fallback scores when this scorer's {@link #score} method threw an exception.
+     *
+     * @param scorerException the exception thrown by {@link #score}
+     * @param taskResult the task result that was being scored
+     * @return fallback scores, or an empty list to skip scoring for this case
+     * @throws Exception if this method throws, the entire eval run is aborted
+     */
+    default List<Score> scoreForScorerException(
+            Exception scorerException, TaskResult<INPUT, OUTPUT> taskResult) {
+        return List.of(new Score(getName(), 0.0));
+    }
 
     static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> of(
             String scorerName, Function<TaskResult<INPUT, OUTPUT>, Double> scorerFn) {

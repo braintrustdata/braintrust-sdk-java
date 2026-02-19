@@ -11,6 +11,7 @@ import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanId;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.Map;
@@ -379,5 +380,249 @@ public class EvalTest {
         assertTrue(
                 experiment.datasetVersion().isPresent(),
                 "Experiment should have a dataset version");
+    }
+
+    @Test
+    @SneakyThrows
+    void evalContinuesWhenTaskThrows() {
+        var experimentName = "unit-test-eval-task-error";
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name(experimentName)
+                        .cases(
+                                DatasetCase.of("good-input", "expected"),
+                                DatasetCase.of("bad-input", "expected"))
+                        .taskFunction(
+                                input -> {
+                                    if ("bad-input".equals(input)) {
+                                        throw new RuntimeException("task failed on bad-input");
+                                    }
+                                    return "result";
+                                })
+                        .scorers(
+                                Scorer.of(
+                                        "exact_match",
+                                        (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
+                        .build();
+
+        // eval should complete without throwing, even though one case errors
+        var result = eval.run();
+        assertNotNull(result.getExperimentUrl());
+
+        var spans = testHarness.awaitExportedSpans();
+
+        // Both cases should produce root spans — the error case is not skipped
+        var rootSpans =
+                spans.stream()
+                        .filter(s -> s.getParentSpanId().equals(SpanId.getInvalid()))
+                        .toList();
+        assertEquals(2, rootSpans.size(), "both cases should produce root spans");
+
+        // Find the errored root span (the one with ERROR status)
+        var erroredRootSpan =
+                rootSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored root span"));
+        assertTrue(
+                erroredRootSpan.getStatus().getDescription().contains("task failed on bad-input"),
+                "root span error should contain the exception message");
+
+        // The errored root span should have output: null
+        var erroredOutputJson =
+                fromJson(
+                        erroredRootSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.output_json")),
+                        Map.class);
+        assertNull(erroredOutputJson.get("output"), "errored case output should be null");
+
+        // Find the task span for the errored case (child of errored root, type=task, status=ERROR)
+        var erroredTaskSpan =
+                spans.stream()
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(
+                                                        erroredRootSpan
+                                                                .getSpanContext()
+                                                                .getSpanId()))
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("\"type\":\"task\"");
+                                })
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored task span"));
+        // Task span should have the exception recorded as an event
+        assertFalse(
+                erroredTaskSpan.getEvents().isEmpty(), "task span should have exception events");
+        assertTrue(
+                erroredTaskSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
+                "task span should have an exception event");
+
+        // The errored case should still have score spans (from scoreForTaskException default = 0.0)
+        var erroredScoreSpans =
+                spans.stream()
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(
+                                                        erroredRootSpan
+                                                                .getSpanContext()
+                                                                .getSpanId()))
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("\"type\":\"score\"");
+                                })
+                        .toList();
+        assertEquals(1, erroredScoreSpans.size(), "errored case should have a score span");
+        var fallbackScoresJson =
+                fromJson(
+                        erroredScoreSpans
+                                .get(0)
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                0.0,
+                ((Number) fallbackScoresJson.get("exact_match")).doubleValue(),
+                "scoreForTaskException default should produce 0.0");
+
+        // The successful case should have a non-error root span
+        var successRootSpan =
+                rootSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected a successful root span"));
+        var successOutputJson =
+                fromJson(
+                        successRootSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.output_json")),
+                        Map.class);
+        assertEquals(
+                "result", successOutputJson.get("output"), "successful case should have output");
+    }
+
+    @Test
+    @SneakyThrows
+    void evalContinuesWhenScorerThrows() {
+        var experimentName = "unit-test-eval-scorer-error";
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name(experimentName)
+                        .cases(DatasetCase.of("strawberry", "fruit"))
+                        .taskFunction(food -> "fruit")
+                        .scorers(
+                                new Scorer<String, String>() {
+                                    @Override
+                                    public String getName() {
+                                        return "broken_scorer";
+                                    }
+
+                                    @Override
+                                    public List<Score> score(
+                                            TaskResult<String, String> taskResult) {
+                                        throw new RuntimeException("scorer is broken");
+                                    }
+                                },
+                                Scorer.of(
+                                        "working_scorer",
+                                        (expected, result) -> expected.equals(result) ? 1.0 : 0.0))
+                        .build();
+
+        // eval should complete — the broken scorer falls back to scoreForScorerException
+        var result = eval.run();
+        assertNotNull(result.getExperimentUrl());
+
+        var spans = testHarness.awaitExportedSpans();
+
+        var rootSpans =
+                spans.stream()
+                        .filter(s -> s.getParentSpanId().equals(SpanId.getInvalid()))
+                        .toList();
+        assertEquals(1, rootSpans.size());
+        var rootSpan = rootSpans.get(0);
+
+        // Find all score spans under the root
+        var scoreSpans =
+                spans.stream()
+                        .filter(
+                                s ->
+                                        s.getParentSpanContext()
+                                                .getSpanId()
+                                                .equals(rootSpan.getSpanContext().getSpanId()))
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("\"type\":\"score\"");
+                                })
+                        .toList();
+        assertEquals(2, scoreSpans.size(), "both scorers should produce score spans");
+
+        // Find the broken scorer's span — it should have ERROR status
+        var brokenScoreSpan =
+                scoreSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() == StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected an errored score span"));
+        assertTrue(
+                brokenScoreSpan.getStatus().getDescription().contains("scorer is broken"),
+                "score span error should contain the exception message");
+        // The exception should be recorded as an event
+        assertTrue(
+                brokenScoreSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
+                "score span should have an exception event");
+        // The broken scorer should still have fallback scores (default 0.0)
+        var brokenScoresJson =
+                fromJson(
+                        brokenScoreSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                0.0,
+                ((Number) brokenScoresJson.get("broken_scorer")).doubleValue(),
+                "scoreForScorerException default should produce 0.0");
+
+        // Find the working scorer's span — it should NOT have ERROR status
+        var workingScoreSpan =
+                scoreSpans.stream()
+                        .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("expected a working score span"));
+        var workingScoresJson =
+                fromJson(
+                        workingScoreSpan
+                                .getAttributes()
+                                .get(AttributeKey.stringKey("braintrust.scores")),
+                        Map.class);
+        assertEquals(
+                1.0,
+                ((Number) workingScoresJson.get("working_scorer")).doubleValue(),
+                "working scorer should produce 1.0 (exact match)");
     }
 }

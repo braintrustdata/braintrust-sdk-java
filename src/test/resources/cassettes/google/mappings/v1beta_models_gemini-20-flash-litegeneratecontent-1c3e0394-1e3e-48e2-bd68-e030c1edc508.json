@@ -1,0 +1,36 @@
+{
+  "id" : "1c3e0394-1e3e-48e2-bd68-e030c1edc508",
+  "name" : "v1beta_models_gemini-20-flash-litegeneratecontent",
+  "request" : {
+    "url" : "/v1beta/models/gemini-2.0-flash-lite:generateContent",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json; charset=UTF-8"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"contents\":[{\"parts\":[{\"text\":\"What is the capital of Germany?\"}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0.0,\"maxOutputTokens\":50}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1beta_models_gemini-20-flash-litegeneratecontent-1c3e0394-1e3e-48e2-bd68-e030c1edc508.json",
+    "headers" : {
+      "Content-Type" : "application/json; charset=UTF-8",
+      "Vary" : [ "Origin", "X-Origin", "Referer" ],
+      "Date" : "Wed, 18 Feb 2026 05:10:51 GMT",
+      "Server" : "scaffolding on HTTPServer2",
+      "X-XSS-Protection" : "0",
+      "X-Frame-Options" : "SAMEORIGIN",
+      "X-Content-Type-Options" : "nosniff",
+      "Server-Timing" : "gfet4t7; dur=398",
+      "Alt-Svc" : "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+    }
+  },
+  "uuid" : "1c3e0394-1e3e-48e2-bd68-e030c1edc508",
+  "persistent" : true,
+  "insertionIndex" : 1
+}
