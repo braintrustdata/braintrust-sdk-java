@@ -6,6 +6,10 @@ plugins {
 }
 
 dependencies {
+  // The main Braintrust SDK — bundled into the agent's isolated classloader so the agent
+  // can use BraintrustConfig, BraintrustSpanExporter, instrumentations, etc.
+  implementation project(':')
+
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
   implementation 'net.bytebuddy:byte-buddy:1.17.5'
 
@@ -31,6 +35,7 @@ shadowJar {
   // The internal code references them by name and finds them via parent CL delegation.
   dependencies {
     exclude(dependency('io.opentelemetry:opentelemetry-api'))
+    exclude(dependency('io.opentelemetry:opentelemetry-api-incubator'))
     exclude(dependency('io.opentelemetry:opentelemetry-context'))
     exclude(dependency('io.opentelemetry:opentelemetry-common'))
     exclude(dependency('io.opentelemetry:opentelemetry-sdk'))
@@ -38,6 +43,9 @@ shadowJar {
     exclude(dependency('io.opentelemetry:opentelemetry-sdk-trace'))
     exclude(dependency('io.opentelemetry:opentelemetry-sdk-logs'))
     exclude(dependency('io.opentelemetry:opentelemetry-sdk-metrics'))
+    exclude(dependency('io.opentelemetry:opentelemetry-sdk-extension-autoconfigure'))
+    exclude(dependency('io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi'))
+    exclude(dependency('io.opentelemetry.semconv:opentelemetry-semconv'))
   }
 
   mergeServiceFiles()
