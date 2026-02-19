@@ -17,7 +17,7 @@ repositories {
   mavenCentral()
 }
 
-// Shared config for all agent subprojects (agent-bootstrap, agent-internal)
+// Shared config for all agent subprojects (bootstrap, internal)
 subprojects {
   apply plugin: 'java'
 
@@ -59,7 +59,7 @@ configurations {
 }
 
 dependencies {
-  bootstrap project(':braintrust-java-agent:agent-bootstrap')
+  bootstrap project(':braintrust-java-agent:bootstrap')
 
   // OTel API + SDK + autoconfigure on bootstrap classpath
   bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
@@ -68,13 +68,13 @@ dependencies {
   bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
   bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
 
-  internal project(path: ':braintrust-java-agent:agent-internal', configuration: 'shadow')
+  internal project(path: ':braintrust-java-agent:internal', configuration: 'shadow')
 
   // Test dependencies
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
   testImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
-  testCompileOnly project(':braintrust-java-agent:agent-bootstrap')
+  testCompileOnly project(':braintrust-java-agent:bootstrap')
 }
 
 // Disable the default jar — we produce agentJar instead
