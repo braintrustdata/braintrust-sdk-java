@@ -1,6 +1,6 @@
 package dev.braintrust.bootstrap;
 
-import dev.braintrust.agent.BraintrustAgent;
+import dev.braintrust.main.AgentBootstrap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +24,7 @@ import java.util.jar.JarFile;
  *
  * <p>The delegation model is: parent-first (standard), falling back to reading {@code .classdata}
  * entries from the agent JAR. This means bootstrap classes (like this class itself and {@link
- * BraintrustAgent}) are loaded by the parent (system classloader), while agent internals (ByteBuddy,
+ * AgentBootstrap}) are loaded by the parent (system classloader), while agent internals (ByteBuddy,
  * OTel SDK, instrumentation code) are loaded here and invisible to the application.
  */
 public class BraintrustClassLoader extends SecureClassLoader {

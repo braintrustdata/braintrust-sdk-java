@@ -82,20 +82,6 @@ jar.enabled = false
 
 /**
  * Assembles the final agent JAR with classloader isolation.
- *
- * Layout:
- *   dev/braintrust/agent/BraintrustAgent.class                            <- bootstrap
- *   dev/braintrust/agent/BraintrustClassLoader.class                      <- bootstrap
- *   dev/braintrust/agent/BraintrustAutoConfigCustomizer.class             <- bootstrap
- *   META-INF/services/...AutoConfigurationCustomizerProvider              <- bootstrap (SPI)
- *   io/opentelemetry/api/...class                                         <- bootstrap (OTel API)
- *   io/opentelemetry/sdk/...class                                         <- bootstrap (OTel SDK)
- *   io/opentelemetry/sdk/autoconfigure/...class                           <- bootstrap (autoconfigure)
- *   inst/dev/braintrust/agent/internal/AgentInstaller.classdata           <- hidden
- *   inst/dev/braintrust/agent/internal/BraintrustSpanProcessorFactory.classdata <- hidden
- *   inst/net/bytebuddy/...classdata                                       <- hidden
- *   inst/io/opentelemetry/exporter/otlp/...classdata                      <- hidden (OTLP exporter)
- *   inst/okhttp3/...classdata                                             <- hidden
  */
 task agentJar(type: Jar) {
   dependsOn configurations.bootstrap, configurations.bootstrapLibs, configurations.internal
@@ -106,8 +92,8 @@ task agentJar(type: Jar) {
 
   manifest {
     attributes(
-      'Premain-Class': 'dev.braintrust.agent.BraintrustAgent',
-      'Agent-Class': 'dev.braintrust.agent.BraintrustAgent',
+      'Premain-Class': 'dev.braintrust.main.AgentBootstrap',
+      'Agent-Class': 'dev.braintrust.main.AgentBootstrap',
       'Can-Redefine-Classes': 'true',
       'Can-Retransform-Classes': 'true',
       'Implementation-Title': 'Braintrust Java Agent',

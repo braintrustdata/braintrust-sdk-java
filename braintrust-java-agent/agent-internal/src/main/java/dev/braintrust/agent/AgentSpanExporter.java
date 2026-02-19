@@ -1,4 +1,4 @@
-package dev.braintrust.agent.internal;
+package dev.braintrust.agent;
 
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.common.CompletableResultCode;

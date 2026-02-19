@@ -1,4 +1,4 @@
-package dev.braintrust.agent.internal;
+package dev.braintrust.agent;
 
 import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.common.AttributeKey;

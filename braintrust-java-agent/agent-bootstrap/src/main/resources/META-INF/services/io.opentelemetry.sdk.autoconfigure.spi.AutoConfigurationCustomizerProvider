@@ -1,1 +1,1 @@
-dev.braintrust.bootstrap.BraintrustAutoConfigCustomizer
+dev.braintrust.bootstrap.OtelAutoConfiguration

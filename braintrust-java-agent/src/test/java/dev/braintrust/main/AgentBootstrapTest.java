@@ -1,9 +1,10 @@
-package dev.braintrust.agent;
+package dev.braintrust.main;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
+import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.bootstrap.BraintrustClassLoader;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -12,18 +13,19 @@ import java.io.File;
 import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
 
-class BraintrustAgentTest {
+class AgentBootstrapTest {
 
     @Test
     void successfulPremain() throws Exception {
         var systemClassloader = ClassLoader.getSystemClassLoader();
-        assertTrue(BraintrustAgent.installed, "premain should install the agent");
-        assertEquals(systemClassloader, BraintrustAgent.class.getClassLoader());
-        var agentClassLoader = (ClassLoader) Class.forName(BraintrustAgent.class.getName(), true, null).getDeclaredField("agentClassLoader").get(null);
-        assertNotNull(agentClassLoader);
-        assertNotEquals(systemClassloader, agentClassLoader);
-        var byteBuddyClazz = agentClassLoader.loadClass("net.bytebuddy.ByteBuddy");
-        assertEquals(agentClassLoader, byteBuddyClazz.getClassLoader());
+        assertTrue(AgentBootstrap.installed, "premain should install the agent");
+        assertEquals(systemClassloader, AgentBootstrap.class.getClassLoader());
+        assertNotNull(BraintrustBridge.getAgentClassLoader(), "premain should set up agent classloader");
+        assertNotEquals(systemClassloader, BraintrustBridge.getAgentClassLoader());
+        assertNull(BraintrustBridge.class.getClassLoader(), "bt bootstrap must run on tb classloader");
+        assertNull(BraintrustClassLoader.class.getClassLoader(), "bt classloader must be loaded on bootstrap");
+        var byteBuddyClazz = BraintrustBridge.getAgentClassLoader().loadClass("net.bytebuddy.ByteBuddy");
+        assertEquals(BraintrustBridge.getAgentClassLoader(), byteBuddyClazz.getClassLoader());
     }
 
     @Test
@@ -32,17 +34,18 @@ class BraintrustAgentTest {
                 "dev.braintrust.bootstrap.",
                 "io.opentelemetry."
         );
-        final List<String> ALLOWED_SYSTEM_CLASSPATH_PREFIXES = List.of(
-                "dev.braintrust.agent."
+        final List<String> ALLOWED_SYSTEM_CLASSPATH_CLASSES = List.of(
+                // only these classes are allowed to appear on the system classpath. everything else must be on the bootstrap or braintrust classpaths
+                "dev.braintrust.main.AgentBootstrap"
         );
 
         ClassLoader bootstrapClassLoader = null;
         var systemClassloader = ClassLoader.getSystemClassLoader();
-        var braintrustClassloader = (BraintrustClassLoader) Class.forName(BraintrustAgent.class.getName(), true, null).getDeclaredField("agentClassLoader").get(null);
+        var braintrustClassloader = BraintrustBridge.getAgentClassLoader();
 
         // Get the agent JAR from the system-CL-loaded BraintrustAgent's code source.
         // (The bootstrap-loaded copy doesn't have a code source, so we use the system CL copy.)
-        var agentJarUrl = BraintrustAgent.class.getProtectionDomain().getCodeSource().getLocation();
+        var agentJarUrl = AgentBootstrap.class.getProtectionDomain().getCodeSource().getLocation();
         try (var agentJar = new JarFile(new File(agentJarUrl.toURI()))) {
             agentJar.stream().forEach(entry -> {
                 var resourceName = entry.getName();
@@ -50,13 +53,12 @@ class BraintrustAgentTest {
                     return;
                 }
                 if (resourceName.endsWith(".class")) {
-                    var className = resourceName.replaceFirst(".class$", "").replace('/', '.');
+                    var className = toClassName(resourceName);
                     try {
                         var clazz = systemClassloader.loadClass(className);
-                        if (className.startsWith("dev.braintrust.agent.")) {
+                        if (ALLOWED_SYSTEM_CLASSPATH_CLASSES.contains(className)) {
                             // ---- SYSTEM CLASSES ----
                             assertEquals(systemClassloader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
-                            assertTrue(startsWithAny(className, ALLOWED_SYSTEM_CLASSPATH_PREFIXES), "unexpected class on bootstrap classpath: %s".formatted(resourceName));
                         } else {
                             // ---- BOOTSTRAP CLASSES ----
                             assertEquals(bootstrapClassLoader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
@@ -70,12 +72,16 @@ class BraintrustAgentTest {
                     }
                 } else if (resourceName.endsWith(".classdata")) {
                     // ---- BRAINTRUST CLASSES ----
-                    var className = resourceName.replaceFirst(".classdata$", "").replace('/', '.');
+                    var className = toClassName(resourceName);
                     try {
                         var clazz = braintrustClassloader.loadClass(className);
                         assertEquals(braintrustClassloader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
-                    } catch (ClassNotFoundException e) {
-                        fail(e);
+                    } catch (ClassNotFoundException | NoClassDefFoundError e) {
+                        // Linkage failures can happen for transitive optional deps (e.g. gRPC).
+                        // Only fail for our own classes which must always load cleanly.
+                        if (className.startsWith("dev.braintrust.")) {
+                            fail(e);
+                        }
                     }
                 }
             });
@@ -87,8 +93,9 @@ class BraintrustAgentTest {
     void otelAutoconfigureProducesRealTracer() {
         // When the agent is attached, GlobalOpenTelemetry.get() should trigger autoconfigure
         // and return a real (non-noop) OpenTelemetry instance with the Braintrust span processor.
+
         var otel = GlobalOpenTelemetry.get();
-        assertNotNull(otel, "GlobalOpenTelemetry should not be null");
+        assertNotNull(otel, "GlobalOpenTelemetry should never be null");
 
         // The tracer provider should be an SdkTracerProvider, not a noop
         String tracerProviderClassName = otel.getTracerProvider().getClass().getName();
@@ -110,5 +117,14 @@ class BraintrustAgentTest {
             }
         }
         return false;
+    }
+
+    /**
+     * Converts a JAR entry name to a fully qualified class name.
+     */
+    private static String toClassName(String resourceName) {
+        return resourceName
+                .replaceFirst("\\.(class|classdata)$", "")
+                .replace('/', '.');
     }
 }

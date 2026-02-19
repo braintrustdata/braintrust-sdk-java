@@ -1,6 +1,5 @@
 package dev.braintrust.bootstrap;
 
-import dev.braintrust.agent.BraintrustAgent;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
@@ -8,17 +7,8 @@ import io.opentelemetry.sdk.trace.SpanProcessor;
 /**
  * OTel SDK autoconfiguration customizer that injects the Braintrust span processor into the tracer
  * provider during SDK initialization.
- *
- * <p>This class is discovered by {@link java.util.ServiceLoader} when OTel SDK autoconfiguration
- * runs (triggered by the first call to {@code GlobalOpenTelemetry.get()}). It loads the actual span
- * processor implementation from {@link BraintrustAgent#agentClassLoader} (the isolated {@link
- * BraintrustClassLoader}) to keep the heavy dependencies (OTLP exporter, OkHttp, etc.) out of the
- * bootstrap classpath.
- *
- * <p>This class lives on the bootstrap classpath so that ServiceLoader can find it regardless of
- * which classloader triggers autoconfiguration.
  */
-public class BraintrustAutoConfigCustomizer implements AutoConfigurationCustomizerProvider {
+public class OtelAutoConfiguration implements AutoConfigurationCustomizerProvider {
 
     private static final String SPAN_PROCESSOR_FACTORY =
             "dev.braintrust.agent.internal.BraintrustSpanProcessorFactory";
@@ -44,7 +34,7 @@ public class BraintrustAutoConfigCustomizer implements AutoConfigurationCustomiz
      * JAR, only accessible via BraintrustClassLoader.
      */
     private static SpanProcessor loadSpanProcessor() {
-        ClassLoader agentCL = BraintrustAgent.agentClassLoader;
+        ClassLoader agentCL = BraintrustBridge.getAgentClassLoader();
         if (agentCL == null) {
             System.err.println(
                     "[braintrust] WARNING: Agent classloader not initialized. "

@@ -1,4 +1,4 @@
-package dev.braintrust.agent.internal;
+package dev.braintrust.agent;
 
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Factory for creating the Braintrust span processor. Called reflectively from {@link
- * dev.braintrust.agent.BraintrustAutoConfigCustomizer} during OTel SDK autoconfiguration.
+ * dev.braintrust.bootstrap.BraintrustAutoConfigCustomizer} during OTel SDK autoconfiguration.
  *
  * <p>This class lives in the agent-internal module (loaded by BraintrustClassLoader) so it can
  * depend on heavy libraries (OTLP exporter, OkHttp, etc.) without polluting the bootstrap
