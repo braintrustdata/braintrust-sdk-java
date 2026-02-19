@@ -10,6 +10,10 @@ dependencies {
   // can use BraintrustConfig, BraintrustSpanExporter, instrumentations, etc.
   implementation project(':')
 
+  // Bootstrap classes (e.g. BraintrustBridge) — available at runtime on the bootstrap
+  // classpath, so we only need them at compile time for javac resolution.
+  compileOnly project(':braintrust-java-agent:bootstrap')
+
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
   implementation 'net.bytebuddy:byte-buddy:1.17.5'
 

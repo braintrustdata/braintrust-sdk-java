@@ -91,11 +91,12 @@ class AgentBootstrapTest {
 
     @Test
     void otelAutoconfigureProducesRealTracer() {
-        // When the agent is attached, GlobalOpenTelemetry.get() should trigger autoconfigure
-        // and return a real (non-noop) OpenTelemetry instance with the Braintrust span processor.
-
+        assertEquals(0, BraintrustBridge.otelInstallCount.get(), "premain should not initialize otel");
         var otel = GlobalOpenTelemetry.get();
         assertNotNull(otel, "GlobalOpenTelemetry should never be null");
+        assertEquals(1, BraintrustBridge.otelInstallCount.get(), "calling get() should initialize otel");
+        GlobalOpenTelemetry.get();
+        assertEquals(1, BraintrustBridge.otelInstallCount.get(), "calling get() multiple times should not do additional installs");
 
         // The tracer provider should be an SdkTracerProvider, not a noop
         String tracerProviderClassName = otel.getTracerProvider().getClass().getName();

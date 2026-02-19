@@ -3,6 +3,8 @@ package dev.braintrust.agent;
 import java.lang.instrument.Instrumentation;
 
 import dev.braintrust.Braintrust;
+import dev.braintrust.bootstrap.BraintrustBridge;
+import dev.braintrust.bootstrap.BraintrustClassLoader;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
@@ -10,14 +12,17 @@ import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 /**
  * The real agent installation logic
  */
-public class AgentInstaller {
+public class BraintrustAgent {
     /**
      * Called reflectively from AgentBootstrap premain
      */
     public static void install(String agentArgs, Instrumentation inst) {
+        if (!(BraintrustAgent.class.getClassLoader() instanceof BraintrustClassLoader)) {
+            throw new IllegalCallerException("Braintrust agent can only run on a braintrust classloader");
+        }
         log("AgentInstaller.install() called");
         log("AgentInstaller classloader: "
-                + AgentInstaller.class.getClassLoader().getClass().getName());
+                + BraintrustAgent.class.getClassLoader().getClass().getName());
         log("Agent args: " + agentArgs);
         log("Instrumentation: retransform=" + inst.isRetransformClassesSupported());
         Braintrust.get(); // call this now so we'll fail fast if there are any issues using the braintrust sdk
@@ -42,6 +47,10 @@ public class AgentInstaller {
             var loggerBuilder = SdkLoggerProvider.builder();
             var meterBuilder = SdkMeterProvider.builder();
             Braintrust.get().openTelemetryEnable(sdkTracerProviderBuilder, loggerBuilder, meterBuilder);
+            var installCount = BraintrustBridge.otelInstallCount.incrementAndGet();
+            if (installCount > 1) {
+                log("WARNING: unexpected otel install count: " + installCount);
+            }
             return sdkTracerProviderBuilder;
         }));
     }

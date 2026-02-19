@@ -8,7 +8,7 @@ import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvide
  * provider during SDK initialization.
  */
 public class OtelAutoConfiguration implements AutoConfigurationCustomizerProvider {
-    private static final String INSTALLER_CLASS = "dev.braintrust.agent.AgentInstaller";
+    private static final String AGENT_CLASS = "dev.braintrust.agent.BraintrustAgent";
     private static final String CONFIGURE_METHOD = "configureOpenTelemetry";
 
     @Override
@@ -20,7 +20,7 @@ public class OtelAutoConfiguration implements AutoConfigurationCustomizerProvide
         }
 
         try {
-            Class<?> installerClass = agentCL.loadClass(INSTALLER_CLASS);
+            Class<?> installerClass = agentCL.loadClass(AGENT_CLASS);
             Object installer = installerClass.getDeclaredConstructor().newInstance();
             installerClass
                     .getMethod(CONFIGURE_METHOD, AutoConfigurationCustomizer.class)

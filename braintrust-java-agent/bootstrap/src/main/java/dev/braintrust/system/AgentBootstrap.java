@@ -14,7 +14,7 @@ import java.util.jar.JarFile;
  * Minimal code which bootstraps braintrust classloading and instrumentation.
  */
 public class AgentBootstrap {
-    private static final String INSTALLER_CLASS = "dev.braintrust.agent.AgentInstaller";
+    private static final String AGENT_CLASS = "dev.braintrust.agent.BraintrustAgent";
     private static final String INSTALLER_METHOD = "install";
 
     static volatile boolean installed = false;
@@ -65,7 +65,7 @@ public class AgentBootstrap {
 
 
             // Load and invoke the real agent installer through the isolated classloader.
-            Class<?> installerClass = btClassLoader.loadClass(INSTALLER_CLASS);
+            Class<?> installerClass = btClassLoader.loadClass(AGENT_CLASS);
             installerClass.getMethod(INSTALLER_METHOD, String.class, Instrumentation.class).invoke(null, agentArgs, inst);
             log("Braintrust Java Agent installed.");
             installed = true;
