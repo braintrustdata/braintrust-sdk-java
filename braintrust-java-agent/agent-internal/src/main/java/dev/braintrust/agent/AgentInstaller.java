@@ -1,6 +1,11 @@
 package dev.braintrust.agent;
 
 import java.lang.instrument.Instrumentation;
+
+import dev.braintrust.Braintrust;
+import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -12,9 +17,6 @@ import net.bytebuddy.utility.JavaModule;
 public class AgentInstaller {
     /**
      * Called reflectively from AgentBootstrap premain
-     *
-     * @param agentArgs the agent arguments from the {@code -javaagent} flag
-     * @param inst the JVM instrumentation instance
      */
     public static void install(String agentArgs, Instrumentation inst) {
         log("AgentInstaller.install() called");
@@ -35,8 +37,20 @@ public class AgentInstaller {
          */
     }
 
+    /**
+     * Called reflectively from OtelAutConfiguration
+     */
+    public void configureOpenTelemetry(AutoConfigurationCustomizer autoConfiguration) {
+        autoConfiguration.addTracerProviderCustomizer(((sdkTracerProviderBuilder, configProperties) -> {
+            var loggerBuilder = SdkLoggerProvider.builder();
+            var meterBuilder = SdkMeterProvider.builder();
+            Braintrust.get().openTelemetryEnable(sdkTracerProviderBuilder, loggerBuilder, meterBuilder);
+            return sdkTracerProviderBuilder;
+        }));
+    }
+
     private static void log(String msg) {
-        // DONTMERGE -- replace me with slf4j
+        // TODO -- replace me with slf4j
         System.out.println("[braintrust]   " + msg);
     }
 }

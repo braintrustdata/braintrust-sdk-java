@@ -19,6 +19,7 @@ dependencies {
   compileOnly "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   compileOnly "io.opentelemetry:opentelemetry-sdk-trace:${otelVersion}"
   compileOnly "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
 
   // OTLP exporter + its transitive deps (OkHttp, etc.) — bundled as .classdata
   // These are the heavy deps that stay in BraintrustClassLoader, NOT on bootstrap.
