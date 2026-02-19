@@ -148,3 +148,16 @@ test {
     exceptionFormat "full"
   }
 }
+
+/**
+ * Runs GlobalLoggerTest as a standalone main() with the agent attached.
+ */
+task testGlobalLogger(type: JavaExec) {
+  dependsOn agentJar, testClasses
+
+  mainClass = 'dev.braintrust.system.GlobalLoggerTest'
+  classpath = sourceSets.test.runtimeClasspath
+  jvmArgs "-javaagent:${agentJar.archiveFile.get().asFile.absolutePath}"
+}
+
+test.dependsOn testGlobalLogger

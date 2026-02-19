@@ -3,6 +3,7 @@
 
 plugins {
   id 'com.gradleup.shadow' version '8.3.6'
+  id 'io.freefair.lombok' version '9.0.0-rc2'
 }
 
 dependencies {
@@ -13,6 +14,9 @@ dependencies {
   // Bootstrap classes (e.g. BraintrustBridge) — available at runtime on the bootstrap
   // classpath, so we only need them at compile time for javac resolution.
   compileOnly project(':braintrust-java-agent:bootstrap')
+
+  // SLF4J API — needed at compile time for Lombok's @Slf4j annotation
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
   implementation 'net.bytebuddy:byte-buddy:1.17.5'

@@ -7,6 +7,7 @@ import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.util.jar.JarFile;
+import java.util.logging.LogManager;
 
 /**
  * Braintrust Java Agent entry point.

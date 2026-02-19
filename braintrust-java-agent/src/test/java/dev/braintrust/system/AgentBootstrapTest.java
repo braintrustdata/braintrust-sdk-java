@@ -11,9 +11,17 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import java.io.File;
 import java.util.jar.JarFile;
+import java.util.logging.LogManager;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class AgentBootstrapTest {
+
+    @BeforeAll
+    static void beforeAll() {
+        System.setProperty("java.util.logging.manager", "dev.braintrust.system.AgentBootstrapTest$CustomLogManager");
+    }
 
     @Test
     void successfulPremain() throws Exception {
