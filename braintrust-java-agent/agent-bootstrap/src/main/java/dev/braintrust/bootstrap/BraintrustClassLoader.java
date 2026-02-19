@@ -1,4 +1,6 @@
-package dev.braintrust.agent;
+package dev.braintrust.bootstrap;
+
+import dev.braintrust.agent.BraintrustAgent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -6,6 +8,8 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.security.SecureClassLoader;
 import java.security.cert.Certificate;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -24,7 +28,6 @@ import java.util.jar.JarFile;
  * OTel SDK, instrumentation code) are loaded here and invisible to the application.
  */
 public class BraintrustClassLoader extends SecureClassLoader {
-
     private static final String ENTRY_PREFIX = "inst/";
     private static final String CLASS_DATA_SUFFIX = ".classdata";
 
@@ -83,6 +86,15 @@ public class BraintrustClassLoader extends SecureClassLoader {
             }
         }
         return null;
+    }
+
+    @Override
+    protected Enumeration<URL> findResources(String name) {
+        URL resource = findResource(name);
+        if (resource != null) {
+            return Collections.enumeration(Collections.singletonList(resource));
+        }
+        return Collections.emptyEnumeration();
     }
 
     private byte[] readEntry(JarEntry entry, String className) throws ClassNotFoundException {

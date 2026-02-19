@@ -1,28 +1,104 @@
 plugins {
-  id 'base'
+  id 'java'
 }
 
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+tasks.withType(JavaCompile).configureEach {
+  options.release = 17
+}
+
+repositories {
+  mavenCentral()
+}
+
+// Shared config for all agent subprojects (agent-bootstrap, agent-internal)
+subprojects {
+  apply plugin: 'java'
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      vendor = JvmVendorSpec.ADOPTIUM
+    }
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+  }
+
+  repositories {
+    mavenCentral()
+  }
+}
+
+// No main source code — this project only assembles the agent JAR and runs tests.
+sourceSets.main.java.srcDirs = []
+
 configurations {
+  // Bootstrap classes (BraintrustAgent, BraintrustClassLoader, BraintrustAutoConfigCustomizer)
+  // — our code + META-INF/services, bundled as normal .class files
   bootstrap
+
+  // Bootstrap libraries — unshaded, added to bootstrap classpath at runtime via
+  // Instrumentation.appendToBootstrapClassLoaderSearch(). Includes:
+  //   - OTel API (Tracer, Span, Context, etc.)
+  //   - OTel SDK (SdkTracerProvider, SpanProcessor, etc.)
+  //   - OTel SDK autoconfigure (AutoConfiguredOpenTelemetrySdk)
+  //   - OTel SDK autoconfigure SPI (AutoConfigurationCustomizerProvider)
+  bootstrapLibs
+
+  // Agent internals (ByteBuddy, OTLP exporter, OkHttp, instrumentation code)
+  // — hidden as .classdata under inst/, only loadable by BraintrustClassLoader
   internal
 }
 
 dependencies {
   bootstrap project(':braintrust-java-agent:agent-bootstrap')
+
+  // OTel API + SDK + autoconfigure on bootstrap classpath
+  bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-api-incubator:${otelVersion}-alpha"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+
   internal project(path: ':braintrust-java-agent:agent-internal', configuration: 'shadow')
+
+  // Test dependencies
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  testCompileOnly project(':braintrust-java-agent:agent-bootstrap')
 }
+
+// Disable the default jar — we produce agentJar instead
+jar.enabled = false
 
 /**
  * Assembles the final agent JAR with classloader isolation.
  *
  * Layout:
- *   dev/braintrust/agent/BraintrustAgent.class          <- bootstrap (normal .class)
- *   dev/braintrust/agent/BraintrustClassLoader.class     <- bootstrap (normal .class)
- *   inst/dev/braintrust/agent/internal/AgentInstaller.classdata  <- hidden from normal CL
- *   inst/dev/braintrust/agent/shaded/bytebuddy/...classdata      <- hidden from normal CL
+ *   dev/braintrust/agent/BraintrustAgent.class                            <- bootstrap
+ *   dev/braintrust/agent/BraintrustClassLoader.class                      <- bootstrap
+ *   dev/braintrust/agent/BraintrustAutoConfigCustomizer.class             <- bootstrap
+ *   META-INF/services/...AutoConfigurationCustomizerProvider              <- bootstrap (SPI)
+ *   io/opentelemetry/api/...class                                         <- bootstrap (OTel API)
+ *   io/opentelemetry/sdk/...class                                         <- bootstrap (OTel SDK)
+ *   io/opentelemetry/sdk/autoconfigure/...class                           <- bootstrap (autoconfigure)
+ *   inst/dev/braintrust/agent/internal/AgentInstaller.classdata           <- hidden
+ *   inst/dev/braintrust/agent/internal/BraintrustSpanProcessorFactory.classdata <- hidden
+ *   inst/net/bytebuddy/...classdata                                       <- hidden
+ *   inst/io/opentelemetry/exporter/otlp/...classdata                      <- hidden (OTLP exporter)
+ *   inst/okhttp3/...classdata                                             <- hidden
  */
 task agentJar(type: Jar) {
-  dependsOn configurations.bootstrap, configurations.internal
+  dependsOn configurations.bootstrap, configurations.bootstrapLibs, configurations.internal
 
   destinationDirectory.set(layout.buildDirectory.dir('libs'))
   archiveBaseName.set('braintrust-java-agent')
@@ -40,17 +116,49 @@ task agentJar(type: Jar) {
     )
   }
 
-  // 1) Include bootstrap classes as normal .class files
+  // 1) Include bootstrap classes as normal .class files (our code + META-INF/services)
   from(provider { configurations.bootstrap.collect { zipTree(it) } }) {
+    // Keep META-INF/services (needed for ServiceLoader) but exclude other META-INF
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/maven/**'
+  }
+
+  // 2) Include bootstrap libraries as normal .class files (OTel API + SDK + autoconfigure)
+  from(provider { configurations.bootstrapLibs.collect { zipTree(it) } }) {
     exclude 'META-INF/**'
   }
 
-  // 2) Include internal classes as .classdata files under inst/
+  // 3) Include internal classes as .classdata files under inst/
   from(provider { configurations.internal.collect { zipTree(it) } }) {
     into 'inst'
     rename '(.*)\\.class$', '$1.classdata'
-    exclude 'META-INF/**'
+    // Keep META-INF/services (needed by ServiceLoader in BraintrustClassLoader)
+    // but exclude everything else in META-INF
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+    exclude 'META-INF/DEPENDENCIES'
+    exclude 'META-INF/proguard/**'
+    exclude 'META-INF/versions/**'
   }
 }
 
 assemble.dependsOn agentJar
+
+test {
+  dependsOn agentJar
+  useJUnitPlatform()
+
+  // Launch JUnit with the Braintrust Java Agent attached
+  jvmArgs "-javaagent:${agentJar.archiveFile.get().asFile.absolutePath}"
+
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}
