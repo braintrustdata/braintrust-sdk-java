@@ -1,4 +1,4 @@
-package dev.braintrust.main;
+package dev.braintrust.system;
 
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.bootstrap.BraintrustClassLoader;

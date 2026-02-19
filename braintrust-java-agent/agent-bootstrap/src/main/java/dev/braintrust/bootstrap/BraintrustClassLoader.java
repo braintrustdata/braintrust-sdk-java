@@ -1,6 +1,6 @@
 package dev.braintrust.bootstrap;
 
-import dev.braintrust.main.AgentBootstrap;
+import dev.braintrust.system.AgentBootstrap;
 
 import java.io.IOException;
 import java.io.InputStream;

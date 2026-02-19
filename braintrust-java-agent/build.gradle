@@ -92,8 +92,8 @@ task agentJar(type: Jar) {
 
   manifest {
     attributes(
-      'Premain-Class': 'dev.braintrust.main.AgentBootstrap',
-      'Agent-Class': 'dev.braintrust.main.AgentBootstrap',
+      'Premain-Class': 'dev.braintrust.system.AgentBootstrap',
+      'Agent-Class': 'dev.braintrust.system.AgentBootstrap',
       'Can-Redefine-Classes': 'true',
       'Can-Retransform-Classes': 'true',
       'Implementation-Title': 'Braintrust Java Agent',

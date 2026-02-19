@@ -1,4 +1,4 @@
-package dev.braintrust.main;
+package dev.braintrust.system;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,8 +35,8 @@ class AgentBootstrapTest {
                 "io.opentelemetry."
         );
         final List<String> ALLOWED_SYSTEM_CLASSPATH_CLASSES = List.of(
-                // only these classes are allowed to appear on the system classpath. everything else must be on the bootstrap or braintrust classpaths
-                "dev.braintrust.main.AgentBootstrap"
+                // only these specific classes are allowed to appear on the system classpath. everything else must be on the bootstrap or braintrust classpaths
+                "dev.braintrust.system.AgentBootstrap"
         );
 
         ClassLoader bootstrapClassLoader = null;
