@@ -17,6 +17,8 @@ import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
@@ -332,12 +334,12 @@ public class Devserver {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private void handleStreamingEval(
+    private <I, O> void handleStreamingEval(
             HttpExchange exchange,
             RemoteEval eval,
             EvalRequest request,
             RequestContext context,
-            List<Scorer<Object, Object>> remoteScorers)
+            List<Scorer<I, O>> remoteScorers)
             throws Exception {
         // Set SSE headers
         exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
@@ -383,7 +385,9 @@ public class Devserver {
                 // concurrent dataset fetching and eval execution
                 extractDataset(request, apiClient)
                         .forEach(
-                                datasetCase -> {
+                                rawDataset -> {
+                                    final DatasetCase<I, O> datasetCase =
+                                            (DatasetCase<I, O>) rawDataset;
                                     var evalSpan =
                                             tracer.spanBuilder("eval")
                                                     .setNoParent()
@@ -400,7 +404,7 @@ public class Devserver {
                                                     braintrustParent.id());
                                     // Make the eval context (with span and baggage) current
                                     try (var rootScope = evalContext.makeCurrent()) {
-                                        final dev.braintrust.eval.TaskResult taskResult;
+                                        final TaskResult<I, O> taskResult;
                                         { // run task
                                             var taskSpan = tracer.spanBuilder("task").startSpan();
                                             try (var unused =
@@ -408,7 +412,41 @@ public class Devserver {
                                                             .with(taskSpan)
                                                             .makeCurrent()) {
                                                 var task = eval.getTask();
-                                                taskResult = task.apply(datasetCase);
+                                                try {
+                                                    taskResult = task.apply(datasetCase);
+                                                } catch (Exception e) {
+                                                    taskSpan.setStatus(
+                                                            StatusCode.ERROR, e.getMessage());
+                                                    taskSpan.recordException(e);
+                                                    taskSpan.end();
+                                                    evalSpan.setStatus(
+                                                            StatusCode.ERROR, e.getMessage());
+                                                    evalSpan.setAttribute(
+                                                            "braintrust.output_json",
+                                                            toJson(
+                                                                    Collections.singletonMap(
+                                                                            "output", null)));
+                                                    log.debug(
+                                                            "Task threw exception for input: "
+                                                                    + datasetCase.input(),
+                                                            e);
+                                                    // run scoreForTaskException on each scorer
+                                                    List<Scorer<I, O>> allScorersForError =
+                                                            new ArrayList<>(eval.getScorers());
+                                                    allScorersForError.addAll(remoteScorers);
+                                                    for (var scorer : allScorersForError) {
+                                                        runScoreForTaskException(
+                                                                tracer,
+                                                                evalSpan,
+                                                                braintrustParent,
+                                                                braintrustGeneration,
+                                                                scorer,
+                                                                e,
+                                                                datasetCase,
+                                                                scoresByName);
+                                                    }
+                                                    return;
+                                                }
                                                 // Send progress event for task completion
                                                 sendProgressEvent(
                                                         os,
@@ -437,37 +475,18 @@ public class Devserver {
                                         // run scorers - one score span per scorer
                                         // Combine local scorers from RemoteEval with remote scorers
                                         // from request
-                                        List<Scorer<?, ?>> allScorers =
+                                        List<Scorer<I, O>> allScorers =
                                                 new ArrayList<>(eval.getScorers());
                                         allScorers.addAll(remoteScorers);
                                         for (var scorer : allScorers) {
-                                            var scoreSpan = tracer.spanBuilder("score").startSpan();
-                                            try (var unused =
-                                                    Context.current()
-                                                            .with(scoreSpan)
-                                                            .makeCurrent()) {
-                                                List<Score> scores = scorer.score(taskResult);
-
-                                                Map<String, Double> scorerScores =
-                                                        new LinkedHashMap<>();
-                                                for (Score score : scores) {
-                                                    scoresByName
-                                                            .computeIfAbsent(
-                                                                    score.name(),
-                                                                    k -> new ArrayList<>())
-                                                            .add(score.value());
-                                                    scorerScores.put(score.name(), score.value());
-                                                }
-                                                // Set score span attributes before ending span
-                                                setScoreSpanAttributes(
-                                                        scoreSpan,
-                                                        braintrustParent,
-                                                        braintrustGeneration,
-                                                        scorer.getName(),
-                                                        scorerScores);
-                                            } finally {
-                                                scoreSpan.end();
-                                            }
+                                            runScorer(
+                                                    tracer,
+                                                    evalSpan,
+                                                    braintrustParent,
+                                                    braintrustGeneration,
+                                                    scorer,
+                                                    taskResult,
+                                                    scoresByName);
                                         }
                                     } catch (IOException e) {
                                         throw new RuntimeException(
@@ -597,6 +616,91 @@ public class Devserver {
                 .setAttribute("braintrust.span_attributes", toJson(scoreSpanAttrs))
                 .setAttribute("braintrust.output_json", scoresJson)
                 .setAttribute("braintrust.scores", scoresJson);
+    }
+
+    /**
+     * Runs a scorer against a successful task result. If the scorer throws, falls back to {@link
+     * Scorer#scoreForScorerException}.
+     */
+    private <I, O> void runScorer(
+            Tracer tracer,
+            Span evalSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            Scorer<I, O> scorer,
+            TaskResult<I, O> taskResult,
+            Map<String, List<Double>> scoresByName) {
+        var scoreSpan = tracer.spanBuilder("score").startSpan();
+        try (var unused = Context.current().with(scoreSpan).makeCurrent()) {
+            List<Score> scores;
+            try {
+                scores = scorer.score(taskResult);
+            } catch (Exception e) {
+                scoreSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                scoreSpan.recordException(e);
+                log.debug("Scorer '{}' threw exception", scorer.getName(), e);
+                // fall back to scoreForScorerException — if this throws, eval aborts
+                scores = scorer.scoreForScorerException(e, taskResult);
+            }
+            recordScores(
+                    scoreSpan,
+                    braintrustParent,
+                    braintrustGeneration,
+                    scorer,
+                    scores,
+                    scoresByName);
+        } finally {
+            scoreSpan.end();
+        }
+    }
+
+    /**
+     * Runs {@link Scorer#scoreForTaskException} when the task threw. If the fallback throws, the
+     * eval aborts.
+     */
+    private <I, O> void runScoreForTaskException(
+            Tracer tracer,
+            Span evalSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            Scorer<I, O> scorer,
+            Exception taskException,
+            DatasetCase<I, O> datasetCase,
+            Map<String, List<Double>> scoresByName) {
+        var scoreSpan = tracer.spanBuilder("score").startSpan();
+        try (var unused = Context.current().with(scoreSpan).makeCurrent()) {
+            // if this throws, it propagates and the eval aborts
+            var scores = scorer.scoreForTaskException(taskException, datasetCase);
+            recordScores(
+                    scoreSpan,
+                    braintrustParent,
+                    braintrustGeneration,
+                    scorer,
+                    scores,
+                    scoresByName);
+        } finally {
+            scoreSpan.end();
+        }
+    }
+
+    /** Records scores on the score span and accumulates them into scoresByName. */
+    private void recordScores(
+            Span scoreSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            Scorer<?, ?> scorer,
+            List<Score> scores,
+            Map<String, List<Double>> scoresByName) {
+        if (scores == null || scores.isEmpty()) {
+            return;
+        }
+        Map<String, Double> scorerScores = new LinkedHashMap<>();
+        for (Score score : scores) {
+            scoresByName.computeIfAbsent(score.name(), k -> new ArrayList<>()).add(score.value());
+            scorerScores.put(score.name(), score.value());
+        }
+        setScoreSpanAttributes(
+                scoreSpan, braintrustParent, braintrustGeneration, scorer.getName(), scorerScores);
     }
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {

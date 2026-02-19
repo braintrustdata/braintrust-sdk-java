@@ -389,6 +389,8 @@ task testJar(type: JavaExec) {
 compileJava.dependsOn validateJavaVersion
 
 // Run jar test as part of check task
+check.dependsOn javadoc
+check.dependsOn delombok
 check.dependsOn testJar
 
 // Task to install git hooks
