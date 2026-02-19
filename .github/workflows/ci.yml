@@ -25,7 +25,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run all checks and tests
-      run: ./gradlew compileTestJava check
+      run: ./gradlew compileTestJava publishToMavenLocal check
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
