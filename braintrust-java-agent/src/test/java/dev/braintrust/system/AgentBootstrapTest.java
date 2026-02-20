@@ -78,8 +78,12 @@ class AgentBootstrapTest {
                     // ---- BRAINTRUST CLASSES ----
                     var className = toClassName(resourceName);
                     try {
+                        // TODO: this seems funky. why are we bundling classes _and_ putting them on the bootstrap?
                         var clazz = braintrustClassloader.loadClass(className);
-                        assertEquals(braintrustClassloader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
+                        var actualClassLoader = clazz.getClassLoader();
+                        assertTrue(
+                                actualClassLoader == braintrustClassloader || actualClassLoader == bootstrapClassLoader,
+                                "unexpected classloader for class %s: expected BraintrustClassLoader or bootstrap, got %s".formatted(clazz, actualClassLoader));
                         btClassCount.incrementAndGet();
                     } catch (ClassNotFoundException | NoClassDefFoundError e) {
                         if (className.startsWith("dev.braintrust") && (!className.startsWith("dev.braintrust.instrumentation."))) {

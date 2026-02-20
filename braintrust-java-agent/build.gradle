@@ -157,6 +157,7 @@ task testGlobalLogger(type: JavaExec) {
 
   mainClass = 'dev.braintrust.system.GlobalLoggerTest'
   classpath = sourceSets.test.runtimeClasspath
+  // jvmArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"
   jvmArgs "-javaagent:${agentJar.archiveFile.get().asFile.absolutePath}"
 }
 

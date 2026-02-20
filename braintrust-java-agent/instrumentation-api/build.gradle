@@ -1,0 +1,7 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+dependencies {
+  // ByteBuddy types used in interface signatures (ElementMatcher, TypeDescription, etc.)
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+}
