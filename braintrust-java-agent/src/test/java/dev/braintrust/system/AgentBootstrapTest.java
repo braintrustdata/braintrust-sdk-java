@@ -10,18 +10,12 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarFile;
-import java.util.logging.LogManager;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class AgentBootstrapTest {
-
-    @BeforeAll
-    static void beforeAll() {
-        System.setProperty("java.util.logging.manager", "dev.braintrust.system.AgentBootstrapTest$CustomLogManager");
-    }
 
     @Test
     void successfulPremain() throws Exception {
@@ -51,6 +45,9 @@ class AgentBootstrapTest {
         var systemClassloader = ClassLoader.getSystemClassLoader();
         var braintrustClassloader = BraintrustBridge.getAgentClassLoader();
 
+        final var systemClassCount = new AtomicInteger(0);
+        final var bootstrapClassCount = new AtomicInteger(0);
+        final var btClassCount = new AtomicInteger(0);
         // Get the agent JAR from the system-CL-loaded BraintrustAgent's code source.
         // (The bootstrap-loaded copy doesn't have a code source, so we use the system CL copy.)
         var agentJarUrl = AgentBootstrap.class.getProtectionDomain().getCodeSource().getLocation();
@@ -67,16 +64,15 @@ class AgentBootstrapTest {
                         if (ALLOWED_SYSTEM_CLASSPATH_CLASSES.contains(className)) {
                             // ---- SYSTEM CLASSES ----
                             assertEquals(systemClassloader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
+                            systemClassCount.incrementAndGet();
                         } else {
                             // ---- BOOTSTRAP CLASSES ----
                             assertEquals(bootstrapClassLoader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
                             assertTrue(startsWithAny(className, ALLOWED_BOOTSTRAP_CLASSPATH_PREFIXES), "unexpected class on bootstrap classpath: %s".formatted(resourceName));
+                            bootstrapClassCount.incrementAndGet();
                         }
                     } catch (ClassNotFoundException e) {
-                        // NOTE: class load failures can happen in some of the transitive deps that have optional modules. We can ignore those failures
-                        if (className.startsWith("dev.braintrust.")) {
-                            fail(e);
-                        }
+                        fail(e);
                     }
                 } else if (resourceName.endsWith(".classdata")) {
                     // ---- BRAINTRUST CLASSES ----
@@ -84,17 +80,21 @@ class AgentBootstrapTest {
                     try {
                         var clazz = braintrustClassloader.loadClass(className);
                         assertEquals(braintrustClassloader, clazz.getClassLoader(), "unexpected classloader for class %s".formatted(clazz));
+                        btClassCount.incrementAndGet();
                     } catch (ClassNotFoundException | NoClassDefFoundError e) {
-                        // Linkage failures can happen for transitive optional deps (e.g. gRPC).
-                        // Only fail for our own classes which must always load cleanly.
-                        if (className.startsWith("dev.braintrust.")) {
+                        if (className.startsWith("dev.braintrust") && (!className.startsWith("dev.braintrust.instrumentation."))) {
                             fail(e);
+                        } else {
+                            // some internal dependencies have optional modules so class load errors can be ignored
+                            System.out.println("ignoring internal class load failure: " + className);
                         }
                     }
                 }
             });
-
         }
+        assertEquals(ALLOWED_SYSTEM_CLASSPATH_CLASSES.size(), systemClassCount.get());
+        assertTrue(bootstrapClassCount.get() > 0);
+        assertTrue(btClassCount.get() > 0);
     }
 
     @Test
@@ -132,8 +132,17 @@ class AgentBootstrapTest {
      * Converts a JAR entry name to a fully qualified class name.
      */
     private static String toClassName(String resourceName) {
-        return resourceName
-                .replaceFirst("\\.(class|classdata)$", "")
-                .replace('/', '.');
+        if (resourceName.endsWith(".class")) {
+            return resourceName
+                    .replaceFirst("\\.class$", "")
+                    .replace('/', '.');
+        } if (resourceName.endsWith(".classdata")) {
+            return resourceName
+                    .replaceFirst("^internal/", "")
+                    .replaceFirst("\\.classdata$", "")
+                    .replace('/', '.');
+        } else {
+            throw new RuntimeException("unexpected resource: " + resourceName);
+        }
     }
 }

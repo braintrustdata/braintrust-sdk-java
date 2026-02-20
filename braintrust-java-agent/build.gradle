@@ -54,7 +54,7 @@ configurations {
   bootstrapLibs
 
   // Agent internals (ByteBuddy, OTLP exporter, OkHttp, instrumentation code)
-  // — hidden as .classdata under inst/, only loadable by BraintrustClassLoader
+  // — hidden as .classdata under internal/, only loadable by BraintrustClassLoader
   internal
 }
 
@@ -114,9 +114,9 @@ task agentJar(type: Jar) {
     exclude 'META-INF/**'
   }
 
-  // 3) Include internal classes as .classdata files under inst/
+  // 3) Include internal classes as .classdata files under internal/
   from(provider { configurations.internal.collect { zipTree(it) } }) {
-    into 'inst'
+    into 'internal'
     rename '(.*)\\.class$', '$1.classdata'
     // Keep META-INF/services (needed by ServiceLoader in BraintrustClassLoader)
     // but exclude everything else in META-INF

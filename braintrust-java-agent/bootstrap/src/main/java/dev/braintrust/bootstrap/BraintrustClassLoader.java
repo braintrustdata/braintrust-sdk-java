@@ -17,18 +17,13 @@ import java.util.jar.JarFile;
  * A classloader that loads agent-internal classes from {@code .classdata} entries inside the agent
  * JAR.
  *
- * <p>Classes stored under the {@code inst/} prefix with a {@code .classdata} extension are
+ * <p>Classes stored under the {@code internal/} prefix with a {@code .classdata} extension are
  * invisible to the JVM's default classloading mechanism. This classloader knows how to find them,
  * providing full classloader isolation between the agent's internals and the application's
  * classpath.
- *
- * <p>The delegation model is: parent-first (standard), falling back to reading {@code .classdata}
- * entries from the agent JAR. This means bootstrap classes (like this class itself and {@link
- * AgentBootstrap}) are loaded by the parent (system classloader), while agent internals (ByteBuddy,
- * OTel SDK, instrumentation code) are loaded here and invisible to the application.
  */
 public class BraintrustClassLoader extends SecureClassLoader {
-    private static final String ENTRY_PREFIX = "inst/";
+    private static final String ENTRY_PREFIX = "internal/";
     private static final String CLASS_DATA_SUFFIX = ".classdata";
 
     private final JarFile agentJarFile;
@@ -54,8 +49,8 @@ public class BraintrustClassLoader extends SecureClassLoader {
 
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        // Convert "dev.braintrust.agent.internal.AgentInstaller"
-        //      -> "inst/dev/braintrust/agent/internal/AgentInstaller.classdata"
+        // Convert "dev.braintrust.agent.internal.BraintrustAgent"
+        //      -> "internal/dev/braintrust/agent/internal/BraintrustAgent.classdata"
         String entryName = ENTRY_PREFIX + name.replace('.', '/') + CLASS_DATA_SUFFIX;
         JarEntry entry = agentJarFile.getJarEntry(entryName);
         if (entry == null) {
