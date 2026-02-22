@@ -64,7 +64,8 @@ public class BraintrustOpenAITest {
         assertEquals("Chat Completion", span.getName());
 
         // Verify essential span attributes
-        assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
+        assertEquals(
+                "openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
         assertEquals(
                 "gpt-4o-mini",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
@@ -152,7 +153,8 @@ public class BraintrustOpenAITest {
         var span = spans.get(0);
 
         assertEquals("Chat Completion", span.getName());
-        assertEquals("openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.system")));
+        assertEquals(
+                "openai", span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
         assertNotNull(
                 span.getAttributes()
                         .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token")));
