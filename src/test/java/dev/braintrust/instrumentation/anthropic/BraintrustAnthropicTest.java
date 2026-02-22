@@ -61,6 +61,9 @@ public class BraintrustAnthropicTest {
 
         // Verify standard GenAI attributes
         assertEquals(
+                "anthropic",
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
+        assertEquals(
                 "claude-3-5-haiku-20241022",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
         assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
@@ -152,6 +155,9 @@ public class BraintrustAnthropicTest {
         var span = spans.get(0);
 
         // Verify standard GenAI attributes
+        assertEquals(
+                "anthropic",
+                span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
         assertEquals(
                 "claude-3-5-haiku-20241022",
                 span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
