@@ -19,7 +19,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ServiceAttributes;
 import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -103,8 +103,8 @@ public final class BraintrustTracing {
         // Create resource first so BraintrustSpanProcessor can access service.name
         var resourceBuilder =
                 Resource.getDefault().toBuilder()
-                        .put(ResourceAttributes.SERVICE_NAME, OTEL_SERVICE_NAME)
-                        .put(ResourceAttributes.SERVICE_VERSION, INSTRUMENTATION_VERSION);
+                        .put(ServiceAttributes.SERVICE_NAME, OTEL_SERVICE_NAME)
+                        .put(ServiceAttributes.SERVICE_VERSION, INSTRUMENTATION_VERSION);
         var resource = resourceBuilder.build();
 
         // spans
