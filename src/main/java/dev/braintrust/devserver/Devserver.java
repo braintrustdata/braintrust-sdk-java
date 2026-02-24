@@ -57,6 +57,7 @@ public class Devserver {
                     "X-Bt-Project-Id",
                     "X-Bt-Stream-Fmt",
                     "X-Bt-Use-Cache",
+                    "X-Bt-Use-Gateway",
                     "X-Stainless-Os",
                     "X-Stainless-Lang",
                     "X-Stainless-Package-Version",
