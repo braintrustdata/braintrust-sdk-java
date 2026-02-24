@@ -25,9 +25,6 @@ class TypeTransformerImpl implements TypeTransformer {
     @Override
     public void applyAdviceToMethod(
             ElementMatcher<? super MethodDescription> methodMatcher, String adviceClassName) {
-        // TODO: helper injection — when advice references helper classes that need to be injected
-        // into the app classloader, that injection should happen here (or in the transform callback).
-        // For now, advice classes must only reference types visible to the app classloader.
         builder =
                 builder.visit(
                         Advice.to(loadAdviceClass(adviceClassName), classFileLocator)
