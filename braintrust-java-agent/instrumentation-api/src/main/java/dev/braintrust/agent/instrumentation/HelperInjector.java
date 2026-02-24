@@ -1,5 +1,6 @@
 package dev.braintrust.agent.instrumentation;
 
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Injection is idempotent per (target classloader, module name) pair. The classloader keys
  * are held weakly so they can be garbage collected.
  */
+@Slf4j
 class HelperInjector {
 
     /**
@@ -53,9 +55,8 @@ class HelperInjector {
         }
         if (targetClassLoader == null) {
             // Bootstrap classloader — can't inject via reflection.
-            System.err.println(
-                    "[braintrust] WARNING: cannot inject helpers into bootstrap classloader"
-                            + " for module: " + moduleName);
+            log.warn("Cannot inject helpers into bootstrap classloader for module: {}",
+                    moduleName);
             return;
         }
 
@@ -74,13 +75,8 @@ class HelperInjector {
         new ClassInjector.UsingReflection(targetClassLoader)
                 .injectRaw(classBytes);
 
-        System.out.println(
-                "[braintrust] Injected "
-                        + classBytes.size()
-                        + " helper class(es) for module '"
-                        + moduleName
-                        + "' into "
-                        + targetClassLoader.getClass().getName());
+        log.debug("Injected {} helper class(es) for module '{}' into {}",
+                classBytes.size(), moduleName, targetClassLoader.getClass().getName());
     }
 
     private static Map<String, byte[]> readHelperBytes(
@@ -90,16 +86,12 @@ class HelperInjector {
             String resourcePath = className.replace('.', '/') + ".class";
             try (InputStream is = agentClassLoader.getResourceAsStream(resourcePath)) {
                 if (is == null) {
-                    System.err.println(
-                            "[braintrust] WARNING: helper class not found in agent classloader: "
-                                    + className);
+                    log.warn("Helper class not found in agent classloader: {}", className);
                     continue;
                 }
                 result.put(className, is.readAllBytes());
             } catch (IOException e) {
-                System.err.println(
-                        "[braintrust] WARNING: failed to read helper class "
-                                + className + ": " + e);
+                log.warn("Failed to read helper class {}", className, e);
             }
         }
         return result;

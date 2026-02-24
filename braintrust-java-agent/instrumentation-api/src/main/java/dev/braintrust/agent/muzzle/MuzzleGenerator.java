@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.jar.asm.ClassWriter;
 import net.bytebuddy.jar.asm.MethodVisitor;
@@ -31,6 +32,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  *
  * <p>Adapted from Datadog's MuzzleGenerator (originally authored by the same developer).
  */
+@Slf4j
 public class MuzzleGenerator {
 
     private static final String REFERENCE_INTERNAL = Type.getInternalName(Reference.class);
@@ -47,7 +49,7 @@ public class MuzzleGenerator {
      */
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.err.println("Usage: MuzzleGenerator <classesDir>");
+            log.error("Usage: MuzzleGenerator <classesDir>");
             System.exit(1);
         }
         File targetDir = new File(args[0]);
@@ -55,12 +57,11 @@ public class MuzzleGenerator {
 
         int count = 0;
         for (InstrumentationModule module : ServiceLoader.load(InstrumentationModule.class, cl)) {
-            System.out.println("[muzzle] Generating $Muzzle for: " + module.name()
-                    + " (" + module.getClass().getName() + ")");
+            log.info("Generating $Muzzle for: {} ({})", module.name(), module.getClass().getName());
             generate(module, targetDir, cl);
             count++;
         }
-        System.out.println("[muzzle] Generated " + count + " $Muzzle class(es).");
+        log.info("Generated {} $Muzzle class(es).", count);
     }
 
     /**

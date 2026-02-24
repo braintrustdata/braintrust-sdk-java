@@ -4,6 +4,7 @@ import dev.braintrust.agent.instrumentation.InstrumentationModule;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.matcher.ElementMatcher;
 
 /**
@@ -12,6 +13,7 @@ import net.bytebuddy.matcher.ElementMatcher;
  *
  * <p>Results are cached per classloader to avoid repeated checking.
  */
+@Slf4j
 public class MuzzleCheck implements ElementMatcher<ClassLoader> {
 
     private final String moduleName;
@@ -37,10 +39,9 @@ public class MuzzleCheck implements ElementMatcher<ClassLoader> {
             if (!matches) {
                 List<Reference.Mismatch> mismatches =
                         referenceMatcher.getMismatchedReferenceSources(cl);
-                System.out.println("[braintrust] Muzzled " + moduleName
-                        + " — classloader=" + cl);
+                log.info("Muzzled {} — classloader={}", moduleName, cl);
                 for (Reference.Mismatch mismatch : mismatches) {
-                    System.out.println("[braintrust]   mismatch: " + mismatch);
+                    log.info("  mismatch: {}", mismatch);
                 }
             }
             return matches;

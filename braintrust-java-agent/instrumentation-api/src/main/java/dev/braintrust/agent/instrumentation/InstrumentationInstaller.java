@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -21,6 +22,7 @@ import net.bytebuddy.utility.JavaModule;
  * Discovers all {@link InstrumentationModule}s via {@link ServiceLoader} and wires them into a
  * ByteBuddy {@link AgentBuilder} that gets installed on the JVM.
  */
+@Slf4j
 public class InstrumentationInstaller {
 
     /**
@@ -44,7 +46,7 @@ public class InstrumentationInstaller {
 
         for (InstrumentationModule module :
                 ServiceLoader.load(InstrumentationModule.class, agentClassloader)) {
-            System.out.println("[braintrust] Discovered instrumentation module: " + module.name());
+            log.info("Discovered instrumentation module: {}", module.name());
 
             // Load muzzle references: prefer compile-time $Muzzle class, fall back to runtime scan
             ReferenceMatcher muzzle = loadMuzzleReferences(module, agentClassloader);
@@ -83,12 +85,8 @@ public class InstrumentationInstaller {
         }
 
         agentBuilder.installOn(inst);
-        System.out.println(
-                "[braintrust] ByteBuddy instrumentation installed: "
-                        + moduleCount
-                        + " module(s), "
-                        + typeCount
-                        + " type instrumentation(s).");
+        log.info("ByteBuddy instrumentation installed: {} module(s), {} type instrumentation(s).",
+                moduleCount, typeCount);
     }
 
     /**
@@ -104,8 +102,8 @@ public class InstrumentationInstaller {
         }
 
         // Fall back to runtime scanning
-        System.out.println("[braintrust] No $Muzzle class for " + module.name()
-                + ", falling back to runtime reference scanning");
+        log.debug("No $Muzzle class for {}, falling back to runtime reference scanning",
+                module.name());
         return buildMuzzleReferencesAtRuntime(module, agentClassLoader);
     }
 
@@ -123,8 +121,7 @@ public class InstrumentationInstaller {
         } catch (ClassNotFoundException e) {
             return null; // no $Muzzle class — fall through to runtime scanning
         } catch (ReflectiveOperationException e) {
-            System.err.println("[braintrust] Failed to load $Muzzle for " + module.name()
-                    + ": " + e.getMessage());
+            log.warn("Failed to load $Muzzle for {}", module.name(), e);
             return null;
         }
     }
@@ -188,7 +185,7 @@ public class InstrumentationInstaller {
                 JavaModule module,
                 boolean loaded,
                 Throwable throwable) {
-            System.err.println("[braintrust] ERROR transforming " + typeName + ": " + throwable.getMessage());
+            log.error("Error transforming {}", typeName, throwable);
         }
 
         @Override
@@ -198,7 +195,7 @@ public class InstrumentationInstaller {
                 JavaModule module,
                 boolean loaded,
                 DynamicType dynamicType) {
-            System.out.println("[braintrust] Transformed: " + typeDescription.getName());
+            log.debug("Transformed: {}", typeDescription.getName());
         }
     }
 }

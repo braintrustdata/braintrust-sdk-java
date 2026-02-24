@@ -1,7 +1,13 @@
 // Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
 // are inherited from the parent's subprojects {} block.
 
+plugins {
+  id 'io.freefair.lombok' version '9.2.0'
+}
+
 dependencies {
+  // SLF4J API — needed at compile time for Lombok's @Slf4j annotation
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
   // ByteBuddy for matcher types in interfaces and for the AgentBuilder in InstrumentationInstaller
   implementation 'net.bytebuddy:byte-buddy:1.17.5'
 
