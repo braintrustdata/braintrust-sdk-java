@@ -19,10 +19,10 @@ public class InstrumentationInstaller {
      * agent, and installs it on the JVM instrumentation instance.
      *
      * @param inst the JVM {@link Instrumentation} instance from premain/agentmain
-     * @param classloader the classloader to use for ServiceLoader discovery and advice
+     * @param agentClassloader the classloader to use for ServiceLoader discovery and advice
      *     class resolution (typically the BraintrustClassLoader)
      */
-    public static void install(Instrumentation inst, ClassLoader classloader) {
+    public static void install(Instrumentation inst, ClassLoader agentClassloader) {
         var agentBuilder =
                 new AgentBuilder.Default()
                         // Use retransformation so we can instrument classes already loaded
@@ -34,7 +34,7 @@ public class InstrumentationInstaller {
         int typeCount = 0;
 
         for (InstrumentationModule module :
-                ServiceLoader.load(InstrumentationModule.class, classloader)) {
+                ServiceLoader.load(InstrumentationModule.class, agentClassloader)) {
             System.out.println("[braintrust] Discovered instrumentation module: " + module.name());
 
             for (TypeInstrumentation typeInst : module.typeInstrumentations()) {
@@ -44,12 +44,18 @@ public class InstrumentationInstaller {
                                 .transform(
                                         (builder,
                                                 typeDescription,
-                                                classLoader,
+                                                targetClassloader,
                                                 javaModule,
                                                 protectionDomain) -> {
+                                            HelperInjector.injectHelpers(
+                                                    targetClassloader,
+                                                    agentClassloader,
+                                                    module.name(),
+                                                    module.getHelperClassNames());
+
                                             var transformer =
                                                     new TypeTransformerImpl(
-                                                            builder, classloader);
+                                                            builder, agentClassloader);
                                             typeInst.transform(transformer);
                                             return transformer.getBuilder();
                                         });

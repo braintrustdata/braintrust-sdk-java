@@ -12,6 +12,11 @@ public class TestInstrumentationModule extends InstrumentationModule {
     }
 
     @Override
+    public List<String> getHelperClassNames() {
+        return List.of("dev.braintrust.agent.instrumentation.test.TestHelper");
+    }
+
+    @Override
     public List<TypeInstrumentation> typeInstrumentations() {
         return List.of(new TestTypeInstrumentation());
     }

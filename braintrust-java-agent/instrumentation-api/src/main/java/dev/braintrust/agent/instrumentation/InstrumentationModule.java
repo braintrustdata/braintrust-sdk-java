@@ -3,6 +3,7 @@ package dev.braintrust.agent.instrumentation;
 import net.bytebuddy.matcher.ElementMatcher;
 import net.bytebuddy.description.type.TypeDescription;
 
+import java.util.Collections;
 import java.util.List;
 
 import static net.bytebuddy.matcher.ElementMatchers.any;
@@ -44,4 +45,19 @@ public abstract class InstrumentationModule {
      * Returns the list of type instrumentations that this module provides.
      */
     public abstract List<TypeInstrumentation> typeInstrumentations();
+
+    /**
+     * Returns the fully-qualified class names of helper classes that should be injected into
+     * the application classloader when this module's instrumentations are applied.
+     *
+     * <p>Helper classes are classes from the agent that need to be visible to the application
+     * classloader because advice code (which gets inlined into app classes) references them.
+     * The agent reads the class bytes from its own classloader and defines them in the app
+     * classloader.
+     *
+     * <p>The default returns an empty list (no helpers needed).
+     */
+    public List<String> getHelperClassNames() {
+        return Collections.emptyList();
+    }
 }
