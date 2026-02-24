@@ -46,8 +46,8 @@ public class InstrumentationInstaller {
                 ServiceLoader.load(InstrumentationModule.class, agentClassloader)) {
             System.out.println("[braintrust] Discovered instrumentation module: " + module.name());
 
-            // Build muzzle references from all advice classes in this module
-            ReferenceMatcher muzzle = buildMuzzleReferences(module, agentClassloader);
+            // Load muzzle references: prefer compile-time $Muzzle class, fall back to runtime scan
+            ReferenceMatcher muzzle = loadMuzzleReferences(module, agentClassloader);
             MuzzleCheck muzzleCheck = new MuzzleCheck(module, muzzle);
 
             // Combine the module's classloader matcher with the muzzle check.
@@ -92,11 +92,49 @@ public class InstrumentationInstaller {
     }
 
     /**
-     * Builds muzzle references by scanning the bytecode of all advice classes used by this
-     * module's type instrumentations. References to helper classes (which will be injected)
+     * Loads muzzle references for a module. First tries to load the compile-time generated
+     * {@code $Muzzle} side-class. If not found, falls back to runtime ASM scanning.
+     */
+    private static ReferenceMatcher loadMuzzleReferences(
+            InstrumentationModule module, ClassLoader agentClassLoader) {
+        // Try compile-time generated $Muzzle class first
+        ReferenceMatcher compiled = loadStaticMuzzleReferences(module, agentClassLoader);
+        if (compiled != null) {
+            return compiled;
+        }
+
+        // Fall back to runtime scanning
+        System.out.println("[braintrust] No $Muzzle class for " + module.name()
+                + ", falling back to runtime reference scanning");
+        return buildMuzzleReferencesAtRuntime(module, agentClassLoader);
+    }
+
+    /**
+     * Attempts to load the compile-time generated {@code $Muzzle} class for the given module.
+     *
+     * @return the pre-computed ReferenceMatcher, or null if the $Muzzle class doesn't exist
+     */
+    static ReferenceMatcher loadStaticMuzzleReferences(
+            InstrumentationModule module, ClassLoader classLoader) {
+        String muzzleClassName = module.getClass().getName() + "$Muzzle";
+        try {
+            Class<?> muzzleClass = classLoader.loadClass(muzzleClassName);
+            return (ReferenceMatcher) muzzleClass.getMethod("create").invoke(null);
+        } catch (ClassNotFoundException e) {
+            return null; // no $Muzzle class — fall through to runtime scanning
+        } catch (ReflectiveOperationException e) {
+            System.err.println("[braintrust] Failed to load $Muzzle for " + module.name()
+                    + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Builds muzzle references at runtime by scanning the bytecode of all advice classes used by
+     * this module's type instrumentations. References to helper classes (which will be injected)
      * and to the instrumentation framework itself are excluded.
      */
-    private static ReferenceMatcher buildMuzzleReferences(
+    private static ReferenceMatcher buildMuzzleReferencesAtRuntime(
             InstrumentationModule module, ClassLoader agentClassLoader) {
         Map<String, Reference> references = new LinkedHashMap<>();
         Set<String> helperClasses = new HashSet<>(module.getHelperClassNames());
