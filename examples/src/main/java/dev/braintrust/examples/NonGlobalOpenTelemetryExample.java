@@ -1,59 +1,62 @@
 package dev.braintrust.examples;
 
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.ChatModel;
-import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.Braintrust;
-import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
-import io.opentelemetry.api.GlobalOpenTelemetry;
+import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.json.BraintrustJsonMapper;
+import dev.braintrust.trace.BraintrustContext;
+import dev.braintrust.trace.BraintrustTracing;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import java.util.HashMap;
+import java.util.Map;
 
 public class NonGlobalOpenTelemetryExample {
     public static void main(String[] args) throws Exception {
-        // make a no-op global otel. Braintrust will not use this
-        var globalOtel = GlobalOpenTelemetry.get();
-        var noopSpan =
-                globalOtel.getTracer("my-instrumentation").spanBuilder("no-op-span").startSpan();
-        try (var ignored = noopSpan.makeCurrent()) {
-            // this span will not be reported to braintrust or anywhere else. It uses the default
-            // otel global tracer, which is a no-op
-        } finally {
-            noopSpan.end();
-        }
+        BraintrustConfig config =
+                BraintrustConfig.of(
+                        "BRAINTRUST_DEFAULT_PROJECT_NAME",
+                        "ai-gateway-service",
+                        "BRAINTRUST_DEBUG",
+                        "true");
+        Braintrust braintrust = Braintrust.get(config);
+        OpenTelemetry openTelemetry = braintrust.openTelemetryCreate(false);
+        Tracer tracer = BraintrustTracing.getTracer(openTelemetry);
 
-        if (null == System.getenv("OPENAI_API_KEY")) {
-            System.err.println(
-                    "\nWARNING envar OPEN_AI_API_KEY not found. This example will likely fail.\n");
-        }
-        var braintrust = Braintrust.get();
-        var openTelemetry = braintrust.openTelemetryCreate(false);
-        OpenAIClient openAIClient =
-                BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
-        var rootSpan =
-                openTelemetry
-                        .getTracer("my-instrumentation")
-                        .spanBuilder("openai-java-instrumentation-example")
+        Context featureContext =
+                BraintrustContext.setParentInBaggage(
+                        Context.current(), "project_name", "thisisatest");
+        Span span =
+                tracer.spanBuilder("open-ai-prompt")
+                        .setParent(featureContext)
+                        .setSpanKind(SpanKind.SERVER)
                         .startSpan();
-        try (var ignored = rootSpan.makeCurrent()) {
-            var request =
-                    ChatCompletionCreateParams.builder()
-                            .model(ChatModel.GPT_4O_MINI)
-                            .addSystemMessage("You are a helpful assistant")
-                            .addUserMessage("What is the capital of France?")
-                            .temperature(0.0)
-                            .build();
-            var response = openAIClient.chat().completions().create(request);
-            System.out.println("\n~~~ CHAT COMPLETIONS RESPONSE: %s\n".formatted(response));
+
+        span.setAttribute(
+                "braintrust.span_attributes",
+                String.format("{\"type\":\"llm\",\"name\":\"%s\"}", "open-ai-prompt"));
+
+        String model = "test";
+        String executionId = "abc";
+        String envirnment = "local";
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("provider", "OpenAI");
+        metadata.put("model", model);
+        metadata.put("feature", "foo");
+        metadata.put("env", envirnment);
+        metadata.put("execution_id", executionId);
+        span.setAttribute("braintrust.metadata", BraintrustJsonMapper.toJson(metadata));
+
+        Context context = Context.current().with(span);
+        Scope scope = context.makeCurrent();
+        try (var ignored = span.makeCurrent()) {
+            Thread.sleep(5);
         } finally {
-            rootSpan.end();
+            span.end();
         }
-        var url =
-                braintrust.projectUri()
-                        + "/logs?r=%s&s=%s"
-                                .formatted(
-                                        rootSpan.getSpanContext().getTraceId(),
-                                        rootSpan.getSpanContext().getSpanId());
-        System.out.println(
-                "\n\n  Example complete! View your data in Braintrust: %s\n".formatted(url));
     }
 }
