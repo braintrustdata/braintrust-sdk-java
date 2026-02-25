@@ -10,25 +10,22 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
-import io.opentelemetry.context.Scope;
 import java.util.HashMap;
 import java.util.Map;
 
 public class NonGlobalOpenTelemetryExample {
     public static void main(String[] args) throws Exception {
+        var projectName = "andrew-misc";
         BraintrustConfig config =
                 BraintrustConfig.of(
-                        "BRAINTRUST_DEFAULT_PROJECT_NAME",
-                        "ai-gateway-service",
-                        "BRAINTRUST_DEBUG",
-                        "true");
+                        "BRAINTRUST_DEFAULT_PROJECT_NAME", projectName, "BRAINTRUST_DEBUG", "true");
         Braintrust braintrust = Braintrust.get(config);
         OpenTelemetry openTelemetry = braintrust.openTelemetryCreate(false);
         Tracer tracer = BraintrustTracing.getTracer(openTelemetry);
 
         Context featureContext =
                 BraintrustContext.setParentInBaggage(
-                        Context.current(), "project_name", "thisisatest");
+                        Context.current(), "project_name", projectName);
         Span span =
                 tracer.spanBuilder("open-ai-prompt")
                         .setParent(featureContext)
@@ -51,12 +48,17 @@ public class NonGlobalOpenTelemetryExample {
         metadata.put("execution_id", executionId);
         span.setAttribute("braintrust.metadata", BraintrustJsonMapper.toJson(metadata));
 
-        Context context = Context.current().with(span);
-        Scope scope = context.makeCurrent();
         try (var ignored = span.makeCurrent()) {
             Thread.sleep(5);
         } finally {
             span.end();
         }
+        var url =
+                braintrust.projectUri()
+                        + "/logs?r=%s&s=%s"
+                                .formatted(
+                                        span.getSpanContext().getTraceId(),
+                                        span.getSpanContext().getSpanId());
+        System.out.println("\n\n  Example complete! View your data in Braintrust: " + url);
     }
 }

@@ -186,3 +186,22 @@ task runLangchainAIServices(type: JavaExec) {
     suspend = false
   }
 }
+
+
+task runCustom(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the simple OpenTelemetry example'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.NonGlobalOpenTelemetryExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  jvmArgs = [
+    "-javaagent:/home/ark/Downloads/dd-java-agent.jar",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.writer.type=LoggingWriter",
+    "-Ddd.trace.agent.url=unix:///dev/null",
+    "-Dotel.traces.exporter=logging",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none"
+  ]
+}
