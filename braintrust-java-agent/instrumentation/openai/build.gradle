@@ -1,6 +1,14 @@
 // Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
 // are inherited from the parent's subprojects {} block.
 
+muzzle {
+  pass {
+    group = 'com.openai'
+    module = 'openai-java'
+    versions = '[2.0.0,)'
+  }
+}
+
 dependencies {
   // Instrumentation framework interfaces
   compileOnly project(':braintrust-java-agent:instrumentation-api')

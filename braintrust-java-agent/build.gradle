@@ -20,6 +20,7 @@ repositories {
 // Shared config for all agent subprojects (bootstrap, internal)
 subprojects {
   apply plugin: 'java'
+  apply plugin: 'dev.braintrust.muzzle'
 
   java {
     toolchain {
@@ -37,12 +38,13 @@ subprojects {
   }
 }
 
-// Add muzzle generation task to all instrumentation subprojects.
-// This runs after compileJava to generate $Muzzle side-classes from advice bytecode.
+// Add muzzle generation task and muzzle check plugin to all instrumentation subprojects.
 subprojects { subproject ->
   subproject.afterEvaluate {
     if (subproject.path.startsWith(':braintrust-java-agent:instrumentation:')) {
       def instrumentationApi = project(':braintrust-java-agent:instrumentation-api')
+
+      // --- $Muzzle side-class generation (compile-time) ---
 
       // Configuration for the muzzle generator classpath
       configurations.maybeCreate('muzzleGenerator')
