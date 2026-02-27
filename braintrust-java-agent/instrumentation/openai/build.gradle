@@ -14,4 +14,20 @@ dependencies {
 
   // Target library — compileOnly because it will be on the app classpath at runtime
   compileOnly 'com.openai:openai-java:2.8.1'
+
+  // Test dependencies
+  testImplementation project(':braintrust-java-agent:instrumentation-api')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testImplementation 'com.openai:openai-java:2.8.1'
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
 }

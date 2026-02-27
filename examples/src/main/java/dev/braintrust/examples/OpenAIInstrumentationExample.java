@@ -7,6 +7,7 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionStreamOptions;
 import dev.braintrust.Braintrust;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
+import dev.langchain4j.model.openai.internal.spi.OpenAiClientBuilderFactory;
 
 /** Basic OTel + OpenAI instrumentation example */
 public class OpenAIInstrumentationExample {
