@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.anthropic.otel;
 
+import com.anthropic.models.beta.messages.BetaMessage;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -51,6 +52,24 @@ public final class AnthropicTelemetryBuilder {
                         .addOperationMetrics(GenAiClientMetrics.get())
                         .buildInstrumenter(SpanKindExtractor.alwaysClient());
 
-        return new AnthropicTelemetry(messageInstrumenter, captureMessageContent);
+        Instrumenter<com.anthropic.models.beta.messages.MessageCreateParams, BetaMessage>
+                betaMessageInstrumenter =
+                        Instrumenter
+                                .<com.anthropic.models.beta.messages.MessageCreateParams,
+                                        BetaMessage>
+                                        builder(
+                                                openTelemetry,
+                                                INSTRUMENTATION_NAME,
+                                                request ->
+                                                        BetaMessageAttributesGetter.INSTANCE
+                                                                .getOperationName(request))
+                                .addAttributesExtractor(
+                                        GenAiAttributesExtractor.create(
+                                                BetaMessageAttributesGetter.INSTANCE))
+                                .addOperationMetrics(GenAiClientMetrics.get())
+                                .buildInstrumenter(SpanKindExtractor.alwaysClient());
+
+        return new AnthropicTelemetry(
+                messageInstrumenter, betaMessageInstrumenter, captureMessageContent);
     }
 }

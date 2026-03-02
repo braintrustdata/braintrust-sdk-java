@@ -1,6 +1,7 @@
 package dev.braintrust.instrumentation.anthropic.otel;
 
 import com.anthropic.client.AnthropicClient;
+import com.anthropic.models.beta.messages.BetaMessage;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import io.opentelemetry.api.OpenTelemetry;
@@ -22,18 +23,24 @@ public final class AnthropicTelemetry {
     }
 
     private final Instrumenter<MessageCreateParams, Message> messageInstrumenter;
+    private final Instrumenter<com.anthropic.models.beta.messages.MessageCreateParams, BetaMessage>
+            betaMessageInstrumenter;
     private final boolean captureMessageContent;
 
     AnthropicTelemetry(
             Instrumenter<MessageCreateParams, Message> messageInstrumenter,
+            Instrumenter<com.anthropic.models.beta.messages.MessageCreateParams, BetaMessage>
+                    betaMessageInstrumenter,
             boolean captureMessageContent) {
         this.messageInstrumenter = messageInstrumenter;
+        this.betaMessageInstrumenter = betaMessageInstrumenter;
         this.captureMessageContent = captureMessageContent;
     }
 
     /** Wraps the provided AnthropicClient, enabling telemetry for it. */
     public AnthropicClient wrap(AnthropicClient client) {
-        return new InstrumentedAnthropicClient(client, messageInstrumenter, captureMessageContent)
+        return new InstrumentedAnthropicClient(
+                        client, messageInstrumenter, betaMessageInstrumenter, captureMessageContent)
                 .createProxy();
     }
 }
