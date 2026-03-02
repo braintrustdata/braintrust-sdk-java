@@ -2,6 +2,7 @@ package dev.braintrust.instrumentation.anthropic.otel;
 
 import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 
+import com.anthropic.models.beta.messages.BetaMessage;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageParam;
 import io.opentelemetry.api.trace.Span;
@@ -29,6 +30,14 @@ final class BraintrustAnthropicSpanAttributes {
      * assistant's response from Anthropic.
      */
     public static void setOutputMessage(Span span, Message message) {
+        span.setAttribute("braintrust.output_json", toJson(message));
+    }
+
+    /**
+     * Sets the braintrust.output_json attribute with a beta output message. This captures the
+     * assistant's response from Anthropic beta APIs.
+     */
+    public static void setOutputMessage(Span span, BetaMessage message) {
         span.setAttribute("braintrust.output_json", toJson(message));
     }
 
