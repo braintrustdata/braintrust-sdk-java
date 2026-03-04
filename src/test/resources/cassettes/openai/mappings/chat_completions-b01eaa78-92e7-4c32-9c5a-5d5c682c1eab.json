@@ -1,0 +1,52 @@
+{
+  "id" : "b01eaa78-92e7-4c32-9c5a-5d5c682c1eab",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"stream_options\":{\"include_usage\":true},\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-b01eaa78-92e7-4c32-9c5a-5d5c682c1eab.txt",
+    "headers" : {
+      "Date" : "Thu, 05 Mar 2026 18:35:37 GMT",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "173",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "Server" : "cloudflare",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_3333829ec399462ea6ba4f1c36ca7b43",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "set-cookie" : "__cf_bm=rjabjiKviAO8XkGYJsd6Cz2BSkX0rSOxvNVIdvvOJYs-1772735737.4398413-1.0.1.1-VQ5vn7Io5jaETVJsOwtkS4OLQ4DBnM7yEMKensoknRsXV0Ai2pQQATk55SqhZLumhuZQ_dnio2s_Pmjqeb6H5CPOtnnRBBUaar5DSO0CIBNqwXtY4VH3Gzgz7krKVvzn; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 05 Mar 2026 19:05:37 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "CF-RAY" : "9d7b38b6fb87a3b3-SEA",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "b01eaa78-92e7-4c32-9c5a-5d5c682c1eab",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-chat-completions",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-2-chat-completions-2",
+  "insertionIndex" : 16
+}
