@@ -16,6 +16,7 @@ import com.openai.models.responses.ResponseInputItem;
 import dev.braintrust.TestHarness;
 import io.opentelemetry.api.common.AttributeKey;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -266,5 +267,135 @@ public class BraintrustOpenAITest {
                 metrics.has("completion_reasoning_tokens"),
                 "completion_reasoning_tokens should be present");
         assertTrue(metrics.get("completion_reasoning_tokens").asInt() >= 0);
+    }
+
+    @Test
+    @SneakyThrows
+    void testWrapOpenAiAsync() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addSystemMessage("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .temperature(0.0)
+                        .build();
+
+        var response = openAIClient.async().chat().completions().create(request).get();
+
+        assertNotNull(response);
+        assertNotNull(response.id());
+        assertTrue(response.choices().get(0).message().content().isPresent());
+        String content = response.choices().get(0).message().content().get();
+        assertTrue(content.toLowerCase().contains("paris"), "Response should mention Paris");
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        assertEquals("Chat Completion", span.getName());
+
+        String spanAttributesJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
+        assertNotNull(spanAttributesJson);
+        JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
+        assertEquals("llm", spanAttributes.get("type").asText());
+
+        String metadataJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson);
+        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
+        assertEquals("openai", metadata.get("provider").asText());
+
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson);
+        var outputChoices = JSON_MAPPER.readTree(outputJson);
+        assertEquals(1, outputChoices.size());
+        assertEquals("assistant", outputChoices.get(0).get("message").get("role").asText());
+
+        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson);
+        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+        assertTrue(metrics.has("prompt_tokens"));
+        assertTrue(metrics.has("completion_tokens"));
+        assertTrue(metrics.has("tokens"));
+        assertFalse(
+                metrics.has("time_to_first_token"),
+                "time_to_first_token should not be present for non-streaming");
+    }
+
+    @Test
+    @SneakyThrows
+    void testWrapOpenAiAsyncStreaming() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        openAIClient = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), openAIClient);
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addSystemMessage("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .temperature(0.0)
+                        .streamOptions(
+                                ChatCompletionStreamOptions.builder().includeUsage(true).build())
+                        .build();
+
+        var fullResponse = new StringBuilder();
+        var stream = openAIClient.async().chat().completions().createStreaming(request);
+        stream.subscribe(
+                chunk -> {
+                    if (!chunk.choices().isEmpty()) {
+                        chunk.choices().get(0).delta().content().ifPresent(fullResponse::append);
+                    }
+                });
+        stream.onCompleteFuture().get(30, TimeUnit.SECONDS);
+
+        assertFalse(fullResponse.toString().isEmpty());
+        assertTrue(fullResponse.toString().toLowerCase().contains("paris"));
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        assertEquals("Chat Completion", span.getName());
+
+        String metadataJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson);
+        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
+        assertEquals("openai", metadata.get("provider").asText());
+
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
+
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson);
+        var outputChoices = JSON_MAPPER.readTree(outputJson);
+        assertEquals(1, outputChoices.size());
+        assertEquals("assistant", outputChoices.get(0).get("message").get("role").asText());
+
+        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson);
+        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+        assertTrue(metrics.has("prompt_tokens"));
+        assertTrue(metrics.has("completion_tokens"));
+        assertTrue(metrics.has("tokens"));
+        assertTrue(
+                metrics.has("time_to_first_token"),
+                "time_to_first_token should be present for streaming");
+        assertTrue(metrics.get("time_to_first_token").asDouble() >= 0.0);
     }
 }

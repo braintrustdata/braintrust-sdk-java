@@ -33,6 +33,8 @@ public final class BraintrustAnthropic {
                     try {
                         var field = getField(client, fieldName);
                         if (field instanceof ClientOptions clientOptions) {
+                            instrumentClientOptions(
+                                    openTelemetry, clientOptions, "originalHttpClient");
                             instrumentClientOptions(openTelemetry, clientOptions, "httpClient");
                         } else if (field instanceof Lazy<?> lazyField) {
                             var resolved = lazyField.getValue();

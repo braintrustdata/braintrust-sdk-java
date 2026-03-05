@@ -5,9 +5,7 @@ import com.anthropic.core.http.HttpClient;
 import com.anthropic.core.http.HttpRequest;
 import com.anthropic.core.http.HttpRequestBody;
 import com.anthropic.core.http.HttpResponse;
-import com.anthropic.helpers.BetaMessageAccumulator;
 import com.anthropic.helpers.MessageAccumulator;
-import com.anthropic.models.beta.messages.BetaRawMessageStreamEvent;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.json.BraintrustJsonMapper;
@@ -63,9 +61,44 @@ public class TracingHttpClient implements HttpClient {
                     bufferedRequest.method().name(),
                     inputJson);
 
-            boolean isBeta = !bufferedRequest.headers().values("anthropic-beta").isEmpty();
             var response = underlying.execute(bufferedRequest, requestOptions);
-            return new TeeingStreamHttpResponse(response, span, isBeta);
+            return new TeeingStreamHttpResponse(response, span);
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            span.end();
+            throw e;
+        }
+    }
+
+    @Override
+    public @NonNull CompletableFuture<HttpResponse> executeAsync(
+            @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
+        var span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
+        try {
+            var bufferedRequest = bufferRequestBody(httpRequest);
+            String inputJson =
+                    bufferedRequest.body() != null
+                            ? readBodyAsString(bufferedRequest.body())
+                            : null;
+            InstrumentationSemConv.tagLLMSpanRequest(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                    bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
+                    bufferedRequest.pathSegments(),
+                    bufferedRequest.method().name(),
+                    inputJson);
+            return underlying
+                    .executeAsync(bufferedRequest, requestOptions)
+                    .thenApply(
+                            response -> (HttpResponse) new TeeingStreamHttpResponse(response, span))
+                    .whenComplete(
+                            (response, t) -> {
+                                if (t != null) {
+                                    // this means the future itself failed
+                                    InstrumentationSemConv.tagLLMSpanResponse(span, t);
+                                    span.end();
+                                }
+                            });
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
             span.end();
@@ -137,16 +170,14 @@ public class TracingHttpClient implements HttpClient {
     private static final class TeeingStreamHttpResponse implements HttpResponse {
         private final HttpResponse delegate;
         private final Span span;
-        private final boolean isBeta;
         private final long spanStartNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
         private final InputStream teeStream;
 
-        TeeingStreamHttpResponse(HttpResponse delegate, Span span, boolean isBeta) {
+        TeeingStreamHttpResponse(HttpResponse delegate, Span span) {
             this.delegate = delegate;
             this.span = span;
-            this.isBeta = isBeta;
             this.teeStream =
                     new TeeInputStream(
                             delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
@@ -162,7 +193,7 @@ public class TracingHttpClient implements HttpClient {
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
-                tagSpanFromBuffer(span, bytes, timeToFirstTokenNanos.get(), isBeta);
+                tagSpanFromBuffer(span, bytes, timeToFirstTokenNanos.get());
             } finally {
                 span.end();
             }
@@ -256,8 +287,7 @@ public class TracingHttpClient implements HttpClient {
     // Span tagging from buffered bytes
     // -------------------------------------------------------------------------
 
-    private static void tagSpanFromBuffer(
-            Span span, byte[] bytes, Long timeToFirstTokenNanos, boolean isBeta) {
+    private static void tagSpanFromBuffer(Span span, byte[] bytes, Long timeToFirstTokenNanos) {
         if (bytes.length == 0) return;
         try {
             String firstLine = firstNonEmptyLine(bytes);
@@ -267,7 +297,7 @@ public class TracingHttpClient implements HttpClient {
                     firstLine != null
                             && (firstLine.startsWith("data:") || firstLine.startsWith("event:"));
             if (isSse) {
-                tagSpanFromSseBytes(span, bytes, timeToFirstTokenNanos, isBeta);
+                tagSpanFromSseBytes(span, bytes, timeToFirstTokenNanos);
             } else {
                 // Non-streaming: plain Message JSON — pass it whole, no time_to_first_token
                 InstrumentationSemConv.tagLLMSpanResponse(
@@ -308,44 +338,26 @@ public class TracingHttpClient implements HttpClient {
      * assembled {@link com.anthropic.models.messages.Message} for the span.
      */
     private static void tagSpanFromSseBytes(
-            Span span, byte[] sseBytes, Long timeToFirstTokenNanos, boolean isBeta) {
+            Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
         try {
             var mapper = BraintrustJsonMapper.get();
             var reader =
                     new BufferedReader(
                             new InputStreamReader(
                                     new ByteArrayInputStream(sseBytes), StandardCharsets.UTF_8));
-            String assembledMessageJson;
-            if (isBeta) {
-                var accumulator = BetaMessageAccumulator.create();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.startsWith("data:")) continue;
-                    String data = line.substring("data:".length()).strip();
-                    if (data.isEmpty()) continue;
-                    try {
-                        accumulator.accumulate(
-                                mapper.readValue(data, BetaRawMessageStreamEvent.class));
-                    } catch (Exception ignored) {
-                        // skip unrecognized event types (e.g. ping)
-                    }
+            var accumulator = MessageAccumulator.create();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith("data:")) continue;
+                String data = line.substring("data:".length()).strip();
+                if (data.isEmpty()) continue;
+                try {
+                    accumulator.accumulate(mapper.readValue(data, RawMessageStreamEvent.class));
+                } catch (Exception ignored) {
+                    // skip unrecognized event types (e.g. ping)
                 }
-                assembledMessageJson = BraintrustJsonMapper.toJson(accumulator.message());
-            } else {
-                var accumulator = MessageAccumulator.create();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.startsWith("data:")) continue;
-                    String data = line.substring("data:".length()).strip();
-                    if (data.isEmpty()) continue;
-                    try {
-                        accumulator.accumulate(mapper.readValue(data, RawMessageStreamEvent.class));
-                    } catch (Exception ignored) {
-                        // skip unrecognized event types (e.g. ping)
-                    }
-                }
-                assembledMessageJson = BraintrustJsonMapper.toJson(accumulator.message());
             }
+            String assembledMessageJson = BraintrustJsonMapper.toJson(accumulator.message());
             InstrumentationSemConv.tagLLMSpanResponse(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
@@ -354,11 +366,5 @@ public class TracingHttpClient implements HttpClient {
         } catch (Exception e) {
             log.error("Could not parse Anthropic SSE buffer to tag streaming span output", e);
         }
-    }
-
-    @Override
-    public @NonNull CompletableFuture<HttpResponse> executeAsync(
-            @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
-        return underlying.executeAsync(httpRequest, requestOptions);
     }
 }

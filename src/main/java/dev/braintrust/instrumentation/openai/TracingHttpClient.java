@@ -74,6 +74,42 @@ public class TracingHttpClient implements HttpClient {
         }
     }
 
+    @Override
+    public @NonNull CompletableFuture<HttpResponse> executeAsync(
+            @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
+        var span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
+        try {
+            var bufferedRequest = bufferRequestBody(httpRequest);
+            String inputJson =
+                    bufferedRequest.body() != null
+                            ? readBodyAsString(bufferedRequest.body())
+                            : null;
+            InstrumentationSemConv.tagLLMSpanRequest(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                    bufferedRequest.baseUrl(),
+                    bufferedRequest.pathSegments(),
+                    bufferedRequest.method().name(),
+                    inputJson);
+            return underlying
+                    .executeAsync(bufferedRequest, requestOptions)
+                    .thenApply(
+                            response -> (HttpResponse) new TeeingStreamHttpResponse(response, span))
+                    .whenComplete(
+                            (response, t) -> {
+                                if (t != null) {
+                                    // this means the future itself failed
+                                    InstrumentationSemConv.tagLLMSpanResponse(span, t);
+                                    span.end();
+                                }
+                            });
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            span.end();
+            throw e;
+        }
+    }
+
     /**
      * Captures the request body into an in-memory byte array and returns a new {@link HttpRequest}
      * backed by those bytes. The original body stream is consumed exactly once here; the returned
@@ -331,11 +367,5 @@ public class TracingHttpClient implements HttpClient {
                 onClose.run();
             }
         }
-    }
-
-    @Override
-    public @NonNull CompletableFuture<HttpResponse> executeAsync(
-            @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
-        return underlying.executeAsync(httpRequest, requestOptions);
     }
 }

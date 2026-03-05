@@ -57,6 +57,8 @@ public class BraintrustOpenAI {
                     try {
                         var field = getField(openAIClient, fieldName);
                         if (field instanceof ClientOptions clientOptions) {
+                            instrumentClientOptions(
+                                    openTelemetry, clientOptions, "originalHttpClient");
                             instrumentClientOptions(openTelemetry, clientOptions, "httpClient");
                         } else {
                             if (field instanceof Lazy<?> lazyField) {
