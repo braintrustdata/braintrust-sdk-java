@@ -6,14 +6,17 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.beta.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.TestHarness;
-import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.common.AttributeKey;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustAnthropicBetaTest {
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
     private TestHarness testHarness;
 
     @BeforeEach
@@ -53,38 +56,55 @@ public class BraintrustAnthropicBetaTest {
         assertEquals(1, spans.size());
         var span = spans.get(0);
 
-        assertEquals(
-                "anthropic",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
-        assertEquals(
-                "claude-3-haiku-20240307",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertNotNull(
-                span.getAttributes()
-                        .get(AttributeKey.stringArrayKey("gen_ai.response.finish_reasons")));
-        assertEquals(
-                "anthropic.messages.create",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
-        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
+        assertEquals("anthropic.messages.create", span.getName());
 
-        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
+        // Verify span_attributes
+        String spanAttributesJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
+        assertNotNull(spanAttributesJson);
+        JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
+        assertEquals("llm", spanAttributes.get("type").asText());
 
+        // Verify metadata
+        String metadataJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson);
+        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
+        assertEquals("anthropic", metadata.get("provider").asText());
+        assertTrue(
+                metadata.get("model").asText().startsWith("claude-3-haiku"),
+                "model should start with claude-3-haiku");
+
+        // Verify input
+        String inputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
+        assertNotNull(inputJson);
+        JsonNode input = JSON_MAPPER.readTree(inputJson);
+        assertTrue(input.isArray());
+        assertTrue(input.size() > 0);
+
+        // Verify output — full BetaMessage object
         String outputJson =
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
         assertNotNull(outputJson);
-        var outputMessage = BraintrustJsonMapper.get().readTree(outputJson);
+        JsonNode outputMessage = JSON_MAPPER.readTree(outputJson);
         assertNotNull(outputMessage.get("id"));
         assertEquals("message", outputMessage.get("type").asText());
         assertEquals("assistant", outputMessage.get("role").asText());
+        assertNotNull(outputMessage.get("content").get(0).get("text"));
+        assertTrue(outputMessage.get("usage").get("output_tokens").asInt() > 0);
+        assertTrue(outputMessage.get("usage").get("input_tokens").asInt() > 0);
 
-        Double timeToFirstToken =
-                span.getAttributes()
-                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
-        assertNotNull(timeToFirstToken, "time_to_first_token should be present");
-        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
+        // Verify metrics — tokens; non-streaming should NOT have time_to_first_token
+        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson);
+        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+        assertTrue(metrics.has("prompt_tokens"), "prompt_tokens should be present");
+        assertTrue(metrics.has("completion_tokens"), "completion_tokens should be present");
+        assertTrue(metrics.has("tokens"), "tokens should be present");
+        assertFalse(
+                metrics.has("time_to_first_token"),
+                "time_to_first_token should not be present for non-streaming");
     }
 
     @Test
@@ -127,33 +147,37 @@ public class BraintrustAnthropicBetaTest {
         assertEquals(1, spans.size());
         var span = spans.get(0);
 
-        assertEquals(
-                "anthropic",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.provider.name")));
-        assertEquals(
-                "claude-3-haiku-20240307",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.request.model")));
-        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.model")));
-        assertEquals(
-                "anthropic.messages.create",
-                span.getAttributes().get(AttributeKey.stringKey("gen_ai.operation.name")));
-        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.id")));
-        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.input_tokens")));
-        assertNotNull(span.getAttributes().get(AttributeKey.longKey("gen_ai.usage.output_tokens")));
+        assertEquals("anthropic.messages.create", span.getName());
 
+        // Verify metadata
+        String metadataJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
+        assertNotNull(metadataJson);
+        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
+        assertEquals("anthropic", metadata.get("provider").asText());
+
+        // Verify input
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json")));
+
+        // Verify output — full BetaMessage object assembled from SSE stream
         String outputJson =
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
         assertNotNull(outputJson);
-        var outputMessages = BraintrustJsonMapper.get().readTree(outputJson);
-        assertTrue(outputMessages.size() > 0);
-        var messageZero = outputMessages.get(0);
-        assertEquals("assistant", messageZero.get("role").asText());
-        assertFalse(messageZero.get("content").asText().isEmpty());
+        JsonNode outputMessage = JSON_MAPPER.readTree(outputJson);
+        assertEquals("assistant", outputMessage.get("role").asText());
+        assertFalse(
+                outputMessage.get("content").get(0).get("text").asText().isEmpty(),
+                "content should not be empty");
 
-        Double timeToFirstToken =
-                span.getAttributes()
-                        .get(AttributeKey.doubleKey("braintrust.metrics.time_to_first_token"));
-        assertNotNull(timeToFirstToken, "time_to_first_token should be present for streaming");
-        assertTrue(timeToFirstToken >= 0.0, "time_to_first_token should be non-negative");
+        // Verify metrics — tokens and time_to_first_token
+        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson);
+        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+        assertTrue(metrics.has("prompt_tokens"), "prompt_tokens should be present");
+        assertTrue(metrics.has("completion_tokens"), "completion_tokens should be present");
+        assertTrue(metrics.has("time_to_first_token"), "time_to_first_token should be present");
+        assertTrue(
+                metrics.get("time_to_first_token").asDouble() >= 0.0,
+                "time_to_first_token should be non-negative");
     }
 }
