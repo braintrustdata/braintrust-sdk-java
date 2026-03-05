@@ -21,8 +21,6 @@ public class GeminiInstrumentationExample {
 
         Braintrust braintrust = Braintrust.get();
         OpenTelemetry openTelemetry = braintrust.openTelemetryCreate();
-        // CLAUDE: don't change the type of geminiClient -- sdk users must use the google genai
-        // client in their signature, not our instrumented client.
         Client geminiClient = BraintrustGenAI.wrap(openTelemetry, new Client.Builder());
 
         var tracer = openTelemetry.getTracer("my-instrumentation");

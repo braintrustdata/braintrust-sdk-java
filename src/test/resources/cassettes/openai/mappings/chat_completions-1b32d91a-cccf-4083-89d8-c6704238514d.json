@@ -1,0 +1,49 @@
+{
+  "id" : "1b32d91a-cccf-4083-89d8-c6704238514d",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-1b32d91a-cccf-4083-89d8-c6704238514d.json",
+    "headers" : {
+      "Date" : "Wed, 04 Mar 2026 20:20:49 GMT",
+      "Content-Type" : "application/json",
+      "access-control-expose-headers" : "X-Request-ID",
+      "openai-organization" : "braintrust-data",
+      "openai-processing-ms" : "293",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "openai-version" : "2020-10-01",
+      "Server" : "cloudflare",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-request-id" : "req_9f8867880f204fc08c77f453f0798d15",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "set-cookie" : "__cf_bm=hN_uAYbU62MWX5bc5pBLFitfSkDqPmRLwo3iuWCVfFQ-1772655648.4182355-1.0.1.1-458X17Eq5x3o4W3OGYvFhk8VBfWitLa6zaJIgQwQXl11qhfjcgrqQ6.MrycfAmoH1QKCxVxqm4v.S9jQUsVBPMWjazGZJmUe8FLUz0mxJ4tFZzZAXFSng74Abm_exDEo; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 04 Mar 2026 20:50:49 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "X-Content-Type-Options" : "nosniff",
+      "CF-RAY" : "9d73956a9a695585-SJC",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "1b32d91a-cccf-4083-89d8-c6704238514d",
+  "persistent" : true,
+  "insertionIndex" : 9
+}

@@ -1,0 +1,53 @@
+{
+  "id" : "7b8cac9c-793a-4dc7-8d7d-71d773210345",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-3-haiku-20240307\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-7b8cac9c-793a-4dc7-8d7d-71d773210345.json",
+    "headers" : {
+      "Date" : "Thu, 05 Mar 2026 18:37:48 GMT",
+      "Content-Type" : "application/json",
+      "anthropic-ratelimit-requests-limit" : "10000",
+      "anthropic-ratelimit-requests-remaining" : "9999",
+      "anthropic-ratelimit-requests-reset" : "2026-03-05T18:37:48Z",
+      "anthropic-ratelimit-input-tokens-limit" : "8000000",
+      "anthropic-ratelimit-input-tokens-remaining" : "8000000",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-03-05T18:37:48Z",
+      "anthropic-ratelimit-output-tokens-limit" : "1500000",
+      "anthropic-ratelimit-output-tokens-remaining" : "1500000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-03-05T18:37:48Z",
+      "anthropic-ratelimit-tokens-limit" : "9500000",
+      "anthropic-ratelimit-tokens-remaining" : "9500000",
+      "anthropic-ratelimit-tokens-reset" : "2026-03-05T18:37:48Z",
+      "request-id" : "req_011CYkRFk9FFhofJ15AFaFhn",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "x-envoy-upstream-service-time" : "302",
+      "vary" : "Accept-Encoding",
+      "X-Robots-Tag" : "none",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "cf-cache-status" : "DYNAMIC",
+      "CF-RAY" : "9d7b3bea1dc7af88-SEA"
+    }
+  },
+  "uuid" : "7b8cac9c-793a-4dc7-8d7d-71d773210345",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-v1-messages",
+  "requiredScenarioState" : "scenario-1-v1-messages-2",
+  "insertionIndex" : 17
+}

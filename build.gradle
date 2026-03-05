@@ -78,7 +78,6 @@ dependencies {
   // OAI instrumentation
   compileOnly 'com.openai:openai-java:2.8.1'
   testImplementation 'com.openai:openai-java:2.8.1'
-  implementation "io.opentelemetry.instrumentation:opentelemetry-openai-java-1.1:2.25.0-alpha"
 
   // Anthropic Instrumentation
   compileOnly "com.anthropic:anthropic-java:2.8.1"

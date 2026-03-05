@@ -97,11 +97,9 @@ public class BraintrustLangchainTest {
         assertTrue(metrics.get("prompt_tokens").asLong() > 0, "Prompt tokens should be > 0");
         assertTrue(
                 metrics.get("completion_tokens").asLong() > 0, "Completion tokens should be > 0");
-        assertTrue(
-                metrics.has("time_to_first_token"), "Metrics should contain time_to_first_token");
-        assertTrue(
-                metrics.get("time_to_first_token").isNumber(),
-                "time_to_first_token should be a number");
+        assertFalse(
+                metrics.has("time_to_first_token"),
+                "time_to_first_token should not be present for non-streaming");
 
         // Verify input
         String inputJson = attributes.get(AttributeKey.stringKey("braintrust.input_json"));
