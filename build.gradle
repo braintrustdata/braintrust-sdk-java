@@ -69,6 +69,8 @@ dependencies {
 
   implementation "com.github.spullara.mustache.java:compiler:0.9.14"
 
+  testImplementation(testFixtures(project(":test-harness")))
+
   testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"

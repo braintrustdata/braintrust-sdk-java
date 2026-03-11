@@ -1,0 +1,41 @@
+plugins {
+  id 'java-library'
+  id 'java-test-fixtures'
+  id 'io.freefair.lombok' version '9.2.0'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+ext {
+  otelVersion = rootProject.ext.otelVersion
+  jacksonVersion = rootProject.ext.jacksonVersion
+  junitVersion = rootProject.ext.junitVersion
+  slf4jVersion = rootProject.ext.slf4jVersion
+}
+
+dependencies {
+  // testFixtures dependencies — everything lives in testFixtures source set
+  testFixturesImplementation project(":")  // SDK main source (for TestHarness -> Braintrust, BraintrustConfig)
+
+  testFixturesImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  testFixturesImplementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  testFixturesImplementation "io.opentelemetry:opentelemetry-sdk-trace:${otelVersion}"
+  testFixturesImplementation "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
+  testFixturesImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+
+  testFixturesImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+  testFixturesImplementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+
+  testFixturesImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testFixturesImplementation 'com.google.code.findbugs:jsr305:3.0.2'
+  testFixturesImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
+}

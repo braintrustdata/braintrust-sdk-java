@@ -33,8 +33,9 @@ public class VCR {
         OFF
     }
 
-    private static final String CASSETTES_ROOT = "src/test/resources/cassettes/";
+    private static final String DEFAULT_CASSETTES_ROOT = "test-harness/src/testFixtures/resources/cassettes/";
 
+    private final String cassettesRoot;
     private final Map<String, WireMockServer> proxyMap;
     @Getter private final VcrMode mode;
     private final Map<String, String> targetUrlToMappingsDir;
@@ -46,16 +47,26 @@ public class VCR {
     }
 
     public VCR(Map<String, String> targetUrlToCassettesDir, List<String> textToNeverRecord) {
+        this(DEFAULT_CASSETTES_ROOT, targetUrlToCassettesDir, textToNeverRecord);
+    }
+
+    public VCR(
+            String cassettesRoot,
+            Map<String, String> targetUrlToCassettesDir,
+            List<String> textToNeverRecord) {
         this(
+                cassettesRoot,
                 VcrMode.valueOf(System.getenv().getOrDefault("VCR_MODE", "replay").toUpperCase()),
                 targetUrlToCassettesDir,
                 textToNeverRecord);
     }
 
     private VCR(
+            String cassettesRoot,
             VcrMode mode,
             Map<String, String> targetUrlToCassettesDir,
             List<String> textToNeverRecord) {
+        this.cassettesRoot = cassettesRoot;
         this.mode = mode;
         this.targetUrlToMappingsDir = Map.copyOf(targetUrlToCassettesDir);
         // Filter out null/empty strings
@@ -67,7 +78,7 @@ public class VCR {
         for (Map.Entry<String, String> entry : targetUrlToCassettesDir.entrySet()) {
             String targetUrl = entry.getKey();
             String mappingsDir = entry.getValue();
-            String cassettesDir = CASSETTES_ROOT + mappingsDir;
+            String cassettesDir = cassettesRoot + mappingsDir;
 
             createDirectoryStructure(cassettesDir);
 
@@ -190,7 +201,7 @@ public class VCR {
             WireMockServer wireMock = proxyMap.get(targetUrl);
 
             try {
-                Path mappingsDirPath = Paths.get(CASSETTES_ROOT, mappingsDir, "mappings");
+                Path mappingsDirPath = Paths.get(cassettesRoot, mappingsDir, "mappings");
                 if (!Files.exists(mappingsDirPath)) {
                     continue;
                 }
@@ -287,7 +298,7 @@ public class VCR {
             body = mapping.at("/response/body").asText();
         } else if (mapping.at("/response/bodyFileName").isTextual()) {
             String bodyFileName = mapping.at("/response/bodyFileName").asText();
-            Path bodyPath = Paths.get(CASSETTES_ROOT, mappingsDir, "__files", bodyFileName);
+            Path bodyPath = Paths.get(cassettesRoot, mappingsDir, "__files", bodyFileName);
             body = Files.readString(bodyPath);
         } else {
             return;
@@ -380,7 +391,7 @@ public class VCR {
             return;
         }
 
-        Path cassettesPath = Paths.get(CASSETTES_ROOT, mappingsDir);
+        Path cassettesPath = Paths.get(cassettesRoot, mappingsDir);
         if (!Files.exists(cassettesPath)) {
             return;
         }
