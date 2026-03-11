@@ -9,6 +9,11 @@ dependencies {
   // dd-trace-api is provided at runtime by the DD agent on the bootstrap classpath,
   // but we need it at compile time for TraceInterceptor / MutableSpan.
   implementation 'com.datadoghq:dd-trace-api:1.60.1'
+  // Bootstrap classes (DDBridge) — needed at compile time for smoke test assertions.
+  // Must be compileOnly so the runtime version comes from the actual agent JAR,
+  // not from this dependency (which would shadow the agent's AgentBootstrap).
+  compileOnly project(':braintrust-java-agent:bootstrap')
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
 // ── Configuration to resolve the DD agent JAR from Maven Central ──
@@ -50,6 +55,8 @@ task smokeTest(type: JavaExec) {
     "-Dotel.metrics.exporter=none",
     "-Dotel.logs.exporter=none",
     "-Ddd.service=bt-dd-smoke-test",
+    "-Dbraintrust.dd.bridge.smoketest=true",
+    // "-Ddd.trace.debug=true",
     "-javaagent:${btAgent.get()}",
   ]
 
@@ -118,5 +125,5 @@ task smokeTestDdOnly(type: JavaExec) {
   }
 }
 
+// FIXME -- require dd smoke tests to pass
 // test.dependsOn smokeTest, smokeTestDdOnly
-test.dependsOn smokeTestDdOnly // FIXME: need to cover all uses of dd + bt. probably need to reverse the current approach

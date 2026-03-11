@@ -98,10 +98,6 @@ dependencies {
 
   // OTel API + SDK + autoconfigure on bootstrap classpath
   bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
-  bootstrapLibs "io.opentelemetry:opentelemetry-api-incubator:${otelVersion}-alpha"
-  bootstrapLibs "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
-  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
-  bootstrapLibs "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
 
   internal project(path: ':braintrust-java-agent:internal', configuration: 'shadow')
 

@@ -28,6 +28,10 @@ dependencies {
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
   implementation 'net.bytebuddy:byte-buddy:1.17.5'
 
+  // DD trace API — provided at runtime by the DD agent on the bootstrap classpath.
+  // Needed at compile time for MutableSpan, DDTraceId, etc. in the DD bridge.
+  compileOnly 'com.datadoghq:dd-trace-api:1.60.1'
+
   // OTel API + autoconfigure SPI — on the bootstrap classpath at runtime,
   // so we compile against them but do NOT bundle them.
   compileOnly "io.opentelemetry:opentelemetry-api:${otelVersion}"
@@ -35,8 +39,10 @@ dependencies {
 
   // OTel SDK + autoconfigure engine — bundled into BraintrustClassLoader.
   // These are no longer on the bootstrap classpath.
+  implementation "io.opentelemetry:opentelemetry-api-incubator:${otelVersion}-alpha"
   implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
 
   // OTLP exporter + its transitive deps (OkHttp, etc.) — bundled as .classdata
   // These are the heavy deps that stay in BraintrustClassLoader, NOT on bootstrap.
@@ -79,10 +85,10 @@ shadowJar {
     // These are on the bootstrap classpath (via bootstrapLibs transitive deps).
     // Exclude them from the shadow JAR to avoid duplication.
     exclude(dependency('io.opentelemetry:opentelemetry-api'))
-    exclude(dependency('io.opentelemetry:opentelemetry-api-incubator'))
-    exclude(dependency('io.opentelemetry:opentelemetry-context'))
-    exclude(dependency('io.opentelemetry:opentelemetry-common'))
-    exclude(dependency('io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi'))
+    // exclude(dependency('io.opentelemetry:opentelemetry-api-incubator'))
+    // exclude(dependency('io.opentelemetry:opentelemetry-context'))
+    // exclude(dependency('io.opentelemetry:opentelemetry-common'))
+    // exclude(dependency('io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi'))
   }
 
   mergeServiceFiles()

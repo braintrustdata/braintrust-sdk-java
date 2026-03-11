@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
  * assignment to projects or experiments.
  */
 @Slf4j
-class BraintrustSpanProcessor implements SpanProcessor {
+public class BraintrustSpanProcessor implements SpanProcessor {
     // Braintrust-specific attributes
     public static final AttributeKey<String> PARENT =
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
@@ -28,6 +28,7 @@ class BraintrustSpanProcessor implements SpanProcessor {
     private final SpanProcessor delegate;
     private final ConcurrentMap<String, ParentContext> parentContexts = new ConcurrentHashMap<>();
 
+    // FIXME: should this be public?
     public BraintrustSpanProcessor(BraintrustConfig config, SpanProcessor delegate) {
         this.config = config;
         this.delegate = delegate;

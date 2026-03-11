@@ -9,4 +9,6 @@ dependencies {
   compileOnly "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
   compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+  // DD trace API — provided at runtime by the DD agent on the bootstrap classpath.
+  compileOnly 'com.datadoghq:dd-trace-api:1.60.1'
 }
