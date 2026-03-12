@@ -5,7 +5,6 @@ plugins {
 dependencies {
   implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
-  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
   // dd-trace-api is provided at runtime by the DD agent on the bootstrap classpath,
   // but we need it at compile time for TraceInterceptor / MutableSpan.
   implementation 'com.datadoghq:dd-trace-api:1.60.1'
@@ -51,6 +50,7 @@ task smokeTest(type: JavaExec) {
     "-Ddd.trace.enabled=true",
     "-Ddd.trace.writer.type=LoggingWriter",
     "-Ddd.trace.agent.url=unix:///dev/null",
+    "-Dotel.java.global-autoconfigure.enabled=true",
     "-Dotel.traces.exporter=none",
     "-Dotel.metrics.exporter=none",
     "-Dotel.logs.exporter=none",

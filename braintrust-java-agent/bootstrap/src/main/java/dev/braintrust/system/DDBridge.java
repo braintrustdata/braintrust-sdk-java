@@ -16,13 +16,6 @@ import java.util.function.Consumer;
 
 /**
  * Bridge between Datadog's tracing system and Braintrust.
- *
- * <p>Registers a {@link TraceInterceptor} with DD's {@link GlobalTracer} so that
- * every completed DD trace is forwarded to a Braintrust callback. The callback
- * (set later by the agent internal code via {@link #setTraceConsumer}) converts
- * DD spans into OTel SpanData and feeds them through BT's span processor chain.
- *
- * <p>Assumes DD agent is already running (its premain ran before ours).
  */
 public class DDBridge {
 
@@ -44,18 +37,25 @@ public class DDBridge {
      * Registers a DD TraceInterceptor that forwards completed traces to
      * the Braintrust trace consumer. Call this during BT agent premain,
      * after DD agent has initialized.
+     *
+     * returns true if successful
      */
-    public static void registerDDTraceInterceptor() {
-        boolean registered = GlobalTracer.get().addTraceInterceptor(new TraceInterceptor() {
+    public static boolean registerDDTraceInterceptor() {
+        return GlobalTracer.get().addTraceInterceptor(new TraceInterceptor() {
             @Override
             public Collection<? extends MutableSpan> onTraceComplete(
                     Collection<? extends MutableSpan> trace) {
                 List<MutableSpan> snapshot = List.copyOf(trace);
-                Consumer<List<MutableSpan>> consumer = traceConsumer;
-                if (consumer != null) {
-                    consumer.accept(snapshot);
+                if (traceConsumer == null) {
+                    synchronized (DDBridge.class) {
+                        if (traceConsumer == null) { // in case another thread set the consumer
+                            bufferedTraces.add(snapshot);
+                        } else {
+                            traceConsumer.accept(snapshot);
+                        }
+                    }
                 } else {
-                    bufferedTraces.add(snapshot);
+                    traceConsumer.accept(snapshot);
                 }
                 return trace;
             }
@@ -67,12 +67,6 @@ public class DDBridge {
                 return 999;
             }
         });
-
-        if (registered) {
-            System.out.println("[braintrust] Registered DD trace interceptor.");
-        } else {
-            System.out.println("[braintrust] WARNING: Failed to register DD trace interceptor.");
-        }
     }
 
     /**
@@ -82,7 +76,10 @@ public class DDBridge {
      * <p>Called by BraintrustAgent once the agent internals and span processor
      * are ready.
      */
-    public static void setTraceConsumer(Consumer<List<MutableSpan>> consumer) {
+    public static synchronized void setTraceConsumer(Consumer<List<MutableSpan>> consumer) {
+        if (traceConsumer != null) {
+            throw new IllegalStateException("trace consumer already set");
+        }
         traceConsumer = consumer;
         // Drain buffered traces
         for (List<MutableSpan> trace : bufferedTraces) {

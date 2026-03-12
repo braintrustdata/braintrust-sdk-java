@@ -4,6 +4,7 @@ import datadog.trace.api.DDTraceId;
 import datadog.trace.api.interceptor.MutableSpan;
 import dev.braintrust.Braintrust;
 import dev.braintrust.system.DDBridge;
+import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.SpanContext;
@@ -21,26 +22,18 @@ import io.opentelemetry.sdk.trace.data.StatusData;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Bridges Datadog traces into Braintrust's span export pipeline.
- *
- * <p>When both DD and BT agents are present, DD owns the OTel GlobalOpenTelemetry
- * (its shim TracerProvider/Propagators). BT taps into completed DD traces via
- * {@link datadog.trace.api.interceptor.TraceInterceptor}, converts {@link MutableSpan}
- * objects to OTel {@link SpanData}, and feeds them through BT's span exporter.
  */
 @Slf4j
 public class DDBridgeConsumer {
-    // Cached reflection handles for extracting trace/span IDs from DD spans.
-    // MutableSpan doesn't expose IDs directly — we need to go through the
-    // AgentSpan → AgentSpanContext interface on DD's bootstrap classpath.
     private static volatile Method contextMethod;
     private static volatile Method getTraceIdMethod;
     private static volatile Method getSpanIdMethod;
@@ -56,9 +49,6 @@ public class DDBridgeConsumer {
 
         final boolean smokeTest = Boolean.getBoolean(SMOKE_TEST_PROP);
 
-        // Build a SdkTracerProvider with BT's span processors (BraintrustSpanProcessor
-        // wrapping BatchSpanProcessor → BraintrustSpanExporter). We use this provider's
-        // internal processor chain to export converted DD spans.
         var tracerBuilder = SdkTracerProvider.builder();
         Braintrust.get().openTelemetryEnable(tracerBuilder, SdkLoggerProvider.builder(), SdkMeterProvider.builder());
         final var tracerProvider = tracerBuilder.build();
@@ -68,13 +58,14 @@ public class DDBridgeConsumer {
         // SdkTracerProvider stores processors in sharedState.getActiveSpanProcessor().
         final var spanProcessor = extractSpanProcessor(tracerProvider);
 
-        DDBridge.registerDDTraceInterceptor();
+        if (!DDBridge.registerDDTraceInterceptor()) {
+            throw new IllegalStateException("Failed to register DD trace interceptor");
+        }
 
         DDBridge.setTraceConsumer(mutableSpans -> {
             try {
                 List<SpanData> spanDataList = convertTrace(mutableSpans);
                 if (!spanDataList.isEmpty()) {
-                    // Record for smoke test assertions if enabled
                     if (smokeTest) {
                         for (var spanData : spanDataList) {
                             DDBridge.bridgedSpans
