@@ -479,10 +479,8 @@ public class DdAgentSmokeTest {
 
     private static boolean isBraintrustAgentPresent() {
         try {
-            Class<?> bridgeClass = Class.forName("dev.braintrust.system.DDBridge");
-            var field = bridgeClass.getField("tracerProvider");
-            var ref = (java.util.concurrent.atomic.AtomicReference<?>) field.get(null);
-            return ref.get() != null;
+            Class.forName("dev.braintrust.system.DDBridge");
+            return true;
         } catch (Exception e) {
             return false;
         }

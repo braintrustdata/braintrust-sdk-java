@@ -64,6 +64,11 @@ public class AgentBootstrap {
 
             var isDatadog = jvmRunningWithDatadogOtel();
 
+            if (isDatadog && (!isRunningAfterDatadogAgent())) {
+                log("ERROR: Braintrust -javaagent must run *after* datadog -javaagent. Aborting Briantrust install");
+                return;
+            }
+
             if (!isDatadog) {
                 // Enable OTel autoconfigure BEFORE adding to bootstrap, so system properties
                 // are set before anything can trigger GlobalOpenTelemetry.get().
@@ -109,6 +114,24 @@ public class AgentBootstrap {
         }
         String envVar = System.getenv("DD_TRACE_OTEL_ENABLED");
         return Boolean.parseBoolean(envVar);
+    }
+
+    /**
+     * Returns true if the Datadog agent's premain has already executed, meaning
+     * it was listed before the Braintrust agent in the {@code -javaagent} flags.
+     * <p>
+     * DD's premain appends its jars to the bootstrap classpath, making
+     * {@code datadog.trace.bootstrap.Agent} loadable from the bootstrap (null)
+     * classloader. If that class is not found on bootstrap, DD either isn't
+     * present or hasn't run its premain yet (i.e. BT is first).
+     */
+    static boolean isRunningAfterDatadogAgent() {
+        try {
+            Class.forName("datadog.trace.bootstrap.Agent", false, null);
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     private static void enableOtelSDKAutoconfiguration() {

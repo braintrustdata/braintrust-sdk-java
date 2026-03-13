@@ -126,8 +126,6 @@ task smokeTestBTAgentFirst(type: JavaExec) {
   environment 'OTEL_METRICS_EXPORTER', 'none'
   environment 'OTEL_LOGS_EXPORTER', 'none'
 
-  ignoreExitValue = true
-
   inputs.files(braintrustAgentJar)
   inputs.files(configurations.ddAgent)
   inputs.files(sourceSets.main.output)
@@ -137,7 +135,7 @@ task smokeTestBTAgentFirst(type: JavaExec) {
   doLast {
     markerFile.get().asFile.tap {
       parentFile.mkdirs()
-      text = "exit=${executionResult.get().exitValue} at ${java.time.Instant.now()}"
+      text = "passed at ${java.time.Instant.now()}"
     }
   }
 }
@@ -182,4 +180,4 @@ task smokeTestDdOnly(type: JavaExec) {
 }
 
 // FIXME -- require dd smoke tests to pass
-test.dependsOn smokeTestDdOnly, smokeTestDDAgentFirst // TODO , smokeTestBTAgentFirst,
+test.dependsOn smokeTestDdOnly, smokeTestDDAgentFirst // TODO: , smokeTestBTAgentFirst
