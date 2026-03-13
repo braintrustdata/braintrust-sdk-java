@@ -56,7 +56,12 @@ public class AgentBootstrap {
         log("Braintrust Java Agent starting...");
 
         if (jvmRunningWithOtelAgent()) {
-            log("OpenTelemetry Java agent detected. Braintrust agent is not yet compatible with the OTel javaagent — skipping install.");
+            log("ERROR: Braintrust agent is not yet compatible with the OTel javaagent - skipping install.");
+            return;
+        }
+
+        if (jvmRunningWithDatadogOtel()) {
+            log("ERROR: Braintrust agent is not yet compatible with datadog javaagent otel - skipping install.");
             return;
         }
 
@@ -67,28 +72,19 @@ public class AgentBootstrap {
             File agentJarFile = new File(agentJarURL.toURI());
             log("Agent JAR: " + agentJarFile);
 
-            var isDatadog = jvmRunningWithDatadogOtel();
+            // Enable OTel autoconfigure BEFORE adding to bootstrap, so system properties
+            // are set before anything can trigger GlobalOpenTelemetry.get().
+            enableOtelSDKAutoconfiguration();
 
-            if (isDatadog && (!isRunningAfterDatadogAgent())) {
-                log("ERROR: Braintrust -javaagent must run *after* datadog -javaagent. Aborting Briantrust install");
-                return;
-            }
-
-            if (!isDatadog) {
-                // Enable OTel autoconfigure BEFORE adding to bootstrap, so system properties
-                // are set before anything can trigger GlobalOpenTelemetry.get().
-                enableOtelSDKAutoconfiguration();
-
-                inst.appendToBootstrapClassLoaderSearch(new JarFile(agentJarFile, false));
-                log("Added agent JAR to bootstrap classpath.");
-            }
+            inst.appendToBootstrapClassLoaderSearch(new JarFile(agentJarFile, false));
+            log("Added agent JAR to bootstrap classpath.");
 
             // Create the isolated braintrust classloader.
             // Parent is the platform classloader so agent internals can see:
             //   - Bootstrap classes (OTel API/SDK added via appendToBootstrapClassLoaderSearch)
             //   - JDK platform modules (java.net.http, java.sql, etc.)
             // but NOT application classes (those are on the system/app classloader).
-            BraintrustClassLoader btClassLoader = new BraintrustClassLoader(agentJarURL, isDatadog ? ClassLoader.getSystemClassLoader() : ClassLoader.getPlatformClassLoader());
+            BraintrustClassLoader btClassLoader = new BraintrustClassLoader(agentJarURL, ClassLoader.getPlatformClassLoader());
             BraintrustBridge.setAgentClassloaderIfAbsent(btClassLoader);
 
 

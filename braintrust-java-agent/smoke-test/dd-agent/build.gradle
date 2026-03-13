@@ -179,5 +179,6 @@ task smokeTestDdOnly(type: JavaExec) {
   }
 }
 
-// FIXME -- require dd smoke tests to pass
-test.dependsOn smokeTestDdOnly, smokeTestDDAgentFirst // TODO: , smokeTestBTAgentFirst
+// FIXME -- support dd + bt agents
+//, smokeTestDDAgentFirst, smokeTestBTAgentFirst
+test.dependsOn smokeTestDdOnly
