@@ -22,7 +22,23 @@ public class DDBridge {
     // FIXME fix up threading and add proper protection for tracer
 
     public static final AtomicReference<TracerProvider> tracerProvider = new AtomicReference<>();
-    public static final Map<String, List<SpanData>> bridgedSpans = new ConcurrentHashMap<>();
+    private static final Map<String, List<SpanData>> bridgedSpans = new ConcurrentHashMap<>();
+
+    /**
+     * Returns the map of bridged spans collected during smoke testing, keyed by trace ID.
+     */
+    public static Map<String, List<SpanData>> getBridgedSpans() {
+        return bridgedSpans;
+    }
+
+    /**
+     * Records a converted span into the bridged spans map (for smoke testing).
+     */
+    public static void recordBridgedSpan(SpanData spanData) {
+        bridgedSpans
+                .computeIfAbsent(spanData.getTraceId(), k -> new CopyOnWriteArrayList<>())
+                .add(spanData);
+    }
 
     /**
      * Consumer that receives completed DD traces. Set by BraintrustAgent once

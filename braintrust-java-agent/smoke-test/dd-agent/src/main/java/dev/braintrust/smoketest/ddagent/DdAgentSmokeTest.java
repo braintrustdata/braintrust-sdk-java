@@ -348,7 +348,7 @@ public class DdAgentSmokeTest {
      * the bridged spans match the DD trace (same names, timing, error status).
      */
     private static void assertBridgedSpans(List<MutableSpan> ddTrace, int numExpectedTraces, int numExpectedSpans) {
-        var braintrustSpans = DDBridge.bridgedSpans;
+        var braintrustSpans = DDBridge.getBridgedSpans();
         assertTrue(braintrustSpans.size() == numExpectedTraces,
                 "bridged trace count: expected=%d actual=%d (keys=%s)".formatted(numExpectedTraces, braintrustSpans.size(), braintrustSpans.keySet()));
 

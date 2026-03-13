@@ -67,9 +67,7 @@ public class DDBridgeConsumer {
                 DDSpanConverter.replayTrace(tracer, spanDataList);
                 if (smokeTest) {
                     for (var spanData : spanDataList) {
-                        DDBridge.bridgedSpans
-                                .computeIfAbsent(spanData.getTraceId(), k -> new CopyOnWriteArrayList<>())
-                                .add(spanData);
+                        DDBridge.recordBridgedSpan(spanData);
                     }
                 }
             } catch (Exception e) {
