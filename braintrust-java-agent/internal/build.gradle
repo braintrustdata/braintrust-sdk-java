@@ -7,7 +7,7 @@ plugins {
 }
 
 dependencies {
-  implementation "org.slf4j:slf4j-simple:${slf4jVersion}" // TODO: figure out logging
+  // implementation "org.slf4j:slf4j-simple:${slf4jVersion}" // TODO: figure out logging
 
   // The main Braintrust SDK — bundled into the agent's isolated classloader so the agent
   // can use BraintrustConfig, BraintrustSpanExporter, instrumentations, etc.

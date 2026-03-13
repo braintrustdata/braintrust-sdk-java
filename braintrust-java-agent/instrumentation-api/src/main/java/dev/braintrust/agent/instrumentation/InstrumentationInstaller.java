@@ -5,6 +5,7 @@ import dev.braintrust.agent.muzzle.ReferenceCreator;
 import dev.braintrust.agent.muzzle.Reference;
 import dev.braintrust.agent.muzzle.ReferenceMatcher;
 import java.lang.instrument.Instrumentation;
+import java.security.ProtectionDomain;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,9 +58,16 @@ public class InstrumentationInstaller {
             ElementMatcher<ClassLoader> classLoaderMatcher = cl -> module.classLoaderMatcher().matches(cl) && muzzleCheck.matches(cl);
 
             for (TypeInstrumentation typeInst : module.typeInstrumentations()) {
+                // Use a RawMatcher that checks the type name FIRST (cheap string match),
+                // then only runs the classloader/muzzle check if the type actually matched.
+                // This avoids running expensive muzzle checks on every classloader encountered.
+                ElementMatcher<TypeDescription> typeMatcher = typeInst.typeMatcher();
+                AgentBuilder.RawMatcher rawMatcher = (typeDescription, targetClassLoader, javaModule, aClass, protectionDomain) ->
+                        typeMatcher.matches(typeDescription) && classLoaderMatcher.matches(targetClassLoader);
+
                 agentBuilder =
                         agentBuilder
-                                .type(typeInst.typeMatcher(), classLoaderMatcher)
+                                .type(rawMatcher)
                                 .transform(
                                         (builder,
                                                 typeDescription,
