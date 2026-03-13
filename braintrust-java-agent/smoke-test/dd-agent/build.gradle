@@ -35,7 +35,10 @@ def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar
  * Agent ordering: DD first, Braintrust second.
  * The process exit code signals pass (0) or fail (non-zero).
  */
-task smokeTest(type: JavaExec) {
+/**
+ * Smoke test: DD agent first, Braintrust agent second.
+ */
+task smokeTestDDAgentFirst(type: JavaExec) {
   dependsOn braintrustAgentJar, classes
 
   mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
@@ -74,14 +77,67 @@ task smokeTest(type: JavaExec) {
   inputs.files(braintrustAgentJar)
   inputs.files(configurations.ddAgent)
   inputs.files(sourceSets.main.output)
-  // A marker file as output so Gradle knows the task succeeded
-  def markerFile = layout.buildDirectory.file('test-results/dd-agent-smoke-test.passed')
+  def markerFile = layout.buildDirectory.file('test-results/dd-agent-first-smoke-test.passed')
   outputs.file(markerFile)
 
   doLast {
     markerFile.get().asFile.tap {
       parentFile.mkdirs()
       text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+/**
+ * Smoke test: Braintrust agent first, DD agent second.
+ */
+task smokeTestBTAgentFirst(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${btAgent.get()}",
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.writer.type=LoggingWriter",
+    "-Ddd.trace.agent.url=unix:///dev/null",
+    "-Dotel.java.global-autoconfigure.enabled=true",
+    "-Dotel.traces.exporter=none",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Ddd.service=bt-dd-smoke-test",
+    "-Dbraintrust.dd.bridge.smoketest=true",
+    // "-Ddd.trace.debug=true",
+  ]
+
+  // Make sure OTEL/DD environment doesn't leak from the host
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  ignoreExitValue = true
+
+  inputs.files(braintrustAgentJar)
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/bt-agent-first-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "exit=${executionResult.get().exitValue} at ${java.time.Instant.now()}"
     }
   }
 }
@@ -126,4 +182,4 @@ task smokeTestDdOnly(type: JavaExec) {
 }
 
 // FIXME -- require dd smoke tests to pass
-// test.dependsOn smokeTest, smokeTestDdOnly
+test.dependsOn smokeTestDdOnly, smokeTestDDAgentFirst // TODO , smokeTestBTAgentFirst,

@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class DDSpanConverter {
-
     private static volatile Method contextMethod;
     private static volatile Method getTraceIdMethod;
     private static volatile Method getSpanIdMethod;
@@ -30,11 +29,15 @@ public class DDSpanConverter {
     private static volatile Method toHexStringPaddedMethod;
     private static volatile boolean reflectionInitialized;
 
+    static {
+        initReflection();
+    }
+
     /**
      * Initialize reflection handles for extracting IDs from DD spans.
      * Must be called before {@link #convertTrace} or {@link #replayTrace}.
      */
-    public static void initReflection() {
+    private static void initReflection() {
         try {
             Class<?> agentSpanClass = Class.forName(
                     "datadog.trace.bootstrap.instrumentation.api.AgentSpan", true, null);
