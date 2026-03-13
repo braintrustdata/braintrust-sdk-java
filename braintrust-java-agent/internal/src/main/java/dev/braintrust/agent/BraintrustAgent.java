@@ -37,12 +37,11 @@ public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
         // Fail fast if there are any issues with the Braintrust SDK or otel
         Braintrust.get();
 
-        /*
+        // FIXME: otel autoconfigure touches the global logger
         AutoConfiguredOpenTelemetrySdk.builder()
                 // TODO: hook up with other otel autoconfigure
                 .setResultAsGlobal()
                 .build();
-         */
 
         if (DDBridgeConsumer.jvmRunningWithDatadogOtel()) {
             DDBridgeConsumer.install();
