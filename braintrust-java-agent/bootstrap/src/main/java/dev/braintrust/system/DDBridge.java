@@ -4,14 +4,18 @@ import datadog.trace.api.GlobalTracer;
 import datadog.trace.api.interceptor.MutableSpan;
 import datadog.trace.api.interceptor.TraceInterceptor;
 import io.opentelemetry.api.trace.TracerProvider;
+import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 /**
@@ -22,22 +26,37 @@ public class DDBridge {
     // FIXME fix up threading and add proper protection for tracer
 
     public static final AtomicReference<TracerProvider> tracerProvider = new AtomicReference<>();
-    private static final Map<String, List<SpanData>> bridgedSpans = new ConcurrentHashMap<>();
+    private static final AtomicReference<BridgeInMemorySpanExporter> smokeTestExporter = new AtomicReference<>();
 
     /**
-     * Returns the map of bridged spans collected during smoke testing, keyed by trace ID.
+     * Sets the in-memory span exporter used during smoke testing.
+     * Called by DDBridgeConsumer when the smoke test system property is enabled.
      */
-    public static Map<String, List<SpanData>> getBridgedSpans() {
-        return bridgedSpans;
+    public static void setSmokeTestExporter(BridgeInMemorySpanExporter exporter) {
+        smokeTestExporter.set(exporter);
     }
 
     /**
-     * Records a converted span into the bridged spans map (for smoke testing).
+     * Returns the smoke test exporter, or null if not in smoke test mode.
      */
-    public static void recordBridgedSpan(SpanData spanData) {
-        bridgedSpans
-                .computeIfAbsent(spanData.getTraceId(), k -> new CopyOnWriteArrayList<>())
-                .add(spanData);
+    public static BridgeInMemorySpanExporter getSmokeTestExporter() {
+        return smokeTestExporter.get();
+    }
+
+    /**
+     * Returns the map of bridged spans collected during smoke testing, keyed by trace ID.
+     * Reads from the in-memory span exporter if one has been configured.
+     */
+    public static Map<String, List<SpanData>> getBridgedSpans() {
+        BridgeInMemorySpanExporter exporter = smokeTestExporter.get();
+        if (exporter == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, List<SpanData>> result = new LinkedHashMap<>();
+        for (SpanData span : exporter.getFinishedSpanItems()) {
+            result.computeIfAbsent(span.getTraceId(), k -> new ArrayList<>()).add(span);
+        }
+        return result;
     }
 
     /**
@@ -102,5 +121,66 @@ public class DDBridge {
             consumer.accept(trace);
         }
         bufferedTraces.clear();
+    }
+
+    public static class BridgeInMemorySpanExporter implements SpanExporter {
+        private final Queue<SpanData> finishedSpanItems = new ConcurrentLinkedQueue<>();
+        private final Lock lock = new ReentrantLock();
+        private final Condition spansAdded = lock.newCondition();
+        private boolean isStopped = false;
+
+        public BridgeInMemorySpanExporter() {}
+
+        public List<SpanData> getFinishedSpanItems(int minSpanCount) throws Exception {
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+            lock.lock();
+            try {
+                while (finishedSpanItems.size() < minSpanCount) {
+                    long remainingNanos = deadline - System.nanoTime();
+                    if (remainingNanos <= 0) {
+                        throw new RuntimeException(String.format("Timeout waiting for spans: expected at least %d spans, but got %d after 30 seconds", minSpanCount, finishedSpanItems.size()));
+                    }
+                    spansAdded.awaitNanos(remainingNanos);
+                }
+                return Collections.unmodifiableList(new ArrayList<>(finishedSpanItems));
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        public List<SpanData> getFinishedSpanItems() {
+            return Collections.unmodifiableList(new ArrayList<>(finishedSpanItems));
+        }
+
+        public void reset() {
+            finishedSpanItems.clear();
+        }
+
+        @Override
+        public CompletableResultCode export(Collection<SpanData> spans) {
+            if (isStopped) {
+                return CompletableResultCode.ofFailure();
+            }
+            lock.lock();
+            try {
+                finishedSpanItems.addAll(spans);
+                spansAdded.signalAll();
+            } finally {
+                lock.unlock();
+            }
+            return CompletableResultCode.ofSuccess();
+        }
+
+        @Override
+        public CompletableResultCode flush() {
+            return CompletableResultCode.ofSuccess();
+        }
+
+        @Override
+        public CompletableResultCode shutdown() {
+            finishedSpanItems.clear();
+            isStopped = true;
+            return CompletableResultCode.ofSuccess();
+        }
     }
 }

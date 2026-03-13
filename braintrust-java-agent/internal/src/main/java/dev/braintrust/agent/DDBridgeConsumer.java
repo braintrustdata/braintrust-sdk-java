@@ -19,6 +19,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
@@ -49,13 +50,16 @@ public class DDBridgeConsumer {
 
         var tracerBuilder = SdkTracerProvider.builder();
         Braintrust.get().openTelemetryEnable(tracerBuilder, SdkLoggerProvider.builder(), SdkMeterProvider.builder());
+
+        if (smokeTest) {
+            var inMemoryExporter = new DDBridge.BridgeInMemorySpanExporter();
+            tracerBuilder.addSpanProcessor(SimpleSpanProcessor.create(inMemoryExporter));
+            DDBridge.setSmokeTestExporter(inMemoryExporter);
+        }
+
         final var tracerProvider = tracerBuilder.build();
         final var tracer = tracerProvider.get("braintrust-java-dd-bridge");
         DDBridge.tracerProvider.set(tracerProvider);
-
-        // Extract the span processor list from the built SdkTracerProvider via reflection.
-        // SdkTracerProvider stores processors in sharedState.getActiveSpanProcessor().
-        final var spanProcessor = extractSpanProcessor(tracerProvider);
 
         if (!DDBridge.registerDDTraceInterceptor()) {
             throw new IllegalStateException("Failed to register DD trace interceptor");
@@ -65,35 +69,12 @@ public class DDBridgeConsumer {
             try {
                 List<SpanData> spanDataList = DDSpanConverter.convertTrace(mutableSpans);
                 DDSpanConverter.replayTrace(tracer, spanDataList);
-                if (smokeTest) {
-                    for (var spanData : spanDataList) {
-                        DDBridge.recordBridgedSpan(spanData);
-                    }
-                }
             } catch (Exception e) {
                 log.warn("Failed to convert DD trace to OTel SpanData", e);
             }
         });
 
         log.info("DD bridge consumer installed — DD traces will be forwarded to Braintrust.");
-    }
-
-    /**
-     * Extracts the active SpanProcessor from a built SdkTracerProvider via reflection.
-     * Returns null if extraction fails (spans won't be exported but DD still works).
-     */
-    private static io.opentelemetry.sdk.trace.SpanProcessor extractSpanProcessor(SdkTracerProvider provider) {
-        try {
-            var sharedStateField = SdkTracerProvider.class.getDeclaredField("sharedState");
-            sharedStateField.setAccessible(true);
-            var sharedState = sharedStateField.get(provider);
-
-            var getProcessorMethod = sharedState.getClass().getMethod("getActiveSpanProcessor");
-            return (io.opentelemetry.sdk.trace.SpanProcessor) getProcessorMethod.invoke(sharedState);
-        } catch (Exception e) {
-            log.warn("Failed to extract span processor from SdkTracerProvider — DD spans won't be exported to BT", e);
-            return null;
-        }
     }
 
     /**
