@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-  implementation 'com.openai:openai-java:2.8.1'
   runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
@@ -12,8 +11,8 @@ def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar
 /**
  * Smoke test: runs PlainJavaSmokeTest with only the Braintrust agent attached.
  *
- * Verifies that the agent works in a plain Java app with no OTel dependencies —
- * just an OpenAI client.
+ * Verifies that the agent works in a plain Java app with no OTel dependencies
+ * and that bytecode instrumentation is applied correctly.
  */
 task smokeTest(type: JavaExec) {
   dependsOn braintrustAgentJar, classes

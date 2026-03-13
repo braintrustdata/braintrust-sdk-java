@@ -1,39 +1,30 @@
 package dev.braintrust.smoketest.plainjava;
 
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.ChatModel;
-import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import dev.braintrust.InstrumentationReflection;
 
 /**
  * Smoke test that runs with only the Braintrust agent attached — no OTel
  * dependencies on the application classpath.
+ *
+ * <p>Run via: {@code ./gradlew :braintrust-java-agent:smoke-test:plain-java:smokeTest}
+ *
+ * <p>This verifies that the Braintrust agent bootstraps correctly and instruments
+ * application classes. The agent's bytecode transformation should change
+ * {@link InstrumentationReflection#isInstrumented()} from returning {@code false}
+ * to returning {@code true}.
  */
 public class PlainJavaSmokeTest {
     public static void main(String[] args) throws Exception {
         System.out.println("[smoke-test] Starting plain-java smoke test");
 
-        OpenAIClient client = OpenAIOkHttpClient.fromEnv();
-        assertNotNull(client, "OpenAI client should not be null");
-        System.out.println("[smoke-test] OpenAI client created successfully: " + client.getClass().getName());
+        boolean instrumented = InstrumentationReflection.isInstrumented();
+        System.out.println("[smoke-test] InstrumentationReflection.isInstrumented() = " + instrumented);
 
-        // Verify that we can build a request without errors — we won't actually
-        // send it since there's no real API key / server.
-        var request = ChatCompletionCreateParams.builder()
-                .model(ChatModel.GPT_4O_MINI)
-                .addUserMessage("Hello")
-                .build();
-        var response = client.chat().completions().create(request);
-
-        assertNotNull(request, "ChatCompletionCreateParams should not be null");
-        System.out.println("[smoke-test] Chat completion request built successfully: " + response);
-
-        System.out.println("=== Smoke test passed ===");
-    }
-
-    private static void assertNotNull(Object object, String msg) {
-        if (object == null) {
-            throw new RuntimeException(msg);
+        if (!instrumented) {
+            throw new RuntimeException(
+                    "Expected InstrumentationReflection.isInstrumented() to return true, " +
+                    "but got false — the agent did not instrument the class");
         }
+        System.out.println("=== Smoke test passed ===");
     }
 }
