@@ -23,7 +23,7 @@ import net.bytebuddy.utility.JavaModule;
  * Discovers all {@link InstrumentationModule}s via {@link ServiceLoader} and wires them into a
  * ByteBuddy {@link AgentBuilder} that gets installed on the JVM.
  */
-@Slf4j
+// @Slf4j
 public class InstrumentationInstaller {
 
     /**
@@ -47,7 +47,7 @@ public class InstrumentationInstaller {
 
         for (InstrumentationModule module :
                 ServiceLoader.load(InstrumentationModule.class, agentClassloader)) {
-            log.info("Discovered instrumentation module: {}", module.name());
+            // log.info("Discovered instrumentation module: {}", module.name());
 
             // Load muzzle references: prefer compile-time $Muzzle class, fall back to runtime scan
             ReferenceMatcher muzzle = loadMuzzleReferences(module, agentClassloader);
@@ -92,8 +92,7 @@ public class InstrumentationInstaller {
         }
 
         agentBuilder.installOn(inst);
-        log.info("ByteBuddy instrumentation installed: {} module(s), {} type instrumentation(s).",
-                moduleCount, typeCount);
+        // log.info("ByteBuddy instrumentation installed: {} module(s), {} type instrumentation(s).", moduleCount, typeCount);
     }
 
     /**
@@ -109,8 +108,7 @@ public class InstrumentationInstaller {
         }
 
         // Fall back to runtime scanning
-        log.debug("No $Muzzle class for {}, falling back to runtime reference scanning",
-                module.name());
+        // log.debug("No $Muzzle class for {}, falling back to runtime reference scanning", module.name());
         return buildMuzzleReferencesAtRuntime(module, agentClassLoader);
     }
 
@@ -128,7 +126,7 @@ public class InstrumentationInstaller {
         } catch (ClassNotFoundException e) {
             return null; // no $Muzzle class — fall through to runtime scanning
         } catch (ReflectiveOperationException e) {
-            log.warn("Failed to load $Muzzle for {}", module.name(), e);
+            // log.warn("Failed to load $Muzzle for {}", module.name(), e);
             return null;
         }
     }
@@ -192,7 +190,7 @@ public class InstrumentationInstaller {
                 JavaModule module,
                 boolean loaded,
                 Throwable throwable) {
-            log.error("Error transforming {}", typeName, throwable);
+            // log.error("Error transforming {}", typeName, throwable);
         }
 
         @Override
@@ -202,7 +200,7 @@ public class InstrumentationInstaller {
                 JavaModule module,
                 boolean loaded,
                 DynamicType dynamicType) {
-            log.debug("Transformed: {}", typeDescription.getName());
+            // log.debug("Transformed: {}", typeDescription.getName());
         }
     }
 }

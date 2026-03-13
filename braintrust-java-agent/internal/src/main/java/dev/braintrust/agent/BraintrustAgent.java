@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * The real agent installation logic
  */
-@Slf4j
+// @Slf4j
 @AutoService(AutoConfigurationCustomizerProvider.class)
 public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
 
@@ -31,16 +31,18 @@ public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
             throw new IllegalCallerException(
                     "Braintrust agent can only run on a braintrust classloader");
         }
-        log.info("invoked on classloader: {}", BraintrustAgent.class.getClassLoader().getClass().getName());
-        log.info("agentArgs: {}", agentArgs);
-        log.info("Instrumentation: retransform={}", inst.isRetransformClassesSupported());
+        // log.info("invoked on classloader: {}", BraintrustAgent.class.getClassLoader().getClass().getName());
+        // log.info("agentArgs: {}", agentArgs);
+        // log.info("Instrumentation: retransform={}", inst.isRetransformClassesSupported());
         // Fail fast if there are any issues with the Braintrust SDK or otel
         Braintrust.get();
 
+        /*
         AutoConfiguredOpenTelemetrySdk.builder()
                 // TODO: hook up with other otel autoconfigure
                 .setResultAsGlobal()
                 .build();
+         */
 
         if (DDBridgeConsumer.jvmRunningWithDatadogOtel()) {
             DDBridgeConsumer.install();
@@ -53,7 +55,7 @@ public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
         autoConfiguration.addTracerProviderCustomizer(
                 ((sdkTracerProviderBuilder, configProperties) -> {
                     if (!BraintrustBridge.otelInstallCount.compareAndSet(0, 1)) {
-                        log.warn("otel install invoked more than once. This should not happen. Bailing.");
+                        // log.warn("otel install invoked more than once. This should not happen. Bailing.");
                         return sdkTracerProviderBuilder;
                     }
                     var loggerBuilder = SdkLoggerProvider.builder();

@@ -74,6 +74,7 @@ task smokeTest {
 
     // PREPEND_JAVA_OPTS is applied first by standalone.sh, before any other JAVA_OPTS.
     pbEnv['PREPEND_JAVA_OPTS'] = [
+      "-Djava.util.logging.manager=org.jboss.logmanager.LogManager",
       "-Xbootclasspath/a:${logManagerJar.absolutePath}",
       '-Djava.util.logging.manager=org.jboss.logmanager.LogManager',
       "-javaagent:${btAgentPath}",
@@ -183,5 +184,5 @@ static boolean waitForDeployment(File deploymentsDir, long timeoutMs) {
   return false
 }
 
-// FIXME -- fix java logger issue
+// FIXME
 // test.dependsOn smokeTest
