@@ -1,0 +1,52 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.40'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar')
+
+/**
+ * Smoke test: starts an embedded Tomcat server with the Braintrust agent attached,
+ * deploys a simple servlet, hits it over HTTP, and verifies instrumentation works.
+ *
+ * This tests the agent against Tomcat's WebappClassLoader hierarchy directly,
+ * without Spring Boot's abstraction layer.
+ */
+task smokeTest(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.tomcat.TomcatSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+
+  jvmArgs = [
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  // Make sure OTel environment doesn't leak from the host
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/tomcat-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+test.dependsOn smokeTest
