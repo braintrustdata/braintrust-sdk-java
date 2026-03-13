@@ -1,0 +1,52 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation 'com.openai:openai-java:2.8.1'
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar')
+
+/**
+ * Smoke test: runs PlainJavaSmokeTest with only the Braintrust agent attached.
+ *
+ * Verifies that the agent works in a plain Java app with no OTel dependencies —
+ * just an OpenAI client.
+ */
+task smokeTest(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.plainjava.PlainJavaSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+
+  jvmArgs = [
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  // Make sure OTel environment doesn't leak from the host
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/plain-java-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+test.dependsOn smokeTest

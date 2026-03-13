@@ -9,7 +9,6 @@ import com.openai.helpers.ChatCompletionAccumulator;
 import com.openai.models.chat.completions.ChatCompletionChunk;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.json.BraintrustJsonMapper;
-import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -28,7 +27,7 @@ class TracingHttpClient implements HttpClient {
     private final HttpClient underlying;
 
     public TracingHttpClient(OpenTelemetry openTelemetry, HttpClient underlying) {
-        this.tracer = BraintrustTracing.getTracer(openTelemetry);
+        this.tracer = openTelemetry.getTracer("braintrust"); // FIXME: put braintrust tracing constants on bootstrap
         this.underlying = underlying;
     }
 

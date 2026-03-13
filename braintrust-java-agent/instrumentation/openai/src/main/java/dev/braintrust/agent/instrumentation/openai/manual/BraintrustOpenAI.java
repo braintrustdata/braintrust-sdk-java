@@ -6,6 +6,7 @@ import com.openai.core.ObjectMappers;
 import com.openai.core.http.HttpClient;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.prompt.BraintrustPrompt;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import kotlin.Lazy;
 import lombok.SneakyThrows;

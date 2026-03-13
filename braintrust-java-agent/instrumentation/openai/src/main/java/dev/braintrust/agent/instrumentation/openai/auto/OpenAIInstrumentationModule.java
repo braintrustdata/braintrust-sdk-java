@@ -32,7 +32,11 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$1",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeInputStream",
-                MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustOpenAI"
+                MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustOpenAI",
+                // FIXME: put these on the bootstrap
+                "dev.braintrust.json.BraintrustJsonMapper",
+                "dev.braintrust.instrumentation.InstrumentationSemConv",
+                "dev.braintrust.prompt.BraintrustPrompt"
         );
     }
 
@@ -58,7 +62,8 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
     private static class OpenAIOkHttpClientBuilderAdvice {
         @Advice.OnMethodExit
         public static void build(
-                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) OpenAIClient returnedClient) {
+                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) Object returnedObject) {
+            OpenAIClient returnedClient = (OpenAIClient) returnedObject;
             returnedClient = BraintrustOpenAI.wrapOpenAI(GlobalOpenTelemetry.get(), returnedClient);
         }
     }

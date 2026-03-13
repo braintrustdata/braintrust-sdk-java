@@ -2,11 +2,15 @@ package dev.braintrust.agent;
 
 import java.lang.instrument.Instrumentation;
 
+import com.google.auto.service.AutoService;
 import dev.braintrust.Braintrust;
 import dev.braintrust.agent.instrumentation.InstrumentationInstaller;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.bootstrap.BraintrustClassLoader;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
+import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 
@@ -16,7 +20,8 @@ import lombok.extern.slf4j.Slf4j;
  * The real agent installation logic
  */
 @Slf4j
-public class BraintrustAgent {
+@AutoService(AutoConfigurationCustomizerProvider.class)
+public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
 
     /**
      * Called reflectively from AgentBootstrap premain.
@@ -29,8 +34,13 @@ public class BraintrustAgent {
         log.info("invoked on classloader: {}", BraintrustAgent.class.getClassLoader().getClass().getName());
         log.info("agentArgs: {}", agentArgs);
         log.info("Instrumentation: retransform={}", inst.isRetransformClassesSupported());
-        // Fail fast if there are any issues with the Braintrust SDK
+        // Fail fast if there are any issues with the Braintrust SDK or otel
         Braintrust.get();
+
+        AutoConfiguredOpenTelemetrySdk.builder()
+                // TODO: hook up with other otel autoconfigure
+                .setResultAsGlobal()
+                .build();
 
         if (DDBridgeConsumer.jvmRunningWithDatadogOtel()) {
             DDBridgeConsumer.install();
@@ -38,10 +48,8 @@ public class BraintrustAgent {
         InstrumentationInstaller.install(inst, BraintrustAgent.class.getClassLoader());
     }
 
-    /**
-     * Called reflectively from OtelAutoConfiguration.
-     */
-    public void configureOpenTelemetry(AutoConfigurationCustomizer autoConfiguration) {
+    @Override
+    public void customize(AutoConfigurationCustomizer autoConfiguration) {
         autoConfiguration.addTracerProviderCustomizer(
                 ((sdkTracerProviderBuilder, configProperties) -> {
                     if (!BraintrustBridge.otelInstallCount.compareAndSet(0, 1)) {
@@ -56,5 +64,4 @@ public class BraintrustAgent {
                     return sdkTracerProviderBuilder;
                 }));
     }
-
 }
