@@ -1,0 +1,186 @@
+plugins {
+  id 'java'
+  id 'war'
+}
+
+def wildflyVersion = '34.0.1.Final'
+def wildflyDistName = "wildfly-${wildflyVersion}"
+
+dependencies {
+  // Jakarta Servlet API — provided by WildFly at runtime
+  compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar')
+
+// ── Download and unzip WildFly ──
+configurations {
+  wildflyDist
+}
+dependencies {
+  wildflyDist "org.wildfly:wildfly-dist:${wildflyVersion}@zip"
+}
+
+task unzipWildfly(type: Copy) {
+  from zipTree(configurations.wildflyDist.singleFile)
+  into layout.buildDirectory.dir('wildfly')
+}
+
+/**
+ * Smoke test: deploys a WAR into a real WildFly server with the Braintrust agent
+ * attached, hits a servlet over HTTP, and verifies instrumentation works.
+ *
+ * This tests the agent against WildFly's JBoss Modules classloader hierarchy —
+ * a significantly different classloading model from Tomcat or embedded servers.
+ */
+task smokeTest {
+  dependsOn braintrustAgentJar, war, unzipWildfly
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(war)
+  inputs.files(configurations.wildflyDist)
+  def markerFile = layout.buildDirectory.file('test-results/wildfly-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    def wildflyHome = layout.buildDirectory.dir('wildfly').get().dir(wildflyDistName).asFile
+    def deploymentsDir = new File(wildflyHome, 'standalone/deployments')
+    def warFile = war.archiveFile.get().asFile
+    def btAgentPath = braintrustAgentJar.get().archiveFile.get().asFile.absolutePath
+
+    // Deploy the WAR
+    copy {
+      from warFile
+      into deploymentsDir
+      rename { 'smoke-test.war' }
+    }
+
+    def standaloneScript = new File(wildflyHome, 'bin/standalone.sh')
+    standaloneScript.setExecutable(true)
+
+    // Start WildFly
+    def pb = new ProcessBuilder(standaloneScript.absolutePath)
+        .directory(wildflyHome)
+        .redirectErrorStream(true)
+
+    // Configure the agent via JAVA_OPTS.
+    // WildFly requires JBoss LogManager on the boot classpath and the system property
+    // set before any JUL initialization. Our agent's premain triggers JUL init via
+    // System.Logger, so the logmanager must be available at premain time.
+    def pbEnv = pb.environment()
+    def logManagerJar = new File(wildflyHome, 'modules/system/layers/base/org/jboss/logmanager/main')
+        .listFiles({ f -> f.name.endsWith('.jar') } as FileFilter)[0]
+
+    // PREPEND_JAVA_OPTS is applied first by standalone.sh, before any other JAVA_OPTS.
+    pbEnv['PREPEND_JAVA_OPTS'] = [
+      "-Xbootclasspath/a:${logManagerJar.absolutePath}",
+      '-Djava.util.logging.manager=org.jboss.logmanager.LogManager',
+      "-javaagent:${btAgentPath}",
+      '-Djboss.http.port=0',
+    ].join(' ').toString()
+    pbEnv.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+    pbEnv['OTEL_TRACES_EXPORTER'] = 'none'
+    pbEnv['OTEL_METRICS_EXPORTER'] = 'none'
+    pbEnv['OTEL_LOGS_EXPORTER'] = 'none'
+
+    def proc = pb.start()
+
+    try {
+      def output = new StringBuilder()
+      def reader = new Thread({
+        proc.inputStream.eachLine { line ->
+          output.append(line).append('\n')
+          logger.lifecycle("[wildfly] ${line}")
+        }
+      })
+      reader.daemon = true
+      reader.start()
+
+      // Wait for WildFly to start and find the HTTP port
+      def port = waitForWildfly(output, 300_000)
+      logger.lifecycle("[smoke-test] WildFly started on port ${port}")
+
+      // Wait for deployment
+      def deployed = waitForDeployment(deploymentsDir, 60_000)
+      if (!deployed) {
+        throw new GradleException("WAR deployment timed out")
+      }
+      logger.lifecycle("[smoke-test] WAR deployed")
+
+      // Hit the endpoint
+      def url = new URL("http://localhost:${port}/smoke-test/instrumented")
+      def retries = 10
+      def responseCode = 0
+      def responseBody = ''
+      for (int i = 0; i < retries; i++) {
+        try {
+          def conn = (HttpURLConnection) url.openConnection()
+          conn.connectTimeout = 5000
+          conn.readTimeout = 5000
+          responseCode = conn.responseCode
+          responseBody = conn.inputStream.text
+          break
+        } catch (Exception e) {
+          if (i == retries - 1) throw e
+          Thread.sleep(2000)
+        }
+      }
+
+      logger.lifecycle("[smoke-test] GET /smoke-test/instrumented -> ${responseCode} ${responseBody}")
+
+      if (responseCode != 200) {
+        throw new GradleException("Expected 200, got ${responseCode}")
+      }
+      if (responseBody.trim() != 'true') {
+        throw new GradleException(
+            "Expected InstrumentationReflection.isInstrumented() to return true, got: ${responseBody}")
+      }
+
+      logger.lifecycle("=== Smoke test passed ===")
+
+      markerFile.get().asFile.tap {
+        parentFile.mkdirs()
+        text = "passed at ${java.time.Instant.now()}"
+      }
+    } finally {
+      proc.destroy()
+      proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+      if (proc.alive) proc.destroyForcibly()
+    }
+  }
+}
+
+/**
+ * Polls WildFly stdout for the "started in" message and extracts the HTTP port.
+ */
+static int waitForWildfly(StringBuilder output, long timeoutMs) {
+  def deadline = System.currentTimeMillis() + timeoutMs
+  while (System.currentTimeMillis() < deadline) {
+    def text = output.toString()
+    // WildFly logs: "Undertow HTTP listener default listening on 0.0.0.0:<port>"
+    def matcher = text =~ /Undertow HTTP listener default listening on [^:]+:(\d+)/
+    if (matcher.find()) {
+      return Integer.parseInt(matcher.group(1))
+    }
+    Thread.sleep(1000)
+  }
+  throw new RuntimeException("WildFly did not start within ${timeoutMs}ms.\nOutput:\n${output}")
+}
+
+/**
+ * Waits for the deployment marker file to appear.
+ */
+static boolean waitForDeployment(File deploymentsDir, long timeoutMs) {
+  def marker = new File(deploymentsDir, 'smoke-test.war.deployed')
+  def failed = new File(deploymentsDir, 'smoke-test.war.failed')
+  def deadline = System.currentTimeMillis() + timeoutMs
+  while (System.currentTimeMillis() < deadline) {
+    if (marker.exists()) return true
+    if (failed.exists()) throw new RuntimeException("WAR deployment failed:\n${failed.text}")
+    Thread.sleep(1000)
+  }
+  return false
+}
+
+test.dependsOn smokeTest
