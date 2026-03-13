@@ -55,6 +55,11 @@ public class AgentBootstrap {
 
         log("Braintrust Java Agent starting...");
 
+        if (jvmRunningWithOtelAgent()) {
+            log("OpenTelemetry Java agent detected. Braintrust agent is not yet compatible with the OTel javaagent — skipping install.");
+            return;
+        }
+
         try {
             // Locate the agent JAR from our own code source
             URL agentJarURL =
@@ -95,6 +100,20 @@ public class AgentBootstrap {
         } catch (Throwable t) {
             log("ERROR: Failed to install Braintrust Java Agent: " + t.getMessage());
             log(t);
+        }
+    }
+
+    /**
+     * Checks whether the OpenTelemetry Java agent is present by looking for its
+     * premain class on the system classloader. Since {@code -javaagent} JARs are
+     * always on the system classpath, this works regardless of agent ordering.
+     */
+    private static boolean jvmRunningWithOtelAgent() {
+        try {
+            Class.forName("io.opentelemetry.javaagent.OpenTelemetryAgent", false, ClassLoader.getSystemClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 

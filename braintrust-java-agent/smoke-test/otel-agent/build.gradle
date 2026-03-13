@@ -6,6 +6,7 @@ dependencies {
   implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
 }
 
 // ── Configuration to resolve the OTel Java agent JAR from Maven Central ──
@@ -28,7 +29,7 @@ def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('agentJar
  * The process exit code signals pass (0) or fail (non-zero).
  */
 task smokeTest(type: JavaExec) {
-  dependsOn braintrustAgentJar, classes
+  dependsOn braintrustAgentJar, jar
 
   mainClass = 'dev.braintrust.smoketest.otelagent.OtelAgentSmokeTest'
   classpath = sourceSets.main.runtimeClasspath
@@ -38,6 +39,8 @@ task smokeTest(type: JavaExec) {
 
   jvmArgs = [
     "-javaagent:${otelAgentJar.absolutePath}",
+    "-Dotel.javaagent.extensions=${jar.archiveFile.get().asFile.absolutePath}",
+    "-Dotel.java.global-autoconfigure.enabled=true",
     "-Dotel.traces.exporter=none",
     "-Dotel.metrics.exporter=none",
     "-Dotel.logs.exporter=none",
@@ -68,5 +71,5 @@ task smokeTest(type: JavaExec) {
   }
 }
 
-// FIXME
+// TODO: enable when otel agent compatibility is ready
 // test.dependsOn smokeTest
