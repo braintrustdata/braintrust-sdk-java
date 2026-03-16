@@ -7,7 +7,6 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.trace.data.SpanData;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,9 +15,9 @@ import java.util.List;
  *
  * <p>Run via: {@code ./gradlew :braintrust-java-agent:smoke-test:otel-agent:smokeTest}
  *
- * <p>This test verifies that the Braintrust agent and the OTel Java agent can coexist
- * in the same JVM, and that spans created through the OTel API are captured by the
- * collecting exporter (installed via {@link SmokeTestAutoConfiguration}).
+ * <p>This test verifies that the Braintrust agent and the OTel Java agent can coexist in the same
+ * JVM, and that spans created through the OTel API are captured by the collecting exporter
+ * (installed via {@link SmokeTestAutoConfiguration}).
  */
 public class OtelAgentSmokeTest {
 
@@ -29,20 +28,24 @@ public class OtelAgentSmokeTest {
         // Triggers autoconfigure — both the OTel agent and Braintrust agent
         // participate in SDK setup.
         OpenTelemetry otel = GlobalOpenTelemetry.get();
-        assertNotNull(collectingExporter, "SmokeTestAutoConfiguration didn't run — collectingExporter is null");
+        assertNotNull(
+                collectingExporter,
+                "SmokeTestAutoConfiguration didn't run — collectingExporter is null");
 
         Tracer tracer = otel.getTracer("braintrust-otel-smoke-test");
 
         // ── Create a root span with a child ──
-        Span root = tracer.spanBuilder("smoke-test-root")
-                .setSpanKind(SpanKind.INTERNAL)
-                .setAttribute("test.source", "braintrust-otel-smoke-test")
-                .startSpan();
+        Span root =
+                tracer.spanBuilder("smoke-test-root")
+                        .setSpanKind(SpanKind.INTERNAL)
+                        .setAttribute("test.source", "braintrust-otel-smoke-test")
+                        .startSpan();
         try (var ignored = root.makeCurrent()) {
-            Span child = tracer.spanBuilder("smoke-test-child")
-                    .setSpanKind(SpanKind.CLIENT)
-                    .setAttribute("test.child", true)
-                    .startSpan();
+            Span child =
+                    tracer.spanBuilder("smoke-test-child")
+                            .setSpanKind(SpanKind.CLIENT)
+                            .setAttribute("test.child", true)
+                            .startSpan();
             child.end();
         } finally {
             root.end();
@@ -74,41 +77,69 @@ public class OtelAgentSmokeTest {
         // ── Root span assertions ──
         var errors = new ArrayList<String>();
         assertSpanField(errors, "root.name", "smoke-test-root", rootSpan.getName());
-        assertSpanField(errors, "root.kind", SpanKind.INTERNAL.toString(), rootSpan.getKind().toString());
-        assertSpanField(errors, "root.attr[test.source]", "braintrust-otel-smoke-test",
-                rootSpan.getAttributes().get(io.opentelemetry.api.common.AttributeKey.stringKey("test.source")));
-        assertSpanField(errors, "root.status", StatusCode.UNSET.toString(),
+        assertSpanField(
+                errors, "root.kind", SpanKind.INTERNAL.toString(), rootSpan.getKind().toString());
+        assertSpanField(
+                errors,
+                "root.attr[test.source]",
+                "braintrust-otel-smoke-test",
+                rootSpan.getAttributes()
+                        .get(io.opentelemetry.api.common.AttributeKey.stringKey("test.source")));
+        assertSpanField(
+                errors,
+                "root.status",
+                StatusCode.UNSET.toString(),
                 rootSpan.getStatus().getStatusCode().toString());
 
         // ── Child span assertions ──
         assertSpanField(errors, "child.name", "smoke-test-child", childSpan.getName());
-        assertSpanField(errors, "child.kind", SpanKind.CLIENT.toString(), childSpan.getKind().toString());
-        assertSpanField(errors, "child.attr[test.child]", "true",
-                String.valueOf(childSpan.getAttributes().get(io.opentelemetry.api.common.AttributeKey.booleanKey("test.child"))));
+        assertSpanField(
+                errors, "child.kind", SpanKind.CLIENT.toString(), childSpan.getKind().toString());
+        assertSpanField(
+                errors,
+                "child.attr[test.child]",
+                "true",
+                String.valueOf(
+                        childSpan
+                                .getAttributes()
+                                .get(
+                                        io.opentelemetry.api.common.AttributeKey.booleanKey(
+                                                "test.child"))));
 
         // ── Parent-child relationship ──
-        assertSpanField(errors, "child.parentSpanId", rootSpan.getSpanContext().getSpanId(),
+        assertSpanField(
+                errors,
+                "child.parentSpanId",
+                rootSpan.getSpanContext().getSpanId(),
                 childSpan.getParentSpanContext().getSpanId());
-        assertSpanField(errors, "child.traceId", rootSpan.getSpanContext().getTraceId(),
+        assertSpanField(
+                errors,
+                "child.traceId",
+                rootSpan.getSpanContext().getTraceId(),
                 childSpan.getSpanContext().getTraceId());
 
         // ── Timestamps ──
         assertTrue(rootSpan.getStartEpochNanos() > 0, "root startTime should be > 0");
-        assertTrue(rootSpan.getEndEpochNanos() >= rootSpan.getStartEpochNanos(),
+        assertTrue(
+                rootSpan.getEndEpochNanos() >= rootSpan.getStartEpochNanos(),
                 "root endTime should be >= startTime");
-        assertTrue(childSpan.getStartEpochNanos() >= rootSpan.getStartEpochNanos(),
+        assertTrue(
+                childSpan.getStartEpochNanos() >= rootSpan.getStartEpochNanos(),
                 "child startTime should be >= root startTime");
-        assertTrue(childSpan.getEndEpochNanos() <= rootSpan.getEndEpochNanos(),
+        assertTrue(
+                childSpan.getEndEpochNanos() <= rootSpan.getEndEpochNanos(),
                 "child endTime should be <= root endTime");
 
         if (!errors.isEmpty()) {
-            throw new RuntimeException("Span assertion failures:\n  " + String.join("\n  ", errors));
+            throw new RuntimeException(
+                    "Span assertion failures:\n  " + String.join("\n  ", errors));
         }
 
         System.out.println("=== Smoke test passed ===");
     }
 
-    private static void assertSpanField(List<String> errors, String field, String expected, String actual) {
+    private static void assertSpanField(
+            List<String> errors, String field, String expected, String actual) {
         if (expected == null && actual == null) return;
         if (expected != null && expected.equals(actual)) return;
         errors.add("%s: expected=%s actual=%s".formatted(field, expected, actual));

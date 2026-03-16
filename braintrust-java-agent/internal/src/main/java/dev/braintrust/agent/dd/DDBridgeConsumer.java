@@ -7,14 +7,11 @@ import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
-import lombok.extern.slf4j.Slf4j;
-
 import java.lang.reflect.Method;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * Bridges Datadog traces into Braintrust's span export pipeline.
- */
+/** Bridges Datadog traces into Braintrust's span export pipeline. */
 @Slf4j
 public class DDBridgeConsumer {
     private static volatile Method contextMethod;
@@ -31,7 +28,9 @@ public class DDBridgeConsumer {
         final boolean smokeTest = Boolean.getBoolean(SMOKE_TEST_PROP);
 
         var tracerBuilder = SdkTracerProvider.builder();
-        Braintrust.get().openTelemetryEnable(tracerBuilder, SdkLoggerProvider.builder(), SdkMeterProvider.builder());
+        Braintrust.get()
+                .openTelemetryEnable(
+                        tracerBuilder, SdkLoggerProvider.builder(), SdkMeterProvider.builder());
 
         if (smokeTest) {
             var inMemoryExporter = new DDBridge.BridgeInMemorySpanExporter();
@@ -47,21 +46,20 @@ public class DDBridgeConsumer {
             throw new IllegalStateException("Failed to register DD trace interceptor");
         }
 
-        DDBridge.setTraceConsumer(mutableSpans -> {
-            try {
-                List<SpanData> spanDataList = DDSpanConverter.convertTrace(mutableSpans);
-                DDSpanConverter.replayTrace(tracer, spanDataList);
-            } catch (Exception e) {
-                log.warn("Failed to convert DD trace to OTel SpanData", e);
-            }
-        });
+        DDBridge.setTraceConsumer(
+                mutableSpans -> {
+                    try {
+                        List<SpanData> spanDataList = DDSpanConverter.convertTrace(mutableSpans);
+                        DDSpanConverter.replayTrace(tracer, spanDataList);
+                    } catch (Exception e) {
+                        log.warn("Failed to convert DD trace to OTel SpanData", e);
+                    }
+                });
 
         log.info("DD bridge consumer installed — DD traces will be forwarded to Braintrust.");
     }
 
-    /**
-     * Checks whether the Datadog agent is present and configured for OTel integration.
-     */
+    /** Checks whether the Datadog agent is present and configured for OTel integration. */
     public static boolean jvmRunningWithDatadogOtel() {
         try {
             Class.forName("datadog.trace.bootstrap.Agent", false, null);

@@ -18,6 +18,9 @@ class MuzzleTask extends DefaultTask {
     /** Shared bootstrap classloader — same across all muzzle task runs. */
     private static URLClassLoader bootstrapCL
 
+    /** Instrumentation classloader — same across all library versions within a task run. */
+    private URLClassLoader instrumentationCL
+
     MuzzleTask() {
         group = 'verification'
         description = 'Checks instrumentation muzzle references against library versions'
@@ -31,15 +34,17 @@ class MuzzleTask extends DefaultTask {
             bootstrapCL = new URLClassLoader(bootstrapUrls as URL[], (ClassLoader) null)
         }
 
+        // Initialize the instrumentation classloader once per task run — it doesn't
+        // change between library versions.
+        def instrumentationClasspath = collectInstrumentationClasspath()
+        def instrumentationUrls = instrumentationClasspath.collect { it.toURI().toURL() } as URL[]
+        instrumentationCL = new URLClassLoader(instrumentationUrls, ClassLoader.systemClassLoader)
+
         def extension = project.extensions.findByType(MuzzleExtension)
         if (!extension || extension.directives.isEmpty()) {
             logger.lifecycle('[muzzle] No muzzle directives configured — skipping')
             return
         }
-
-        // Build the instrumentation classpath — the project's compiled classes + instrumentation-api + bytebuddy.
-        // This is what we load InstrumentationModules from.
-        def instrumentationClasspath = collectInstrumentationClasspath()
 
         int totalVersions = 0
         int totalFailures = 0
@@ -74,7 +79,7 @@ class MuzzleTask extends DefaultTask {
                     continue
                 }
 
-                def result = checkVersion(instrumentationClasspath, libraryJars, directive, version)
+                def result = checkVersion(libraryJars, directive, version)
 
                 if (result.passed && directive.assertPass) {
                     logger.lifecycle("[muzzle]   ${version} PASS")
@@ -150,9 +155,15 @@ class MuzzleTask extends DefaultTask {
         def deps = []
         deps.add(project.dependencies.create("${directive.group}:${directive.module}:${version}"))
 
-        // Add extra dependencies
+        // Add extra dependencies — if no version specified, use the same version being checked
         directive.additionalDependencies.each { dep ->
-            deps.add(project.dependencies.create(dep))
+            def parts = dep.split(':')
+            if (parts.length == 2) {
+                // group:module only — use the version under test
+                deps.add(project.dependencies.create("${dep}:${version}"))
+            } else {
+                deps.add(project.dependencies.create(dep))
+            }
         }
 
         Configuration config = project.configurations.detachedConfiguration(deps as org.gradle.api.artifacts.Dependency[])
@@ -175,27 +186,19 @@ class MuzzleTask extends DefaultTask {
      * Checks a single library version against the instrumentation's muzzle references.
      */
     private CheckResult checkVersion(
-            List<File> instrumentationClasspath,
             List<File> libraryJars,
             MuzzleDirective directive,
             String version) {
 
-        // Create isolated classloaders
-        def instrumentationUrls = instrumentationClasspath.collect { it.toURI().toURL() } as URL[]
         def libraryUrls = libraryJars.collect { it.toURI().toURL() } as URL[]
 
-        // Instrumentation classloader: agent code + instrumentation-api + bytebuddy
-        // Parent = system classloader (for JDK classes)
-        def instrumentationCL = new URLClassLoader(instrumentationUrls, ClassLoader.systemClassLoader)
-
         // Library classloader: just the library JARs + transitive deps
-        // Parent = null (bootstrap only) so it's fully isolated
+        // Parent = bootstrap placeholder so it sees OTel API etc.
         def libraryCL = new URLClassLoader(libraryUrls, bootstrapCL)
 
         try {
             return doCheck(instrumentationCL, libraryCL)
         } finally {
-            instrumentationCL.close()
             libraryCL.close()
         }
     }
@@ -208,7 +211,7 @@ class MuzzleTask extends DefaultTask {
         def messages = []
 
         // Load classes from the instrumentation classloader
-        def moduleClass = instrumentationCL.loadClass('dev.braintrust.agent.instrumentation.InstrumentationModule')
+        def moduleClass = instrumentationCL.loadClass('dev.braintrust.instrumentation.InstrumentationModule')
         def serviceLoader = ServiceLoader.load(moduleClass, instrumentationCL)
 
         boolean anyModule = false
@@ -227,7 +230,30 @@ class MuzzleTask extends DefaultTask {
                 continue
             }
 
-            // 2. Load muzzle references (prefer $Muzzle, fall back to runtime)
+            // 2. Read all helper class bytes so they can be made available during muzzle checks.
+            //    At runtime, helpers are injected into the target classloader before advice runs,
+            //    so the muzzle check should see them too.
+            def helperNames = module.getHelperClassNames()
+            Map<String, byte[]> allHelperBytes = [:]
+            for (String helperName : helperNames) {
+                def resourceName = helperName.replace('.', '/') + '.class'
+                def helperStream = instrumentationCL.getResourceAsStream(resourceName)
+                if (helperStream == null) {
+                    messages.add("Helper class not found: ${helperName}")
+                    allPassed = false
+                } else {
+                    allHelperBytes[helperName] = helperStream.readAllBytes()
+                    helperStream.close()
+                }
+            }
+
+            // Build a classloader that layers helpers on top of the library CL,
+            // simulating what the app classloader looks like after helper injection.
+            def libraryWithHelpersCL = allHelperBytes.isEmpty()
+                    ? libraryCL
+                    : new HelperTestClassLoader(libraryCL, allHelperBytes)
+
+            // 3. Load muzzle references (prefer $Muzzle, fall back to runtime)
             def referenceMatcher = loadMuzzleReferences(module, instrumentationCL)
             if (referenceMatcher == null) {
                 messages.add("Could not load muzzle references for module '${moduleName}'")
@@ -235,41 +261,27 @@ class MuzzleTask extends DefaultTask {
                 continue
             }
 
-            // 3. Check references against the library classloader
-            boolean refsMatch = referenceMatcher.matches(libraryCL)
+            // 4. Check references against library + helpers
+            boolean refsMatch = referenceMatcher.matches(libraryWithHelpersCL)
             if (!refsMatch) {
-                def mismatches = referenceMatcher.getMismatchedReferenceSources(libraryCL)
+                def mismatches = referenceMatcher.getMismatchedReferenceSources(libraryWithHelpersCL)
                 mismatches.each { messages.add("${it}") }
                 allPassed = false
                 continue
             }
 
-            // 4. Verify helper class injection
-            def helperNames = module.getHelperClassNames()
-            for (String helperName : helperNames) {
-                try {
-                    def resourceName = helperName.replace('.', '/') + '.class'
-                    def helperStream = instrumentationCL.getResourceAsStream(resourceName)
-                    if (helperStream == null) {
-                        messages.add("Helper class not found: ${helperName}")
+            // 5. Verify helper classes can actually be loaded (catches linkage errors)
+            if (!allHelperBytes.isEmpty()) {
+                for (String helperName : helperNames) {
+                    try {
+                        def defined = libraryWithHelpersCL.loadClass(helperName)
+                        // Force resolution to catch linkage errors
+                        defined.getDeclaredMethods()
+                        defined.getDeclaredFields()
+                    } catch (Throwable t) {
+                        messages.add("Helper injection would fail for ${helperName}: ${t.class.simpleName}: ${t.message}")
                         allPassed = false
-                        continue
                     }
-                    def helperBytes = helperStream.readAllBytes()
-                    helperStream.close()
-
-                    // Try to define the helper in a classloader that delegates to the library CL
-                    // This verifies that the helper's dependencies are satisfied by the library
-                    def testCL = new HelperTestClassLoader(libraryCL, helperName, helperBytes)
-                    def defined = testCL.loadClass(helperName)
-
-                    // Force resolution of the class to catch linkage errors
-                    defined.getDeclaredMethods()
-                    defined.getDeclaredFields()
-
-                } catch (Throwable t) {
-                    messages.add("Helper injection would fail for ${helperName}: ${t.class.simpleName}: ${t.message}")
-                    allPassed = false
                 }
             }
         }
@@ -303,10 +315,10 @@ class MuzzleTask extends DefaultTask {
         // We reflectively call the buildMuzzleReferencesAtRuntime equivalent
         try {
             def installerClass = instrumentationCL.loadClass(
-                    'dev.braintrust.agent.instrumentation.InstrumentationInstaller')
+                    'dev.braintrust.instrumentation.InstrumentationInstaller')
             def method = installerClass.getDeclaredMethod(
                     'loadStaticMuzzleReferences',
-                    instrumentationCL.loadClass('dev.braintrust.agent.instrumentation.InstrumentationModule'),
+                    instrumentationCL.loadClass('dev.braintrust.instrumentation.InstrumentationModule'),
                     ClassLoader.class)
             method.setAccessible(true)
             def result = method.invoke(null, module, instrumentationCL)
@@ -315,14 +327,14 @@ class MuzzleTask extends DefaultTask {
 
         // Last resort: build at runtime
         try {
-            def generatorClass = instrumentationCL.loadClass('dev.braintrust.agent.muzzle.MuzzleGenerator')
+            def generatorClass = instrumentationCL.loadClass('dev.braintrust.instrumentation.muzzle.MuzzleGenerator')
             def collectMethod = generatorClass.getDeclaredMethod('collectReferences',
-                    instrumentationCL.loadClass('dev.braintrust.agent.instrumentation.InstrumentationModule'),
+                    instrumentationCL.loadClass('dev.braintrust.instrumentation.InstrumentationModule'),
                     ClassLoader.class)
             collectMethod.setAccessible(true)
             def refs = collectMethod.invoke(null, module, instrumentationCL)
 
-            def matcherClass = instrumentationCL.loadClass('dev.braintrust.agent.muzzle.ReferenceMatcher')
+            def matcherClass = instrumentationCL.loadClass('dev.braintrust.instrumentation.muzzle.ReferenceMatcher')
             return matcherClass.getConstructors()[0].newInstance(refs)
         } catch (Exception e) {
             logger.warn("[muzzle] Failed to build references at runtime for ${module.name()}: ${e.message}")
@@ -331,26 +343,25 @@ class MuzzleTask extends DefaultTask {
     }
 
     /**
-     * A classloader that can define a single helper class and delegates everything else
-     * to the library classloader. This tests whether the helper's dependencies are
-     * satisfied by the library version.
+     * A classloader that layers helper classes on top of a library classloader.
+     * Extends URLClassLoader with the same URLs so that helpers and library classes
+     * share the same runtime package — required for package-private access.
      */
-    private static class HelperTestClassLoader extends ClassLoader {
-        private final String helperName
-        private final byte[] helperBytes
+    private static class HelperTestClassLoader extends URLClassLoader {
+        private final Map<String, byte[]> helperBytes
 
-        HelperTestClassLoader(ClassLoader libraryParent, String helperName, byte[] helperBytes) {
-            super(libraryParent)
-            this.helperName = helperName
+        HelperTestClassLoader(URLClassLoader libraryCL, Map<String, byte[]> helperBytes) {
+            super(libraryCL.getURLs(), libraryCL.getParent())
             this.helperBytes = helperBytes
         }
 
         @Override
         protected Class<?> findClass(String name) throws ClassNotFoundException {
-            if (name == helperName) {
-                return defineClass(name, helperBytes, 0, helperBytes.length)
+            def bytes = helperBytes.get(name)
+            if (bytes != null) {
+                return defineClass(name, bytes, 0, bytes.length)
             }
-            throw new ClassNotFoundException(name)
+            return super.findClass(name)
         }
     }
 

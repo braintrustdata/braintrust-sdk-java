@@ -4,24 +4,23 @@ import dev.braintrust.InstrumentationReflection;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.catalina.Context;
-import org.apache.catalina.startup.Tomcat;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
+import org.apache.catalina.Context;
+import org.apache.catalina.startup.Tomcat;
 
 /**
- * Smoke test that starts an embedded Tomcat with the Braintrust agent attached,
- * deploys a servlet, hits it over HTTP, and verifies instrumentation works.
+ * Smoke test that starts an embedded Tomcat with the Braintrust agent attached, deploys a servlet,
+ * hits it over HTTP, and verifies instrumentation works.
  *
  * <p>Run via: {@code ./gradlew :braintrust-java-agent:smoke-test:tomcat:smokeTest}
  *
- * <p>This tests the agent against Tomcat's classloader hierarchy directly,
- * without any framework abstraction.
+ * <p>This tests the agent against Tomcat's classloader hierarchy directly, without any framework
+ * abstraction.
  */
 public class TomcatSmokeTest {
 
@@ -53,21 +52,27 @@ public class TomcatSmokeTest {
             System.out.println("[smoke-test] Tomcat started on port " + port);
 
             var client = HttpClient.newHttpClient();
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:" + port + "/instrumented"))
-                    .GET()
-                    .build();
+            var request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:" + port + "/instrumented"))
+                            .GET()
+                            .build();
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            System.out.println("[smoke-test] GET /instrumented -> " + response.statusCode() + " " + response.body());
+            System.out.println(
+                    "[smoke-test] GET /instrumented -> "
+                            + response.statusCode()
+                            + " "
+                            + response.body());
 
             if (response.statusCode() != 200) {
                 throw new RuntimeException("Expected 200, got " + response.statusCode());
             }
             if (!"true".equals(response.body())) {
                 throw new RuntimeException(
-                        "Expected InstrumentationReflection.isInstrumented() to return true via HTTP, " +
-                        "but got: " + response.body());
+                        "Expected InstrumentationReflection.isInstrumented() to return true via"
+                                + " HTTP, but got: "
+                                + response.body());
             }
 
             System.out.println("=== Smoke test passed ===");

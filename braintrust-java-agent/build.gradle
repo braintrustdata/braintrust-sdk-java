@@ -62,7 +62,7 @@ subprojects { subproject ->
           configurations.muzzleGenerator,
           configurations.compileClasspath
         )
-        mainClass = 'dev.braintrust.agent.muzzle.MuzzleGenerator'
+        mainClass = 'dev.braintrust.instrumentation.muzzle.MuzzleGenerator'
         args = [sourceSets.main.java.classesDirectory.get().asFile.absolutePath]
       }
 

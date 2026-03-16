@@ -25,7 +25,7 @@ import org.gradle.api.Project
  * }
  * </pre>
  *
- * <p>Then run: {@code ./gradlew :braintrust-java-agent:instrumentation:openai:muzzle}
+ * <p>Then run: {@code ./gradlew :braintrust-java-agent:instrumentation:openai_2_8_0:muzzle}
  */
 class MuzzlePlugin implements Plugin<Project> {
 

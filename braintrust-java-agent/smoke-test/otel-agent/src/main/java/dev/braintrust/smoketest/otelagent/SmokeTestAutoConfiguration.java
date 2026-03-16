@@ -5,11 +5,11 @@ import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvide
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 
 /**
- * Autoconfigure SPI provider that hooks the smoke test's collecting exporter
- * into the OTel SDK tracer provider for assertions.
+ * Autoconfigure SPI provider that hooks the smoke test's collecting exporter into the OTel SDK
+ * tracer provider for assertions.
  *
- * <p>Discovered by Braintrust's {@code OtelAutoConfiguration} which scans the
- * system classloader for additional {@code AutoConfigurationCustomizerProvider} SPIs.
+ * <p>Discovered by Braintrust's {@code OtelAutoConfiguration} which scans the system classloader
+ * for additional {@code AutoConfigurationCustomizerProvider} SPIs.
  */
 public class SmokeTestAutoConfiguration implements AutoConfigurationCustomizerProvider {
 
@@ -17,12 +17,13 @@ public class SmokeTestAutoConfiguration implements AutoConfigurationCustomizerPr
     public void customize(AutoConfigurationCustomizer autoConfiguration) {
         System.out.println("[smoke-test] SmokeTestAutoConfiguration.customize() called");
 
-        autoConfiguration.addTracerProviderCustomizer((builder, config) -> {
-            var collectingExporter = new CollectingSpanExporter();
-            OtelAgentSmokeTest.collectingExporter = collectingExporter;
-            builder.addSpanProcessor(SimpleSpanProcessor.create(collectingExporter));
-            System.out.println("[smoke-test] Added collecting span exporter");
-            return builder;
-        });
+        autoConfiguration.addTracerProviderCustomizer(
+                (builder, config) -> {
+                    var collectingExporter = new CollectingSpanExporter();
+                    OtelAgentSmokeTest.collectingExporter = collectingExporter;
+                    builder.addSpanProcessor(SimpleSpanProcessor.create(collectingExporter));
+                    System.out.println("[smoke-test] Added collecting span exporter");
+                    return builder;
+                });
     }
 }

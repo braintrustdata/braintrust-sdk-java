@@ -10,8 +10,8 @@ import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.data.SpanData;
 
 /**
- * Adapts a {@link SpanData} instance to the {@link ReadableSpan} interface so it can
- * be passed to {@link io.opentelemetry.sdk.trace.SpanProcessor#onEnd(ReadableSpan)}.
+ * Adapts a {@link SpanData} instance to the {@link ReadableSpan} interface so it can be passed to
+ * {@link io.opentelemetry.sdk.trace.SpanProcessor#onEnd(ReadableSpan)}.
  */
 final class SpanDataReadableSpan implements ReadableSpan {
 

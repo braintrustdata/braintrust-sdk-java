@@ -10,15 +10,14 @@ import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
-import lombok.extern.slf4j.Slf4j;
-
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Utility for converting Datadog {@link MutableSpan}s to OTel {@link SpanData}
- * and replaying them on an OTel {@link Tracer}.
+ * Utility for converting Datadog {@link MutableSpan}s to OTel {@link SpanData} and replaying them
+ * on an OTel {@link Tracer}.
  */
 @Slf4j
 public class DDSpanConverter {
@@ -34,17 +33,21 @@ public class DDSpanConverter {
     }
 
     /**
-     * Initialize reflection handles for extracting IDs from DD spans.
-     * Must be called before {@link #convertTrace} or {@link #replayTrace}.
+     * Initialize reflection handles for extracting IDs from DD spans. Must be called before {@link
+     * #convertTrace} or {@link #replayTrace}.
      */
     private static void initReflection() {
         try {
-            Class<?> agentSpanClass = Class.forName(
-                    "datadog.trace.bootstrap.instrumentation.api.AgentSpan", true, null);
+            Class<?> agentSpanClass =
+                    Class.forName(
+                            "datadog.trace.bootstrap.instrumentation.api.AgentSpan", true, null);
             contextMethod = agentSpanClass.getMethod("context");
 
-            Class<?> agentSpanContextClass = Class.forName(
-                    "datadog.trace.bootstrap.instrumentation.api.AgentSpanContext", true, null);
+            Class<?> agentSpanContextClass =
+                    Class.forName(
+                            "datadog.trace.bootstrap.instrumentation.api.AgentSpanContext",
+                            true,
+                            null);
             getTraceIdMethod = agentSpanContextClass.getMethod("getTraceId");
             getSpanIdMethod = agentSpanContextClass.getMethod("getSpanId");
 
@@ -54,21 +57,20 @@ public class DDSpanConverter {
             reflectionInitialized = true;
             log.info("DD span converter reflection initialized successfully.");
         } catch (Exception e) {
-            log.error("Failed to initialize DD span converter reflection — span conversion will not work", e);
+            log.error(
+                    "Failed to initialize DD span converter reflection — span conversion will not"
+                            + " work",
+                    e);
             reflectionInitialized = false;
         }
     }
 
-    /**
-     * Returns true if reflection has been successfully initialized.
-     */
+    /** Returns true if reflection has been successfully initialized. */
     public static boolean isReflectionInitialized() {
         return reflectionInitialized;
     }
 
-    /**
-     * Converts a list of DD {@link MutableSpan}s (one trace) to OTel {@link SpanData}.
-     */
+    /** Converts a list of DD {@link MutableSpan}s (one trace) to OTel {@link SpanData}. */
     static List<SpanData> convertTrace(List<MutableSpan> mutableSpans) throws Exception {
         if (!reflectionInitialized) {
             log.warn("Reflection not initialized — cannot convert DD spans");
@@ -83,7 +85,10 @@ public class DDSpanConverter {
                     result.add(spanData);
                 }
             } catch (Exception e) {
-                log.warn("Failed to convert DD span '{}': {}", ddSpan.getResourceName(), e.getMessage());
+                log.warn(
+                        "Failed to convert DD span '{}': {}",
+                        ddSpan.getResourceName(),
+                        e.getMessage());
             }
         }
         return result;
@@ -91,10 +96,10 @@ public class DDSpanConverter {
 
     /**
      * Replays a list of already-converted {@link SpanData} on the given OTel {@link Tracer}.
-     * <p>
-     * Spans are topologically sorted (parents before children) so that parent contexts
-     * are available when starting child spans. Each span is started and immediately ended
-     * with the original timestamps, attributes, status, and kind preserved.
+     *
+     * <p>Spans are topologically sorted (parents before children) so that parent contexts are
+     * available when starting child spans. Each span is started and immediately ended with the
+     * original timestamps, attributes, status, and kind preserved.
      */
     static void replayTrace(Tracer tracer, List<SpanData> spans) {
         if (spans == null || spans.isEmpty()) {
@@ -108,9 +113,10 @@ public class DDSpanConverter {
         Map<String, Context> spanContextMap = new HashMap<>();
 
         for (SpanData sd : sorted) {
-            SpanBuilder builder = tracer.spanBuilder(sd.getName())
-                    .setSpanKind(sd.getKind())
-                    .setStartTimestamp(sd.getStartEpochNanos(), TimeUnit.NANOSECONDS);
+            SpanBuilder builder =
+                    tracer.spanBuilder(sd.getName())
+                            .setSpanKind(sd.getKind())
+                            .setStartTimestamp(sd.getStartEpochNanos(), TimeUnit.NANOSECONDS);
 
             // Set all attributes
             sd.getAttributes().forEach((key, value) -> setAttributeUnchecked(builder, key, value));
@@ -123,8 +129,7 @@ public class DDSpanConverter {
                     builder.setParent(parentCtx);
                 } else {
                     // Parent not in this batch — create a remote parent context
-                    builder.setParent(Context.current().with(
-                            Span.wrap(sd.getParentSpanContext())));
+                    builder.setParent(Context.current().with(Span.wrap(sd.getParentSpanContext())));
                 }
             } else {
                 builder.setNoParent();
@@ -149,13 +154,14 @@ public class DDSpanConverter {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void setAttributeUnchecked(SpanBuilder builder, io.opentelemetry.api.common.AttributeKey<?> key, Object value) {
+    private static <T> void setAttributeUnchecked(
+            SpanBuilder builder, io.opentelemetry.api.common.AttributeKey<?> key, Object value) {
         builder.setAttribute((io.opentelemetry.api.common.AttributeKey<T>) key, (T) value);
     }
 
     /**
-     * Topologically sorts spans so that parent spans appear before their children.
-     * Spans without parents in the list come first.
+     * Topologically sorts spans so that parent spans appear before their children. Spans without
+     * parents in the list come first.
      */
     private static List<SpanData> topologicalSort(List<SpanData> spans) {
         // Build adjacency: parentSpanId -> list of children
@@ -207,7 +213,8 @@ public class DDSpanConverter {
         return sorted;
     }
 
-    private static SpanData convertSpan(MutableSpan ddSpan, List<MutableSpan> allSpans) throws Exception {
+    private static SpanData convertSpan(MutableSpan ddSpan, List<MutableSpan> allSpans)
+            throws Exception {
         // Extract trace ID and span ID via reflection
         Object agentSpanContext = contextMethod.invoke(ddSpan);
         DDTraceId ddTraceId = (DDTraceId) getTraceIdMethod.invoke(agentSpanContext);
@@ -234,13 +241,18 @@ public class DDSpanConverter {
             }
         }
 
-        SpanContext spanContext = SpanContext.create(
-                traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+        SpanContext spanContext =
+                SpanContext.create(
+                        traceIdHex, spanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
 
         SpanContext parentSpanContext;
         if (!parentSpanIdHex.equals(SpanContext.getInvalid().getSpanId())) {
-            parentSpanContext = SpanContext.create(
-                    traceIdHex, parentSpanIdHex, TraceFlags.getSampled(), TraceState.getDefault());
+            parentSpanContext =
+                    SpanContext.create(
+                            traceIdHex,
+                            parentSpanIdHex,
+                            TraceFlags.getSampled(),
+                            TraceState.getDefault());
         } else {
             parentSpanContext = SpanContext.getInvalid();
         }
@@ -248,9 +260,8 @@ public class DDSpanConverter {
         Attributes attributes = convertTags(ddSpan.getTags());
         SpanKind spanKind = inferSpanKind(ddSpan);
 
-        StatusData status = ddSpan.isError()
-                ? StatusData.create(StatusCode.ERROR, "")
-                : StatusData.unset();
+        StatusData status =
+                ddSpan.isError() ? StatusData.create(StatusCode.ERROR, "") : StatusData.unset();
 
         long startEpochNanos = ddSpan.getStartTime();
         long endEpochNanos = startEpochNanos + ddSpan.getDurationNano();
@@ -295,9 +306,7 @@ public class DDSpanConverter {
         return builder.build();
     }
 
-    /**
-     * Infers OTel SpanKind from DD's operation name convention.
-     */
+    /** Infers OTel SpanKind from DD's operation name convention. */
     private static SpanKind inferSpanKind(MutableSpan ddSpan) {
         CharSequence opName = ddSpan.getOperationName();
         if (opName == null) return SpanKind.INTERNAL;

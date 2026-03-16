@@ -2,7 +2,6 @@ plugins {
   id 'java-library'
   id 'maven-publish'
   id 'signing'
-  id 'com.diffplug.spotless' version '6.25.0'
   id 'io.freefair.lombok' version '9.2.0'
   id 'com.vanniktech.maven.publish' version '0.28.0'
 }
@@ -24,6 +23,8 @@ tasks.withType(JavaCompile).configureEach {
 repositories {
   mavenCentral()
 }
+
+def langchainVersion = '1.9.1'
 
 dependencies {
   api "io.opentelemetry:opentelemetry-api:${otelVersion}"
@@ -201,25 +202,6 @@ compileJava.dependsOn generateBraintrustProperties
 processResources.dependsOn generateBraintrustProperties
 sourcesJar.dependsOn generateBraintrustProperties
 jar.dependsOn generateBraintrustProperties
-
-// Configure Spotless for code formatting
-spotless {
-  java {
-    target 'src/*/java/**/*.java'
-
-    // Use Google Java Format
-    googleJavaFormat('1.19.2').aosp().reflowLongStrings()
-
-    // Remove unused imports
-    removeUnusedImports()
-
-    // Trim trailing whitespace
-    trimTrailingWhitespace()
-
-    // End with newline
-    endWithNewline()
-  }
-}
 
 task validateJavaVersion {
   doLast {

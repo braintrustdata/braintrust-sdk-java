@@ -1,7 +1,5 @@
 package dev.braintrust.bootstrap;
 
-import dev.braintrust.system.AgentBootstrap;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -66,8 +64,10 @@ public class BraintrustClassLoader extends SecureClassLoader {
         // For .class resource lookups, map to .classdata
         String entryName;
         if (name.endsWith(".class")) {
-            entryName = ENTRY_PREFIX + name.substring(0, name.length() - ".class".length())
-                    + CLASS_DATA_SUFFIX;
+            entryName =
+                    ENTRY_PREFIX
+                            + name.substring(0, name.length() - ".class".length())
+                            + CLASS_DATA_SUFFIX;
         } else {
             entryName = ENTRY_PREFIX + name;
         }

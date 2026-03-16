@@ -1,30 +1,28 @@
 package dev.braintrust.agent;
 
-import com.google.auto.service.AutoService;
-import dev.braintrust.agent.instrumentation.InstrumentationModule;
-import dev.braintrust.agent.instrumentation.TypeInstrumentation;
-import dev.braintrust.agent.instrumentation.TypeTransformer;
-import dev.braintrust.bootstrap.BraintrustBridge;
-import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.internal.ConfigUtil;
-import net.bytebuddy.asm.Advice;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.matcher.ElementMatcher;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
-import java.util.List;
-
 import static net.bytebuddy.matcher.ElementMatchers.isStatic;
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
+import com.google.auto.service.AutoService;
+import dev.braintrust.bootstrap.BraintrustBridge;
+import dev.braintrust.instrumentation.InstrumentationModule;
+import dev.braintrust.instrumentation.TypeInstrumentation;
+import dev.braintrust.instrumentation.TypeTransformer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.OpenTelemetry;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
+import java.util.List;
+import net.bytebuddy.asm.Advice;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
+
 /**
- * Replaces {@code GlobalOpenTelemetry.maybeAutoConfigureAndSetGlobal()} so that
- * the Braintrust agent controls OTel SDK initialization lazily — triggered on
- * the first call to {@code GlobalOpenTelemetry.get()}.
+ * Replaces {@code GlobalOpenTelemetry.maybeAutoConfigureAndSetGlobal()} so that the Braintrust
+ * agent controls OTel SDK initialization lazily — triggered on the first call to {@code
+ * GlobalOpenTelemetry.get()}.
  */
 @AutoService(InstrumentationModule.class)
 public class GlobalOpenTelemetryInstrumentationModule extends InstrumentationModule {
@@ -62,13 +60,17 @@ public class GlobalOpenTelemetryInstrumentationModule extends InstrumentationMod
         }
 
         @Advice.OnMethodExit
-        static void onExit(
-                @Advice.Return(readOnly = false) OpenTelemetry result) {
-            // almost identical to the original method, but load autoconfigure out of the braintrust classloader
+        static void onExit(@Advice.Return(readOnly = false) OpenTelemetry result) {
+            // almost identical to the original method, but load autoconfigure out of the braintrust
+            // classloader
             ClassLoader braintrustClassLoader = BraintrustBridge.getAgentClassLoader();
             Class<?> openTelemetrySdkAutoConfiguration;
             try {
-                openTelemetrySdkAutoConfiguration = Class.forName("io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk", true, braintrustClassLoader);
+                openTelemetrySdkAutoConfiguration =
+                        Class.forName(
+                                "io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk",
+                                true,
+                                braintrustClassLoader);
             } catch (ClassNotFoundException e) {
                 result = null;
                 return;
@@ -80,14 +82,18 @@ public class GlobalOpenTelemetryInstrumentationModule extends InstrumentationMod
                 Method getOpenTelemetrySdk =
                         openTelemetrySdkAutoConfiguration.getMethod("getOpenTelemetrySdk");
                 OpenTelemetry raw = (OpenTelemetry) getOpenTelemetrySdk.invoke(autoConfiguredSdk);
-                result = (OpenTelemetry) MethodHandles.lookup()
-                        .findStatic(
-                                GlobalOpenTelemetry.class,
-                                "obfuscatedOpenTelemetry",
-                                MethodType.methodType(OpenTelemetry.class, OpenTelemetry.class))
-                        .invoke(raw);
+                result =
+                        (OpenTelemetry)
+                                MethodHandles.lookup()
+                                        .findStatic(
+                                                GlobalOpenTelemetry.class,
+                                                "obfuscatedOpenTelemetry",
+                                                MethodType.methodType(
+                                                        OpenTelemetry.class, OpenTelemetry.class))
+                                        .invoke(raw);
                 return;
-            } catch (Throwable t) {}
+            } catch (Throwable t) {
+            }
             result = null;
             return;
         }

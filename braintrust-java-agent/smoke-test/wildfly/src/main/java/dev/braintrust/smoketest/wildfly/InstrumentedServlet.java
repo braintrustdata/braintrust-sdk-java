@@ -5,12 +5,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 
-/**
- * Simple servlet that returns whether the Braintrust agent has instrumented the app.
- */
+/** Simple servlet that returns whether the Braintrust agent has instrumented the app. */
 @WebServlet("/instrumented")
 public class InstrumentedServlet extends HttpServlet {
     @Override
