@@ -15,6 +15,9 @@ import org.gradle.api.tasks.TaskAction
  */
 class MuzzleTask extends DefaultTask {
 
+    /** Shared bootstrap classloader — same across all muzzle task runs. */
+    private static URLClassLoader bootstrapCL
+
     MuzzleTask() {
         group = 'verification'
         description = 'Checks instrumentation muzzle references against library versions'
@@ -22,6 +25,12 @@ class MuzzleTask extends DefaultTask {
 
     @TaskAction
     void run() {
+        // Initialize the shared bootstrap classloader once per build.
+        if (bootstrapCL == null) {
+            def bootstrapUrls = collectBootstrapClasspath()
+            bootstrapCL = new URLClassLoader(bootstrapUrls as URL[], (ClassLoader) null)
+        }
+
         def extension = project.extensions.findByType(MuzzleExtension)
         if (!extension || extension.directives.isEmpty()) {
             logger.lifecycle('[muzzle] No muzzle directives configured — skipping')
@@ -112,6 +121,25 @@ class MuzzleTask extends DefaultTask {
     }
 
     /**
+     * Collects the bootstrap classpath: the bootstrap module's compiled classes + bootstrapLibs
+     * (OTel API and its transitive deps). This simulates what ends up on the real JVM bootstrap
+     * classpath when the agent runs.
+     */
+    private List<URL> collectBootstrapClasspath() {
+        def agentProject = project.project(':braintrust-java-agent')
+        def urls = []
+
+        // Bootstrap module compiled classes
+        def bootstrapProject = project.project(':braintrust-java-agent:bootstrap')
+        bootstrapProject.sourceSets.main.output.classesDirs.each { urls.add(it.toURI().toURL()) }
+
+        // bootstrapLibs configuration (OTel API + transitive deps like context, common)
+        agentProject.configurations.bootstrapLibs.resolve().each { urls.add(it.toURI().toURL()) }
+
+        return urls
+    }
+
+    /**
      * Resolves a specific version of the library, returning the JAR files.
      * Uses Gradle's dependency resolution for transitive deps.
      */
@@ -162,7 +190,7 @@ class MuzzleTask extends DefaultTask {
 
         // Library classloader: just the library JARs + transitive deps
         // Parent = null (bootstrap only) so it's fully isolated
-        def libraryCL = new URLClassLoader(libraryUrls, (ClassLoader) null)
+        def libraryCL = new URLClassLoader(libraryUrls, bootstrapCL)
 
         try {
             return doCheck(instrumentationCL, libraryCL)
