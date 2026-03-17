@@ -607,6 +607,7 @@ public class Devserver {
         Map<String, Object> scoreSpanAttrs = new LinkedHashMap<>();
         scoreSpanAttrs.put("type", "score");
         scoreSpanAttrs.put("name", scorerName);
+        scoreSpanAttrs.put("purpose", "scorer");
         if (braintrustGeneration != null) {
             scoreSpanAttrs.put("generation", braintrustGeneration);
         }

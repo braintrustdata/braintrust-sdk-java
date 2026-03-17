@@ -230,6 +230,7 @@ public final class Eval<INPUT, OUTPUT> {
         Map<String, Object> spanAttrs = new LinkedHashMap<>();
         spanAttrs.put("type", "score");
         spanAttrs.put("name", scorer.getName());
+        spanAttrs.put("purpose", "scorer");
         scoreSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
         var scoresJson = toJson(scorerScores);
         scoreSpan.setAttribute("braintrust.output_json", scoresJson);

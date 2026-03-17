@@ -104,6 +104,30 @@ public class EvalTest {
                 numRootSpans.get() * 4,
                 spans.size(),
                 "each eval case should make four spans (one per scorer)");
+
+        // All score spans should have purpose=scorer in span_attributes
+        var scoreSpans =
+                spans.stream()
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("\"type\":\"score\"");
+                                })
+                        .toList();
+        assertFalse(scoreSpans.isEmpty(), "should have score spans");
+        for (var scoreSpan : scoreSpans) {
+            var spanAttrsJson =
+                    scoreSpan
+                            .getAttributes()
+                            .get(AttributeKey.stringKey("braintrust.span_attributes"));
+            assertTrue(
+                    spanAttrsJson.contains("\"purpose\":\"scorer\""),
+                    "score span should have purpose=scorer in span_attributes: " + spanAttrsJson);
+        }
     }
 
     boolean isFruitOrVegetable(String str) {
