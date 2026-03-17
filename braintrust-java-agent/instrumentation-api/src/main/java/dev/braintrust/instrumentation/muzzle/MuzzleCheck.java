@@ -1,8 +1,6 @@
 package dev.braintrust.instrumentation.muzzle;
 
 import dev.braintrust.instrumentation.InstrumentationModule;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +15,6 @@ import net.bytebuddy.matcher.ElementMatcher;
  */
 @Slf4j
 public class MuzzleCheck implements ElementMatcher<ClassLoader> {
-    private static final ClassLoader BOOTSTRAP_PLACEHOLDER = new URLClassLoader(new URL[0], null);
     private final String moduleName;
     private final ReferenceMatcher referenceMatcher;
 
@@ -36,7 +33,8 @@ public class MuzzleCheck implements ElementMatcher<ClassLoader> {
         }
 
         if (classLoader == null) {
-            classLoader = BOOTSTRAP_PLACEHOLDER;
+            // TODO: support fetching resources from the bootstrap classpath
+            return true;
         }
 
         // Use identity-based key for classloader caching

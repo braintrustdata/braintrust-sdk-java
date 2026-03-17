@@ -29,10 +29,6 @@ public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
         // log.info("Instrumentation: retransform={}", inst.isRetransformClassesSupported());
         // Fail fast if there are any issues with the Braintrust SDK or otel
         Braintrust.get();
-
-        if (DDBridgeConsumer.jvmRunningWithDatadogOtel()) {
-            DDBridgeConsumer.install();
-        }
         InstrumentationInstaller.install(inst, BraintrustAgent.class.getClassLoader());
     }
 
