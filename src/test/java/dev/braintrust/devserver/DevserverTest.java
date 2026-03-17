@@ -433,6 +433,7 @@ class DevserverTest {
             assertNotNull(spanAttrsJson, "Score span should have span_attributes");
             JsonNode spanAttrs = JSON_MAPPER.readTree(spanAttrsJson);
             assertEquals("score", spanAttrs.get("type").asText());
+            assertEquals("scorer", spanAttrs.get("purpose").asText());
             assertEquals("test-gen-1", spanAttrs.get("generation").asText());
 
             // Scorer name should be either simple_scorer or the remote scorer
