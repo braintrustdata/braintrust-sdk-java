@@ -1,8 +1,10 @@
+def springAiVersion = '1.1.0'
+
 muzzle {
   pass {
     group = 'org.springframework.ai'
-    module = 'spring-ai-model'
-    versions = '[1.0.0,)'
+    module = 'spring-ai-openai'
+    versions = "[${springAiVersion},${springAiVersion}]"
   }
 }
 
@@ -21,8 +23,8 @@ dependencies {
   compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
 
   // Target libraries — compileOnly because they will be on the app classpath at runtime
-  compileOnly 'org.springframework.ai:spring-ai-model:1.1.0'
-  compileOnly 'org.springframework.ai:spring-ai-openai:1.1.0'
+  compileOnly "org.springframework.ai:spring-ai-model:${springAiVersion}"
+  compileOnly "org.springframework.ai:spring-ai-openai:${springAiVersion}"
 
   // Test dependencies
   testImplementation(testFixtures(project(":test-harness")))
@@ -31,7 +33,7 @@ dependencies {
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
   testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
   testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
-  testImplementation 'org.springframework.ai:spring-ai-model:1.1.0'
+  testImplementation "org.springframework.ai:spring-ai-model:${springAiVersion}"
 }
 
 test {

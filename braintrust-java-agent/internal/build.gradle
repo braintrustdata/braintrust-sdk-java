@@ -10,6 +10,9 @@ dependencies {
   // can use BraintrustConfig, BraintrustSpanExporter, instrumentations, etc.
   implementation project(':braintrust-sdk')
 
+  // DONTMERGE
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+
   // Bootstrap classes (e.g. BraintrustBridge) — available at runtime on the bootstrap
   // classpath, so we only need them at compile time for javac resolution.
   compileOnly project(':braintrust-java-agent:bootstrap')

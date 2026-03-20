@@ -14,7 +14,7 @@ import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.matcher.ElementMatcher;
-import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.chat.model.ChatModel;
 
 @AutoService(InstrumentationModule.class)
 public class SpringAIInstrumentationModule extends InstrumentationModule {
@@ -57,10 +57,15 @@ public class SpringAIInstrumentationModule extends InstrumentationModule {
         @Advice.OnMethodExit
         public static void build(
                 @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
-                        OpenAiChatModel returnedModel) {
-            returnedModel =
-                    (OpenAiChatModel)
-                            BraintrustSpringAI.wrap(GlobalOpenTelemetry.get(), returnedModel);
+                        Object returnedObject) {
+            System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~ INST APPLIED DONTMERGE");
+            try {
+                throw new RuntimeException("DONTMERGE");
+            } catch (Exception e) {
+                // e.printStackTrace();
+            }
+            returnedObject =
+                    BraintrustSpringAI.wrap(GlobalOpenTelemetry.get(), (ChatModel) returnedObject);
         }
     }
 }

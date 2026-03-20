@@ -21,10 +21,10 @@ import org.springframework.web.client.RestClient;
 public class BraintrustSpringAI {
 
     /**
-     * Wraps a Spring AI {@link ChatModel} so that every {@code call()} invocation is traced as a
+     * Wraps a Spring AI chat model so that every {@code call()} invocation is traced as a
      * Braintrust LLM span.
      */
-    public static ChatModel wrap(OpenTelemetry openTelemetry, ChatModel chatModel) {
+    public static Object wrap(OpenTelemetry openTelemetry, ChatModel chatModel) {
         try {
             if (chatModel instanceof OpenAiChatModel) {
                 return instrumentOpenAiChatModel(openTelemetry, (OpenAiChatModel) chatModel);
@@ -43,6 +43,7 @@ public class BraintrustSpringAI {
 
         if (restClient == null || hasTracingInterceptor(restClient)) {
             // Already wrapped or nothing to wrap
+            System.out.println(" ---- already wrapped DONTMERGE");
             return chatModel;
         }
 
@@ -51,6 +52,8 @@ public class BraintrustSpringAI {
                 restClient.mutate().requestInterceptor(new TracingInterceptor(tracer));
         OpenAiApi wrappedOpenAiApi =
                 openAiApi.mutate().restClientBuilder(wrappedRestClientBuilder).build();
+        // NOTE: calling the builder here will re-enter instrumentation but we'll detect our tracing
+        // interceptor and stop so we'll only wrap once
         OpenAiChatModel wrappedChatModel = chatModel.mutate().openAiApi(wrappedOpenAiApi).build();
 
         ChatModelObservationConvention observationConvention =
