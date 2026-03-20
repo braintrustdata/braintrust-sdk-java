@@ -34,7 +34,7 @@ dependencies {
   testFixturesImplementation "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
   testFixturesImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
 
-  testFixturesImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.0'
+  testFixturesImplementation 'org.wiremock:wiremock:3.13.1'
   testFixturesImplementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
   testFixturesImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
