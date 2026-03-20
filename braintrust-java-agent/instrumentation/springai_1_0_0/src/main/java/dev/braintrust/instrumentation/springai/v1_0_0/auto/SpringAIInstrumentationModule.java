@@ -29,7 +29,9 @@ public class SpringAIInstrumentationModule extends InstrumentationModule {
     public List<String> getHelperClassNames() {
         return List.of(
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustSpringAI",
-                MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustSpringAI$TracingInterceptor");
+                MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustSpringAI$TracingInterceptor",
+                MANUAL_INSTRUMENTATION_PACKAGE
+                        + "BraintrustSpringAI$BraintrustChatModelObservationHandler");
     }
 
     @Override
@@ -58,12 +60,6 @@ public class SpringAIInstrumentationModule extends InstrumentationModule {
         public static void build(
                 @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
                         Object returnedObject) {
-            System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~ INST APPLIED DONTMERGE");
-            try {
-                throw new RuntimeException("DONTMERGE");
-            } catch (Exception e) {
-                // e.printStackTrace();
-            }
             returnedObject =
                     BraintrustSpringAI.wrap(GlobalOpenTelemetry.get(), (ChatModel) returnedObject);
         }
