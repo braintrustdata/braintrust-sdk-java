@@ -100,19 +100,24 @@ jobs:
           # Strip 'v' prefix to get the actual version used by Gradle
           VERSION="${TAG#v}"
 
-          # Find the built JAR files (version does NOT include 'v' prefix)
-          MAIN_JAR=$(find build/libs -name "*-${VERSION}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
-          SOURCES_JAR=$(find build/libs -name "*-${VERSION}-sources.jar" | head -1)
-          JAVADOC_JAR=$(find build/libs -name "*-${VERSION}-javadoc.jar" | head -1)
+          # braintrust-sdk artifacts
+          SDK_MAIN_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
+          SDK_SOURCES_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}-sources.jar" | head -1)
+          SDK_JAVADOC_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}-javadoc.jar" | head -1)
 
-          echo "main-jar=$MAIN_JAR" >> $GITHUB_OUTPUT
-          echo "sources-jar=$SOURCES_JAR" >> $GITHUB_OUTPUT
-          echo "javadoc-jar=$JAVADOC_JAR" >> $GITHUB_OUTPUT
+          # braintrust-java-agent artifact (single fat jar, no sources/javadoc)
+          AGENT_JAR=$(find braintrust-java-agent/build/libs -name "braintrust-java-agent-${VERSION}.jar" | head -1)
+
+          echo "sdk-main-jar=$SDK_MAIN_JAR" >> $GITHUB_OUTPUT
+          echo "sdk-sources-jar=$SDK_SOURCES_JAR" >> $GITHUB_OUTPUT
+          echo "sdk-javadoc-jar=$SDK_JAVADOC_JAR" >> $GITHUB_OUTPUT
+          echo "agent-jar=$AGENT_JAR" >> $GITHUB_OUTPUT
 
           echo "Found artifacts:"
-          echo "  Main JAR: $MAIN_JAR"
-          echo "  Sources JAR: $SOURCES_JAR"
-          echo "  Javadoc JAR: $JAVADOC_JAR"
+          echo "  SDK Main JAR: $SDK_MAIN_JAR"
+          echo "  SDK Sources JAR: $SDK_SOURCES_JAR"
+          echo "  SDK Javadoc JAR: $SDK_JAVADOC_JAR"
+          echo "  Agent JAR: $AGENT_JAR"
 
       - name: Create GitHub Release
         run: |
@@ -123,18 +128,16 @@ jobs:
             --generate-notes \
             --title "Release $TAG"
 
-          # Upload artifacts if they exist
-          if [[ -n "${{ steps.find-artifacts.outputs.main-jar }}" && -f "${{ steps.find-artifacts.outputs.main-jar }}" ]]; then
-            gh release upload "$TAG" "${{ steps.find-artifacts.outputs.main-jar }}"
-          fi
-
-          if [[ -n "${{ steps.find-artifacts.outputs.sources-jar }}" && -f "${{ steps.find-artifacts.outputs.sources-jar }}" ]]; then
-            gh release upload "$TAG" "${{ steps.find-artifacts.outputs.sources-jar }}"
-          fi
-
-          if [[ -n "${{ steps.find-artifacts.outputs.javadoc-jar }}" && -f "${{ steps.find-artifacts.outputs.javadoc-jar }}" ]]; then
-            gh release upload "$TAG" "${{ steps.find-artifacts.outputs.javadoc-jar }}"
-          fi
+          # Upload SDK artifacts
+          for jar in \
+            "${{ steps.find-artifacts.outputs.sdk-main-jar }}" \
+            "${{ steps.find-artifacts.outputs.sdk-sources-jar }}" \
+            "${{ steps.find-artifacts.outputs.sdk-javadoc-jar }}" \
+            "${{ steps.find-artifacts.outputs.agent-jar }}"; do
+            if [[ -n "$jar" && -f "$jar" ]]; then
+              gh release upload "$TAG" "$jar"
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to Sonatype
