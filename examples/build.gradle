@@ -31,6 +31,9 @@ dependencies {
   implementation 'com.google.genai:google-genai:1.20.0'
   // spring ai examples
   implementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'
+  implementation 'org.springframework.ai:spring-ai-openai:1.1.0'
+  // spring-ai-openai requires spring-webflux (WebClient) at runtime
+  implementation 'org.springframework:spring-webflux:6.2.3'
   // spring boot for SpringAIExample (exclude logback, use slf4j-simple like other examples)
   implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
     exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
@@ -133,10 +136,15 @@ task runGeminiInstrumentation(type: JavaExec) {
 
 task runSpringAI(type: JavaExec) {
   group = 'Braintrust SDK Examples'
-  description = 'Run the Spring Boot + Spring AI + Gemini example.'
+  description = 'Run the Spring Boot + Spring AI example'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.braintrust.examples.SpringAIExample'
   systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+
+  def agentJar = project(':braintrust-java-agent').tasks.named('jar')
+  dependsOn agentJar
+  jvmArgs "-javaagent:${agentJar.get().archiveFile.get().asFile.absolutePath}"
+
   debugOptions {
     enabled = true
     port = 5566

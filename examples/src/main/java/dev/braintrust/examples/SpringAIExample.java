@@ -12,6 +12,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,7 +30,9 @@ import org.springframework.context.annotation.Bean;
 public class SpringAIExample {
 
     public static void main(String[] args) {
-        SpringApplication.run(SpringAIExample.class, args);
+        var app = new SpringApplication(SpringAIExample.class);
+        app.setWebApplicationType(org.springframework.boot.WebApplicationType.NONE);
+        app.run(args);
     }
 
     @Bean
@@ -77,15 +82,42 @@ public class SpringAIExample {
 
     @Bean
     public String aiProvider() {
-        // return "openai";
-        // return "anthropic";
-        return "google";
+        var provider = System.getenv("SPRING_AI_EXAMPLE_PROVIDER");
+        if (provider == null || provider.isBlank()) {
+            return "openai";
+        }
+        return switch (provider) {
+            case "openai", "google" -> provider;
+            default ->
+                    throw new RuntimeException(
+                            "unsupported SPRING_AI_EXAMPLE_PROVIDER: '%s'. Allowed values: openai, google"
+                                    .formatted(provider));
+        };
     }
 
     @Bean
     public ChatModel chatModel(String aiProvider, OpenTelemetry openTelemetry) {
         return switch (aiProvider) {
-            case "openai", "anthropic" -> {
+            case "openai" -> {
+                if (null == System.getenv("OPENAI_API_KEY")) {
+                    System.err.println(
+                            "\n"
+                                    + "WARNING: OPENAI_API_KEY not found. This example will likely"
+                                    + " fail.\n"
+                                    + "Set it with: export OPENAI_API_KEY='your-key'\n");
+                }
+                var openAiApi = OpenAiApi.builder().apiKey(System.getenv("OPENAI_API_KEY")).build();
+                yield OpenAiChatModel.builder()
+                        .openAiApi(openAiApi)
+                        .defaultOptions(
+                                OpenAiChatOptions.builder()
+                                        .model("gpt-4o-mini")
+                                        .temperature(0.0)
+                                        .maxTokens(50)
+                                        .build())
+                        .build();
+            }
+            case "anthropic" -> {
                 throw new RuntimeException("TODO: " + aiProvider);
             }
             case "google" -> {
