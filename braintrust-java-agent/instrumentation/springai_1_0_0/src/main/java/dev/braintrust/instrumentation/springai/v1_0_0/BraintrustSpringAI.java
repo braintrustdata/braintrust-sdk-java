@@ -1,10 +1,14 @@
 package dev.braintrust.instrumentation.springai.v1_0_0;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.json.BraintrustJsonMapper;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -12,12 +16,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.messages.AbstractMessage;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.observation.ChatModelObservationContext;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -34,14 +38,6 @@ public class BraintrustSpringAI {
     private static final Map<ObservationRegistry, Boolean> REGISTERED_REGISTRIES =
             Collections.synchronizedMap(new WeakHashMap<>());
 
-    /**
-     * Instruments an {@link OpenAiChatModel.Builder} in place before {@code build()} runs.
-     *
-     * <p>Installs a {@link TracingInterceptor} on the builder's {@code RestClient} (for HTTP-level
-     * spans) and wires a {@link BraintrustChatModelObservationHandler} into the builder's {@link
-     * ObservationRegistry} (for semantic input/output observation). If the builder already carries
-     * a no-op registry a fresh one is created and set on the builder so observations fire.
-     */
     public static void prepareBuilder(OpenTelemetry openTelemetry, Object builderObj) {
         if (!(builderObj instanceof OpenAiChatModel.Builder)) {
             return;
@@ -49,23 +45,6 @@ public class BraintrustSpringAI {
         OpenAiChatModel.Builder builder = (OpenAiChatModel.Builder) builderObj;
         try {
             Tracer tracer = openTelemetry.getTracer(TRACER_NAME);
-
-            // --- wire the HTTP tracing interceptor via RestClient ---
-            /*
-            OpenAiApi openAiApi = getField(builder, "openAiApi");
-            if (openAiApi != null) {
-                RestClient restClient = getField(openAiApi, "restClient");
-                if (restClient != null && !hasTracingInterceptor(restClient)) {
-                    RestClient.Builder wrappedRestClientBuilder =
-                            restClient.mutate().requestInterceptor(new TracingInterceptor(tracer));
-                    OpenAiApi wrappedOpenAiApi =
-                            openAiApi.mutate().restClientBuilder(wrappedRestClientBuilder).build();
-                    builder.openAiApi(wrappedOpenAiApi);
-                }
-            }
-             */
-
-            // --- wire the observation handler via ObservationRegistry ---
             ObservationRegistry registry = getField(builder, "observationRegistry");
             if (registry == null || registry.isNoop()) {
                 registry = ObservationRegistry.create();
@@ -83,21 +62,6 @@ public class BraintrustSpringAI {
         }
     }
 
-    private static boolean hasTracingInterceptor(RestClient restClient)
-            throws ReflectiveOperationException {
-        List<ClientHttpRequestInterceptor> interceptors = getField(restClient, "interceptors");
-        if (interceptors == null) {
-            return false;
-        }
-
-        for (ClientHttpRequestInterceptor interceptor : interceptors) {
-            if (interceptor instanceof TracingInterceptor) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @SuppressWarnings("unchecked")
     private static <T> T getField(Object obj, String fieldName)
             throws ReflectiveOperationException {
@@ -113,29 +77,6 @@ public class BraintrustSpringAI {
         }
         throw new NoSuchFieldException(
                 "Field '" + fieldName + "' not found on " + obj.getClass().getName());
-    }
-
-    private static final class TracingInterceptor implements ClientHttpRequestInterceptor {
-        private final Tracer tracer;
-
-        private TracingInterceptor(Tracer tracer) {
-            this.tracer = tracer;
-        }
-
-        @Override
-        public ClientHttpResponse intercept(
-                HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
-                throws IOException {
-            var span = tracer.spanBuilder("todo").startSpan();
-            try (var ignored = span.makeCurrent()) {
-                // TODO: tag request
-                ClientHttpResponse response = execution.execute(request, body);
-                // TODO: tag response
-                return response;
-            } finally {
-                span.end();
-            }
-        }
     }
 
     private static final class BraintrustChatModelObservationHandler
@@ -156,41 +97,112 @@ public class BraintrustSpringAI {
 
         @Override
         public void onStart(ChatModelObservationContext context) {
-            var span = tracer.spanBuilder("spring.ai.chat").startSpan();
+            Span span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
             context.put(OBSERVATION_SPAN_KEY, span);
 
             Prompt prompt = context.getRequest();
             if (prompt != null) {
-                var inputJson = BraintrustJsonMapper.toJson(prompt);
-                System.out.println("SPRING AI INPUT MESSAGES: " + inputJson);
+                tagRequest(span, prompt);
             }
         }
 
         @Override
         public void onError(ChatModelObservationContext context) {
-            var span = context.get(OBSERVATION_SPAN_KEY);
-            if (span instanceof io.opentelemetry.api.trace.Span) {
+            Span span = context.get(OBSERVATION_SPAN_KEY);
+            if (span != null) {
                 Throwable error = context.getError();
                 if (error != null) {
-                    ((io.opentelemetry.api.trace.Span) span).recordException(error);
+                    InstrumentationSemConv.tagLLMSpanResponse(span, error);
                 }
             }
         }
 
         @Override
         public void onStop(ChatModelObservationContext context) {
+            Span span = context.get(OBSERVATION_SPAN_KEY);
+            if (span == null) {
+                return;
+            }
             try {
                 ChatResponse response = context.getResponse();
                 if (response != null) {
-                    var outputJson = BraintrustJsonMapper.toJson(response);
-                    System.out.println("SPRING AI OUTPUT MESSAGES: " + outputJson);
+                    tagResponse(span, response);
                 }
             } finally {
-                var span = context.get(OBSERVATION_SPAN_KEY);
-                if (span instanceof io.opentelemetry.api.trace.Span) {
-                    ((io.opentelemetry.api.trace.Span) span).end();
+                span.end();
+            }
+        }
+
+        @SneakyThrows
+        private static void tagRequest(Span span, Prompt prompt) {
+            // Build a synthetic OpenAI-style {"messages":[{role, content},...]} body
+            ArrayNode messages = BraintrustJsonMapper.get().createArrayNode();
+            for (Message msg : prompt.getInstructions()) {
+                ObjectNode msgNode = BraintrustJsonMapper.get().createObjectNode();
+                msgNode.put("role", msg.getMessageType().getValue().toLowerCase());
+                msgNode.put("content", msg.getText());
+                messages.add(msgNode);
+            }
+
+            // Pull model from prompt options if present
+            String model = null;
+            if (prompt.getOptions() != null) {
+                Object modelOpt = prompt.getOptions().getModel();
+                if (modelOpt != null) {
+                    model = modelOpt.toString();
                 }
             }
+
+            ObjectNode requestBody = BraintrustJsonMapper.get().createObjectNode();
+            requestBody.set("messages", messages);
+            if (model != null) {
+                requestBody.put("model", model);
+            }
+
+            InstrumentationSemConv.tagLLMSpanRequest(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                    "https://api.openai.com",
+                    List.of("v1", "chat", "completions"),
+                    "POST",
+                    BraintrustJsonMapper.toJson(requestBody));
+        }
+
+        @SneakyThrows
+        private static void tagResponse(Span span, ChatResponse chatResponse) {
+            // Build a synthetic OpenAI-style {"choices":[...],"usage":{...}} body
+            ArrayNode choices = BraintrustJsonMapper.get().createArrayNode();
+            for (var generation : chatResponse.getResults()) {
+                ObjectNode choice = BraintrustJsonMapper.get().createObjectNode();
+                ObjectNode message = BraintrustJsonMapper.get().createObjectNode();
+                message.put("role", "assistant");
+                message.put("content", generation.getOutput().getText());
+                choice.set("message", message);
+                choice.put(
+                        "finish_reason",
+                        generation.getMetadata().getFinishReason() != null
+                                ? generation.getMetadata().getFinishReason().toLowerCase()
+                                : "stop");
+                choices.add(choice);
+            }
+
+            ObjectNode responseBody = BraintrustJsonMapper.get().createObjectNode();
+            responseBody.set("choices", choices);
+
+            ChatResponseMetadata metadata = chatResponse.getMetadata();
+            if (metadata != null && metadata.getUsage() != null) {
+                Usage usage = metadata.getUsage();
+                ObjectNode usageNode = BraintrustJsonMapper.get().createObjectNode();
+                usageNode.put("prompt_tokens", usage.getPromptTokens());
+                usageNode.put("completion_tokens", usage.getCompletionTokens());
+                usageNode.put("total_tokens", usage.getTotalTokens());
+                responseBody.set("usage", usageNode);
+            }
+
+            InstrumentationSemConv.tagLLMSpanResponse(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                    BraintrustJsonMapper.toJson(responseBody));
         }
     }
 
