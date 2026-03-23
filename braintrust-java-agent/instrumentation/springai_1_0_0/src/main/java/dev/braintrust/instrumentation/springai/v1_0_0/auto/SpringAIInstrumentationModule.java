@@ -12,9 +12,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import java.util.List;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.matcher.ElementMatcher;
-import org.springframework.ai.chat.model.ChatModel;
 
 @AutoService(InstrumentationModule.class)
 public class SpringAIInstrumentationModule extends InstrumentationModule {
@@ -56,12 +54,9 @@ public class SpringAIInstrumentationModule extends InstrumentationModule {
     }
 
     private static class OpenAiChatModelBuilderAdvice {
-        @Advice.OnMethodExit
-        public static void build(
-                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
-                        Object returnedObject) {
-            returnedObject =
-                    BraintrustSpringAI.wrap(GlobalOpenTelemetry.get(), (ChatModel) returnedObject);
+        @Advice.OnMethodEnter
+        public static void build(@Advice.This Object builder) {
+            BraintrustSpringAI.prepareBuilder(GlobalOpenTelemetry.get(), builder);
         }
     }
 }
