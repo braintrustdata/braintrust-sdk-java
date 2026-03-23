@@ -63,10 +63,20 @@ public class ReferenceCreator extends ClassVisitor {
         Map<String, Reference> references = new LinkedHashMap<>();
         Queue<String> queue = new ArrayDeque<>();
         queue.add(entryPointClassName);
+        // Always scan all declared helpers unconditionally — don't rely on bytecode reachability.
+        // A helper may be dispatched to via reflection (e.g. Class.forName + Method.invoke) which
+        // is invisible to the static scanner, but its references still need to be muzzle-checked.
+        for (String helperClassName : helperClassNames) {
+            if (!helperClassName.equals(entryPointClassName)) {
+                queue.add(helperClassName);
+            }
+        }
 
         while (!queue.isEmpty()) {
             String className = queue.remove();
-            visitedSources.add(className);
+            if (!visitedSources.add(className)) {
+                continue;
+            }
             String resourceName = className.replace('.', '/') + ".class";
             try (InputStream in = loader.getResourceAsStream(resourceName)) {
                 if (in == null) {
