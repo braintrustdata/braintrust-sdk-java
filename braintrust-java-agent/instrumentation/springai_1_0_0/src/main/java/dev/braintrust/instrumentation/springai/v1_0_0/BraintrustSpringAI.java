@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.springai.v1_0_0;
 
+import dev.braintrust.json.BraintrustJsonMapper;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
@@ -160,8 +161,8 @@ public class BraintrustSpringAI {
 
             Prompt prompt = context.getRequest();
             if (prompt != null) {
-                System.out.println("SPRING AI INPUT MESSAGES:");
-                printInputMessages(prompt.getInstructions());
+                var inputJson = BraintrustJsonMapper.toJson(prompt);
+                System.out.println("SPRING AI INPUT MESSAGES: " + inputJson);
             }
         }
 
@@ -181,8 +182,8 @@ public class BraintrustSpringAI {
             try {
                 ChatResponse response = context.getResponse();
                 if (response != null) {
-                    System.out.println("SPRING AI OUTPUT MESSAGES:");
-                    printOutputMessages(response.getResults());
+                    var outputJson = BraintrustJsonMapper.toJson(response);
+                    System.out.println("SPRING AI OUTPUT MESSAGES: " + outputJson);
                 }
             } finally {
                 var span = context.get(OBSERVATION_SPAN_KEY);
@@ -190,36 +191,6 @@ public class BraintrustSpringAI {
                     ((io.opentelemetry.api.trace.Span) span).end();
                 }
             }
-        }
-
-        private static void printInputMessages(List<Message> messages) {
-            if (messages == null || messages.isEmpty()) {
-                System.out.println("  (none)");
-                return;
-            }
-
-            for (Message message : messages) {
-                System.out.println("  - " + message.getMessageType() + ": " + messageText(message));
-            }
-        }
-
-        private static void printOutputMessages(List<Generation> generations) {
-            if (generations == null || generations.isEmpty()) {
-                System.out.println("  (none)");
-                return;
-            }
-
-            for (Generation generation : generations) {
-                AssistantMessage output = generation.getOutput();
-                System.out.println("  - ASSISTANT: " + (output == null ? "" : output.getText()));
-            }
-        }
-
-        private static String messageText(Message message) {
-            if (message instanceof AbstractMessage) {
-                return ((AbstractMessage) message).getText();
-            }
-            return String.valueOf(message);
         }
     }
 
