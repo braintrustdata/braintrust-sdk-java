@@ -72,7 +72,7 @@ class MuzzleTask extends DefaultTask {
                         continue
                     }
 
-                    def result = checkVersion(libraryJars, directive, version, bootstrapCL, instrumentationCL)
+                    def result = checkVersion(libraryJars, directive, version, bootstrapCL, instrumentationCL, directive.ignoredInstrumentation as Set)
 
                     if (result.passed && directive.assertPass) {
                         logger.lifecycle("[muzzle]   ${version} PASS")
@@ -187,7 +187,8 @@ class MuzzleTask extends DefaultTask {
             MuzzleDirective directive,
             String version,
             URLClassLoader bootstrapCL,
-            URLClassLoader instrumentationCL) {
+            URLClassLoader instrumentationCL,
+            Set<String> ignoredInstrumentation = []) {
 
         def libraryUrls = libraryJars.collect { it.toURI().toURL() } as URL[]
 
@@ -196,7 +197,7 @@ class MuzzleTask extends DefaultTask {
         def libraryCL = new URLClassLoader(libraryUrls, bootstrapCL)
 
         try {
-            return doCheck(instrumentationCL, libraryCL)
+            return doCheck(instrumentationCL, libraryCL, ignoredInstrumentation)
         } finally {
             libraryCL.close()
         }
@@ -206,7 +207,7 @@ class MuzzleTask extends DefaultTask {
      * Performs the actual muzzle check: loads modules via ServiceLoader, checks references,
      * verifies helper injection.
      */
-    private CheckResult doCheck(URLClassLoader instrumentationCL, URLClassLoader libraryCL) {
+    private CheckResult doCheck(URLClassLoader instrumentationCL, URLClassLoader libraryCL, Set<String> ignoredInstrumentation = []) {
         def messages = []
 
         // Load classes from the instrumentation classloader
@@ -219,6 +220,12 @@ class MuzzleTask extends DefaultTask {
         for (def module : serviceLoader) {
             anyModule = true
             def moduleName = module.name()
+
+            // 0. Skip modules explicitly excluded for this directive
+            if (ignoredInstrumentation.contains(module.getClass().getName())) {
+                logger.info("[muzzle]   module '${moduleName}' skipped (listed in ignoredInstrumentation)")
+                continue
+            }
 
             // 1. Check classLoaderMatcher
             def classLoaderMatcher = module.classLoaderMatcher()

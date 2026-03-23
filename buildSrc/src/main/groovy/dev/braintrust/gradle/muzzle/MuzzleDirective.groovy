@@ -33,6 +33,13 @@ class MuzzleDirective {
     /** Transitive dependencies to exclude from the test classpath */
     List<String> excludedDependencies = []
 
+    /**
+     * Fully-qualified class names of {@code InstrumentationModule} implementations to skip when
+     * checking this directive. Use this when a single Gradle project contains modules for multiple
+     * libraries and a given directive's classpath only satisfies one of them.
+     */
+    List<String> ignoredInstrumentation = []
+
     void skipVersions(String... versions) {
         skipVersions.addAll(versions)
     }
