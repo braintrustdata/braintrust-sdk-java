@@ -34,6 +34,12 @@ dependencies {
   testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
   testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "org.springframework.ai:spring-ai-model:${springAiVersion}"
+  testImplementation "org.springframework.ai:spring-ai-openai:${springAiVersion}"
+  // spring-ai-openai requires spring-webflux at runtime for WebClient
+  testRuntimeOnly 'org.springframework:spring-webflux:6.2.3'
+  // Force httpclient5 version to match what spring-ai-openai expects (WireMock pulls in an older one)
+  testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+  testImplementation 'org.apache.httpcomponents.core5:httpcore5:5.2.4'
 }
 
 test {
