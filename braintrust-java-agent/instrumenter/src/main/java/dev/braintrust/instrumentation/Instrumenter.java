@@ -215,7 +215,18 @@ public class Instrumenter {
                 JavaModule module,
                 boolean loaded,
                 Throwable throwable) {
-            log.error("Error transforming {}", typeName, throwable);
+            // TypePool resolution failures (NoSuchTypeException) happen when ByteBuddy tries to
+            // resolve the type hierarchy of a class whose supertype or interface isn't on the
+            // classpath (e.g. jakarta.servlet.Filter in a non-servlet app). These are harmless —
+            // the class simply won't be transformed. Downgrade to DEBUG to avoid log noise.
+            if (throwable instanceof net.bytebuddy.pool.TypePool.Resolution.NoSuchTypeException) {
+                log.debug(
+                        "Skipping {} — unresolvable type in hierarchy: {}",
+                        typeName,
+                        throwable.getMessage());
+            } else {
+                log.error("Error transforming {}", typeName, throwable);
+            }
         }
 
         @Override
