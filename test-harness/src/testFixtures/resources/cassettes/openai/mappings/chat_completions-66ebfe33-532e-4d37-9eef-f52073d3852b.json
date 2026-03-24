@@ -1,0 +1,49 @@
+{
+  "id" : "66ebfe33-532e-4d37-9eef-f52073d3852b",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":50,\"stream\":false,\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-66ebfe33-532e-4d37-9eef-f52073d3852b.json",
+    "headers" : {
+      "x-request-id" : "req_b10b6d1fac124ce0a55865916276b73a",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e133bdfcddeeb7b-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999990",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 24 Mar 2026 05:21:43 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=Zcj_j8fcwOPeG75O3ZaE0pRDKCm8zwbwOQOTH_khXeM-1774329702.3701656-1.0.1.1-C5cWDsZ6vstzylsop_Bg2a4t5Yy8AYRbieir_UTtKNNvO5hiYXpHnqfHuDJo.wZ7xs06dH7t2Kuh.txzLfQklRdC8UHi.1AD7m.e.78fz4mIGFK89je9j7iRIfN.rm5z; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 24 Mar 2026 05:51:43 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "345",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "66ebfe33-532e-4d37-9eef-f52073d3852b",
+  "persistent" : true,
+  "insertionIndex" : 20
+}
