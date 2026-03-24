@@ -1,0 +1,39 @@
+{
+  "id" : "69d8944a-62b4-4aa4-99eb-07bb05ec277f",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CtoGCrIBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAoiCg9zZXJ2aWNlLnZlcnNpb24SDwoNMC4yLjktYzNjODk2MAogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTkuMBKiBQoRCg9icmFpbnRydXN0LWphdmESjAUKEB1DOpKhcvDKTOkqQr3B2moSCFssjRCyHVYKKg9DaGF0IENvbXBsZXRpb24wATkqhAyodq+fGEHdPir3dq+fGEqvAQoTYnJhaW50cnVzdC5tZXRhZGF0YRKXAQqUAXsicHJvdmlkZXIiOiJvcGVuYWkiLCJyZXF1ZXN0X3BhdGgiOiJ2MS9jaGF0L2NvbXBsZXRpb25zIiwibW9kZWwiOiJncHQtNG8tbWluaSIsInJlcXVlc3RfYmFzZV91cmkiOiJodHRwczovL2FwaS5vcGVuYWkuY29tIiwicmVxdWVzdF9tZXRob2QiOiJQT1NUIn1KgQEKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SZwplW3sibWVzc2FnZSI6eyJyb2xlIjoiYXNzaXN0YW50IiwiY29udGVudCI6IlRoZSBjYXBpdGFsIG9mIEZyYW5jZSBpcyBQYXJpcy4ifSwiZmluaXNoX3JlYXNvbiI6InN0b3AifV1KLgoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSEAoOeyJ0eXBlIjoibGxtIn1KMgoRYnJhaW50cnVzdC5wYXJlbnQSHQobcHJvamVjdF9uYW1lOmphdmEtdW5pdC10ZXN0SlcKFWJyYWludHJ1c3QuaW5wdXRfanNvbhI+CjxbeyJyb2xlIjoidXNlciIsImNvbnRlbnQiOiJXaGF0IGlzIHRoZSBjYXBpdGFsIG9mIEZyYW5jZT8ifV1KTgoSYnJhaW50cnVzdC5tZXRyaWNzEjgKNnsiY29tcGxldGlvbl90b2tlbnMiOjcsInByb21wdF90b2tlbnMiOjE0LCJ0b2tlbnMiOjIxfXoAhQEBAQAA"
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "atnYRFJjoAMECPg=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69c21f67-167ff53536471bb2269517f9;Parent=0623b959320d0409;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Tue, 24 Mar 2026 05:21:43 GMT",
+      "Via" : "1.1 95a087e13956fc03ffaeeaec4faa051a.cloudfront.net (CloudFront), 1.1 ddea1c07643e5e0bfceb34480eebdc52.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69c21f670000000010c7f59853d4ab48",
+      "x-amzn-RequestId" : "73ad6c14-a78a-44de-a12c-05890aae3dd5",
+      "X-Amz-Cf-Id" : "Qy9Obbn_6Uavw6pSCAOJAm8MHgGeIiBvAazPkByZLmQxuGCCdiCNKQ==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "69d8944a-62b4-4aa4-99eb-07bb05ec277f",
+  "persistent" : true,
+  "insertionIndex" : 141
+}
