@@ -23,7 +23,86 @@ repositories {
   mavenCentral()
 }
 
-def langchainVersion = '1.9.1'
+// Shared config for instrumentation subprojects
+subprojects {
+  apply plugin: 'java'
+  apply plugin: 'dev.braintrust.muzzle'
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      vendor = JvmVendorSpec.ADOPTIUM
+    }
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+  }
+
+  repositories {
+    mavenCentral()
+  }
+}
+
+// Add muzzle generation task and muzzle check plugin to all instrumentation subprojects.
+subprojects { subproject ->
+  subproject.afterEvaluate {
+    if (subproject.path.startsWith(':braintrust-sdk:instrumentation:')) {
+      def instrumentationApi = project(':braintrust-java-agent:instrumenter')
+
+      // Bootstrap classes (e.g. BraintrustBridge) are on the bootstrap classpath at runtime.
+      // Make them available at compile time so instrumentation modules can reference them.
+      dependencies.add('compileOnly', project(':braintrust-java-agent:bootstrap'))
+
+      // --- $Muzzle side-class generation (compile-time) ---
+
+      // Configuration for the muzzle generator classpath
+      configurations.maybeCreate('muzzleGenerator')
+      dependencies.add('muzzleGenerator', instrumentationApi)
+      dependencies.add('muzzleGenerator', 'net.bytebuddy:byte-buddy:1.17.5')
+
+      task generateMuzzle(type: JavaExec) {
+        dependsOn compileJava, instrumentationApi.tasks.named('compileJava')
+        description = 'Generates $Muzzle side-classes for InstrumentationModule subclasses'
+        group = 'build'
+
+        // Classpath: compiled instrumentation classes + instrumenter + bytebuddy + deps
+        classpath = files(
+          sourceSets.main.output.classesDirs,
+          configurations.muzzleGenerator,
+          configurations.compileClasspath
+        )
+        mainClass = 'dev.braintrust.instrumentation.muzzle.MuzzleGenerator'
+        args = [sourceSets.main.java.classesDirectory.get().asFile.absolutePath]
+      }
+
+      // Run muzzle generation after compileJava, before jar
+      tasks.named('classes').configure { dependsOn generateMuzzle }
+
+      // Run muzzle checks as part of the check lifecycle
+      tasks.named('check').configure { dependsOn 'muzzle' }
+    }
+  }
+}
+
+// Configuration for embedding instrumentation subproject classes into the SDK JAR
+configurations {
+  // Non-transitive: we only want the instrumentation subproject JARs themselves,
+  // not their transitive dependencies (which include braintrust-sdk itself).
+  embed {
+    transitive = false
+  }
+}
+
+// Auto-discover instrumentation subprojects and add them to the embed configuration.
+// This must be done after project evaluation so the subprojects are resolved.
+afterEvaluate {
+  project.subprojects.each { sub ->
+    if (sub.path.startsWith(':braintrust-sdk:instrumentation:')) {
+      dependencies.add('embed', sub)
+    }
+  }
+}
 
 dependencies {
   api "io.opentelemetry:opentelemetry-api:${otelVersion}"
@@ -52,26 +131,43 @@ dependencies {
   testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
   testImplementation 'org.wiremock:wiremock:3.13.1'
 
-  // OAI instrumentation
-  compileOnly 'com.openai:openai-java:2.8.1'
-  testImplementation 'com.openai:openai-java:2.8.1'
 
-  // Anthropic Instrumentation
-  compileOnly "com.anthropic:anthropic-java:2.8.1"
-  testImplementation "com.anthropic:anthropic-java:2.8.1"
-
-  // Google GenAI Instrumentation
-  compileOnly "com.google.genai:google-genai:1.20.0"
-  testImplementation "com.google.genai:google-genai:1.20.0"
-
-  // LangChain4j Instrumentation
-  compileOnly "dev.langchain4j:langchain4j:${langchainVersion}"
-  compileOnly "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
-  compileOnly "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
-  testImplementation "dev.langchain4j:langchain4j:${langchainVersion}"
-  testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
-  testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
 }
+
+// Merge META-INF/services files from embedded instrumentation JARs.
+// This ensures ServiceLoader can discover InstrumentationModule implementations.
+task mergeEmbedServices {
+  dependsOn configurations.embed
+  def mergedDir = layout.buildDirectory.dir("merged-services")
+  outputs.dir mergedDir
+
+  doLast {
+    def servicesMap = [:]
+    configurations.embed.each { file ->
+      if (file.isFile()) {
+        zipTree(file).matching { include 'META-INF/services/**' }.visit { details ->
+          if (!details.isDirectory()) {
+            def serviceName = details.relativePath.toString()
+            if (!servicesMap.containsKey(serviceName)) {
+              servicesMap[serviceName] = new LinkedHashSet<String>()
+            }
+            servicesMap[serviceName].addAll(details.file.readLines().findAll { it.trim() })
+          }
+        }
+      }
+    }
+    def outDir = mergedDir.get().asFile
+    outDir.deleteDir()
+    servicesMap.each { path, lines ->
+      def outFile = new File(outDir, path)
+      outFile.parentFile.mkdirs()
+      outFile.text = lines.join('\n') + '\n'
+    }
+  }
+}
+
+jar.dependsOn mergeEmbedServices
+jar.from(layout.buildDirectory.dir("merged-services"))
 
 // Generate braintrust.properties at build time with smart versioning
 task generateBraintrustProperties {
@@ -128,6 +224,19 @@ jar {
       'Main-Class': 'dev.braintrust.SDKMain'
     )
   }
+
+  // Embed instrumentation subproject classes into the SDK JAR.
+  // Use dependsOn to ensure instrumentation jars are built first.
+  dependsOn configurations.embed
+
+  from({
+    configurations.embed.collect { it.isDirectory() ? it : zipTree(it) }
+  }) {
+    // Exclude META-INF from embedded jars (we handle service files separately below)
+    exclude 'META-INF/**'
+  }
+
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 import com.vanniktech.maven.publish.JavadocJar

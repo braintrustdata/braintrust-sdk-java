@@ -20,6 +20,11 @@ def braintrustLogLevel = System.getenv('BRAINTRUST_LOG_LEVEL') ?: 'info'
 
 dependencies {
   implementation project(':braintrust-sdk')
+  implementation project(':braintrust-sdk:instrumentation:openai_2_8_0')
+  implementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
+  implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
+  implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
+  implementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
   runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   // To run otel examples
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
