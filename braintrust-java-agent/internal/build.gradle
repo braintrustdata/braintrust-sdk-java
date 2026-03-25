@@ -48,14 +48,17 @@ dependencies {
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// Auto-discover all instrumentation subprojects and add them as implementation dependencies.
-// Any subproject under :braintrust-java-agent:instrumentation is automatically bundled
-// into the shadow JAR, and its META-INF/services entries are merged.
-project(':braintrust-java-agent').subprojects.each { subproject ->
-  if (subproject.path.startsWith(':braintrust-java-agent:instrumentation:')
-      || subproject.path == ':braintrust-java-agent:smoke-test:test-instrumentation') {
+// Auto-discover instrumentation subprojects from braintrust-sdk and add them as implementation
+// dependencies. These get bundled into the shadow JAR with merged META-INF/services entries.
+project(':braintrust-sdk').subprojects.each { subproject ->
+  if (subproject.path.startsWith(':braintrust-sdk:instrumentation:')) {
     dependencies.add('implementation', subproject)
   }
+}
+// Also include test-instrumentation for smoke tests
+// TODO: don't bundle this instrumentation in the agent jar. Instead create a flag to look for instrumentation on the system classpath
+if (findProject(':braintrust-java-agent:smoke-test:test-instrumentation') != null) {
+  dependencies.add('implementation', project(':braintrust-java-agent:smoke-test:test-instrumentation'))
 }
 
 test {

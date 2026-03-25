@@ -4,7 +4,6 @@ import dev.braintrust.api.BraintrustApiClient;
 import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.jspecify.annotations.NonNull;
 
 /** A dataset loaded externally from Braintrust using paginated API fetches */
 public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTPUT> {
@@ -70,7 +69,7 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
         private boolean closed;
         private final @Nonnull String cursorVersion;
 
-        BrainstoreCursor(@NonNull String cursorVersion) {
+        BrainstoreCursor(@Nonnull String cursorVersion) {
             this.currentBatch = new ArrayList<>();
             this.currentIndex = 0;
             this.cursor = null;

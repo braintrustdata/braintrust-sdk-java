@@ -10,9 +10,9 @@ import io.opentelemetry.api.trace.StatusCode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.SneakyThrows;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 public class InstrumentationSemConv {
     public static final String PROVIDER_NAME_OPENAI = "openai";
@@ -27,10 +27,10 @@ public class InstrumentationSemConv {
     @SneakyThrows
     public static void tagLLMSpanRequest(
             Span span,
-            @NonNull String providerName,
-            @NonNull String baseUrl,
-            @NonNull List<String> pathSegments,
-            @NonNull String method,
+            @Nonnull String providerName,
+            @Nonnull String baseUrl,
+            @Nonnull List<String> pathSegments,
+            @Nonnull String method,
             @Nullable String requestBody) {
         switch (providerName) {
             case PROVIDER_NAME_OPENAI ->
@@ -46,15 +46,15 @@ public class InstrumentationSemConv {
     }
 
     public static void tagLLMSpanResponse(
-            Span span, @NonNull String providerName, @NonNull String responseBody) {
+            Span span, @Nonnull String providerName, @Nonnull String responseBody) {
         tagLLMSpanResponse(span, providerName, responseBody, null);
     }
 
     @SneakyThrows
     public static void tagLLMSpanResponse(
             Span span,
-            @NonNull String providerName,
-            @NonNull String responseBody,
+            @Nonnull String providerName,
+            @Nonnull String responseBody,
             @Nullable Long timeToFirstTokenNanoseconds) {
         switch (providerName) {
             case PROVIDER_NAME_OPENAI ->
@@ -65,7 +65,7 @@ public class InstrumentationSemConv {
         }
     }
 
-    public static void tagLLMSpanResponse(Span span, @NonNull Throwable responseError) {
+    public static void tagLLMSpanResponse(Span span, @Nonnull Throwable responseError) {
         span.setStatus(StatusCode.ERROR, responseError.getMessage());
         span.recordException(responseError);
     }

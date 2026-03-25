@@ -1,0 +1,44 @@
+muzzle {
+  pass {
+    group = 'com.openai'
+    module = 'openai-java'
+    versions = '[2.8.0,)'
+  }
+}
+
+dependencies {
+  compileOnly project(':braintrust-java-agent:instrumenter')
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation 'com.google.code.findbugs:jsr305:3.0.2' // for @Nullable annotations
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+  implementation project(':braintrust-sdk')
+
+  // AutoService for SPI registration
+  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+  // ByteBuddy for ElementMatcher types used in instrumentation definitions
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Target library — compileOnly because it will be on the app classpath at runtime
+  compileOnly 'com.openai:openai-java:2.8.0'
+
+  // Test dependencies
+  testImplementation(testFixtures(project(":test-harness")))
+  testImplementation project(':braintrust-java-agent:instrumenter')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+  testImplementation 'com.openai:openai-java:2.8.0'
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

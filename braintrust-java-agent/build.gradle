@@ -44,11 +44,11 @@ subprojects {
   }
 }
 
-// Add muzzle generation task and muzzle check plugin to all instrumentation subprojects.
+// Add muzzle generation task and muzzle check plugin to smoke-test test-instrumentation.
+// (Instrumentation subprojects under :braintrust-sdk are configured in braintrust-sdk/build.gradle.)
 subprojects { subproject ->
   subproject.afterEvaluate {
-    if (subproject.path.startsWith(':braintrust-java-agent:instrumentation:')
-        || subproject.path == ':braintrust-java-agent:smoke-test:test-instrumentation') {
+    if (subproject.path == ':braintrust-java-agent:smoke-test:test-instrumentation') {
       def instrumentationApi = project(':braintrust-java-agent:instrumenter')
 
       // Bootstrap classes (e.g. BraintrustBridge) are on the bootstrap classpath at runtime.
