@@ -10,9 +10,9 @@ import io.opentelemetry.sdk.trace.SpanProcessor;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Custom span processor that enriches spans with Braintrust-specific attributes. Supports parent
@@ -34,7 +34,7 @@ public class BraintrustSpanProcessor implements SpanProcessor {
     }
 
     @Override
-    public void onStart(@NotNull Context parentContext, ReadWriteSpan span) {
+    public void onStart(@Nonnull Context parentContext, ReadWriteSpan span) {
         log.debug("OnStart: span={}, parent={}", span.getName(), parentContext);
 
         // Check if span already has a parent attribute

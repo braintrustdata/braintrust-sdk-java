@@ -40,7 +40,6 @@ dependencies {
 
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
-  implementation 'org.apache.commons:commons-lang3:3.14.0'
   implementation 'com.google.code.findbugs:jsr305:3.0.2' // for @Nullable annotations
 
   implementation "com.github.spullara.mustache.java:compiler:0.9.14"
