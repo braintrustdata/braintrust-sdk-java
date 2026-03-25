@@ -4,6 +4,7 @@ import com.google.genai.Client;
 import dev.braintrust.Braintrust;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.instrumentation.genai.BraintrustGenAI;
+import dev.braintrust.instrumentation.springai.v1_0_0.BraintrustSpringAI;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -18,6 +19,7 @@ import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -39,7 +41,12 @@ public class SpringAIExample {
     }
 
     @Bean
-    public CommandLineRunner run(ChatModel chatModel, Tracer tracer, Braintrust braintrust) {
+    public CommandLineRunner run(
+            @Qualifier("openAIChatModel") ChatModel openAIChatModel,
+            @Qualifier("anthropicChatModel") ChatModel anthropicChatModel,
+            @Qualifier("googleChatModel") ChatModel googleChatModel,
+            Tracer tracer,
+            Braintrust braintrust) {
         return args -> {
             Span rootSpan = tracer.spanBuilder("spring-ai-example").startSpan();
             try (Scope scope = rootSpan.makeCurrent()) {
@@ -47,11 +54,16 @@ public class SpringAIExample {
 
                 // Make a simple chat call
                 var prompt = new Prompt("what's the name of the most popular java DI framework?");
-                var response = chatModel.call(prompt);
+                var oaiResponse = openAIChatModel.call(prompt);
+                var anthropicResponse = anthropicChatModel.call(prompt);
+                var googleResponse = googleChatModel.call(prompt);
 
                 System.out.println(
-                        "~~~ SPRING AI CHAT RESPONSE: %s\n"
-                                .formatted(response.getResult().getOutput().getText()));
+                        "~~~ SPRING AI CHAT RESPONSES: \noat: %s\nanthropic: %s\ngoogle: %s\n"
+                                .formatted(
+                                        oaiResponse.getResult().getOutput().getText(),
+                                        anthropicResponse.getResult().getOutput().getText(),
+                                        googleResponse.getResult().getOutput().getText()));
             } finally {
                 rootSpan.end();
             }
@@ -84,84 +96,73 @@ public class SpringAIExample {
     }
 
     @Bean
-    public String aiProvider() {
-        var provider = System.getenv("SPRING_AI_EXAMPLE_PROVIDER");
-        if (provider == null || provider.isBlank()) {
-            return "openai";
+    public ChatModel openAIChatModel(OpenTelemetry openTelemetry) {
+        if (null == System.getenv("OPENAI_API_KEY")) {
+            System.err.println(
+                    "\n"
+                            + "WARNING: OPENAI_API_KEY not found. This example will likely"
+                            + " fail.\n"
+                            + "Set it with: export OPENAI_API_KEY='your-key'\n");
         }
-        return switch (provider) {
-            case "openai", "anthropic", "google" -> provider;
-            default ->
-                    throw new RuntimeException(
-                            "unsupported SPRING_AI_EXAMPLE_PROVIDER: '%s'. Allowed values: openai, anthropic, google"
-                                    .formatted(provider));
-        };
+        return BraintrustSpringAI.wrap(
+                        openTelemetry,
+                        OpenAiChatModel.builder()
+                                .openAiApi(
+                                        OpenAiApi.builder()
+                                                .apiKey(System.getenv("OPENAI_API_KEY"))
+                                                .build())
+                                .defaultOptions(
+                                        OpenAiChatOptions.builder()
+                                                .model("gpt-4o-mini")
+                                                .temperature(0.0)
+                                                .maxTokens(50)
+                                                .build()))
+                .build();
     }
 
     @Bean
-    public ChatModel chatModel(String aiProvider, OpenTelemetry openTelemetry) {
-        return switch (aiProvider) {
-            case "openai" -> {
-                if (null == System.getenv("OPENAI_API_KEY")) {
-                    System.err.println(
-                            "\n"
-                                    + "WARNING: OPENAI_API_KEY not found. This example will likely"
-                                    + " fail.\n"
-                                    + "Set it with: export OPENAI_API_KEY='your-key'\n");
-                }
-                var openAiApi = OpenAiApi.builder().apiKey(System.getenv("OPENAI_API_KEY")).build();
-                yield OpenAiChatModel.builder()
-                        .openAiApi(openAiApi)
-                        .defaultOptions(
-                                OpenAiChatOptions.builder()
-                                        .model("gpt-4o-mini")
-                                        .temperature(0.0)
-                                        .maxTokens(50)
-                                        .build())
-                        .build();
-            }
-            case "anthropic" -> {
-                if (null == System.getenv("ANTHROPIC_API_KEY")) {
-                    System.err.println(
-                            "\n"
-                                    + "WARNING: ANTHROPIC_API_KEY not found. This example will"
-                                    + " likely fail.\n"
-                                    + "Set it with: export ANTHROPIC_API_KEY='your-key'\n");
-                }
-                var anthropicApi =
-                        AnthropicApi.builder().apiKey(System.getenv("ANTHROPIC_API_KEY")).build();
-                yield AnthropicChatModel.builder()
-                        .anthropicApi(anthropicApi)
-                        .defaultOptions(
-                                AnthropicChatOptions.builder()
-                                        .model("claude-3-haiku-20240307")
-                                        .temperature(0.0)
-                                        .maxTokens(50)
-                                        .build())
-                        .build();
-            }
-            case "google" -> {
-                if (null == System.getenv("GOOGLE_API_KEY")
-                        && null == System.getenv("GEMINI_API_KEY")) {
-                    System.err.println(
-                            "\n"
-                                + "WARNING: Neither GOOGLE_API_KEY nor GEMINI_API_KEY found. This"
-                                + " example will likely fail.\n"
-                                + "Set either: export GOOGLE_API_KEY='your-key' (recommended) or"
-                                + " export GEMINI_API_KEY='your-key'\n");
-                }
-                Client genAIClient = BraintrustGenAI.wrap(openTelemetry, new Client.Builder());
-                yield GoogleGenAiChatModel.builder()
-                        .genAiClient(genAIClient)
-                        .defaultOptions(
-                                GoogleGenAiChatOptions.builder()
-                                        .model("gemini-2.0-flash-lite")
-                                        .temperature(0.0)
-                                        .maxOutputTokens(50)
-                                        .build())
-                        .build();
-            }
-            default -> throw new RuntimeException("unsupported provider: " + aiProvider);
-        };
+    public ChatModel anthropicChatModel(OpenTelemetry openTelemetry) {
+        if (null == System.getenv("ANTHROPIC_API_KEY")) {
+            System.err.println(
+                    "\n"
+                            + "WARNING: ANTHROPIC_API_KEY not found. This example will"
+                            + " likely fail.\n"
+                            + "Set it with: export ANTHROPIC_API_KEY='your-key'\n");
+        }
+        return BraintrustSpringAI.wrap(
+                        openTelemetry,
+                        AnthropicChatModel.builder()
+                                .anthropicApi(
+                                        AnthropicApi.builder()
+                                                .apiKey(System.getenv("ANTHROPIC_API_KEY"))
+                                                .build())
+                                .defaultOptions(
+                                        AnthropicChatOptions.builder()
+                                                .model("claude-3-haiku-20240307")
+                                                .temperature(0.0)
+                                                .maxTokens(50)
+                                                .build()))
+                .build();
+    }
+
+    @Bean
+    public ChatModel googleChatModel(OpenTelemetry openTelemetry) {
+        if (null == System.getenv("GOOGLE_API_KEY") && null == System.getenv("GEMINI_API_KEY")) {
+            System.err.println(
+                    "\n"
+                            + "WARNING: Neither GOOGLE_API_KEY nor GEMINI_API_KEY found. This"
+                            + " example will likely fail.\n"
+                            + "Set either: export GOOGLE_API_KEY='your-key' (recommended) or"
+                            + " export GEMINI_API_KEY='your-key'\n");
+        }
+        return GoogleGenAiChatModel.builder()
+                .genAiClient(BraintrustGenAI.wrap(openTelemetry, new Client.Builder()))
+                .defaultOptions(
+                        GoogleGenAiChatOptions.builder()
+                                .model("gemini-2.0-flash-lite")
+                                .temperature(0.0)
+                                .maxOutputTokens(50)
+                                .build())
+                .build();
     }
 }
