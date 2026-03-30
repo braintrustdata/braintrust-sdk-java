@@ -1,0 +1,49 @@
+name: attachments
+type: llm_span_test
+provider: openai
+endpoint: /v1/chat/completions
+requests:
+  - model: gpt-4o-mini
+    temperature: 0.0
+    messages:
+      - role: system
+        content: you are a helpful assistant
+      - role: user
+        content:
+        - type: text
+          text: What color is this image?
+        - type: image_url
+          image_url:
+            # 1x1 red pixel
+            url: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with "gpt-4o-mini"
+      provider: openai
+    span_attributes:
+      name: Chat Completion
+      type: llm
+    input:
+      - role: system
+        content: you are a helpful assistant
+      - role: user
+        content:
+          - text: What color is this image?
+            type: text
+          - image_url:
+              url:
+                content_type: image/png
+                filename: !fn is_non_empty_string
+                key: !fn is_non_empty_string
+                type: braintrust_attachment
+            type: image_url
+    output:
+      - finish_reason: stop
+        index: 0
+        message:
+          role: assistant
+          content: !fn is_non_empty_string

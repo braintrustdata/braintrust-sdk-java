@@ -1,0 +1,60 @@
+name: tools
+type: llm_span_test
+provider: openai
+endpoint: /v1/chat/completions
+enabled_runners: ["python", "typescript", "java", "ruby"]
+requests:
+  - model: gpt-4o
+    max_tokens: 500
+    temperature: 0.0
+    tools:
+      - type: function
+        function:
+          name: get_weather
+          description: Get the current weather for a location
+          parameters:
+            type: object
+            properties:
+              location:
+                type: string
+                description: The city and state, e.g. San Francisco, CA
+              unit:
+                type: string
+                enum: [celsius, fahrenheit]
+                description: The unit of temperature
+            required: [location]
+    messages:
+      - role: user
+        content: What is the weather like in Paris, France?
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with gpt-4o
+      provider: openai
+    span_attributes:
+      name: Chat Completion
+      type: llm
+    input:
+      - role: user
+        content: What is the weather like in Paris, France?
+    output:
+      - !or
+        - finish_reason: tool_calls
+          index: 0
+          message:
+            role: assistant
+            tool_calls:
+              - type: function
+                function:
+                  name: get_weather
+                  arguments: !fn "lambda value: \"Paris\" in value"
+        # gen_ai output messages
+        - role: assistant
+          tool_calls:
+            - type: function
+              function:
+                name: get_weather
+                arguments: !fn "lambda value: \"Paris\" in value"

@@ -1,0 +1,28 @@
+description: Canonical environment variable spec for Braintrust SDKs
+
+config_envars:
+  - name: BRAINTRUST_API_KEY
+    required: true
+    documentation: API key for authentication with Braintrust.
+
+  - name: BRAINTRUST_APP_URL
+    required: false
+    default: "https://www.braintrust.dev"
+    documentation: Base URL for Braintrust web application.
+
+  - name: BRAINTRUST_API_URL
+    required: false
+    default: "https://api.braintrust.dev"
+    documentation: Base URL for Braintrust API.
+
+  - name: BRAINTRUST_PROJECT
+    required: false
+    documentation: Project name for Braintrust logging and tracing. The SDK will provide a default of its choosing if this is not set.
+
+  - name: BRAINTRUST_PROJECT_ID
+    required: false
+    documentation: Project ID (UUID) for logging spans. Takes precedence over BRAINTRUST_PROJECT if both are set.
+
+  - name: BRAINTRUST_ORG_NAME
+    required: false
+    documentation: Organization name to use when logging in. Useful when account has multiple organizations.

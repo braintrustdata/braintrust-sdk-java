@@ -1,0 +1,11 @@
+description: names and docs for span attributes special to Braintrust
+
+span_attributes:
+  - name: braintrust.parent
+    documentation: todo
+  - name: braintrust.metrics
+    documentation: todo
+
+braintrust_metrics:
+  - name: time_to_first_token
+    documentation: todo

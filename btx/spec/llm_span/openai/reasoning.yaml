@@ -1,0 +1,84 @@
+name: reasoning
+type: llm_span_test
+provider: openai
+endpoint: /v1/responses
+# java instrumentation doesn't support responses yet
+enabled_runners: ["python", "typescript", "java"]
+requests:
+  - model: o4-mini
+    reasoning:
+      effort: high
+      summary: detailed
+    input:
+      - role: user
+        content: >
+          Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what
+          would be the formula for the nth term?
+  - model: o4-mini
+    reasoning:
+      effort: high
+      summary: detailed
+    input:
+      # Full context from the first response is inserted by the runner
+      - role: user
+        content: Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+      completion_reasoning_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with "o4-mini"
+      provider: openai
+    span_attributes:
+      type: llm
+    input:
+      - role: user
+        content: >
+          Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what
+          would be the formula for the nth term?
+    output:
+      - type: reasoning
+        summary: !fn is_reasoning_message
+      - type: message
+        role: assistant
+        status: completed
+        content:
+          - type: output_text
+            annotations: []
+            logprobs: []
+            text: !fn is_non_empty_string
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+      completion_reasoning_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with "o4-mini"
+      provider: openai
+    span_attributes:
+      type: llm
+    input:
+      # Light assertions since most of the context is duplicated/inserted
+      - role: user
+      - type: reasoning
+        summary: !fn is_reasoning_message
+      - type: message
+        role: assistant
+        status: completed
+        content:
+          - type: output_text
+      - role: user
+        content: Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?
+    output:
+      - type: reasoning
+        summary: !fn is_reasoning_message
+      - type: message
+        role: assistant
+        status: completed
+        content:
+          - type: output_text
+            annotations: []
+            logprobs: []
+            text: !fn "lambda value: \"440\" in value"
