@@ -19,6 +19,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.observation.ChatModelObservationContext;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 
@@ -63,12 +64,28 @@ class OpenAIBuilderWrapper {
 
     @SneakyThrows
     static void tagSpanRequest(
-            BraintrustObservationHandler observationHandler, Span span, Prompt prompt) {
+            BraintrustObservationHandler observationHandler,
+            Span span,
+            ChatModelObservationContext context) {
+        Prompt prompt = context.getRequest();
         ArrayNode messages = BraintrustJsonMapper.get().createArrayNode();
         for (Message msg : prompt.getInstructions()) {
             ObjectNode msgNode = BraintrustJsonMapper.get().createObjectNode();
             msgNode.put("role", msg.getMessageType().getValue().toLowerCase());
-            msgNode.put("content", msg.getText());
+            String text = msg.getText();
+            // If the content text is a JSON array or object (e.g. multi-part content with images),
+            // emit it as a structured JSON node rather than a plain string.
+            try {
+                com.fasterxml.jackson.databind.JsonNode parsed =
+                        BraintrustJsonMapper.get().readTree(text);
+                if (parsed.isArray() || parsed.isObject()) {
+                    msgNode.set("content", parsed);
+                } else {
+                    msgNode.put("content", text);
+                }
+            } catch (Exception e) {
+                msgNode.put("content", text);
+            }
             messages.add(msgNode);
         }
 
@@ -97,19 +114,43 @@ class OpenAIBuilderWrapper {
 
     @SneakyThrows
     static void tagSpanResponse(
-            BraintrustObservationHandler observationHandler, Span span, ChatResponse chatResponse) {
+            BraintrustObservationHandler observationHandler,
+            Span span,
+            ChatModelObservationContext context) {
+        ChatResponse chatResponse = context.getResponse();
+        if (null == chatResponse) {
+            return;
+        }
         ArrayNode choices = BraintrustJsonMapper.get().createArrayNode();
+        int idx = 0;
         for (var generation : chatResponse.getResults()) {
             ObjectNode choice = BraintrustJsonMapper.get().createObjectNode();
             ObjectNode message = BraintrustJsonMapper.get().createObjectNode();
             message.put("role", "assistant");
             message.put("content", generation.getOutput().getText());
+            var assistantMsg =
+                    (org.springframework.ai.chat.messages.AssistantMessage) generation.getOutput();
+            if (assistantMsg.hasToolCalls()) {
+                ArrayNode toolCallsNode = BraintrustJsonMapper.get().createArrayNode();
+                for (var tc : assistantMsg.getToolCalls()) {
+                    ObjectNode tcNode = BraintrustJsonMapper.get().createObjectNode();
+                    tcNode.put("id", tc.id());
+                    tcNode.put("type", tc.type());
+                    ObjectNode fnNode = BraintrustJsonMapper.get().createObjectNode();
+                    fnNode.put("name", tc.name());
+                    fnNode.put("arguments", tc.arguments());
+                    tcNode.set("function", fnNode);
+                    toolCallsNode.add(tcNode);
+                }
+                message.set("tool_calls", toolCallsNode);
+            }
             choice.set("message", message);
             choice.put(
                     "finish_reason",
                     generation.getMetadata().getFinishReason() != null
                             ? generation.getMetadata().getFinishReason().toLowerCase()
                             : "stop");
+            choice.put("index", idx++);
             choices.add(choice);
         }
 
@@ -133,7 +174,8 @@ class OpenAIBuilderWrapper {
         InstrumentationSemConv.tagLLMSpanResponse(
                 span,
                 InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                BraintrustJsonMapper.toJson(responseBody));
+                BraintrustJsonMapper.toJson(responseBody),
+                context.get(BraintrustObservationHandler.TTFT_NANOS_KEY));
     }
 
     private static String extractBaseUrl(OpenAiChatModel.Builder builder) {

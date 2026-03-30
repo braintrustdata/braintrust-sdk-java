@@ -20,6 +20,8 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.observation.ChatModelObservationContext;
+import org.springframework.ai.chat.prompt.Prompt;
 
 @Slf4j
 class AnthropicBuilderWrapper {
@@ -66,7 +68,8 @@ class AnthropicBuilderWrapper {
     static void tagSpanRequest(
             BraintrustObservationHandler observationHandler,
             Span span,
-            org.springframework.ai.chat.prompt.Prompt prompt) {
+            ChatModelObservationContext context) {
+        Prompt prompt = context.getRequest();
         ArrayNode messages = BraintrustJsonMapper.get().createArrayNode();
         for (Message msg : prompt.getInstructions()) {
             ObjectNode msgNode = BraintrustJsonMapper.get().createObjectNode();
@@ -93,7 +96,13 @@ class AnthropicBuilderWrapper {
 
     @SneakyThrows
     static void tagSpanResponse(
-            BraintrustObservationHandler observationHandler, Span span, ChatResponse chatResponse) {
+            BraintrustObservationHandler observationHandler,
+            Span span,
+            ChatModelObservationContext context) {
+        ChatResponse chatResponse = context.getResponse();
+        if (null == chatResponse) {
+            return;
+        }
         ArrayNode content = BraintrustJsonMapper.get().createArrayNode();
         for (var generation : chatResponse.getResults()) {
             ObjectNode block = BraintrustJsonMapper.get().createObjectNode();
@@ -102,6 +111,7 @@ class AnthropicBuilderWrapper {
             content.add(block);
         }
         ObjectNode responseBody = BraintrustJsonMapper.get().createObjectNode();
+        responseBody.put("role", "assistant");
         responseBody.set("content", content);
 
         ChatResponseMetadata metadata = chatResponse.getMetadata();
@@ -118,7 +128,8 @@ class AnthropicBuilderWrapper {
         InstrumentationSemConv.tagLLMSpanResponse(
                 span,
                 InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
-                BraintrustJsonMapper.toJson(responseBody));
+                BraintrustJsonMapper.toJson(responseBody),
+                context.get(BraintrustObservationHandler.TTFT_NANOS_KEY));
     }
 
     private static String extractBaseUrl(AnthropicChatModel.Builder builder) {

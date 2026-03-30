@@ -226,9 +226,8 @@ class WrappedHttpClient implements HttpClient {
                     root.set("usage", usageData);
                 }
 
-                long ttft = timeToFirstTokenNanos.get();
-                InstrumentationSemConv.tagLLMSpanResponse(
-                        span, providerName, toJson(root), ttft == 0L ? null : ttft);
+                Long ttft = timeToFirstTokenNanos.get();
+                InstrumentationSemConv.tagLLMSpanResponse(span, providerName, toJson(root), ttft);
             } catch (Exception e) {
                 log.debug("Failed to finalize streaming span", e);
             }
