@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.springai.v1_0_0;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
@@ -74,7 +75,17 @@ class AnthropicBuilderWrapper {
         for (Message msg : prompt.getInstructions()) {
             ObjectNode msgNode = BraintrustJsonMapper.get().createObjectNode();
             msgNode.put("role", msg.getMessageType().getValue().toLowerCase());
-            msgNode.put("content", msg.getText());
+            String text = msg.getText();
+            try {
+                JsonNode parsed = BraintrustJsonMapper.get().readTree(text);
+                if (parsed.isArray() || parsed.isObject()) {
+                    msgNode.set("content", parsed);
+                } else {
+                    msgNode.put("content", text);
+                }
+            } catch (Exception e) {
+                msgNode.put("content", text);
+            }
             messages.add(msgNode);
         }
         String model = null;

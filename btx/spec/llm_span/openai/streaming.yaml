@@ -1,0 +1,39 @@
+name: streaming
+type: llm_span_test
+provider: openai
+endpoint: /v1/chat/completions
+enabled_runners: ["python", "typescript", "java", "go", "ruby"]
+requests:
+  - model: gpt-4o-mini
+    max_tokens: 800
+    temperature: 0.0
+    messages:
+      - role: system
+        content: you are a thoughtful assistant
+      - role: user
+        content: Count from 1 to 10 slowly.
+    stream: true
+    stream_options:
+      include_usage: true
+expected_brainstore_spans:
+  - metrics:
+      time_to_first_token: !fn is_non_negative_number
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with "gpt-4o-mini"
+      provider: openai
+    span_attributes:
+      name: Chat Completion
+      type: llm
+    input:
+      - role: system
+        content: you are a thoughtful assistant
+      - role: user
+        content: Count from 1 to 10 slowly.
+    output:
+      - index: 0
+        message:
+          role: assistant
+          content: !fn is_non_empty_string

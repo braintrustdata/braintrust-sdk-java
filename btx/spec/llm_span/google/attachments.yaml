@@ -1,0 +1,44 @@
+name: attachments
+type: llm_span_test
+provider: google
+endpoint: /v1/models/gemini-2.0-flash:generateContent
+enabled_runners: ["python", "typescript", "java", "go"]
+requests:
+  - contents:
+      - role: user
+        parts:
+          - text: What color is this image?
+          - inline_data:
+              mime_type: image/png
+              # 1x1 red pixel
+              data: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==
+    generationConfig:
+      temperature: 0.0
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: gemini-2.0-flash
+    span_attributes:
+      name: generate_content
+      type: llm
+    input:
+      model: gemini-2.0-flash
+      contents:
+        - role: user
+          parts:
+            - text: What color is this image?
+            - image_url:
+                url:
+                  content_type: image/png
+                  filename: !fn is_non_empty_string
+                  key: !fn is_non_empty_string
+                  type: braintrust_attachment
+    output:
+      candidates:
+        - content:
+            parts:
+              - text: !fn is_non_empty_string
+            role: model

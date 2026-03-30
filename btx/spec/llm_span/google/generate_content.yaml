@@ -1,0 +1,34 @@
+name: generate_content
+type: llm_span_test
+provider: google
+endpoint: /v1/models/gemini-2.5-flash:generateContent
+enabled_runners: ["python", "typescript", "java", "go"]
+requests:
+  - contents:
+      - role: user
+        parts:
+          - text: What is the capital of France?
+    generationConfig:
+      temperature: 0.0
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: gemini-2.5-flash
+    span_attributes:
+      name: generate_content
+      type: llm
+    input:
+      model: gemini-2.5-flash
+      contents:
+        - role: user
+          parts:
+            - text: What is the capital of France?
+    output:
+      candidates:
+        - content:
+            parts:
+              - text: !fn is_non_empty_string
+            role: model

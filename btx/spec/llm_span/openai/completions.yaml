@@ -1,0 +1,34 @@
+name: completions
+type: llm_span_test
+provider: openai
+endpoint: /v1/chat/completions
+requests:
+  - model: gpt-4o-mini
+    temperature: 0.0
+    messages:
+      - role: system
+        content: you are a helpful assistant
+      - role: user
+        content: What is the capital of France?
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: !starts_with "gpt-4o-mini"
+      provider: openai
+    span_attributes:
+      name: Chat Completion
+      type: llm
+    input:
+      - role: system
+        content: you are a helpful assistant
+      - role: user
+        content: What is the capital of France?
+    output:
+      - finish_reason: stop
+        index: 0
+        message:
+          role: assistant
+          content: The capital of France is Paris.

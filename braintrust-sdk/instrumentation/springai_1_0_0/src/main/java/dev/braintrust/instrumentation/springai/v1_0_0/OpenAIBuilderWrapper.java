@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.springai.v1_0_0;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
@@ -76,8 +77,7 @@ class OpenAIBuilderWrapper {
             // If the content text is a JSON array or object (e.g. multi-part content with images),
             // emit it as a structured JSON node rather than a plain string.
             try {
-                com.fasterxml.jackson.databind.JsonNode parsed =
-                        BraintrustJsonMapper.get().readTree(text);
+                JsonNode parsed = BraintrustJsonMapper.get().readTree(text);
                 if (parsed.isArray() || parsed.isObject()) {
                     msgNode.set("content", parsed);
                 } else {

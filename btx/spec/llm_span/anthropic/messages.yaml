@@ -1,0 +1,34 @@
+name: messages
+type: llm_span_test
+provider: anthropic
+endpoint: /v1/messages
+enabled_runners: ["python", "typescript", "java", "csharp"]
+requests:
+  - model: claude-haiku-4-5-20251001
+    temperature: 0.0
+    max_tokens: 128
+    system: "You are a helpful assistant."
+    messages:
+      - role: user
+        content: What is the capital of France?
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: claude-haiku-4-5-20251001
+      provider: anthropic
+    span_attributes:
+      name: anthropic.messages.create
+      type: llm
+    input:
+      - content: What is the capital of France?
+        role: user
+      - content: "You are a helpful assistant."
+        role: system
+    output:
+      content:
+        - text: The capital of France is Paris.
+          type: text
+      role: assistant

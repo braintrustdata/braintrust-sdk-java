@@ -1,0 +1,47 @@
+name: attachments
+type: llm_span_test
+provider: anthropic
+endpoint: /v1/messages
+enabled_runners: ["java"]
+requests:
+  - model: claude-haiku-4-5-20251001
+    temperature: 0.0
+    max_tokens: 128
+    messages:
+      - role: user
+        content:
+          - type: text
+            text: What color is this image?
+          - type: image
+            source:
+              type: base64
+              media_type: image/png
+              # 1x1 red pixel
+              data: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==
+expected_brainstore_spans:
+  - metrics:
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: claude-haiku-4-5-20251001
+      provider: anthropic
+    span_attributes:
+      name: anthropic.messages.create
+      type: llm
+    input:
+      - role: user
+        content:
+          - type: text
+            text: What color is this image?
+          - type: image
+            source:
+              type: braintrust_attachment
+              content_type: image/png
+              filename: !fn is_non_empty_string
+              key: !fn is_non_empty_string
+    output:
+      content:
+        - text: !fn is_non_empty_string
+          type: text
+      role: assistant

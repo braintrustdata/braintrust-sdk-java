@@ -1,0 +1,36 @@
+name: streaming
+type: llm_span_test
+provider: anthropic
+endpoint: /v1/messages
+enabled_runners: ["java"]
+requests:
+  - model: claude-haiku-4-5-20251001
+    temperature: 0.0
+    max_tokens: 128
+    system: "You are a helpful assistant."
+    messages:
+      - role: user
+        content: Count from 1 to 5.
+    stream: true
+expected_brainstore_spans:
+  - metrics:
+      time_to_first_token: !fn is_non_negative_number
+      tokens: !fn is_non_negative_number
+      prompt_tokens: !fn is_non_negative_number
+      completion_tokens: !fn is_non_negative_number
+    metadata:
+      model: claude-haiku-4-5-20251001
+      provider: anthropic
+    span_attributes:
+      name: anthropic.messages.create
+      type: llm
+    input:
+      - content: Count from 1 to 5.
+        role: user
+      - content: "You are a helpful assistant."
+        role: system
+    output:
+      content:
+        - text: !fn is_non_empty_string
+          type: text
+      role: assistant
