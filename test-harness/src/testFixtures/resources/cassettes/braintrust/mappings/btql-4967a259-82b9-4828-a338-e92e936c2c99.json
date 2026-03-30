@@ -1,0 +1,42 @@
+{
+  "id" : "4967a259-82b9-4828-a338-e92e936c2c99",
+  "name" : "btql",
+  "request" : {
+    "url" : "/btql",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"query\":{\"select\":[{\"op\":\"star\"}],\"from\":{\"op\":\"function\",\"name\":{\"op\":\"ident\",\"name\":[\"project_logs\"]},\"args\":[{\"op\":\"literal\",\"value\":\"6ae68365-7620-4630-921b-bac416634fc8\"}]},\"filter\":{\"op\":\"and\",\"left\":{\"op\":\"eq\",\"left\":{\"op\":\"ident\",\"name\":[\"root_span_id\"]},\"right\":{\"op\":\"literal\",\"value\":\"df31adbfcb2ec7755cda1d9bba10ac30\"}},\"right\":{\"op\":\"ne\",\"left\":{\"op\":\"ident\",\"name\":[\"span_parents\"]},\"right\":{\"op\":\"literal\",\"value\":null}}},\"sort\":[{\"expr\":{\"op\":\"ident\",\"name\":[\"created\"]},\"dir\":\"asc\"}],\"limit\":1000},\"use_columnstore\":true,\"use_brainstore\":true,\"brainstore_realtime\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "btql-4967a259-82b9-4828-a338-e92e936c2c99.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bhNcDF8ZIAMELGQ=",
+      "vary" : "Origin",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "x-bt-brainstore-duration-ms" : "414",
+      "X-Amzn-Trace-Id" : "Root=1-69d6c2b3-7f9a2bf93728f2597a34614e;Parent=64bcfc63cb5b17a2;Sampled=0;Lineage=1:24be3d11:0",
+      "x-bt-api-duration-ms" : "431",
+      "Date" : "Wed, 08 Apr 2026 21:03:47 GMT",
+      "Via" : "1.1 5d1052cca98b3bf996fd05529bc2e070.cloudfront.net (CloudFront), 1.1 da32b45f2cc22dc818960285c4e91b66.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69d6c2b30000000007d381f810ed6fe7",
+      "x-amzn-RequestId" : "2294ac14-4cf3-442a-9cdb-90a52bf5b848",
+      "X-Amz-Cf-Id" : "UyshuFMOh_NsuqWCk3QjELbRbV6VoUhW4PbGWr76knlJ8nIusZtiJg==",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "4967a259-82b9-4828-a338-e92e936c2c99",
+  "persistent" : true,
+  "insertionIndex" : 129
+}

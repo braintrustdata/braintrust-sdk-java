@@ -1,0 +1,39 @@
+{
+  "id" : "a763f8ff-ac48-42d2-ad49-0f4204d96615",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CoAVCrIBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAoiCg9zZXJ2aWNlLnZlcnNpb24SDwoNMC4zLjAtMWMwNGFmMAogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTkuMBLIEwogCg9icmFpbnRydXN0LWphdmESDTAuMy4wLTFjMDRhZjASqQMKEBhU0raOfSMU69Gax7vaZCMSCIHPo8Hw2kM/IgjSxwrKDXJzSioFc2NvcmUwATneGlrjfn2kGEFed3smf32kGEo1ChFicmFpbnRydXN0LnNjb3JlcxIgCh57InR5cGVzY3JpcHRfZXhhY3RfbWF0Y2giOjAuMH1KnQEKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEn8KfXsidHlwZSI6InNjb3JlIiwibmFtZSI6Imludm9rZS1qYXZhLXVuaXQtdGVzdC10eXBlc2NyaXB0ZXhhY3RtYXRjaC05ZTQ0LWxhdGVzdCIsInB1cnBvc2UiOiJzY29yZXIiLCJnZW5lcmF0aW9uIjoidGVzdC1nZW4tMSJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMnBsYXlncm91bmRfaWQ6Y2VlYTc0MjItMzUwNy00ZDFjLWE1ZjctN2FjZjQxZDlmYWMySjoKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SIAoeeyJ0eXBlc2NyaXB0X2V4YWN0X21hdGNoIjowLjB9UAF6AIUBAQEAABLuAgoQGFTSto59IxTr0ZrHu9pkIxII0scKyg1yc0oqBGV2YWwwAzlRNUrjfn2kGEFa03wmf32kGEosChVicmFpbnRydXN0LmlucHV0X2pzb24SEwoReyJpbnB1dCI6ImFwcGxlIn1KVwoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSOQo3eyJ0eXBlIjoiZXZhbCIsIm5hbWUiOiJldmFsIiwiZ2VuZXJhdGlvbiI6InRlc3QtZ2VuLTEifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJwbGF5Z3JvdW5kX2lkOmNlZWE3NDIyLTM1MDctNGQxYy1hNWY3LTdhY2Y0MWQ5ZmFjMkolChhicmFpbnRydXN0LmV4cGVjdGVkX2pzb24SCQoHImZydWl0IkozChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhkKF3sib3V0cHV0IjoiamF2YS1mcnVpdCJ9UAF6AIUBAQEAABKfAQoQ2KpQ9YgKrDQ+8qc+r0/JxRII1Lgae1qvhhgiCKO3irQHtoemKhBjdXN0b20tdGFzay1zcGFuMAE5b/OAJn99pBhBtTOBJn99pBhKSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoycGxheWdyb3VuZF9pZDpjZWVhNzQyMi0zNTA3LTRkMWMtYTVmNy03YWNmNDFkOWZhYzJ6AIUBAQEAABLSAgoQ2KpQ9YgKrDQ+8qc+r0/JxRIIo7eKtAe2h6YiCKumPv7z1X+jKgR0YXNrMAE5S/h/Jn99pBhB0lSGJn99pBhKLQoVYnJhaW50cnVzdC5pbnB1dF9qc29uEhQKEnsiaW5wdXQiOiJjYXJyb3QifUpXChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxI5Cjd7InR5cGUiOiJ0YXNrIiwibmFtZSI6InRhc2siLCJnZW5lcmF0aW9uIjoidGVzdC1nZW4tMSJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMnBsYXlncm91bmRfaWQ6Y2VlYTc0MjItMzUwNy00ZDFjLWE1ZjctN2FjZjQxZDlmYWMySjMKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SGQoXeyJvdXRwdXQiOiJqYXZhLWZydWl0In1QAXoAhQEBAQAAEu0CChDYqlD1iAqsND7ypz6vT8nFEggADebhi5ej8yIIq6Y+/vPVf6MqBXNjb3JlMAE55nmJJn99pBhBEr2LJn99pBhKLAoRYnJhaW50cnVzdC5zY29yZXMSFwoVeyJzaW1wbGVfc2NvcmVyIjowLjd9SnQKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzElYKVHsidHlwZSI6InNjb3JlIiwibmFtZSI6InNpbXBsZV9zY29yZXIiLCJwdXJwb3NlIjoic2NvcmVyIiwiZ2VuZXJhdGlvbiI6InRlc3QtZ2VuLTEifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJwbGF5Z3JvdW5kX2lkOmNlZWE3NDIyLTM1MDctNGQxYy1hNWY3LTdhY2Y0MWQ5ZmFjMkoxChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhcKFXsic2ltcGxlX3Njb3JlciI6MC43fVABegCFAQEBAAASqQMKENiqUPWICqw0PvKnPq9PycUSCMiSUWHi8tfZIgirpj7+89V/oyoFc2NvcmUwATlFaYwmf32kGEH/UGddf32kGEo1ChFicmFpbnRydXN0LnNjb3JlcxIgCh57InR5cGVzY3JpcHRfZXhhY3RfbWF0Y2giOjAuMH1KnQEKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEn8KfXsidHlwZSI6InNjb3JlIiwibmFtZSI6Imludm9rZS1qYXZhLXVuaXQtdGVzdC10eXBlc2NyaXB0ZXhhY3RtYXRjaC05ZTQ0LWxhdGVzdCIsInB1cnBvc2UiOiJzY29yZXIiLCJnZW5lcmF0aW9uIjoidGVzdC1nZW4tMSJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMnBsYXlncm91bmRfaWQ6Y2VlYTc0MjItMzUwNy00ZDFjLWE1ZjctN2FjZjQxZDlmYWMySjoKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SIAoeeyJ0eXBlc2NyaXB0X2V4YWN0X21hdGNoIjowLjB9UAF6AIUBAQEAABLzAgoQ2KpQ9YgKrDQ+8qc+r0/JxRIIq6Y+/vPVf6MqBGV2YWwwAzkXpX4mf32kGEFJymhdf32kGEotChVicmFpbnRydXN0LmlucHV0X2pzb24SFAoSeyJpbnB1dCI6ImNhcnJvdCJ9SlcKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEjkKN3sidHlwZSI6ImV2YWwiLCJuYW1lIjoiZXZhbCIsImdlbmVyYXRpb24iOiJ0ZXN0LWdlbi0xIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoycGxheWdyb3VuZF9pZDpjZWVhNzQyMi0zNTA3LTRkMWMtYTVmNy03YWNmNDFkOWZhYzJKKQoYYnJhaW50cnVzdC5leHBlY3RlZF9qc29uEg0KCyJ2ZWdldGFibGUiSjMKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SGQoXeyJvdXRwdXQiOiJqYXZhLWZydWl0In1QAXoAhQEBAQAA"
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bhNOTFwYIAMENtw=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69d6c25b-58cbd56549527e4735a65671;Parent=580340944e5606a6;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Wed, 08 Apr 2026 21:02:19 GMT",
+      "Via" : "1.1 d08613e1dd8ad614e47875ae31a8af20.cloudfront.net (CloudFront), 1.1 b669d9add7767f73665f1f8b7e8cd802.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69d6c25b000000000fca400db84bc6b0",
+      "x-amzn-RequestId" : "8c66959a-3fab-4eeb-a6ec-8659ab4e12b0",
+      "X-Amz-Cf-Id" : "EryyAUAHp5cTAcZfgfVscJSQwHzWO0407O3myMzFWA6aDq2q8D-Z9g==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "a763f8ff-ac48-42d2-ad49-0f4204d96615",
+  "persistent" : true,
+  "insertionIndex" : 93
+}

@@ -1,0 +1,60 @@
+{
+  "id" : "4adbe73e-d342-4368-9aad-2b269068d505",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"test input\",\"output\":\"hello world\",\"expected\":\"hello world\",\"metadata\":{}},\"parent\":{\"object_type\":\"project_logs\",\"object_id\":\"6ae68365-7620-4630-921b-bac416634fc8\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"25ba5724ed44cf3d\",\"root_span_id\":\"49e7ed385154a29ec94b1e5c3cd89a0d\"}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke-4adbe73e-d342-4368-9aad-2b269068d505.json",
+    "headers" : {
+      "x-bt-function-creds-cached" : "HIT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "_cfuvid=oJPtpIhd8DLmaEWdtRHLwxhn9tfEni45vjngYtAh7Zg-1775678977572-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None",
+      "x-amzn-RequestId" : "6c419d70-8532-4fd6-b415-eb7222f8328a",
+      "X-Amz-Cf-Id" : "TjHBywvvEsxYQ1-eWyOLhuL2_vzIXtcaV93Agcmeje3ZO00AfNISHg==",
+      "openai-project" : "proj_wMRY6YpEiASXMxPIIcI9nQRi",
+      "cache-control" : "max-age=604800, no-transform",
+      "Age" : "3190",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_b0c3976a96854946bbe763b7b0e515af",
+      "X-Cache" : "Miss from cloudfront",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "cf-ray" : "9e93e8cf5c247af0-IAD",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999937",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-bt-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69d6c27a-599d2c8f2a27b34c6c802b8c;Parent=4d061a98a537cfe4;Sampled=0;Lineage=1:8be8f50d:0",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Wed, 08 Apr 2026 21:02:51 GMT",
+      "Via" : "1.1 dbfd9bcc806d4c322e72b461b2458112.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwIDAWrmg2V2IEYwkhu6xBZjT8gCkLtlbhYrS92U+PngLZk0qQPtmCo3+WZHTrmsi0Zm5s1OeyJwcm9wYWdhdGVkX2V2ZW50Ijp7InNwYW5fYXR0cmlidXRlcyI6eyJwdXJwb3NlIjoic2NvcmVyIn19LCJyb290X3NwYW5faWQiOiI0OWU3ZWQzODUxNTRhMjllYzk0YjFlNWMzY2Q4OWEwZCJ9",
+      "x-content-type-options" : "nosniff",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "openai-version" : "2020-10-01",
+      "x-bt-span-id" : "90bb656e-162b-4bdd-94f8-f9e02d9934a9",
+      "openai-processing-ms" : "14235",
+      "x-bt-function-meta-cached" : "MISS"
+    }
+  },
+  "uuid" : "4adbe73e-d342-4368-9aad-2b269068d505",
+  "persistent" : true,
+  "insertionIndex" : 17
+}
