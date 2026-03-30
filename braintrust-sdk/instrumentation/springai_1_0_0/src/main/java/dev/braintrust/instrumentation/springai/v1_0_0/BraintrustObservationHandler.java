@@ -7,9 +7,7 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.observation.ChatModelObservationContext;
-import org.springframework.ai.chat.prompt.Prompt;
 
 /**
  * Provider-agnostic Micrometer observation handler for Spring AI chat model calls.
@@ -24,16 +22,24 @@ final class BraintrustObservationHandler
     private static final String OBSERVATION_SPAN_KEY =
             BraintrustObservationHandler.class.getName() + ".span";
 
+    private static final String START_NANOS_KEY =
+            BraintrustObservationHandler.class.getName() + ".startNanos";
+    static final String TTFT_NANOS_KEY =
+            BraintrustObservationHandler.class.getName() + ".ttftNanos";
+
     private final Tracer tracer;
-    private final TriConsumer<BraintrustObservationHandler, Span, Prompt> tagRequest;
-    private final TriConsumer<BraintrustObservationHandler, Span, ChatResponse> tagResponse;
+    private final TriConsumer<BraintrustObservationHandler, Span, ChatModelObservationContext>
+            tagRequest;
+    private final TriConsumer<BraintrustObservationHandler, Span, ChatModelObservationContext>
+            tagResponse;
     private final String baseUrl;
 
     BraintrustObservationHandler(
             Tracer tracer,
             String baseUrl,
-            TriConsumer<BraintrustObservationHandler, Span, Prompt> tagRequest,
-            TriConsumer<BraintrustObservationHandler, Span, ChatResponse> tagResponse) {
+            TriConsumer<BraintrustObservationHandler, Span, ChatModelObservationContext> tagRequest,
+            TriConsumer<BraintrustObservationHandler, Span, ChatModelObservationContext>
+                    tagResponse) {
         this.tracer = tracer;
         this.baseUrl = baseUrl;
         this.tagRequest = tagRequest;
@@ -52,10 +58,20 @@ final class BraintrustObservationHandler
     @Override
     public void onStart(@Nonnull ChatModelObservationContext context) {
         try {
+            context.put(START_NANOS_KEY, System.nanoTime());
             Span span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
             context.put(OBSERVATION_SPAN_KEY, span);
-            Prompt prompt = context.getRequest();
-            tagRequest.accept(this, span, prompt);
+            tagRequest.accept(this, span, context);
+        } catch (Exception e) {
+            log.debug("instrumentation error", e);
+        }
+    }
+
+    @Override
+    public void onEvent(
+            @Nonnull Observation.Event event, @Nonnull ChatModelObservationContext context) {
+        try {
+            setTTFTIfAbsent(context);
         } catch (Exception e) {
             log.debug("instrumentation error", e);
         }
@@ -81,15 +97,28 @@ final class BraintrustObservationHandler
                 return;
             }
             try {
-                ChatResponse response = context.getResponse();
-                if (response != null) {
-                    tagResponse.accept(this, span, response);
+                if (context.getResponse() != null) {
+                    setTTFTIfAbsent(context);
+                    tagResponse.accept(this, span, context);
                 }
             } finally {
                 span.end();
             }
         } catch (Exception e) {
             log.debug("instrumentation error", e);
+        }
+    }
+
+    private void setTTFTIfAbsent(ChatModelObservationContext context) {
+        if (context.get(TTFT_NANOS_KEY) == null) {
+            synchronized (this) {
+                if (context.get(TTFT_NANOS_KEY) == null) {
+                    Long startNanos = context.get(START_NANOS_KEY);
+                    if (startNanos != null) {
+                        context.put(TTFT_NANOS_KEY, System.nanoTime() - startNanos);
+                    }
+                }
+            }
         }
     }
 }
