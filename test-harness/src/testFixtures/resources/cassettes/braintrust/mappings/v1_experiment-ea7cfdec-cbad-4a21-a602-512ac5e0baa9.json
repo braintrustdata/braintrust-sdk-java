@@ -1,0 +1,42 @@
+{
+  "id" : "ea7cfdec-cbad-4a21-a602-512ac5e0baa9",
+  "name" : "v1_experiment",
+  "request" : {
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"6ae68365-7620-4630-921b-bac416634fc8\",\"name\":\"test-dataset-linking\",\"dataset_id\":\"0855b29c-69ba-4f98-9154-61a40334a492\",\"dataset_version\":\"1000196534141277158\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_experiment-ea7cfdec-cbad-4a21-a602-512ac5e0baa9.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bC_6KHY1IAMEOUA=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "482",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad0d-3d36815355f8b122476457ff;Parent=17431bfdcccb1165;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:13 GMT",
+      "Via" : "1.1 b521abc69f4dd055f355de798c5fb95a.cloudfront.net (CloudFront), 1.1 ee5f8da78d4211a93c9dba8864a4067e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad0d0000000055f8790848f7a409",
+      "x-amzn-RequestId" : "6a19a4fd-b4bf-41d6-886c-f885c06169f9",
+      "X-Amz-Cf-Id" : "yr4wYhUGpXsnVvRfhyOdpJzUmKuktYmiBQQfPdSzNNC52muqU0Xtjw==",
+      "etag" : "W/\"1e2-8tkQUxgNDrD+TCGdYQUPh+v39UU\"",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "ea7cfdec-cbad-4a21-a602-512ac5e0baa9",
+  "persistent" : true,
+  "insertionIndex" : 67
+}

@@ -1,0 +1,39 @@
+{
+  "id" : "8afbf4cb-e9b1-40be-9217-a5b611ac35fa",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CvgSCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTFmMTQzZGEtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASuREKEQoPYnJhaW50cnVzdC1qYXZhEqMRChAWNfQr0eamXnlOPkenyPAtEghCEYrC2GV1TCIIcn+tIq5t01IqCXJlc3BvbnNlczABOVzvSGlDraEYQdP2Bk1GraEYSqkBChVicmFpbnRydXN0LmlucHV0X2pzb24SjwEKjAFbeyJyb2xlIjoidXNlciIsImNvbnRlbnQiOiJMb29rIGF0IHRoaXMgc2VxdWVuY2U6IDIsIDYsIDEyLCAyMCwgMzAuIFdoYXQgaXMgdGhlIHBhdHRlcm4gYW5kIHdoYXQgd291bGQgYmUgdGhlIGZvcm11bGEgZm9yIHRoZSBudGggdGVybT9cbiJ9XUpzChJicmFpbnRydXN0Lm1ldHJpY3MSXQpbeyJjb21wbGV0aW9uX3Rva2VucyI6OTEyLCJwcm9tcHRfdG9rZW5zIjo0MSwidG9rZW5zIjo5NTMsImNvbXBsZXRpb25fcmVhc29uaW5nX3Rva2VucyI6NzY4fUouChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxIQCg57InR5cGUiOiJsbG0ifUoyChFicmFpbnRydXN0LnBhcmVudBIdChtwcm9qZWN0X25hbWU6amF2YS11bml0LXRlc3RKqgwKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SjwwKjAxbeyJpZCI6InJzXzA3NTdkZmZhODEzNjQ0ZTQwMDY5Y2FhY2ZhYTkwODgxOTNhODdhYjg3ZDliN2ZjNGI0IiwidHlwZSI6InJlYXNvbmluZyIsInN1bW1hcnkiOlt7InR5cGUiOiJzdW1tYXJ5X3RleHQiLCJ0ZXh0IjoiKipEZXRlcm1pbmluZyB0aGUgc2VxdWVuY2UgZm9ybXVsYSoqXG5cblRoZSB1c2Vy4oCZcyBzZXF1ZW5jZSBpczogMiwgNiwgMTIsIDIwLCAzMC4gVG8gZmluZCB0aGUgcGF0dGVybiwgSSBub3RpY2UgdGhlIGRpZmZlcmVuY2VzIGFyZSA0LCA2LCA4LCAxMCwgd2hpY2ggc3VnZ2VzdHMgYSBxdWFkcmF0aWMgcmVsYXRpb25zaGlwLiBJIGRlZHVjZSB0aGUgZm9ybXVsYSBmb3IgdGhlIG50aCB0ZXJtIGlzIGFfbiA9IG4obisxKS4gVGhpcyBtZWFucyBlYWNoIHRlcm0gcmVwcmVzZW50cyB0aGUgcHJvZHVjdCBvZiB0d28gY29uc2VjdXRpdmUgaW50ZWdlcnMsIGFsc28ga25vd24gYXMgcHJvbmljIG51bWJlcnMuIElmIHN0YXJ0aW5nIHRoZSBzZXF1ZW5jZSBhdCBuPTEsIGl0IHdvcmtzIGp1c3QgYXMgd2VsbCBpZiBzdGFydGluZyBhdCBuPTAsIGdlbmVyYXRpbmcgMCwgMiwgNiwgMTIsIGV0Yy4ifSx7InR5cGUiOiJzdW1tYXJ5X3RleHQiLCJ0ZXh0IjoiKipJZGVudGlmeWluZyB0aGUgcGF0dGVybiBhbmQgZm9ybXVsYSoqXG5cblNpbmNlIHRoZSBmaXJzdCB0ZXJtIGlzIDIsIEnigJltIGluZGV4aW5nIGF0IG49MS4gVGhlIHBhdHRlcm4gYXBwZWFycyB0byBiZSBwcm9uaWMgbnVtYmVycywgd2hlcmUgdGhlIGdlbmVyYWwgdGVybSBjYW4gYmUgZXhwcmVzc2VkIGFzIGFfbiA9IG4obisxKS4gVGhpcyBtZWFucyB0aGV5J3JlIHByb2R1Y3RzIG9mIGNvbnNlY3V0aXZlIGludGVnZXJzLiBUaGUgZGlmZmVyZW5jZXMgYmV0d2VlbiB0ZXJtcyBhcmUgaW5jcmVhc2luZyBldmVuIG51bWJlcnM6IDQsIDYsIDgsIDEwLCBpbmRpY2F0aW5nIHRoYXQgYV9uIC0gYV8obi0xKSA9IDJuLiBJIGNhbiBhbHNvIHNheSBhX24gPSAyICogVF9uLCBsaW5raW5nIGl0IHRvIHRyaWFuZ3VsYXIgbnVtYmVycy4gVGh1cywgdGhlIGZvcm11bGEgcmVtYWlucyBhX24gPSBuKG4rMSkuIn1dfSx7ImlkIjoibXNnXzA3NTdkZmZhODEzNjQ0ZTQwMDY5Y2FhZDA1MTgwODgxOTNhNWE5NTNkMjE5M2IxMDkwIiwidHlwZSI6Im1lc3NhZ2UiLCJzdGF0dXMiOiJjb21wbGV0ZWQiLCJjb250ZW50IjpbeyJ0eXBlIjoib3V0cHV0X3RleHQiLCJhbm5vdGF0aW9ucyI6W10sImxvZ3Byb2JzIjpbXSwidGV4dCI6IlRoZSB0ZXJtcyBhcmUgdGhlIOKAnHByb25pY+KAnSAob3Igb2Jsb25nKSBudW1iZXJzLCBpLmUuIHByb2R1Y3RzIG9mIHR3byBjb25zZWN1dGl2ZSBpbnRlZ2VyczpcblxuMiA9IDHCtzIgIFxuNiA9IDLCtzMgIFxuMTIgPSAzwrc0ICBcbjIwID0gNMK3NSAgXG4zMCA9IDXCtzYgIFxuXG5JZiB3ZSBjYWxsIHRoZSBmaXJzdCB0ZXJtIGHigoEsIHRoZSBydWxlIGlzXG5cbuKAg2HigpkgPSBuwrcobiArIDEpLOKAg24gPSAxLCAyLCAzLCDigKZcblxuU28gZXhwbGljaXRseSBh4oKZID0gbsKyICsgbi4ifV0sInJvbGUiOiJhc3Npc3RhbnQifV1KoQEKE2JyYWludHJ1c3QubWV0YWRhdGESiQEKhgF7InByb3ZpZGVyIjoib3BlbmFpIiwicmVxdWVzdF9wYXRoIjoicmVzcG9uc2VzIiwibW9kZWwiOiJvNC1taW5pIiwicmVxdWVzdF9iYXNlX3VyaSI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTk0NzYiLCJyZXF1ZXN0X21ldGhvZCI6IlBPU1QifXoAhQEBAQAA"
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bC_6PEakIAMEVtQ=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad0d-36c3379e79f805e83025fa50;Parent=5d803a6acdae41bd;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:14 GMT",
+      "Via" : "1.1 9257f9c4051fe8bd6cc4a09855b66350.cloudfront.net (CloudFront), 1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad0d0000000006e873505f5b0b03",
+      "x-amzn-RequestId" : "39420be1-9600-416b-8be1-034e8309de6e",
+      "X-Amz-Cf-Id" : "49za57F2sECrE2asZsboaZV6oi7rbs82Hw2LRADIuqna9t4Xo3foHQ==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "8afbf4cb-e9b1-40be-9217-a5b611ac35fa",
+  "persistent" : true,
+  "insertionIndex" : 18
+}

@@ -1,0 +1,39 @@
+{
+  "id" : "25dd388f-9a35-4397-be7d-29658e601824",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CrAICrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTFmMTQzZGEtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjAS8QYKJwoPYnJhaW50cnVzdC1qYXZhEhQwLjIuMTAtMWYxNDNkYS1ESVJUWRLEAQoQpy0frd8GcLlWJH6lh/xCYBIIsmv01jstE5wiCHhl6+BsN4iCKgR0YXNrMAE5oqPBEkqtoRhB4jnDEkqtoRhKLwoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSEQoPeyJ0eXBlIjoidGFzayJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMmV4cGVyaW1lbnRfaWQ6MDAzZjI5Y2UtODQ1Yi00OTg3LWEwNzItMWFhMzdlMmFmZDQ0egCFAQEBAAASvAIKEKctH63fBnC5ViR+pYf8QmASCE3fqTZx9Aw7Igh4ZevgbDeIgioFc2NvcmUwATlZKMUSSq2hGEHp/scSSq2hGEoqChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhAKDnsic2NvcmVyIjoxLjB9SlMKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEjUKM3sidHlwZSI6InNjb3JlIiwibmFtZSI6InNjb3JlciIsInB1cnBvc2UiOiJzY29yZXIifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJleHBlcmltZW50X2lkOjAwM2YyOWNlLTg0NWItNDk4Ny1hMDcyLTFhYTM3ZTJhZmQ0NEolChFicmFpbnRydXN0LnNjb3JlcxIQCg57InNjb3JlciI6MS4wfXoAhQEBAQAAEr8CChCnLR+t3wZwuVYkfqWH/EJgEgh4ZevgbDeIgioEZXZhbDADOag4vxJKraEYQU6HyBJKraEYSiAKE2JyYWludHJ1c3QuZXhwZWN0ZWQSCQoHImZydWl0IkouChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhQKEnsib3V0cHV0IjoiZnJ1aXQifUovChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxIRCg97InR5cGUiOiJldmFsIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoyZXhwZXJpbWVudF9pZDowMDNmMjljZS04NDViLTQ5ODctYTA3Mi0xYWEzN2UyYWZkNDRKMQoVYnJhaW50cnVzdC5pbnB1dF9qc29uEhgKFnsiaW5wdXQiOiJzdHJhd2JlcnJ5In16AIUBAQEAAA=="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bC_7gHCRoAMEU8Q=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad16-001e29ad5f3d99f63dd5f84f;Parent=730e2b5b1ef5c351;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:22 GMT",
+      "Via" : "1.1 dc8ab0490cc3f7679073e847e3aabb66.cloudfront.net (CloudFront), 1.1 170efbc424be9181bda5d0fcd6e41f30.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad16000000005ef0f349dc1f9e86",
+      "x-amzn-RequestId" : "8d686bb0-0c6a-493d-9db3-6565877bbf5d",
+      "X-Amz-Cf-Id" : "5mhTuJqyxTXCGd3lMyUNe4M577myQZrpFxlLm7JVdgd15PUCH37KkA==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "25dd388f-9a35-4397-be7d-29658e601824",
+  "persistent" : true,
+  "insertionIndex" : 46
+}

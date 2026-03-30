@@ -1,0 +1,47 @@
+{
+  "id" : "d45267a2-48a9-4f13-a3a9-8d7d91d64ed9",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0757dffa813644e40069caacfaa9088193a87ab87d9b7fc4b4\",\"summary\":[{\"text\":\"**Determining the sequence formula**\\n\\nThe user’s sequence is: 2, 6, 12, 20, 30. To find the pattern, I notice the differences are 4, 6, 8, 10, which suggests a quadratic relationship. I deduce the formula for the nth term is a_n = n(n+1). This means each term represents the product of two consecutive integers, also known as pronic numbers. If starting the sequence at n=1, it works just as well if starting at n=0, generating 0, 2, 6, 12, etc.\",\"type\":\"summary_text\"},{\"text\":\"**Identifying the pattern and formula**\\n\\nSince the first term is 2, I’m indexing at n=1. The pattern appears to be pronic numbers, where the general term can be expressed as a_n = n(n+1). This means they're products of consecutive integers. The differences between terms are increasing even numbers: 4, 6, 8, 10, indicating that a_n - a_(n-1) = 2n. I can also say a_n = 2 * T_n, linking it to triangular numbers. Thus, the formula remains a_n = n(n+1).\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_0757dffa813644e40069caad0518088193a5a953d2193b1090\",\"content\":[{\"annotations\":[],\"text\":\"The terms are the “pronic” (or oblong) numbers, i.e. products of two consecutive integers:\\n\\n2 = 1·2  \\n6 = 2·3  \\n12 = 3·4  \\n20 = 4·5  \\n30 = 5·6  \\n\\nIf we call the first term a₁, the rule is\\n\\n aₙ = n·(n + 1), n = 1, 2, 3, …\\n\\nSo explicitly aₙ = n² + n.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-d45267a2-48a9-4f13-a3a9-8d7d91d64ed9.json",
+    "headers" : {
+      "x-request-id" : "req_5afa0b9a2287469eac3504c427adaf6a",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e48b10499c976d3-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999605",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 17:04:16 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=D3H3rIb86JPAUfKIRrFbhInZKIep_WfCYOhUTD6sHCc-1774890245.8532403-1.0.1.1-OVuRqmNPHmFPLwfxmq3rWydeoflHIHD5r5hQRwcP2OQVeLnBhY97JekdH51QzlZGb2A6ZG9sxwNdAkrjVM.mRCO7Sl3NKcEVtpB4eqcafdqAMrC6nigUAwPXg_UhnV4v; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 17:34:16 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "10410",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "d45267a2-48a9-4f13-a3a9-8d7d91d64ed9",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

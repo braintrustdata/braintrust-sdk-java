@@ -1,0 +1,53 @@
+{
+  "id" : "c20d3fb2-e1d3-4540-ac67-70b65be4a5b6",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"system\":\"You are a helpful assistant.\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-c20d3fb2-e1d3-4540-ac67-70b65be4a5b6.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "388",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "800000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-03-30T17:03:59Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-03-30T17:03:59Z",
+      "anthropic-ratelimit-tokens-remaining" : "4800000",
+      "set-cookie" : "_cfuvid=Ff3oREjG.iccC0fU9lfbfxMKZ7JXzz5WBCQzv6m59hI-1774890239.0581343-1.0.1.1-B.A7.Qg2cPwcvbZSWIxQC6HaTZgGFIDgN.jNWwVuwZY; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "4000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=389",
+      "anthropic-ratelimit-input-tokens-remaining" : "4000000",
+      "anthropic-ratelimit-requests-remaining" : "3999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9e48b0da19bf7592-SEA",
+      "anthropic-ratelimit-tokens-limit" : "4800000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CZZdKfd5EG7KAbbVfNNAp",
+      "anthropic-ratelimit-tokens-reset" : "2026-03-30T17:03:59Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Mon, 30 Mar 2026 17:03:59 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-03-30T17:03:59Z",
+      "anthropic-ratelimit-input-tokens-limit" : "4000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "800000"
+    }
+  },
+  "uuid" : "c20d3fb2-e1d3-4540-ac67-70b65be4a5b6",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

@@ -1,0 +1,39 @@
+{
+  "id" : "cac31305-4dd5-4dee-bfda-c7d4d963663b",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CuwOCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTFmMTQzZGEtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASrQ0KJwoPYnJhaW50cnVzdC1qYXZhEhQwLjIuMTAtMWYxNDNkYS1ESVJUWRKpAwoQA2IdC+bTJDM8Ddb6N0tE3hII5PWze/ZYIVsiCFOEqxmMX3vbKgVzY29yZTABOVNI6G5EraEYQbm53kdFraEYSjoKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SIAoeeyJ0eXBlc2NyaXB0X2V4YWN0X21hdGNoIjowLjB9Sp0BChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxJ/Cn17InR5cGUiOiJzY29yZSIsIm5hbWUiOiJpbnZva2UtamF2YS11bml0LXRlc3QtdHlwZXNjcmlwdGV4YWN0bWF0Y2gtOWU0NC1sYXRlc3QiLCJwdXJwb3NlIjoic2NvcmVyIiwiZ2VuZXJhdGlvbiI6InRlc3QtZ2VuLTEifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJwbGF5Z3JvdW5kX2lkOmNlZWE3NDIyLTM1MDctNGQxYy1hNWY3LTdhY2Y0MWQ5ZmFjMko1ChFicmFpbnRydXN0LnNjb3JlcxIgCh57InR5cGVzY3JpcHRfZXhhY3RfbWF0Y2giOjAuMH1QAXoAhQEBAQAAEu4CChADYh0L5tMkMzwN1vo3S0TeEghThKsZjF972yoEZXZhbDADOSA6pG5EraEYQZs030dFraEYSiUKGGJyYWludHJ1c3QuZXhwZWN0ZWRfanNvbhIJCgciZnJ1aXQiSjMKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SGQoXeyJvdXRwdXQiOiJqYXZhLWZydWl0In1KVwoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSOQo3eyJ0eXBlIjoiZXZhbCIsIm5hbWUiOiJldmFsIiwiZ2VuZXJhdGlvbiI6InRlc3QtZ2VuLTEifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJwbGF5Z3JvdW5kX2lkOmNlZWE3NDIyLTM1MDctNGQxYy1hNWY3LTdhY2Y0MWQ5ZmFjMkosChVicmFpbnRydXN0LmlucHV0X2pzb24SEwoReyJpbnB1dCI6ImFwcGxlIn1QAXoAhQEBAQAAEp8BChCcAgD6NvPGhTOf+VfA6xVCEgjcU554we2QCCIItdGr7cx/YkEqEGN1c3RvbS10YXNrLXNwYW4wATnn3N9HRa2hGEE07N9HRa2hGEpJChFicmFpbnRydXN0LnBhcmVudBI0CjJwbGF5Z3JvdW5kX2lkOmNlZWE3NDIyLTM1MDctNGQxYy1hNWY3LTdhY2Y0MWQ5ZmFjMnoAhQEBAQAAEtICChCcAgD6NvPGhTOf+VfA6xVCEgi10avtzH9iQSII1fcJ32ODTBkqBHRhc2swATnNlN9HRa2hGEHybeFHRa2hGEozChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhkKF3sib3V0cHV0IjoiamF2YS1mcnVpdCJ9SlcKGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEjkKN3sidHlwZSI6InRhc2siLCJuYW1lIjoidGFzayIsImdlbmVyYXRpb24iOiJ0ZXN0LWdlbi0xIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoycGxheWdyb3VuZF9pZDpjZWVhNzQyMi0zNTA3LTRkMWMtYTVmNy03YWNmNDFkOWZhYzJKLQoVYnJhaW50cnVzdC5pbnB1dF9qc29uEhQKEnsiaW5wdXQiOiJjYXJyb3QifVABegCFAQEBAAAS7QIKEJwCAPo288aFM5/5V8DrFUISCJhKJR6SlfQRIgjV9wnfY4NMGSoFc2NvcmUwATnHg+JHRa2hGEF8RONHRa2hGEoxChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhcKFXsic2ltcGxlX3Njb3JlciI6MC43fUp0ChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxJWClR7InR5cGUiOiJzY29yZSIsIm5hbWUiOiJzaW1wbGVfc2NvcmVyIiwicHVycG9zZSI6InNjb3JlciIsImdlbmVyYXRpb24iOiJ0ZXN0LWdlbi0xIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoycGxheWdyb3VuZF9pZDpjZWVhNzQyMi0zNTA3LTRkMWMtYTVmNy03YWNmNDFkOWZhYzJKLAoRYnJhaW50cnVzdC5zY29yZXMSFwoVeyJzaW1wbGVfc2NvcmVyIjowLjd9UAF6AIUBAQEAAA=="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bC_42GCRIAMEgwA=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad05-1a4623283f9161d524810af8;Parent=26565085f2963a5a;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:05 GMT",
+      "Via" : "1.1 49e28fce48b0172be48e0ceea533547e.cloudfront.net (CloudFront), 1.1 566cc276dff9847158a5a9854be4df42.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad050000000024e29d708ac4d359",
+      "x-amzn-RequestId" : "da475d16-b43e-43fe-8056-60546cafa133",
+      "X-Amz-Cf-Id" : "C76CztAUqjE5QAC9wmvscbexBx4JgLw29Ij5a-1d7MRwRkk8IXN19Q==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "cac31305-4dd5-4dee-bfda-c7d4d963663b",
+  "persistent" : true,
+  "insertionIndex" : 90
+}

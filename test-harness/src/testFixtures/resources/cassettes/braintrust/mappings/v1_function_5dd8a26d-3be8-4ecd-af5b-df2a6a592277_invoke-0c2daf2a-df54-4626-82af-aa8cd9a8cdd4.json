@@ -1,0 +1,39 @@
+{
+  "id" : "0c2daf2a-df54-4626-82af-aa8cd9a8cdd4",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"test input\",\"output\":\"hello world\",\"expected\":\"hello world\",\"metadata\":{}},\"parent\":{\"object_type\":\"project_logs\",\"object_id\":\"6ae68365-7620-4630-921b-bac416634fc8\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"be08035706f5d06d\",\"root_span_id\":\"dfdad346f887a256eef7aaba8028bb9f\"}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke-0c2daf2a-df54-4626-82af-aa8cd9a8cdd4.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-bt-function-creds-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69caad25-48c651b91ed924312cefd25a;Parent=6cdfe64722400ce4;Sampled=0;Lineage=1:8be8f50d:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:49 GMT",
+      "Via" : "1.1 0df7f27a01014ab815259ca2d88193c6.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwIDAWrmg2V2IEYwkhu6xBZjT8gCjJVlrVOgTQugiVv8pw/MtQN8hieBoclB7KGdScm0aHv3eyJwcm9wYWdhdGVkX2V2ZW50Ijp7InNwYW5fYXR0cmlidXRlcyI6eyJwdXJwb3NlIjoic2NvcmVyIn19LCJyb290X3NwYW5faWQiOiJkZmRhZDM0NmY4ODdhMjU2ZWVmN2FhYmE4MDI4YmI5ZiJ9",
+      "x-amzn-RequestId" : "f1d6602e-330c-45be-999a-f317a2542348",
+      "X-Amz-Cf-Id" : "YPE9emVsZxTHlBWRYw4OPPf3lkepdrBKWbZBdL3GNwBU3rr2IUwqTw==",
+      "x-bt-span-id" : "8c9565ad-53a0-4d0b-a089-5bfca70fccb5",
+      "x-bt-function-meta-cached" : "MISS",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "0c2daf2a-df54-4626-82af-aa8cd9a8cdd4",
+  "persistent" : true,
+  "insertionIndex" : 17
+}

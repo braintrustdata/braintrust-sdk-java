@@ -1,0 +1,39 @@
+{
+  "id" : "efa11985-877f-4bd5-af88-cd3487fb3e93",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CpIQCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTFmMTQzZGEtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjAS0w4KJwoPYnJhaW50cnVzdC1qYXZhEhQwLjIuMTAtMWYxNDNkYS1ESVJUWRLEAQoQpMsOw3vYZ8109cFEEIsg0hIIbMyC5WFJ1JkiCIpRbntXAUo3KgR0YXNrMAE5sTPZ10itoRhBLT3b10itoRhKLwoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSEQoPeyJ0eXBlIjoidGFzayJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMmV4cGVyaW1lbnRfaWQ6MzdhYzNmM2YtMDBiOS00YTVmLTk5NzctZmFmMTM0OWFiODgxegCFAQEBAAASywIKEKTLDsN72GfNdPXBRBCLINISCNg6ARAJxpJeIgiKUW57VwFKNyoFc2NvcmUwATmIit3XSK2hGEFcM+DXSK2hGEovChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhUKE3siZXhhY3RfbWF0Y2giOjAuMH1KWAoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSOgo4eyJ0eXBlIjoic2NvcmUiLCJuYW1lIjoiZXhhY3RfbWF0Y2giLCJwdXJwb3NlIjoic2NvcmVyIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoyZXhwZXJpbWVudF9pZDozN2FjM2YzZi0wMGI5LTRhNWYtOTk3Ny1mYWYxMzQ5YWI4ODFKKgoRYnJhaW50cnVzdC5zY29yZXMSFQoTeyJleGFjdF9tYXRjaCI6MC4wfXoAhQEBAQAAEsECChCkyw7De9hnzXT1wUQQiyDSEgiKUW57VwFKNyoEZXZhbDADOWCX1ddIraEYQT3K4NdIraEYSiMKE2JyYWludHJ1c3QuZXhwZWN0ZWQSDAoKIndoYXRldmVyIkouChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhQKEnsib3V0cHV0IjoiZnJ1aXQifUovChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxIRCg97InR5cGUiOiJldmFsIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoyZXhwZXJpbWVudF9pZDozN2FjM2YzZi0wMGI5LTRhNWYtOTk3Ny1mYWYxMzQ5YWI4ODFKMAoVYnJhaW50cnVzdC5pbnB1dF9qc29uEhcKFXsiaW5wdXQiOiJuby1vcmlnaW4ifXoAhQEBAQAAEsQBChDVXLMbH/ilSovcVEYD3BbUEgiyVD/yHhzZISIIxjSOVzNktV8qBHRhc2swATn7RuTXSK2hGEG8DOXXSK2hGEovChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxIRCg97InR5cGUiOiJ0YXNrIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoyZXhwZXJpbWVudF9pZDozN2FjM2YzZi0wMGI5LTRhNWYtOTk3Ny1mYWYxMzQ5YWI4ODF6AIUBAQEAABLLAgoQ1VyzGx/4pUqL3FRGA9wW1BIIZjDqGeCszVYiCMY0jlczZLVfKgVzY29yZTABOX3E5ddIraEYQeUH59dIraEYSi8KFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SFQoTeyJleGFjdF9tYXRjaCI6MC4wfUpYChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxI6Cjh7InR5cGUiOiJzY29yZSIsIm5hbWUiOiJleGFjdF9tYXRjaCIsInB1cnBvc2UiOiJzY29yZXIifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJleHBlcmltZW50X2lkOjM3YWMzZjNmLTAwYjktNGE1Zi05OTc3LWZhZjEzNDlhYjg4MUoqChFicmFpbnRydXN0LnNjb3JlcxIVChN7ImV4YWN0X21hdGNoIjowLjB9egCFAQEBAAASuQMKENVcsxsf+KVKi9xURgPcFtQSCMY0jlczZLVfKgRldmFsMAM5KHzi10itoRhBw1nn10itoRhKIwoTYnJhaW50cnVzdC5leHBlY3RlZBIMCgoid2hhdGV2ZXIiSnUKEWJyYWludHJ1c3Qub3JpZ2luEmAKXnsib2JqZWN0X3R5cGUiOiJ1bml0LXRlc3QiLCJvYmplY3RfaWQiOiIxMjM0IiwiaWQiOiI1Njc4IiwiX3hhY3RfaWQiOiI5IiwiY3JlYXRlZCI6IndoYXRldmVyIn1KLgoWYnJhaW50cnVzdC5vdXRwdXRfanNvbhIUChJ7Im91dHB1dCI6ImZydWl0In1KLwoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSEQoPeyJ0eXBlIjoiZXZhbCJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMmV4cGVyaW1lbnRfaWQ6MzdhYzNmM2YtMDBiOS00YTVmLTk5NzctZmFmMTM0OWFiODgxSjEKFWJyYWludHJ1c3QuaW5wdXRfanNvbhIYChZ7ImlucHV0IjoiaGFzLW9yaWdpbiJ9egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bC_6zH72oAMEWNQ=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad11-5a0e577b4cf199e0197eeee0;Parent=064b3ab92c245614;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:04:17 GMT",
+      "Via" : "1.1 dc8ab0490cc3f7679073e847e3aabb66.cloudfront.net (CloudFront), 1.1 4ac8d091dce10e726cfc5404bfed72b8.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad1100000000111dd6ece871b07b",
+      "x-amzn-RequestId" : "75665808-cc8f-4ac6-ba6e-0b92f24e3f67",
+      "X-Amz-Cf-Id" : "PGKW5KERY6y8lJE8_zz5KuE43kboNijnXSPF4zItbR9LxiS1czdfwA==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "efa11985-877f-4bd5-af88-cd3487fb3e93",
+  "persistent" : true,
+  "insertionIndex" : 56
+}

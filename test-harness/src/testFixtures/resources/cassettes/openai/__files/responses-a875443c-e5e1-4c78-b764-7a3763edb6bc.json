@@ -1,0 +1,81 @@
+{
+  "id": "resp_00f7261b9398801b0069caad0e75288190a2ee69b3fd1eac49",
+  "object": "response",
+  "created_at": 1774890254,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1774890263,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "output": [
+    {
+      "id": "rs_00f7261b9398801b0069caad0ef5fc81909b6f083520c3ed1e",
+      "type": "reasoning",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating pronic numbers**\n\nIn this conversation, the user is interested in pronic numbers and their nth term formula, which is n(n+1). For the 10th term, I compute a_10 and find it to be 110. The sum of the first 10 terms involves two components: the sum of squares and the sum of n, leading to a total of 440. I can confirm this with the alternative formula for summing pronic numbers. So, the results are: 10th term = 110 and sum of the first 10 terms = 440."
+        }
+      ]
+    },
+    {
+      "id": "msg_00f7261b9398801b0069caad16f7008190ac6b285acd79b20d",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The 10th pronic number is  \na\u2081\u2080 = 10\u00b7(10 + 1) = 10\u00b711 = 110.  \n\nThe sum of the first 10 pronic numbers is  \nS\u2081\u2080 = \u2211\u2099\u208c\u2081\u00b9\u2070 n(n + 1) = \u2211n\u00b2 + \u2211n  \n     = (10\u00b711\u00b721)/6 + (10\u00b711)/2  \n     = 385 + 55  \n     = 440.  \n\n(Equivalently one can use the closed\u2010form  \n\u2211\u2099\u208c\u2081\u207f n(n + 1) = n(n + 1)(n + 2)/3 \u2192 for n=10: 10\u00b711\u00b712/3=440.)"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": "high",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 214,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 467,
+    "output_tokens_details": {
+      "reasoning_tokens": 256
+    },
+    "total_tokens": 681
+  },
+  "user": null,
+  "metadata": {}
+}

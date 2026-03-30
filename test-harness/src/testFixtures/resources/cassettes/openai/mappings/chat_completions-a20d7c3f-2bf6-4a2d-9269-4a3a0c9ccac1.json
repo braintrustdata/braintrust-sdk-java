@@ -1,0 +1,52 @@
+{
+  "id" : "a20d7c3f-2bf6-4a2d-9269-4a3a0c9ccac1",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"system\",\n    \"content\" : \"you are a helpful assistant\"\n  }, {\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"text\",\n      \"text\" : \"What color is this image?\"\n    }, {\n      \"type\" : \"image_url\",\n      \"image_url\" : {\n        \"url\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\",\n        \"detail\" : \"low\"\n      }\n    } ]\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-a20d7c3f-2bf6-4a2d-9269-4a3a0c9ccac1.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-input-images" : "1ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-ratelimit-limit-input-images" : "50000",
+      "set-cookie" : "__cf_bm=71EJuslWApEwU8xXnEohgViAT5KJBrVYQ.6VJlW8ZD0-1774890233.284976-1.0.1.1-nfzf1mzFR696EBnNWXjiB.1l70cnxOkDZzYLw1HvgdJCBMkFhwoXatdC.S8BW9XaEAlGaW0E3aWp.fGBnonOEBXSe7aqKAMMJuIWjct99U5h4fmR3_IxYSAYiZydlkHR; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 17:33:55 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-remaining-input-images" : "49999",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_88a313d1a825483b9b9faffd9ce8f7eb",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "9e48b0b60bf7af88-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999220",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 17:03:55 GMT",
+      "access-control-expose-headers" : "X-Request-ID",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "1568",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "a20d7c3f-2bf6-4a2d-9269-4a3a0c9ccac1",
+  "persistent" : true,
+  "insertionIndex" : 10
+}

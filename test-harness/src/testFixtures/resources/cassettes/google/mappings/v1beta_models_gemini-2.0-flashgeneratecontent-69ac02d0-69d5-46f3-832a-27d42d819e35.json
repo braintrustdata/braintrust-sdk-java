@@ -1,0 +1,37 @@
+{
+  "id" : "69ac02d0-69d5-46f3-832a-27d42d819e35",
+  "name" : "v1beta_models_gemini-2.0-flashgeneratecontent",
+  "request" : {
+    "url" : "/v1beta/models/gemini-2.0-flash:generateContent",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json; charset=UTF-8"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"contents\":[{\"parts\":[{\"text\":\"What color is this image?\"},{\"inlineData\":{\"data\":\"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\",\"mimeType\":\"image/png\"}}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0.0}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1beta_models_gemini-2.0-flashgeneratecontent-69ac02d0-69d5-46f3-832a-27d42d819e35.json",
+    "headers" : {
+      "X-Frame-Options" : "SAMEORIGIN",
+      "Alt-Svc" : "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "Server" : "scaffolding on HTTPServer2",
+      "X-Content-Type-Options" : "nosniff",
+      "Server-Timing" : "gfet4t7; dur=863",
+      "Vary" : [ "Origin", "X-Origin", "Referer" ],
+      "X-Gemini-Service-Tier" : "standard",
+      "X-XSS-Protection" : "0",
+      "Date" : "Mon, 30 Mar 2026 17:03:58 GMT",
+      "Content-Type" : "application/json; charset=UTF-8"
+    }
+  },
+  "uuid" : "69ac02d0-69d5-46f3-832a-27d42d819e35",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

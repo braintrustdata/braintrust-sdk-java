@@ -1,0 +1,39 @@
+{
+  "id" : "f000c4bf-09fa-443c-8f2a-ddf9fafd53df",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CvIDCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTFmMTQzZGEtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASkwEKDQoLdGVzdC1jbGllbnQSgQEKEOtTvrspu+3wUQiDWRYLjagSCLH37+WonUiOKhBjbGllbnQtb3BlcmF0aW9uMAE5SF7tIlWtoRhBpl0wI1WtoRhKNQoRYnJhaW50cnVzdC5wYXJlbnQSIAoeZXhwZXJpbWVudF9pZDphYmMxMjMtaHR0cC10ZXN0egCFAQEBAAASnQEKDQoLdGVzdC1zZXJ2ZXISiwEKEOtTvrspu+3wUQiDWRYLjagSCEn5q4NLOp3yIgix9+/lqJ1IjioQc2VydmVyLW9wZXJhdGlvbjABOaCUJyNVraEYQa5QKyNVraEYSjUKEWJyYWludHJ1c3QucGFyZW50EiAKHmV4cGVyaW1lbnRfaWQ6YWJjMTIzLWh0dHAtdGVzdHoAhQEBAwAA"
+    } ]
+  },
+  "response" : {
+    "status" : 403,
+    "bodyFileName" : "otel_v1_traces-f000c4bf-09fa-443c-8f2a-ddf9fafd53df.json",
+    "headers" : {
+      "X-Cache" : "Error from cloudfront",
+      "x-amz-apigw-id" : "bDAC7FGhIAMEuew=",
+      "vary" : "Origin, Accept-Encoding",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69caad45-6463d978560799a93c87ad5e;Parent=4cb240774933c770;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 17:05:09 GMT",
+      "Via" : "1.1 dc8ab0490cc3f7679073e847e3aabb66.cloudfront.net (CloudFront), 1.1 fbb003dfc0617e3e058e3dac791dfd5a.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69caad45000000006c4c0717cd613be1",
+      "x-amzn-RequestId" : "cb226cc1-e3ae-4c14-80be-df35932d03db",
+      "X-Amz-Cf-Id" : "jbBVmv3L-WmLt3PtV01238eyQYGcgm5JiMqsRMgUDc1Xa4KgbeiUPw==",
+      "etag" : "W/\"13b-7uhgtgwEt3cpDtpfCFODqOMy5HA\"",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "f000c4bf-09fa-443c-8f2a-ddf9fafd53df",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

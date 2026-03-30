@@ -1,0 +1,47 @@
+{
+  "id" : "a875443c-e5e1-4c78-b764-7a3763edb6bc",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_00f7261b9398801b0069caad00e1d481909d7ea5392f0e2d88\",\"summary\":[{\"text\":\"**Identifying the number sequence**\\n\\nI see the sequence: 2, 6, 12, 20, 30, and I'm recognizing these as pronic numbers, which equals n(n+1). So, when n starts at 1, the terms calculate as: 1*2 = 2, 2*3 = 6, 3*4 = 12, 4*5 = 20, and 5*6 = 30. This pattern shows that the nth term can be expressed as a_n = n(n+1), or alternatively, a_n = n² + n. The second differences are constant at 2, confirming this pattern.\",\"type\":\"summary_text\"},{\"text\":\"**Summarizing pronic numbers**\\n\\nI've realized that the sequence can be represented as pronic numbers, where the formula is a_n = n(n+1). This works when I start indexing from 1, giving terms like 2, 6, 12, 20, and 30. The differences between successive terms increase by 2 each time, indicating a second difference that's constant. I can also express this using combinations, but the simplest way is just n(n+1). So, the final answer highlights that these are pronic numbers, valid for n ≥ 1.\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_00f7261b9398801b0069caad0db91c81909f4d4910fb6415ca\",\"content\":[{\"annotations\":[],\"text\":\"The numbers are the “pronic” (or oblong) numbers: each term is the product of two successive integers.\\n\\nTerm by term:\\n  1 · 2 = 2  \\n  2 · 3 = 6  \\n  3 · 4 = 12  \\n  4 · 5 = 20  \\n  5 · 6 = 30  \\n\\nIf you label the first term 2 as a₁, then\\n\\n  aₙ = n·(n + 1)  for n = 1, 2, 3, …  \\n\\nEquivalently, aₙ = n² + n.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-a875443c-e5e1-4c78-b764-7a3763edb6bc.json",
+    "headers" : {
+      "x-request-id" : "req_8bb3725e3c6d415483d6eb4e7489e214",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e48b13a0bdf8691-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999577",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 17:04:23 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=LBCIQt02RGJxd6EYjELJeyyPHWFMw3mKqj2msrWDi2Y-1774890254.4035838-1.0.1.1-04_zPu6zzKGp2SFPgDSgo8ye6yXIfztWbSQuIZXnHDNZYlJzRAz3lNZDfWA2S_7nw4hf76C40XMcZ3DoiDTPrE4a8bT76kjw8CyAHPrQiD_SueTe6oT9GJp_paqUwdO4; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 17:34:23 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "9041",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "a875443c-e5e1-4c78-b764-7a3763edb6bc",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

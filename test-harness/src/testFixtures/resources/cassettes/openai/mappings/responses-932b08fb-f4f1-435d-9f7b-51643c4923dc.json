@@ -1,0 +1,47 @@
+{
+  "id" : "932b08fb-f4f1-435d-9f7b-51643c4923dc",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the capital of France? Reply in one word.\",\"role\":\"user\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"low\",\"summary\":\"auto\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-932b08fb-f4f1-435d-9f7b-51643c4923dc.json",
+    "headers" : {
+      "x-request-id" : "req_f25142faa411493fa29f1696756c1c44",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e48b0c35ceab091-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999775",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 17:03:57 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=nnXh.D66O2LpQ883D5lr.LbcqPxZ7fYNrKL_jJxoxwE-1774890235.4133198-1.0.1.1-LuGTF9y.nudryMRCBPA_frOKtZSwUBT5rtyzXjyUaklpsqT2Okq1U2TRoQX7zfR..x9PtQPmAEHos1a1Ve38OtV3AeFeZJ4I5DOod2hApU_xaxzZWf28kuoLxY5IlFBr; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 17:33:57 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "1420",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "932b08fb-f4f1-435d-9f7b-51643c4923dc",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

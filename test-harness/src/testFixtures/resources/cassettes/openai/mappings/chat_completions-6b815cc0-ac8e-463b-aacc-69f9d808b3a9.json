@@ -1,0 +1,49 @@
+{
+  "id" : "6b815cc0-ac8e-463b-aacc-69f9d808b3a9",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful geography assistant.\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":50,\"stream\":false,\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-6b815cc0-ac8e-463b-aacc-69f9d808b3a9.json",
+    "headers" : {
+      "x-request-id" : "req_014691dfa35c4296b6c0f17a8f5d0e1a",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e48b0c1db0d75f4-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999980",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 17:03:56 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=gLvh8W2YTkAjzhFtx9iJw3f.UEjwF05Yj9lIa7l8AZ8-1774890235.1804721-1.0.1.1-dc7qf097hGTLytOQ49qD_dKJ60h0SA2mKBnl99XLXVgIeKoMY32.L.YYXtB9FUeUA9wm31pcmi_o6qD_I2YuHHWh8BOUne8KQlJ31kvtpThCvuRjv92K.dF_X5UA_2ak; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 17:33:56 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "538",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "6b815cc0-ac8e-463b-aacc-69f9d808b3a9",
+  "persistent" : true,
+  "insertionIndex" : 3
+}
