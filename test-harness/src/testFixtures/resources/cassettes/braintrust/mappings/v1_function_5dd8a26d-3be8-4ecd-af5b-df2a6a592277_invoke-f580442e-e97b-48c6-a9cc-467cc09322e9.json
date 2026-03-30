@@ -1,0 +1,58 @@
+{
+  "id" : "f580442e-e97b-48c6-a9cc-467cc09322e9",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"What is 2+2?\",\"output\":\"four\",\"expected\":\"4\",\"metadata\":{}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke-f580442e-e97b-48c6-a9cc-467cc09322e9.json",
+    "headers" : {
+      "x-bt-function-creds-cached" : "HIT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=4vcba7kGx49EI5pDTMlIc9nKsEH6Wq_0C7O5bmmXG9I-1774830640.9093962-1.0.1.1-sfmf2LZkaBlnt0w.XB7LLSQPfeJdDiREJ6amUvODy5gRlX5pk26DS72LANfWfI9lFXWFRt3Ek3u52p7nu7isUR1Eu0yPj2IiocKXixKn0_gVbBbe0SddLX4RV.sJOrvm; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:00:50 GMT",
+      "x-amzn-RequestId" : "5365a19e-232a-45b9-b8d5-f1272eafb115",
+      "X-Amz-Cf-Id" : "y_4QmGnXPQ_UpzpqCi4c2eB4BbW0a4HAsgJuJDAknNT6TSvV7FTwAg==",
+      "openai-project" : "proj_wMRY6YpEiASXMxPIIcI9nQRi",
+      "cache-control" : "max-age=604800",
+      "Age" : "2201",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_e3f8767df80d45a082795efc29aaa7e7",
+      "X-Cache" : "Miss from cloudfront",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "cf-ray" : "9e4301d1acb2286e-IAD",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999940",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-bt-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69c9ccd5-22791f6c734248cc0716e1d0;Parent=5ef8053c5d3c7601;Sampled=0;Lineage=1:8be8f50d:0",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Mon, 30 Mar 2026 01:07:33 GMT",
+      "Via" : "1.1 7605973575a3551426b82751020317de.cloudfront.net (CloudFront)",
+      "x-content-type-options" : "nosniff",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "9394",
+      "x-bt-function-meta-cached" : "HIT"
+    }
+  },
+  "uuid" : "f580442e-e97b-48c6-a9cc-467cc09322e9",
+  "persistent" : true,
+  "insertionIndex" : 10
+}

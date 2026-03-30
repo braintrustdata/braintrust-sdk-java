@@ -1,0 +1,39 @@
+{
+  "id" : "74d6bb06-4fe1-4111-81c9-2c2e849a2942",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CucCCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTQ5YWUzYzMtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASqAEKGAoWZGlzdHJpYnV0ZWQtdHJhY2UtdGVzdBKLAQoQrHtH1wvyz1CQzZMrfEB7HRIIB+XY00hnsl8qHXRlc3QtZGlzdHJpYnV0ZWQtdHJhY2UtcGFyZW50MAE5QGVfphJ5oRhBtsFLJBN5oRhKMgoRYnJhaW50cnVzdC5wYXJlbnQSHQobcHJvamVjdF9uYW1lOmphdmEtdW5pdC10ZXN0egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bAzxGGkeoAMEI3Q=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69c9ccd3-3748b56f188f92985a5f2846;Parent=002371467a7fdbb2;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 01:07:31 GMT",
+      "Via" : "1.1 d6022fdb6e8ea3c6fe76398e42003fcc.cloudfront.net (CloudFront), 1.1 ffe9646b2ea911744e2d51fc0715cedc.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69c9ccd3000000002c0b84e2a33dc96b",
+      "x-amzn-RequestId" : "08879e84-845f-4535-bbaa-c4f5de451a79",
+      "X-Amz-Cf-Id" : "-1y-DLsDGFjq1X3fFWQMKYBGKEucA0RC7M54CEXzPI8LK62UgTh_Bw==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "74d6bb06-4fe1-4111-81c9-2c2e849a2942",
+  "persistent" : true,
+  "insertionIndex" : 16
+}

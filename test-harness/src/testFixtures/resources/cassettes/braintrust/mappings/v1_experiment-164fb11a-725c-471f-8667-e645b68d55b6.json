@@ -1,0 +1,42 @@
+{
+  "id" : "164fb11a-725c-471f-8667-e645b68d55b6",
+  "name" : "v1_experiment",
+  "request" : {
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"6ae68365-7620-4630-921b-bac416634fc8\",\"name\":\"unit-test-eval-experiment-tags-metadata\",\"tags\":[\"java-sdk\",\"unit-test\"],\"metadata\":{\"version\":\"1.0\",\"model\":\"gpt-4o\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_experiment-164fb11a-725c-471f-8667-e645b68d55b6.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bAzvXEU1IAMEMsg=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "500",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69c9ccc8-012792110f8945760ecf53ba;Parent=14b5c9d4d69f8f57;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 01:07:20 GMT",
+      "Via" : "1.1 59e4792b9d6184bfa491a317b36590d2.cloudfront.net (CloudFront), 1.1 170efbc424be9181bda5d0fcd6e41f30.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69c9ccc8000000000c995c42417fdb7c",
+      "x-amzn-RequestId" : "d675945a-41c0-42aa-b7c7-0db9ac9a6133",
+      "X-Amz-Cf-Id" : "GDmxLWHQf2s7MHNPT_oirY89iIgr3J-pN3-VI3bj82_KxK-S8fiRlg==",
+      "etag" : "W/\"1f4-WSOVVQHK5AxcCT82oHsyV5VlzI8\"",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "164fb11a-725c-471f-8667-e645b68d55b6",
+  "persistent" : true,
+  "insertionIndex" : 47
+}

@@ -1,0 +1,49 @@
+{
+  "id" : "7a5acb8c-6825-424e-bb33-27571a13b8e0",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"is it hotter in Paris or New York right now?\"\n  }, {\n    \"role\" : \"assistant\",\n    \"tool_calls\" : [ {\n      \"id\" : \"call_gyBOAooL7pnfQg60WpcfeQVj\",\n      \"type\" : \"function\",\n      \"function\" : {\n        \"name\" : \"getWeather\",\n        \"arguments\" : \"{\\\"arg0\\\": \\\"Paris\\\"}\"\n      }\n    }, {\n      \"id\" : \"call_k7gk8BxIW8RWmZ8A6xsSI981\",\n      \"type\" : \"function\",\n      \"function\" : {\n        \"name\" : \"getWeather\",\n        \"arguments\" : \"{\\\"arg0\\\": \\\"New York\\\"}\"\n      }\n    } ]\n  }, {\n    \"role\" : \"tool\",\n    \"tool_call_id\" : \"call_gyBOAooL7pnfQg60WpcfeQVj\",\n    \"content\" : \"The weather in Paris is sunny with 72°F temperature.\"\n  }, {\n    \"role\" : \"tool\",\n    \"tool_call_id\" : \"call_k7gk8BxIW8RWmZ8A6xsSI981\",\n    \"content\" : \"The weather in New York is sunny with 72°F temperature.\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getForecast\",\n      \"description\" : \"Get weather forecast for next N days\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          },\n          \"arg1\" : {\n            \"type\" : \"integer\"\n          }\n        },\n        \"required\" : [ \"arg0\", \"arg1\" ]\n      }\n    }\n  }, {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getWeather\",\n      \"description\" : \"Get current weather for a location\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          }\n        },\n        \"required\" : [ \"arg0\" ]\n      }\n    }\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-7a5acb8c-6825-424e-bb33-27571a13b8e0.json",
+    "headers" : {
+      "x-request-id" : "req_07057d78bd3647c8a8205a3240ddb370",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e43371ae82aaf88-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999955",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 01:07:04 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=Y005q90w_.crUPG9Wz9lhTRcGbukgQPj2f9hSlAa7DQ-1774832823.5051386-1.0.1.1-BwxPUUEMbKvzG1TKO_9a_liqIhH.d5UH67tvT2lvKdBTf3FOx0dEju0dRYXDv8Tu5fRmnRbyn0HSmuKbsdsM9epN9iqq0i5mVj3ET316_T2QMTGYfjzm15Ddvo8WRslq; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:04 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "731",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "7a5acb8c-6825-424e-bb33-27571a13b8e0",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

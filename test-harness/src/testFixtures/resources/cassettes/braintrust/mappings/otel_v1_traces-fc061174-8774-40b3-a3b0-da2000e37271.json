@@ -1,0 +1,39 @@
+{
+  "id" : "fc061174-8774-40b3-a3b0-da2000e37271",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CvgCCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTQ5YWUzYzMtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASuQEKJwoPYnJhaW50cnVzdC1qYXZhEhQwLjIuMTAtNDlhZTNjMy1ESVJUWRKNAQoQvQ6n3bUQbLA4aOVh6SBKJhIIwFwZWYnqn7gqDnVuaXQtdGVzdC1yb290MAE5wMwdVBR5oRhBbx8eVBR5oRhKDwoJdW5pdC10ZXN0EgIQAUoyChFicmFpbnRydXN0LnBhcmVudBIdChtwcm9qZWN0X25hbWU6amF2YS11bml0LXRlc3R6AIUBAQEAAA=="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bAzx5EbDIAMERpA=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69c9ccd8-2b68a7c83393b566192c9ba5;Parent=2676b7191790b389;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 01:07:36 GMT",
+      "Via" : "1.1 21c7c4234f218bb5110262cbbf01f870.cloudfront.net (CloudFront), 1.1 0df7f27a01014ab815259ca2d88193c6.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69c9ccd800000000607422cb23a6494e",
+      "x-amzn-RequestId" : "eda91475-ab19-43fd-9b07-e0e5fc10415e",
+      "X-Amz-Cf-Id" : "LIjBZ8VfGyc8iXTerURYW4J2U-coqN5itmiyqULdOQ4_QYhITe68pA==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "fc061174-8774-40b3-a3b0-da2000e37271",
+  "persistent" : true,
+  "insertionIndex" : 2
+}

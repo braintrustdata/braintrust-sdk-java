@@ -1,0 +1,49 @@
+{
+  "id" : "a5d1e757-7485-42ec-8ce8-4984afc35215",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"What is the weather like in Paris, France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"max_tokens\" : 500,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"get_weather\",\n      \"description\" : \"Get the current weather for a location\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"location\" : {\n            \"type\" : \"string\",\n            \"description\" : \"The city and state, e.g. San Francisco, CA\"\n          },\n          \"unit\" : {\n            \"type\" : \"string\",\n            \"enum\" : [ \"celsius\", \"fahrenheit\" ]\n          }\n        },\n        \"required\" : [ \"location\" ]\n      }\n    }\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-a5d1e757-7485-42ec-8ce8-4984afc35215.json",
+    "headers" : {
+      "x-request-id" : "req_8ea2d4548eb1426b8e7692614cedfb53",
+      "x-ratelimit-limit-tokens" : "30000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e43370b5e39e668-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Mon, 30 Mar 2026 01:07:01 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=7UsKJQxqioCGJjNOrafBSPDUbZVL3PdAdIlCNQ_p4KY-1774832821.019814-1.0.1.1-Xq94a_o4E35RQmmMFged6ONzkeNjzonvI8fOhXiTbqx2s6nrJOBSg6uymVeH8brBXNq0Jl9YdsueQfA9_U7vfR0n4iqiTrlwfeWQdI26_BX.6wr6AdABdpTs_2nOECk5; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:01 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "432",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "a5d1e757-7485-42ec-8ce8-4984afc35215",
+  "persistent" : true,
+  "insertionIndex" : 14
+}

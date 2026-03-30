@@ -1,0 +1,39 @@
+{
+  "id" : "5ebb881f-1e97-4b47-b72f-1d444f11bb56",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CucCCrkBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAopCg9zZXJ2aWNlLnZlcnNpb24SFgoUMC4yLjEwLTQ5YWUzYzMtRElSVFkKIAoWdGVsZW1ldHJ5LnNkay5sYW5ndWFnZRIGCgRqYXZhCiUKEnRlbGVtZXRyeS5zZGsubmFtZRIPCg1vcGVudGVsZW1ldHJ5CiEKFXRlbGVtZXRyeS5zZGsudmVyc2lvbhIICgYxLjU5LjASqAEKFgoUc29tZS1pbnN0cnVtZW50YXRpb24SjQEKEDCppiORFfibPy559gKv0JQSCASBqzMx28NnKg51bml0LXRlc3Qtcm9vdDABORikYRMUeaEYQTL6YRMUeaEYSg8KCXVuaXQtdGVzdBICEAFKMgoRYnJhaW50cnVzdC5wYXJlbnQSHQobcHJvamVjdF9uYW1lOmphdmEtdW5pdC10ZXN0egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bAzxuFnmIAMEDxw=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69c9ccd7-1d526b1b59bf992f31401c4f;Parent=54bdaf2fca7dea5d;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 30 Mar 2026 01:07:35 GMT",
+      "Via" : "1.1 21c7c4234f218bb5110262cbbf01f870.cloudfront.net (CloudFront), 1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69c9ccd70000000038cdd05b1028b2f5",
+      "x-amzn-RequestId" : "5a3ff568-c837-4d1a-8e89-27d5b85b93a0",
+      "X-Amz-Cf-Id" : "4oqUx_stDJBjOq8pkrjpDLQFExpH8pqfYoUJYOdo6lZQZpHeGV1SuA==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "5ebb881f-1e97-4b47-b72f-1d444f11bb56",
+  "persistent" : true,
+  "insertionIndex" : 4
+}

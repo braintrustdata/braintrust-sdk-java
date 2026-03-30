@@ -1,0 +1,52 @@
+{
+  "id" : "ecdd4af9-60e0-430d-abe9-864d05dfeed4",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-ecdd4af9-60e0-430d-abe9-864d05dfeed4.json",
+    "headers" : {
+      "x-request-id" : "req_91dc1244873a4e97a6c9be896a41444d",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e43371a58be9982-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 01:07:04 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=ch7g87QFKQpB8l7CiKU2LgXs2k7BJBQ7I83RxkxpiDQ-1774832823.4187546-1.0.1.1-vrwaEdZwm1eqVqEXWsDD5vXrOTr0amX_WuprU.cS6XDSrXGYFqoRsGp7poWuxPUF61UyJOMsa6.gL2P6e4535hLAWWouz_Qwz_Qdle8Q4h7JwaoYdWGXk_g_LNZ4dygZ; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:04 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "478",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "ecdd4af9-60e0-430d-abe9-864d05dfeed4",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-chat-completions",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-1-chat-completions-2",
+  "insertionIndex" : 4
+}

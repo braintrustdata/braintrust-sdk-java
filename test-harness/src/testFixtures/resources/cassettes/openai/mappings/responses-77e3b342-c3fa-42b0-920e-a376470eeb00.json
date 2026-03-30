@@ -1,0 +1,47 @@
+{
+  "id" : "77e3b342-c3fa-42b0-920e-a376470eeb00",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0725108a83b97fb80069c9ccbbfd8081959cafdaf2d870222d\",\"summary\":[{\"text\":\"**Exploring the sequence pattern**\\n\\nThe user provided the sequence: 2, 6, 12, 20, 30, and is curious about its pattern and formula for the nth term. I see these are pronic or rectangular numbers defined by n(n+1). Starting from n=1, we have T1=2, T2=6, T3=12, T4=20, T5=30. So, the nth term formula is a_n = n(n+1). The differences are 4, 6, 8, and 10, revealing a quadratic nature. Hence, the pattern connects to triangular numbers multiplied by 2.\",\"type\":\"summary_text\"},{\"text\":\"**Clarifying the pronic number pattern**\\n\\nThe pronic numbers' formula is P_n = n(n+1), or a_n = n^2 + n. This tells us the pattern represents the arrangement of dots in a rectangular formation of n by n+1. The differences between terms increase by 2 each time, indicating a quadratic sequence. If n starts at 1, it yields elements like 2, 6, 12, and so forth. Interestingly, these numbers also represent the sum of the first n even numbers. So, the formula remains a_n = n(n+1), highlighting them as pronic numbers.\",\"type\":\"summary_text\"},{\"text\":\"**Defining the pronic pattern**\\n\\nI see that the pronic numbers can be expressed as a_n = n(n+1) or a_n = n^2 + n. They can also be represented as double triangular numbers since 2T_n equals n(n+1). Depending on whether I start from n=1 or n=0, I might get different outcomes, but in both cases, the pattern remains the same: products of consecutive integers. The differences between the terms increase by 2, indicating a quadratic nature to the sequence. So, the formula stands as a_n = n(n+1).\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_0725108a83b97fb80069c9cccb5dd481958afdec8ed92c2af7\",\"content\":[{\"annotations\":[],\"text\":\"The key is to look at the gaps between terms:\\n\\n  2 → 6   gap = 4  \\n  6 → 12  gap = 6  \\n 12 → 20  gap = 8  \\n 20 → 30  gap = 10  \\n\\nThose gaps increase by 2 each time, so the sequence is quadratic.  In fact you can spot\\n\\n 2 = 1·2  \\n 6 = 2·3  \\n12 = 3·4  \\n20 = 4·5  \\n30 = 5·6  \\n\\ni.e. the nth term is the product of two consecutive integers.  If we start counting at n=1, the formula is\\n\\n  aₙ = n·(n + 1)  =  n² + n.\\n\\nSo the general term is aₙ = n(n+1).\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-77e3b342-c3fa-42b0-920e-a376470eeb00.json",
+    "headers" : {
+      "x-request-id" : "req_746cbe4cddf64b898ed076ac99fd789d",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e43379c8ce6a0f3-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999535",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 01:07:33 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=ylzqwEieg5DXeTQ0WlZvS_4rS_3_HxklCpXcdZiddTE-1774832844.2505007-1.0.1.1-KT.LN7CjIZBsrKzq56TlVo0AqmWkp8uBQVvbFwzaR0wDcbDnUZJfsRPpc3Xr8akkFDlVucAuI2JQUMJpUSZErlw0O1t6.uCO950G8gzJy_iXPVj5iVworoduCQj3CbfB; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:33 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "8878",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "77e3b342-c3fa-42b0-920e-a376470eeb00",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

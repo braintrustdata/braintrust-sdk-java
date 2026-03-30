@@ -1,0 +1,39 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "The image is red."
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "avgLogprobs": -0.052323949337005612
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 264,
+    "candidatesTokenCount": 5,
+    "totalTokenCount": 269,
+    "promptTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 258
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 6
+      }
+    ],
+    "candidatesTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 5
+      }
+    ]
+  },
+  "modelVersion": "gemini-2.0-flash",
+  "responseId": "uczJaYWtJcvVz7IPuoqEoQk"
+}

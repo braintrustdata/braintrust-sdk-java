@@ -1,0 +1,76 @@
+{
+  "id": "resp_091fb888d037ec6a0069c9ccc7af748195a671147365f9208d",
+  "object": "response",
+  "created_at": 1774832839,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1774832843,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "output": [
+    {
+      "id": "rs_091fb888d037ec6a0069c9ccc80d748195b080c3f0dd6da234",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_091fb888d037ec6a0069c9ccca8b6c81958d8760be6a154677",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The 10th term is  \n\u2003a\u2081\u2080 = 10\u00b7(10 + 1) = 10\u00b711 = 110  \n\nThe sum of the first 10 terms is  \n\u2003S\u2081\u2080 = \u2211\u2099\u208c\u2081\u00b9\u2070 n(n+1)  \nYou can compute it as  \n\u2003\u2211n\u00b2 + \u2211n = [10\u00b711\u00b721\u20446] + [10\u00b711\u20442]  \n\u2003\u2003= 385 + 55 = 440  \n\nOr directly by the closed\u2010form  \n\u2003S\u2099 = n(n + 1)(n + 2)/3  \nso  \n\u2003S\u2081\u2080 = 10\u00b711\u00b712/3 = 440."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": null,
+  "reasoning": {
+    "effort": "high",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 184,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 579,
+    "output_tokens_details": {
+      "reasoning_tokens": 384
+    },
+    "total_tokens": 763
+  },
+  "user": null,
+  "metadata": {}
+}

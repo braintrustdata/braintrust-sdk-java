@@ -1,0 +1,1 @@
+{"name":"close-enough-judge","score":null,"metadata":{"rationale":"1) Identify the expected string: \"hello world\".\n2) Identify the actual output: \"hello world\".\n3) Compare characters, including letters, spacing, and case.\n4) Verify both strings are identical in content and length.\n5) Conclude they match exactly, so assign the maximum score.","choice":"1.0"}}

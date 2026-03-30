@@ -1,0 +1,47 @@
+{
+  "id" : "78b69161-e286-4135-9841-75dadb74a494",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0df6988081ffdb2d0069c9ccb5cf148193801a26151b022a6d\",\"summary\":[{\"text\":\"**Identifying the sequence pattern**\\n\\nThe user has provided a sequence: 2, 6, 12, 20, 30. I'm recognizing these numbers as twice the triangular numbers, which are formed by multiplying the sequence 1, 3, 6, 10, 15 by 2. I see that the formula for the nth term can be expressed as \\\\( n(n+1) \\\\), which simplifies to \\\\( n^2 + n \\\\). The pattern also shows increasing differences of 2, confirming it's related to the pronic numbers. Thus, the formula for n=1 would still yield \\\\( a_n = n(n+1) \\\\).\",\"type\":\"summary_text\"},{\"text\":\"**Finalizing the sequence analysis**\\n\\nI'm determining that if I start at \\\\( n=0 \\\\), the terms are 0, 2, 6, but since the provided sequence begins at 2, I should start at \\\\( n=1 \\\\). The formula clearly is \\\\( a_n = n(n+1) \\\\), which can also be expressed as \\\\( n^2 + n \\\\). The pattern of differences shows increases by even numbers: 4, 6, 8, confirming it's quadratic. Thus, the answer is that these are pronic numbers, with the formula \\\\( a_n = n(n+1) \\\\) for \\\\( n \\\\geq 1 \\\\).\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_0df6988081ffdb2d0069c9ccc007a081938516e61154852655\",\"content\":[{\"annotations\":[],\"text\":\"The gaps between consecutive terms are\\n\\n6–2 = 4, 12–6 = 6, 20–12 = 8, 30–20 =10,…\\n\\ni.e. the differences are the even numbers 4,6,8,10,… = 2·2,2·3,2·4,2·5,…\\n\\nIf we index the sequence so that a₁=2, a₂=6, a₃=12,… then\\n\\n aₙ₊₁ − aₙ = 2·(n+1),\\n\\nand one checks by induction (or just by knowing the “pronic” or “oblong” numbers) that\\n\\n aₙ = n(n+1).\\n\\nSo the pattern is the pronic numbers (twice the triangular numbers), and the nth term is\\n\\n aₙ = n(n + 1).\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-78b69161-e286-4135-9841-75dadb74a494.json",
+    "headers" : {
+      "x-request-id" : "req_30399fe76fbf4429b3ef46950ffda31f",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e433753e9c57577-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999527",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 01:07:21 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=8llw101Pr6SGXewTysa4ME14kgjN2ylYwJ5QiZKGJto-1774832832.6244078-1.0.1.1-bYJpxkNL34EUUHSrssqUeAr9XOUSch9UOyaLWQ64f9tz1EaQaLtFBWmn_cDSA1cIrGdLJn0BcaqKAqCOZPhr2t0MfooWdOlx_v6eU4MNlZWVV5ljHuBLNBJJU9TxCPMm; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:21 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "9007",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "78b69161-e286-4135-9841-75dadb74a494",
+  "persistent" : true,
+  "insertionIndex" : 4
+}

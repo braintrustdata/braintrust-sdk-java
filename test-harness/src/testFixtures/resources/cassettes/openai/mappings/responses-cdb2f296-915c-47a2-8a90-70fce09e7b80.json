@@ -1,0 +1,47 @@
+{
+  "id" : "cdb2f296-915c-47a2-8a90-70fce09e7b80",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_091fb888d037ec6a0069c9ccbac2d48195a960329339497c3b\",\"summary\":[{\"text\":\"**Identifying the sequence formula**\\n\\nThe user provides a sequence 2, 6, 12, 20, 30 and asks for its pattern and formula for the nth term. I see that 2=1×2, 6=2×3, 12=3×4, 20=4×5, and 30=5×6. So, the nth term is n(n + 1) starting from n = 1. These numbers represent pronic numbers or products of consecutive natural numbers. The formula can also be expressed as a_n = n² + n. If indexing starts at 0, that would change things, but it looks like it starts at 1 here.\",\"type\":\"summary_text\"},{\"text\":\"**Understanding term differences**\\n\\nI'm analyzing the differences between terms in the sequence: 6 - 2 = 4, 12 - 6 = 6, 20 - 12 = 8, and 30 - 20 = 10. These differences are even numbers and can be expressed as 2n + 2, starting at n = 1. This leads me to deduce that a_n = n(n + 1). \\n\\nThe sequence represents pronic numbers, or the product of two consecutive integers. So, the formula a_n is indeed n(n + 1). This can also be connected to triangular numbers, but I’ll stick with the established pattern for clarity.\",\"type\":\"summary_text\"},{\"text\":\"**Finalizing the sequence**\\n\\nI realize the sequence starts with n at 1. So, confirming what I’ve concluded: each term equals n(n + 1), making the formula a_n = n(n + 1). It's also noteworthy that these are pronic numbers. I think I've reached a solid final answer, so I’m confident in providing this information clearly: the pattern is each term is represented as a_n = n(n + 1), and they correspond to pronic numbers.\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_091fb888d037ec6a0069c9ccc6f110819583d571e9880301e4\",\"content\":[{\"annotations\":[],\"text\":\"The terms are the “pronic” (or “oblong”) numbers, i.e. the product of two consecutive integers:\\n\\n2 = 1·2  \\n6 = 2·3  \\n12 = 3·4  \\n20 = 4·5  \\n30 = 5·6  \\n\\nIf we call the first term a₁, then for n≥1\\n\\n aₙ = n·(n + 1)  \\n\\nEquivalently,\\n\\n aₙ = n² + n.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-cdb2f296-915c-47a2-8a90-70fce09e7b80.json",
+    "headers" : {
+      "x-request-id" : "req_1c087edffa6f4bc8a5d6e3517975634b",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e43377f5a48683a-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999610",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 30 Mar 2026 01:07:23 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=.Sm8HPayH.uj6Wl8Uezc2Hiow0oD4XN.h0ysmy1ySG8-1774832839.5759952-1.0.1.1-EtLU3pJe2qEJRgpIDt_g5Tc6bYLG3SK3jwyDd3r_Epp.RafkFcKsFZPrET82MB_e0LWVm9ET7_W.kuBeNx3P1MF3RnuhNW8rIfAz7A.5nSdsqb.VXXMr_QAM6EFxE2Sa; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 30 Mar 2026 01:37:23 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "3963",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "cdb2f296-915c-47a2-8a90-70fce09e7b80",
+  "persistent" : true,
+  "insertionIndex" : 3
+}
