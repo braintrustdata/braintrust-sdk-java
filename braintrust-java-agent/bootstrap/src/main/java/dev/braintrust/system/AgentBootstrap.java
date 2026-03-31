@@ -1,10 +1,9 @@
 package dev.braintrust.system;
 
-import dev.braintrust.bootstrap.BraintrustBridge;
-import dev.braintrust.bootstrap.BraintrustClassLoader;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.jar.JarFile;
 
 /**
@@ -44,18 +43,16 @@ public class AgentBootstrap {
 
         if (jvmRunningWithOtelAgent()) {
             log(
-                    "ERROR: Braintrust agent is not yet compatible with the OTel javaagent -"
-                            + " skipping install.");
+                    "ERROR: Braintrust agent is not yet compatible with the OTel -javaagent."
+                            + " aborting install.");
+            return;
+        }
+        if (jvmRunningWithDatadogOtelConfig() && (!isRunningAfterDatadogAgent())) {
+            log("ERROR: Braintrust agent must run _after_ datadog -javaagent. aborting install.");
             return;
         }
 
-        if (jvmRunningWithDatadogOtel()) {
-            log(
-                    "ERROR: Braintrust agent is not yet compatible with datadog javaagent otel -"
-                            + " skipping install.");
-            return;
-        }
-
+        boolean installOnBootstrap = !jvmRunningWithDatadogOtelConfig();
         try {
             // Locate the agent JAR from our own code source
             URL agentJarURL =
@@ -67,19 +64,21 @@ public class AgentBootstrap {
             // are set before anything can trigger GlobalOpenTelemetry.get().
             enableOtelSDKAutoconfiguration();
 
-            inst.appendToBootstrapClassLoaderSearch(new JarFile(agentJarFile, false));
-            log("Added agent JAR to bootstrap classpath.");
-
-            // Create the isolated braintrust classloader.
-            // Parent is the platform classloader so agent internals can see:
-            //   - Bootstrap classes (OTel API/SDK added via appendToBootstrapClassLoaderSearch)
-            //   - JDK platform modules (java.net.http, java.sql, etc.)
-            // but NOT application classes (those are on the system/app classloader).
-            BraintrustClassLoader btClassLoader =
-                    new BraintrustClassLoader(agentJarURL, ClassLoader.getPlatformClassLoader());
-            BraintrustBridge.setAgentClassLoaderIfAbsent(btClassLoader);
+            ClassLoader btClassLoaderParent;
+            if (installOnBootstrap) {
+                inst.appendToBootstrapClassLoaderSearch(new JarFile(agentJarFile, false));
+                btClassLoaderParent = ClassLoader.getPlatformClassLoader();
+                log("Added agent JAR to bootstrap classpath.");
+            } else {
+                btClassLoaderParent =
+                        new URLClassLoader(
+                                new URL[] {agentJarFile.toURI().toURL()},
+                                ClassLoader.getPlatformClassLoader());
+                log("skipping bootstrap classpath setup");
+            }
 
             // Load and invoke the real agent installer through the isolated classloader.
+            ClassLoader btClassLoader = createBTClassLoader(agentJarURL, btClassLoaderParent);
             Class<?> installerClass = btClassLoader.loadClass(AGENT_CLASS);
             installerClass
                     .getMethod(INSTALLER_METHOD, String.class, Instrumentation.class)
@@ -90,6 +89,16 @@ public class AgentBootstrap {
             log("ERROR: Failed to install Braintrust Java Agent: " + t.getMessage());
             log(t);
         }
+    }
+
+    private static ClassLoader createBTClassLoader(URL agentJarURL, ClassLoader btClassLoaderParent)
+            throws Exception {
+        // NOTE: not caching because we only invoke this once
+        var bridgeClass =
+                btClassLoaderParent.loadClass("dev.braintrust.bootstrap.BraintrustBridge");
+        var createMethod =
+                bridgeClass.getMethod("createBraintrustClassLoader", URL.class, ClassLoader.class);
+        return (ClassLoader) createMethod.invoke(null, agentJarURL, btClassLoaderParent);
     }
 
     /**
@@ -109,16 +118,8 @@ public class AgentBootstrap {
         }
     }
 
-    /**
-     * Checks whether the Datadog agent is present and configured for OTel integration. Must be
-     * callable from the system classloader (no DD compile deps).
-     */
-    private static boolean jvmRunningWithDatadogOtel() {
-        try {
-            Class.forName("datadog.trace.bootstrap.Agent", false, null);
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+    /** Checks whether the Datadog agent is present and configured for OTel integration */
+    private static boolean jvmRunningWithDatadogOtelConfig() {
         String sysProp = System.getProperty("dd.trace.otel.enabled");
         if (sysProp != null) {
             return Boolean.parseBoolean(sysProp);
@@ -131,7 +132,7 @@ public class AgentBootstrap {
      * Returns true if the Datadog agent's premain has already executed, meaning it was listed
      * before the Braintrust agent in the {@code -javaagent} flags.
      */
-    static boolean isRunningAfterDatadogAgent() {
+    private static boolean isRunningAfterDatadogAgent() {
         // DD's premain appends its jars to the bootstrap classpath, making
         // {@code datadog.trace.bootstrap.Agent} loadable from the bootstrap (null)
         // classloader. If that class is not found on bootstrap, DD either isn't

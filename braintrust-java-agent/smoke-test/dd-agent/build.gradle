@@ -1,0 +1,189 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  // dd-trace-api is provided at runtime by the DD agent on the bootstrap classpath,
+  // but we need it at compile time for TraceInterceptor / MutableSpan.
+  implementation 'com.datadoghq:dd-trace-api:1.60.1'
+  implementation 'org.msgpack:msgpack-core:0.9.8'
+  implementation 'io.opentelemetry.proto:opentelemetry-proto:1.5.0-alpha'
+  // Bootstrap classes (DDBridge) — needed at compile time for smoke test assertions.
+  // Must be compileOnly so the runtime version comes from the actual agent JAR,
+  // not from this dependency (which would shadow the agent's AgentBootstrap).
+  compileOnly project(':braintrust-java-agent:bootstrap')
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+// ── Configuration to resolve the DD agent JAR from Maven Central ──
+configurations {
+  ddAgent
+}
+dependencies {
+  ddAgent 'com.datadoghq:dd-java-agent:1.60.1'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('jar')
+
+/**
+ * Smoke test: runs DdAgentSmokeTest with both agents attached.
+ *
+ * This is a JavaExec task (not JUnit) because it needs a clean JVM with two
+ * -javaagent flags in a specific order. It follows the same pattern as
+ * testGlobalLogger in :braintrust-java-agent.
+ *
+ * Agent ordering: DD first, Braintrust second.
+ * The process exit code signals pass (0) or fail (non-zero).
+ */
+/**
+ * Smoke test: DD agent first, Braintrust agent second.
+ */
+task smokeTestDDAgentFirst(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.agent.url=http://127.0.0.1:18226",
+    "-Ddd.trace.flush.interval=1",
+    "-Dotel.java.global-autoconfigure.enabled=true",
+    "-Dotel.traces.exporter=none",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Ddd.service=bt-dd-smoke-test",
+    "-Dbraintrust.smoketest.dd.mock.port=18226",
+    "-Dbraintrust.smoketest.bt.mock.port=18227",
+    // "-Ddd.trace.debug=true",
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  // Make sure OTEL/DD environment doesn't leak from the host
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'BT_AGENT_EXPECTED', 'true'
+  environment 'BRAINTRUST_FILTER_AI_SPANS', 'true'
+  environment 'BRAINTRUST_API_URL', 'http://127.0.0.1:18227'
+  environment 'BRAINTRUST_API_KEY', 'test-api-key'
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  // ── Caching: declare inputs so Gradle can skip/cache this task ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/dd-agent-first-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+/**
+ * Smoke test: DD agent only (no Braintrust agent).
+ * Verifies that DD-only assertions pass and OTel assertions are skipped.
+ */
+task smokeTestDdOnly(type: JavaExec) {
+  dependsOn classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.otel.enabled=true",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.agent.url=http://127.0.0.1:18228",
+    "-Ddd.trace.flush.interval=1",
+    "-Ddd.service=bt-dd-smoke-test",
+    "-Dbraintrust.smoketest.dd.mock.port=18228",
+  ]
+
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'BT_AGENT_EXPECTED', 'false'
+
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/dd-only-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+/**
+ * Smoke test: DD agent without OTel compatibility mode.
+ * Verifies that DD-native tracing (@Trace annotations) still works
+ * when dd.trace.otel.enabled is NOT set.
+ */
+task smokeTestDdNoOtel(type: JavaExec) {
+  dependsOn braintrustAgentJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.ddagent.DdNoOtelSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def ddAgentJar = configurations.ddAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${ddAgentJar.absolutePath}",
+    "-Ddd.trace.enabled=true",
+    "-Ddd.trace.agent.url=http://127.0.0.1:18230",
+    "-Ddd.trace.flush.interval=1",
+    "-Ddd.service=bt-dd-smoke-test",
+    "-Dbraintrust.smoketest.dd.mock.port=18230",
+    "-Dbraintrust.smoketest.bt.mock.port=18231",
+    // dd.trace.otel.enabled is intentionally NOT set
+    "-javaagent:${btAgent.get()}",
+  ]
+
+  environment.remove('DD_API_KEY')
+  environment.remove('DD_AGENT_HOST')
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+
+  environment 'BT_AGENT_EXPECTED', 'true'
+  environment 'BRAINTRUST_API_URL', 'http://127.0.0.1:18231'
+  environment 'BRAINTRUST_API_KEY', 'test-api-key'
+
+  inputs.files(braintrustAgentJar)
+  inputs.files(configurations.ddAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/dd-no-otel-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+test.dependsOn smokeTestDdOnly, smokeTestDDAgentFirst, smokeTestDdNoOtel

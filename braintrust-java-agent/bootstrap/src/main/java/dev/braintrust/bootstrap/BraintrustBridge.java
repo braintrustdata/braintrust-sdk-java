@@ -1,5 +1,6 @@
 package dev.braintrust.bootstrap;
 
+import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -22,10 +23,14 @@ public class BraintrustBridge {
         return agentClassLoaderRef.get();
     }
 
-    public static void setAgentClassLoaderIfAbsent(BraintrustClassLoader classLoader) {
-        var witness = agentClassLoaderRef.compareAndExchange(null, classLoader);
+    public static BraintrustClassLoader createBraintrustClassLoader(
+            URL agentJarURL, ClassLoader btClassLoaderParent) throws Exception {
+        BraintrustClassLoader btClassLoader =
+                new BraintrustClassLoader(agentJarURL, btClassLoaderParent);
+        var witness = agentClassLoaderRef.compareAndExchange(null, btClassLoader);
         if (null != witness) {
             throw new IllegalStateException("agent classloader must only be set once");
         }
+        return btClassLoader;
     }
 }

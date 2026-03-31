@@ -5,6 +5,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
@@ -153,7 +154,12 @@ public final class BraintrustTracing {
 
     /** Gets a tracer from a specific OpenTelemetry instance. */
     public static Tracer getTracer(OpenTelemetry openTelemetry) {
-        return openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
+        return getTracer(openTelemetry.getTracerProvider());
+    }
+
+    /** Gets the braintrust tracer from a tracer provider */
+    public static Tracer getTracer(TracerProvider tracerProvider) {
+        return tracerProvider.get(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
     }
 
     private static String sdkInfoLogMessage() {

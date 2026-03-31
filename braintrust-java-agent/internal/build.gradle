@@ -40,6 +40,9 @@ dependencies {
   // These are the heavy deps that stay in BraintrustClassLoader, NOT on bootstrap.
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
 
+  // for dd compat mode
+  compileOnly 'com.datadoghq:dd-trace-api:1.60.1'
+
   // Test dependencies
   testImplementation project(':braintrust-java-agent:bootstrap')
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
