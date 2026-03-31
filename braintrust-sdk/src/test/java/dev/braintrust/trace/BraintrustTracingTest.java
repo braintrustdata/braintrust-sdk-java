@@ -3,8 +3,13 @@ package dev.braintrust.trace;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.braintrust.TestHarness;
+import dev.braintrust.UnitTestSpanExporter;
+import dev.braintrust.config.BraintrustConfig;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +67,49 @@ public class BraintrustTracingTest {
                 "project_name:" + TestHarness.defaultProjectName(),
                 parentAttribute,
                 "braintrust.parent should be set from the config's default project name");
+    }
+
+    @Test
+    void filterAISpansDropsNonAISpans() {
+        // Build a tracer where the BraintrustSpanProcessor wraps a test exporter,
+        // so the filter in onEnd() gates what the exporter receives.
+        var config =
+                BraintrustConfig.builder()
+                        .apiKey("test-key")
+                        .apiUrl("http://localhost:1234")
+                        .filterAISpans(true)
+                        .build();
+
+        var spanExporter = new UnitTestSpanExporter();
+        var processor =
+                new BraintrustSpanProcessor(config, SimpleSpanProcessor.create(spanExporter));
+        var tracerProvider = SdkTracerProvider.builder().addSpanProcessor(processor).build();
+        var tracer = tracerProvider.get("test");
+
+        // Non-AI span — should be filtered out
+        var nonAiSpan = tracer.spanBuilder("http-call").startSpan();
+        nonAiSpan.setAttribute("http.method", "GET");
+        nonAiSpan.end();
+
+        // Span with no attributes — should be filtered out
+        var emptySpan = tracer.spanBuilder("empty-span").startSpan();
+        emptySpan.end();
+
+        // Substring non-match — should be filtered out
+        var substringSpan = tracer.spanBuilder("not-ai").startSpan();
+        substringSpan.setAttribute("zbraintrust.foo", "bar");
+        substringSpan.end();
+
+        // AI span with attribute set AFTER startSpan — should pass the filter
+        var aiSpan = tracer.spanBuilder("llm-call").startSpan();
+        aiSpan.setAttribute("gen_ai.model", "gpt-4");
+        aiSpan.end();
+
+        tracerProvider.forceFlush().join(5, TimeUnit.SECONDS);
+        var spans = spanExporter.getFinishedSpanItems();
+
+        assertEquals(1, spans.size(), "Only the AI span should be exported");
+        assertEquals("llm-call", spans.get(0).getName());
     }
 
     private void doSimpleOtelTrace(Tracer tracer) {

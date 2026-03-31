@@ -7,6 +7,7 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.trace.ReadWriteSpan;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SpanProcessor;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -26,11 +27,21 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
     private final BraintrustConfig config;
     private final SpanProcessor delegate;
+    private final List<BraintrustSampler> samplers;
     private final ConcurrentMap<String, ParentContext> parentContexts = new ConcurrentHashMap<>();
 
     BraintrustSpanProcessor(BraintrustConfig config, SpanProcessor delegate) {
         this.config = config;
         this.delegate = delegate;
+        this.samplers = buildSamplers(config);
+    }
+
+    private static List<BraintrustSampler> buildSamplers(BraintrustConfig config) {
+        var samplers = new java.util.ArrayList<BraintrustSampler>();
+        if (config.filterAISpans()) {
+            samplers.add(new BraintrustSampler.FilterAISpans());
+        }
+        return List.copyOf(samplers);
     }
 
     @Override
@@ -93,12 +104,21 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         if (config.debug()) {
             logSpanDetails(span);
         }
+        for (var sampler : samplers) {
+            if (!sampler.sample(span)) {
+                log.debug(
+                        "Span filtered by {}: {}",
+                        sampler.getClass().getSimpleName(),
+                        span.getName());
+                return;
+            }
+        }
         delegate.onEnd(span);
     }
 
     @Override
     public boolean isEndRequired() {
-        return delegate.isEndRequired();
+        return !samplers.isEmpty() || delegate.isEndRequired();
     }
 
     @Override
