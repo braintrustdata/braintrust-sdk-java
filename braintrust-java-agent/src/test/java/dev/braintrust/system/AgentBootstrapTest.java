@@ -127,6 +127,8 @@ class AgentBootstrapTest {
                                     } catch (ClassNotFoundException | NoClassDefFoundError e) {
                                         if (className.startsWith("dev.braintrust")
                                                 && (!className.startsWith(
+                                                        "dev.braintrust.agent.dd."))
+                                                && (!className.startsWith(
                                                         "dev.braintrust.instrumentation."))) {
                                             fail(e);
                                         } else {
