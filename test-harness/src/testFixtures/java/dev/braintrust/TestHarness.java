@@ -19,6 +19,7 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -49,6 +50,11 @@ public class TestHarness {
     }
 
     public static TestHarness setup() {
+        return setup(cfg -> cfg);
+    }
+
+    public static TestHarness setup(
+            Function<BraintrustConfig.Builder, BraintrustConfig.Builder> configCustomizer) {
         var configBuilder =
                 BraintrustConfig.builder()
                         .apiUrl(vcr.getUrlForTargetBase("https://api.braintrust.dev"))
@@ -60,6 +66,7 @@ public class TestHarness {
                             "BRAINTRUST_API_KEY",
                             "sk-000000000000000000000000000000000000000000000000"));
         }
+        configBuilder = configCustomizer.apply(configBuilder);
         return setup(configBuilder.build());
     }
 
