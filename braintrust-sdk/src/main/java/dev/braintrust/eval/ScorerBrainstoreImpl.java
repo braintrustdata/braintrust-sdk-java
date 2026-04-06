@@ -60,14 +60,17 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
         // Build parent span components for distributed tracing (as object, not base64 string)
         Object parent = buildParentSpanComponents();
 
-        var request =
-                BraintrustApiClient.FunctionInvokeRequest.of(
-                        taskResult.datasetCase().input(),
-                        taskResult.result(),
-                        taskResult.datasetCase().expected(),
-                        taskResult.datasetCase().metadata(),
-                        version,
-                        parent);
+        // Build scorer args map with optional parameters
+        var scorerArgs = new java.util.LinkedHashMap<String, Object>();
+        scorerArgs.put("input", taskResult.datasetCase().input());
+        scorerArgs.put("output", taskResult.result());
+        scorerArgs.put("expected", taskResult.datasetCase().expected());
+        scorerArgs.put("metadata", taskResult.datasetCase().metadata());
+        if (!taskResult.parameters().isEmpty()) {
+            scorerArgs.put("parameters", taskResult.parameters().getMerged());
+        }
+
+        var request = new BraintrustApiClient.FunctionInvokeRequest(scorerArgs, version, parent);
 
         Object result = apiClient.invokeFunction(getFunctionId(), request);
         return parseScoreResult(result);

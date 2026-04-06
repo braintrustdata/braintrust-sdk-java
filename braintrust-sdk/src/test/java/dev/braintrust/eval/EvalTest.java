@@ -649,4 +649,43 @@ public class EvalTest {
                 ((Number) workingScoresJson.get("working_scorer")).doubleValue(),
                 "working scorer should produce 1.0 (exact match)");
     }
+
+    @Test
+    @SneakyThrows
+    public void evalPassesParametersToTask() {
+        var receivedModel = new java.util.concurrent.atomic.AtomicReference<String>();
+        var receivedTemp = new java.util.concurrent.atomic.AtomicReference<Double>();
+
+        var eval =
+                testHarness
+                        .braintrust()
+                        .<String, String>evalBuilder()
+                        .name("unit-test-eval")
+                        .cases(DatasetCase.of("hello", "world"))
+                        .parameters(
+                                ParameterDef.data("model", "gpt-4", "Model to use"),
+                                ParameterDef.data("temperature", 0.5, "Sampling temperature"))
+                        // Override temperature, keep model default
+                        .parameterValues(Map.of("temperature", 0.9))
+                        .task(
+                                new Task<>() {
+                                    @Override
+                                    public TaskResult<String, String> apply(
+                                            DatasetCase<String, String> datasetCase,
+                                            Parameters parameters)
+                                            throws Exception {
+                                        receivedModel.set(parameters.get("model", String.class));
+                                        receivedTemp.set(
+                                                parameters.get("temperature", Double.class));
+                                        return new TaskResult<>("world", datasetCase, parameters);
+                                    }
+                                })
+                        .scorers(Scorer.of("exact", (expected, result) -> 1.0))
+                        .build();
+
+        eval.run();
+
+        assertEquals("gpt-4", receivedModel.get(), "should receive default model value");
+        assertEquals(0.9, receivedTemp.get(), "should receive overridden temperature value");
+    }
 }

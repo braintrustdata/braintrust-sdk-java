@@ -38,6 +38,7 @@ class DevserverTest {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private static final String REMOTE_EVAL_NAME = "food-type-classifier";
+    private static final String PARAM_EVAL_NAME = "param-eval";
     private static final String TASK_ERROR_EVAL_NAME = "task-error-eval";
     private static final String SCORER_ERROR_EVAL_NAME = "scorer-error-eval";
     private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
@@ -110,10 +111,36 @@ class DevserverTest {
                         .scorer(Scorer.of("working_scorer", (expected, result) -> 1.0))
                         .build();
 
+        // Eval with parameters — task returns the model param as its output
+        RemoteEval<String, String> paramEval =
+                RemoteEval.<String, String>builder()
+                        .name(PARAM_EVAL_NAME)
+                        .parameter(dev.braintrust.eval.ParameterDef.data("model", "gpt-4"))
+                        .parameter(dev.braintrust.eval.ParameterDef.data("temperature", 0.5))
+                        .task(
+                                new dev.braintrust.eval.Task<>() {
+                                    @Override
+                                    public dev.braintrust.eval.TaskResult<String, String> apply(
+                                            dev.braintrust.eval.DatasetCase<String, String>
+                                                    datasetCase,
+                                            dev.braintrust.eval.Parameters parameters)
+                                            throws Exception {
+                                        // Echo both params so tests can verify defaults + overrides
+                                        String model = parameters.get("model", String.class);
+                                        Double temp = parameters.get("temperature", Double.class);
+                                        String output = model + ":" + temp;
+                                        return new dev.braintrust.eval.TaskResult<>(
+                                                output, datasetCase, parameters);
+                                    }
+                                })
+                        .scorer(Scorer.of("static_scorer", (expected, result) -> 1.0))
+                        .build();
+
         server =
                 Devserver.builder()
                         .config(testHarness.braintrust().config())
                         .registerEval(testEval)
+                        .registerEval(paramEval)
                         .registerEval(taskErrorEval)
                         .registerEval(scorerErrorEval)
                         .host("localhost")
@@ -305,7 +332,24 @@ class DevserverTest {
         }
 
         // Get exported spans from test harness (since devserver uses global tracer)
-        List<SpanData> exportedSpans = testHarness.awaitExportedSpans();
+        // Filter to only spans belonging to this test by finding trace IDs from eval spans
+        // with the right generation tag
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        var traceIds =
+                allSpans.stream()
+                        .filter(
+                                s -> {
+                                    var attrs =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.span_attributes"));
+                                    return attrs != null && attrs.contains("test-gen-1");
+                                })
+                        .map(s -> s.getTraceId())
+                        .collect(java.util.stream.Collectors.toSet());
+        List<SpanData> exportedSpans =
+                allSpans.stream().filter(s -> traceIds.contains(s.getTraceId())).toList();
         assertFalse(exportedSpans.isEmpty(), "Should have exported spans");
 
         // We should have 2 eval traces (one per dataset case), each with task, scores, and custom
@@ -653,10 +697,11 @@ class DevserverTest {
         assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
         assertEquals(1, doneEvents.size(), "Should have 1 done event");
 
-        // Only the good case should produce a progress event (bad case task throws before progress)
+        // Both cases should produce a progress event (error case sends progress with null output
+        // so the Playground can link to the trace)
         List<Map<String, String>> progressEvents =
                 events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
-        assertEquals(1, progressEvents.size(), "Only the successful case should send a progress");
+        assertEquals(2, progressEvents.size(), "Both cases should send a progress event");
 
         // Verify summary includes the fallback score from scoreForTaskException (default 0.0)
         JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
@@ -924,6 +969,65 @@ class DevserverTest {
                 1.0,
                 ((Number) workingScoresJson.get("working_scorer")).doubleValue(),
                 "working scorer should produce 1.0");
+    }
+
+    @Test
+    void testParameterDefaultsAndOverrides() throws Exception {
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(PARAM_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        // Override temperature but let model use its default
+        evalRequest.setParameters(Map.of("temperature", 0.9));
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("hello");
+        case1.setExpected("world");
+        dataSpec.setData(List.of(case1));
+        evalRequest.setData(dataSpec);
+
+        Map<String, Object> parentSpec =
+                Map.of(
+                        "object_type", PLAYGROUND_PARENT.type(),
+                        "object_id", PLAYGROUND_PARENT.id(),
+                        "propagated_event",
+                                Map.of("span_attributes", Map.of("generation", "test-gen-params")));
+        evalRequest.setParent(parentSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        List<Map<String, String>> progressEvents =
+                events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        assertEquals(1, progressEvents.size(), "Should have 1 progress event");
+
+        // Task echoes "model:temperature" — model should be default "gpt-4",
+        // temperature should be the overridden 0.9
+        JsonNode progressData = JSON_MAPPER.readTree(progressEvents.get(0).get("data"));
+        String taskOutput = progressData.get("data").asText();
+        assertEquals(
+                "\"gpt-4:0.9\"",
+                taskOutput,
+                "Task should receive default model and overridden temperature");
+
+        assertEquals(1, events.stream().filter(e -> "summary".equals(e.get("event"))).count());
+        assertEquals(1, events.stream().filter(e -> "done".equals(e.get("event"))).count());
     }
 
     /** Helper to read SSE events from an HttpURLConnection response. */
