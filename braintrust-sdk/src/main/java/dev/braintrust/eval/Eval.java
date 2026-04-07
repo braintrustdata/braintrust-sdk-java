@@ -38,6 +38,7 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull List<Scorer<INPUT, OUTPUT>> scorers;
     private final @Nonnull List<String> tags;
     private final @Nonnull Map<String, Object> metadata;
+    private final @Nonnull Parameters parameters;
 
     private Eval(Builder<INPUT, OUTPUT> builder) {
         this.experimentName = builder.experimentName;
@@ -59,6 +60,7 @@ public final class Eval<INPUT, OUTPUT> {
         this.scorers = List.copyOf(builder.scorers);
         this.tags = List.copyOf(builder.tags);
         this.metadata = Map.copyOf(builder.metadata);
+        this.parameters = builder.buildParameters();
     }
 
     /** Runs the evaluation and returns results. */
@@ -129,7 +131,7 @@ public final class Eval<INPUT, OUTPUT> {
                                 .startSpan();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
-                    taskResult = task.apply(datasetCase);
+                    taskResult = task.apply(datasetCase, parameters);
                     rootSpan.setAttribute(
                             "braintrust.output_json",
                             toJson(Map.of("output", taskResult.result())));
@@ -252,6 +254,8 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nullable Tracer tracer = null;
         private @Nullable Task<INPUT, OUTPUT> task;
         private @Nonnull List<Scorer<INPUT, OUTPUT>> scorers = List.of();
+        private @Nonnull List<ParameterDef<?>> parameterDefs = List.of();
+        private @Nonnull Map<String, Object> parameterValues = Map.of();
         private @Nonnull List<String> tags = List.of();
         private @Nonnull Map<String, Object> metadata = Map.of();
 
@@ -335,9 +339,10 @@ public final class Eval<INPUT, OUTPUT> {
                     new Task<>() {
                         @Override
                         public TaskResult<INPUT, OUTPUT> apply(
-                                DatasetCase<INPUT, OUTPUT> datasetCase) {
+                                DatasetCase<INPUT, OUTPUT> datasetCase, Parameters parameters)
+                                throws Exception {
                             var result = taskFn.apply(datasetCase.input());
-                            return new TaskResult<>(result, datasetCase);
+                            return new TaskResult<>(result, datasetCase, parameters);
                         }
                     });
         }
@@ -364,6 +369,40 @@ public final class Eval<INPUT, OUTPUT> {
         public Builder<INPUT, OUTPUT> metadata(Map<String, Object> metadata) {
             this.metadata = Map.copyOf(metadata);
             return this;
+        }
+
+        /**
+         * Sets parameter definitions for this eval. Default values from the definitions are used
+         * unless overridden via {@link #parameterValues(Map)}.
+         */
+        @SuppressWarnings("rawtypes")
+        public Builder<INPUT, OUTPUT> parameters(ParameterDef<?>... parameterDefs) {
+            this.parameterDefs = List.of(parameterDefs);
+            return this;
+        }
+
+        /** Sets parameter definitions for this eval. */
+        public Builder<INPUT, OUTPUT> parameters(List<ParameterDef<?>> parameterDefs) {
+            this.parameterDefs = List.copyOf(parameterDefs);
+            return this;
+        }
+
+        /**
+         * Sets explicit parameter values, overriding any defaults from parameter definitions. Keys
+         * not present here fall back to the default value from the corresponding {@link
+         * ParameterDef}.
+         */
+        public Builder<INPUT, OUTPUT> parameterValues(Map<String, Object> values) {
+            this.parameterValues = Map.copyOf(values);
+            return this;
+        }
+
+        /** Builds the merged Parameters from definitions and explicit values. */
+        private Parameters buildParameters() {
+            if (parameterDefs.isEmpty() && parameterValues.isEmpty()) {
+                return Parameters.empty();
+            }
+            return new Parameters(parameterDefs, parameterValues);
         }
     }
 }

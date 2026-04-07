@@ -12,7 +12,7 @@ import lombok.Getter;
  */
 @Getter
 @Builder
-public class RequestContext {
+class RequestContext {
     /** Validated origin from CORS */
     private final String appOrigin;
 

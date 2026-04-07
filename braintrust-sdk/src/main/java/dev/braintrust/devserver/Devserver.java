@@ -3,6 +3,7 @@ package dev.braintrust.devserver;
 import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
 import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -180,32 +181,36 @@ public class Devserver {
 
                 Map<String, Object> metadata = new LinkedHashMap<>();
 
-                Map<String, Map<String, Object>> parametersMap = new LinkedHashMap<>();
-                for (Map.Entry<String, RemoteEval.Parameter> paramEntry :
-                        eval.getParameters().entrySet()) {
-                    String paramName = paramEntry.getKey();
-                    RemoteEval.Parameter param = paramEntry.getValue();
+                // Serialize parameters in the container format
+                if (eval.getParameters().isEmpty()) {
+                    metadata.put("parameters", NullNode.getInstance());
+                } else {
+                    Map<String, Map<String, Object>> schemaMap = new LinkedHashMap<>();
+                    for (ParameterDef<?> param : eval.getParameters()) {
+                        Map<String, Object> paramMetadata = new LinkedHashMap<>();
+                        paramMetadata.put("type", param.type().toString().toLowerCase());
 
-                    Map<String, Object> paramMetadata = new LinkedHashMap<>();
-                    paramMetadata.put("type", param.getType().getValue());
+                        if (param.schema() != null) {
+                            paramMetadata.put("schema", param.schema());
+                        }
 
-                    if (param.getDescription() != null) {
-                        paramMetadata.put("description", param.getDescription());
+                        if (param.defaultValue() != null) {
+                            paramMetadata.put("default", param.defaultValue());
+                        }
+
+                        if (param.description() != null) {
+                            paramMetadata.put("description", param.description());
+                        }
+
+                        schemaMap.put(param.name(), paramMetadata);
                     }
 
-                    if (param.getDefaultValue() != null) {
-                        paramMetadata.put("default", param.getDefaultValue());
-                    }
-
-                    // Only include schema for data type parameters
-                    if (param.getType() == RemoteEval.ParameterType.DATA
-                            && param.getSchema() != null) {
-                        paramMetadata.put("schema", param.getSchema());
-                    }
-
-                    parametersMap.put(paramName, paramMetadata);
+                    Map<String, Object> parametersContainer = new LinkedHashMap<>();
+                    parametersContainer.put("type", "braintrust.staticParameters");
+                    parametersContainer.put("schema", schemaMap);
+                    parametersContainer.put("source", NullNode.getInstance());
+                    metadata.put("parameters", parametersContainer);
                 }
-                metadata.put("parameters", parametersMap);
 
                 // Add scores (list of scorer names)
                 List<Map<String, String>> scores = new ArrayList<>();
@@ -245,7 +250,14 @@ public class Devserver {
         try {
             InputStream requestBody = exchange.getRequestBody();
             var requestBodyString = new String(requestBody.readAllBytes(), StandardCharsets.UTF_8);
-            EvalRequest request = fromJson(requestBodyString, EvalRequest.class);
+            EvalRequest request;
+            try {
+                request = fromJson(requestBodyString, EvalRequest.class);
+            } catch (Exception e) {
+                sendResponse(
+                        exchange, 400, "text/plain", "Invalid request body: " + e.getMessage());
+                return;
+            }
 
             // Validate evaluator exists
             RemoteEval eval = evals.get(request.getName());
@@ -376,6 +388,14 @@ public class Devserver {
 
                 var tracer = BraintrustTracing.getTracer();
 
+                // Merge parameters: evaluator defaults + request overrides
+                final Parameters mergedParameters =
+                        new Parameters(
+                                eval.getParameters(),
+                                null == request.getParameters()
+                                        ? Map.of()
+                                        : request.getParameters());
+
                 // Execute task and scorers for each case
                 final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
                 final var parentInfo = extractParentInfo(request);
@@ -414,7 +434,9 @@ public class Devserver {
                                                             .makeCurrent()) {
                                                 var task = eval.getTask();
                                                 try {
-                                                    taskResult = task.apply(datasetCase);
+                                                    taskResult =
+                                                            task.apply(
+                                                                    datasetCase, mergedParameters);
                                                 } catch (Exception e) {
                                                     taskSpan.setStatus(
                                                             StatusCode.ERROR, e.getMessage());
@@ -431,6 +453,21 @@ public class Devserver {
                                                             "Task threw exception for input: "
                                                                     + datasetCase.input(),
                                                             e);
+                                                    // Set eval span attributes so Braintrust can
+                                                    // resolve the trace
+                                                    setEvalSpanAttributesForError(
+                                                            evalSpan,
+                                                            braintrustParent,
+                                                            braintrustGeneration,
+                                                            datasetCase);
+                                                    // Send progress event even on error so the
+                                                    // Playground can link to the trace
+                                                    sendProgressEvent(
+                                                            os,
+                                                            evalSpan.getSpanContext().getSpanId(),
+                                                            datasetCase.origin(),
+                                                            eval.getName(),
+                                                            null);
                                                     // run scoreForTaskException on each scorer
                                                     List<Scorer<I, O>> allScorersForError =
                                                             new ArrayList<>(eval.getScorers());
@@ -576,6 +613,38 @@ public class Devserver {
         }
         evalSpan.setAttribute(
                 "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
+    }
+
+    /**
+     * Sets eval span attributes when the task threw an exception. Similar to {@link
+     * #setEvalSpanAttributes} but does not require a TaskResult.
+     */
+    private void setEvalSpanAttributesForError(
+            Span evalSpan,
+            BraintrustUtils.Parent braintrustParent,
+            String braintrustGeneration,
+            DatasetCase<?, ?> datasetCase) {
+        var spanAttrs = new LinkedHashMap<>();
+        spanAttrs.put("type", "eval");
+        spanAttrs.put("name", "eval");
+        if (braintrustGeneration != null) {
+            spanAttrs.put("generation", braintrustGeneration);
+        }
+        evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
+                .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
+                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
+
+        if (datasetCase.origin().isPresent()) {
+            evalSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
+        }
+        if (!datasetCase.tags().isEmpty()) {
+            evalSpan.setAttribute(
+                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
+        }
+        if (!datasetCase.metadata().isEmpty()) {
+            evalSpan.setAttribute("braintrust.metadata", toJson(datasetCase.metadata()));
+        }
     }
 
     private void setTaskSpanAttributes(

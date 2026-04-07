@@ -1,11 +1,14 @@
 package dev.braintrust.devserver;
 
+import dev.braintrust.eval.DatasetCase;
+import dev.braintrust.eval.ParameterDef;
+import dev.braintrust.eval.Parameters;
 import dev.braintrust.eval.Scorer;
 import dev.braintrust.eval.Task;
+import dev.braintrust.eval.TaskResult;
 import java.util.*;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Singular;
@@ -36,8 +39,8 @@ public class RemoteEval<INPUT, OUTPUT> {
      */
     @Singular @Nonnull private final List<Scorer<INPUT, OUTPUT>> scorers;
 
-    /** Optional parameters that can be configured from the UI */
-    @Singular @Nonnull private final Map<String, Parameter> parameters;
+    /** Optional parameter definitions that can be configured from the UI */
+    @Singular @Nonnull private final List<ParameterDef<?>> parameters;
 
     public static class Builder<INPUT, OUTPUT> {
         /**
@@ -48,84 +51,29 @@ public class RemoteEval<INPUT, OUTPUT> {
          */
         public Builder<INPUT, OUTPUT> taskFunction(Function<INPUT, OUTPUT> taskFn) {
             return task(
-                    datasetCase -> {
-                        var result = taskFn.apply(datasetCase.input());
-                        return new dev.braintrust.eval.TaskResult<>(result, datasetCase);
+                    new Task<>() {
+                        @Override
+                        public TaskResult<INPUT, OUTPUT> apply(
+                                DatasetCase<INPUT, OUTPUT> datasetCase, Parameters parameters)
+                                throws Exception {
+                            var result = taskFn.apply(datasetCase.input());
+                            return new TaskResult<>(result, datasetCase, parameters);
+                        }
                     });
         }
 
         /** Build the RemoteEval */
         public RemoteEval<INPUT, OUTPUT> build() {
-            // can add build hooks here later if desired
-            return internalBuild();
-        }
-    }
-
-    /** Represents a configurable parameter for the evaluator */
-    @Getter
-    @lombok.Builder(builderClassName = "Builder")
-    public static class Parameter {
-        /** Type of parameter: "prompt" or "data" */
-        @Nonnull private final ParameterType type;
-
-        /** Optional description of the parameter */
-        @Nullable private final String description;
-
-        /** Optional default value for the parameter */
-        @Nullable private final Object defaultValue;
-
-        /**
-         * JSON Schema for data type parameters. Only applicable when type is DATA. Should be a Map
-         * representing a JSON Schema object.
-         */
-        @Nullable private final Map<String, Object> schema;
-
-        public static Parameter promptParameter(String description, Object defaultValue) {
-            return Parameter.builder()
-                    .type(ParameterType.PROMPT)
-                    .description(description)
-                    .defaultValue(defaultValue)
-                    .build();
-        }
-
-        public static Parameter promptParameter(Object defaultValue) {
-            return promptParameter(null, defaultValue);
-        }
-
-        public static Parameter dataParameter(
-                String description, Map<String, Object> schema, Object defaultValue) {
-            return Parameter.builder()
-                    .type(ParameterType.DATA)
-                    .description(description)
-                    .schema(schema)
-                    .defaultValue(defaultValue)
-                    .build();
-        }
-
-        public static Parameter dataParameter(Map<String, Object> schema, Object defaultValue) {
-            return dataParameter(null, schema, defaultValue);
-        }
-
-        public static Parameter dataParameter(Map<String, Object> schema) {
-            return dataParameter(null, schema, null);
-        }
-    }
-
-    /** Parameter type enumeration */
-    public enum ParameterType {
-        /** Prompt parameter (for LLM prompts) */
-        PROMPT("prompt"),
-        /** Data parameter (for other configuration data) */
-        DATA("data");
-
-        private final String value;
-
-        ParameterType(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
+            var result = internalBuild();
+            // Validate parameter names are unique
+            var seen = new HashSet<String>();
+            for (var param : result.getParameters()) {
+                if (!seen.add(param.name())) {
+                    throw new IllegalArgumentException(
+                            "Duplicate parameter name: '" + param.name() + "'");
+                }
+            }
+            return result;
         }
     }
 }
