@@ -26,9 +26,12 @@ public class SpringAIOpenAIInstrumentationModule extends InstrumentationModule {
     public List<String> getHelperClassNames() {
         return List.of(
                 PACKAGE + "BraintrustSpringAI",
-                PACKAGE + "OpenAIBuilderWrapper",
-                PACKAGE + "BraintrustObservationHandler",
-                PACKAGE + "TriConsumer",
+                PACKAGE + "BraintrustSpringAI$BraintrustRestInterceptor",
+                PACKAGE + "BraintrustSpringAI$BufferedClientHttpResponse",
+                PACKAGE + "BraintrustSpringAI$BraintrustWebClientFilter",
+                PACKAGE + "BraintrustSpringAI$BodyCapturingRequest",
+                PACKAGE + "BraintrustSpringAI$BodyCapturingOutputMessage",
+                PACKAGE + "BraintrustSpringAI$StreamContext",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }
