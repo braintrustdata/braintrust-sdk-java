@@ -1,0 +1,39 @@
+{
+  "id" : "56eb6751-958b-43ef-a244-a36c39bee0c6",
+  "name" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke",
+  "request" : {
+    "url" : "/v1/function/efa5f9c3-6ece-4726-a9d6-4ba792980b3f/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"carrot\",\"output\":\"java-fruit\",\"expected\":\"vegetable\",\"metadata\":{}},\"parent\":{\"object_type\":\"playground_logs\",\"object_id\":\"ceea7422-3507-4d1c-a5f7-7acf41d9fac2\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"c8925161e2f2d7d9\",\"root_span_id\":\"d8aa50f5880aac343ef2a73eaf4fc9c5\"}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke-56eb6751-958b-43ef-a244-a36c39bee0c6.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-bt-function-creds-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69d6c25a-1b24a231273b251178df6e9f;Parent=09e2597eb9ffffee;Sampled=0;Lineage=1:8be8f50d:0",
+      "Date" : "Wed, 08 Apr 2026 21:02:18 GMT",
+      "Via" : "1.1 65f2e9f7f1475de54aa452d3ceb9bcf6.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwMDAc7qdCI1B00cpfd6z0HZ+sIC/x7a/mNnRuuTM0KSgEU4sQOHiPfRR7xDlZKjdjamJPv0eyJwcm9wYWdhdGVkX2V2ZW50Ijp7InNwYW5fYXR0cmlidXRlcyI6eyJwdXJwb3NlIjoic2NvcmVyIn19LCJyb290X3NwYW5faWQiOiJkOGFhNTBmNTg4MGFhYzM0M2VmMmE3M2VhZjRmYzljNSJ9",
+      "x-amzn-RequestId" : "3d8c9205-171d-42cc-bce2-97ac7a6b8189",
+      "X-Amz-Cf-Id" : "xz7bYpljNiYKFE6feFh42juHq28wxXJj7vBxoVizFhTpZ5EuDUAXXQ==",
+      "x-bt-span-id" : "ff1edafe-6367-46eb-9333-4292804538b1",
+      "x-bt-function-meta-cached" : "HIT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "56eb6751-958b-43ef-a244-a36c39bee0c6",
+  "persistent" : true,
+  "insertionIndex" : 94
+}

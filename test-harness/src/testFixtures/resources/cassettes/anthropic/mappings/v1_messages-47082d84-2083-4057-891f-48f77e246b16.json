@@ -1,0 +1,54 @@
+{
+  "id" : "47082d84-2083-4057-891f-48f77e246b16",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":\"Count from 1 to 5.\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"system\":\"You are a helpful assistant.\",\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-47082d84-2083-4057-891f-48f77e246b16.txt",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "462",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "800000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-04-08T21:03:12Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-04-08T21:03:12Z",
+      "anthropic-ratelimit-tokens-remaining" : "4791000",
+      "set-cookie" : "_cfuvid=qzpl4wE8yd75Igv4voFXZutYdnMVKxl1QVaPi7i46CM-1775682191.9616196-1.0.1.1-r8JJLAYtw4RhPExwCWzLcomtRUnXHVOzgs6JaXgrjyQ; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=464",
+      "anthropic-ratelimit-input-tokens-remaining" : "3991000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "CF-RAY" : "9e9437a3bd047533-SEA",
+      "anthropic-ratelimit-tokens-limit" : "4800000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CZryqvRnYDouF7V8t3u94",
+      "anthropic-ratelimit-tokens-reset" : "2026-04-08T21:03:12Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Wed, 08 Apr 2026 21:03:12 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-04-08T21:03:12Z",
+      "Cache-Control" : "no-cache",
+      "anthropic-ratelimit-input-tokens-limit" : "4000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "800000"
+    }
+  },
+  "uuid" : "47082d84-2083-4057-891f-48f77e246b16",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

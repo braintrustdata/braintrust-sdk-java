@@ -1,0 +1,52 @@
+{
+  "id" : "eea32a97-7092-4b21-93b0-5d4b1619fce1",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a helpful assistant\",\"role\":\"system\"},{\"content\":[{\"text\":\"What color is this image?\",\"type\":\"text\"},{\"image_url\":{\"url\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"},\"type\":\"image_url\"}],\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-eea32a97-7092-4b21-93b0-5d4b1619fce1.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-input-images" : "1ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-ratelimit-limit-input-images" : "50000",
+      "set-cookie" : "__cf_bm=MCJCzm36IyQvtrUcvwYk.xx86yLKW3DTREl.oksRE4Y-1775682185.952806-1.0.1.1-3gYNjCwOJ6sV4SJlKuB8gH6PK9zaaI16kbgYDDI_H7Coj0JnTe6CSWvpZFUzaTfYJqcxblY67WI3Zh7yMG0FHRkZJWgzjYDEAW19O7ey2oE8CwLJY_mvafEpjxRC9wa3; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 08 Apr 2026 21:33:06 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-remaining-input-images" : "49999",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_ea1024314da24822a6f7086460511790",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "9e94377e3f984f60-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999217",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Wed, 08 Apr 2026 21:03:06 GMT",
+      "access-control-expose-headers" : "X-Request-ID",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "676",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "eea32a97-7092-4b21-93b0-5d4b1619fce1",
+  "persistent" : true,
+  "insertionIndex" : 13
+}

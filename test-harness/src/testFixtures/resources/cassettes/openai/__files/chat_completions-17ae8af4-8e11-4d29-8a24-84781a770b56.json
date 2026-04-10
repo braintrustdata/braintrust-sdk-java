@@ -1,0 +1,54 @@
+{
+  "id": "chatcmpl-DSUOB4AEqMhIvHC9mfXwCdSfcFD9I",
+  "object": "chat.completion",
+  "created": 1775682371,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_PUTCJuGUHjycxa3b7E7uyYjt",
+            "type": "function",
+            "function": {
+              "name": "getWeather",
+              "arguments": "{\"arg0\": \"Paris\"}"
+            }
+          },
+          {
+            "id": "call_cACrbs9SRbZN5pBsdIPLfHGj",
+            "type": "function",
+            "function": {
+              "name": "getWeather",
+              "arguments": "{\"arg0\": \"New York\"}"
+            }
+          }
+        ],
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 84,
+    "completion_tokens": 47,
+    "total_tokens": 131,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a5086b7b9a"
+}

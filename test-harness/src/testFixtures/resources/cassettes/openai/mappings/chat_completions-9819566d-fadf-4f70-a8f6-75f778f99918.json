@@ -1,0 +1,49 @@
+{
+  "id" : "9819566d-fadf-4f70-a8f6-75f778f99918",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-9819566d-fadf-4f70-a8f6-75f778f99918.json",
+    "headers" : {
+      "x-request-id" : "req_e9861980a28f4ec699fe13bf876b1b80",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9e9437bbbc96ded8-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Wed, 08 Apr 2026 21:03:16 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=4L9nI4o8b3sG_.QJfVysRcOkWPj9nUzkb1Np9cYJ10M-1775682195.7937968-1.0.1.1-i4lnNk7ATAgR5Gjm81Vs.BfA_3AueWTAGwhfEgzYsKT0M8AUMcj8399TYEBoQ8Le4p4YilOEuFSiMViiO9m3mcJjGW2nfWtcs8oDxtcEvTOj.cy1VRCor04YQXVDfRgc; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 08 Apr 2026 21:33:16 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "270",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "9819566d-fadf-4f70-a8f6-75f778f99918",
+  "persistent" : true,
+  "insertionIndex" : 7
+}

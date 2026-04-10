@@ -1,0 +1,56 @@
+{
+  "id" : "ca81e846-884a-484e-a88b-e76ce1670233",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-3-haiku-20240307\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-ca81e846-884a-484e-a88b-e76ce1670233.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "750",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "1500000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-04-08T21:05:53Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-04-08T21:05:53Z",
+      "anthropic-ratelimit-tokens-remaining" : "9500000",
+      "set-cookie" : "_cfuvid=TAMSZxfpDXXvm7T3Uk9_Rh1QlVdcF5nSyrxz25XwQ4A-1775682353.126336-1.0.1.1-w6fdHGYHVke4ONUDu_T0fbKz72XeE8wzii_legTYxis; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "10000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=753",
+      "anthropic-ratelimit-input-tokens-remaining" : "8000000",
+      "anthropic-ratelimit-requests-remaining" : "9999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9e943b930dd5d465-SEA",
+      "anthropic-ratelimit-tokens-limit" : "9500000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CZrz3oRh6RMs3y12FrTFK",
+      "anthropic-ratelimit-tokens-reset" : "2026-04-08T21:05:53Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Wed, 08 Apr 2026 21:05:53 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-04-08T21:05:53Z",
+      "anthropic-ratelimit-input-tokens-limit" : "8000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "1500000"
+    }
+  },
+  "uuid" : "ca81e846-884a-484e-a88b-e76ce1670233",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-v1-messages",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-2-v1-messages-2",
+  "insertionIndex" : 9
+}

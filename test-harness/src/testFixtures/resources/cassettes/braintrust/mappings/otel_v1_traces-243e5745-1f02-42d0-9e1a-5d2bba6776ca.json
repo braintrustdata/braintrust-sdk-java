@@ -1,0 +1,39 @@
+{
+  "id" : "243e5745-1f02-42d0-9e1a-5d2bba6776ca",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CtoQCrIBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAoiCg9zZXJ2aWNlLnZlcnNpb24SDwoNMC4zLjAtMWMwNGFmMAogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTkuMBKiDwogCg9icmFpbnRydXN0LWphdmESDTAuMy4wLTFjMDRhZjASxAEKED+ETRw/elLS5Ij1DfnW2OwSCC09DIoslbtHIgi4WGY1gSLBcyoEdGFzazABOZEXmo6AfaQYQZXgm46AfaQYSi8KGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEhEKD3sidHlwZSI6InRhc2sifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJleHBlcmltZW50X2lkOmY4NTUwZjA3LWRkZjUtNDBhYS05NGU5LWNmMTU4YzA0YWUzZnoAhQEBAQAAEs4CChA/hE0cP3pS0uSI9Q351tjsEgicFJFlI6kbZSIIuFhmNYEiwXMqBXNjb3JlMAE54GqejoB9pBhBqZSijoB9pBhKKwoRYnJhaW50cnVzdC5zY29yZXMSFgoUeyJmcnVpdF9zY29yZXIiOjEuMH1KWQoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSOwo5eyJ0eXBlIjoic2NvcmUiLCJuYW1lIjoiZnJ1aXRfc2NvcmVyIiwicHVycG9zZSI6InNjb3JlciJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMmV4cGVyaW1lbnRfaWQ6Zjg1NTBmMDctZGRmNS00MGFhLTk0ZTktY2YxNThjMDRhZTNmSjAKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SFgoUeyJmcnVpdF9zY29yZXIiOjEuMH16AIUBAQEAABKiAwoQP4RNHD96UtLkiPUN+dbY7BIIuFhmNYEiwXMqBGV2YWwwAzn6wZKOgH2kGEHRKKOOgH2kGEoxChVicmFpbnRydXN0LmlucHV0X2pzb24SGAoWeyJpbnB1dCI6InN0cmF3YmVycnkifUolCg9icmFpbnRydXN0LnRhZ3MSEioQCgUKA3JlZAoHCgVzd2VldEovChpicmFpbnRydXN0LnNwYW5fYXR0cmlidXRlcxIRCg97InR5cGUiOiJldmFsIn1KSQoRYnJhaW50cnVzdC5wYXJlbnQSNAoyZXhwZXJpbWVudF9pZDpmODU1MGYwNy1kZGY1LTQwYWEtOTRlOS1jZjE1OGMwNGFlM2ZKLgoWYnJhaW50cnVzdC5vdXRwdXRfanNvbhIUChJ7Im91dHB1dCI6ImZydWl0In1KIAoTYnJhaW50cnVzdC5leHBlY3RlZBIJCgciZnJ1aXQiSjoKE2JyYWludHJ1c3QubWV0YWRhdGESIwoheyJzZWFzb24iOiJzdW1tZXIiLCJjYWxvcmllcyI6MzJ9egCFAQEBAAASxAEKEAv2ZNDtRc88z9hhEKljEJkSCCCX2vHkPWpkIggBN7++Nno76ioEdGFzazABOVtRp46AfaQYQcRQqI6AfaQYSi8KGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEhEKD3sidHlwZSI6InRhc2sifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJleHBlcmltZW50X2lkOmY4NTUwZjA3LWRkZjUtNDBhYS05NGU5LWNmMTU4YzA0YWUzZnoAhQEBAQAAEs4CChAL9mTQ7UXPPM/YYRCpYxCZEgi8/uKpOUVv7iIIATe/vjZ6O+oqBXNjb3JlMAE5afmojoB9pBhB9NeqjoB9pBhKKwoRYnJhaW50cnVzdC5zY29yZXMSFgoUeyJmcnVpdF9zY29yZXIiOjEuMH1KWQoaYnJhaW50cnVzdC5zcGFuX2F0dHJpYnV0ZXMSOwo5eyJ0eXBlIjoic2NvcmUiLCJuYW1lIjoiZnJ1aXRfc2NvcmVyIiwicHVycG9zZSI6InNjb3JlciJ9SkkKEWJyYWludHJ1c3QucGFyZW50EjQKMmV4cGVyaW1lbnRfaWQ6Zjg1NTBmMDctZGRmNS00MGFhLTk0ZTktY2YxNThjMDRhZTNmSjAKFmJyYWludHJ1c3Qub3V0cHV0X2pzb24SFgoUeyJmcnVpdF9zY29yZXIiOjEuMH16AIUBAQEAABKoAwoQC/Zk0O1FzzzP2GEQqWMQmRIIATe/vjZ6O+oqBGV2YWwwAzmKVaWOgH2kGEGBNauOgH2kGEowChVicmFpbnRydXN0LmlucHV0X2pzb24SFwoVeyJpbnB1dCI6ImFzcGFyYWd1cyJ9SigKD2JyYWludHJ1c3QudGFncxIVKhMKBwoFZ3JlZW4KCAoGc2F2b3J5Si8KGmJyYWludHJ1c3Quc3Bhbl9hdHRyaWJ1dGVzEhEKD3sidHlwZSI6ImV2YWwifUpJChFicmFpbnRydXN0LnBhcmVudBI0CjJleHBlcmltZW50X2lkOmY4NTUwZjA3LWRkZjUtNDBhYS05NGU5LWNmMTU4YzA0YWUzZkouChZicmFpbnRydXN0Lm91dHB1dF9qc29uEhQKEnsib3V0cHV0IjoiZnJ1aXQifUokChNicmFpbnRydXN0LmV4cGVjdGVkEg0KCyJ2ZWdldGFibGUiSjoKE2JyYWludHJ1c3QubWV0YWRhdGESIwoheyJzZWFzb24iOiJzcHJpbmciLCJjYWxvcmllcyI6MjB9egCFAQEBAAA="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "bhNPOG54oAMEgPQ=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69d6c261-647a2e500dbbbf0e40571ad2;Parent=017961fb768381b5;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Wed, 08 Apr 2026 21:02:25 GMT",
+      "Via" : "1.1 2be627c4e85d6d9d9e32a7523e1b67ee.cloudfront.net (CloudFront), 1.1 b669d9add7767f73665f1f8b7e8cd802.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69d6c26100000000045d8799560d5531",
+      "x-amzn-RequestId" : "ae8e9b56-7d79-4bae-abc8-15700f44b92a",
+      "X-Amz-Cf-Id" : "7J-A1zkpXlrBoTyHJ-ODRFitb4RxJQwkecQaFfUJpIf8WY6CF1_vHw==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "243e5745-1f02-42d0-9e1a-5d2bba6776ca",
+  "persistent" : true,
+  "insertionIndex" : 80
+}

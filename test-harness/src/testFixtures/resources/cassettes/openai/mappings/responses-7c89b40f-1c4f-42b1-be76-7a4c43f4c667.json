@@ -1,0 +1,47 @@
+{
+  "id" : "7c89b40f-1c4f-42b1-be76-7a4c43f4c667",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0a904223c9c2dec80069d6c297e9888190b6872d7c5acd1fef\",\"summary\":[{\"text\":\"**Identifying the sequence pattern**\\n\\nThe user has shared a sequence: 2, 6, 12, 20, 30, and I’m trying to find the pattern. It looks like these numbers are twice the triangular numbers, which are calculated as T_n = n(n+1)/2. So, the nth term can be expressed as a_n = n(n+1). For n starting at 1, this yields: a_1=2, a_2=6, a_3=12, and so forth. Following another line of reasoning, I realize the differences are also increasing consistently.\",\"type\":\"summary_text\"},{\"text\":\"**Defining the pronic sequence**\\n\\nI’ve been exploring the sequence 2, 6, 12, 20, 30 and calculating the differences between consecutive terms. I see that the differences follow the pattern d_n = 2n for n >= 2. This means each term can be represented as the sum of the previous term and that difference. Therefore, I identify the sequence as pronic numbers, which is expressed as a_n = n(n+1). Ultimately, this tells me that the nth term for n >= 1 is n(n+1).\",\"type\":\"summary_text\"},{\"text\":\"**Explaining the pronic numbers sequence**\\n\\nI need to clarify that if we start the sequence at n=1, then the formula for the nth term is a_n = n(n+1), which represents the product of successive integers, or pronic numbers. The differences between terms increase by 2, indicating a quadratic sequence. Therefore, I conclude that the pattern is 2, 6, 12, 20, 30, with the general formula being a_n = n^2 + n. If starting at n=0, it would shift to a_n = (n+1)(n+2).\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_0a904223c9c2dec80069d6c2a75bec8190a04ffb44dd56eb6f\",\"content\":[{\"annotations\":[],\"text\":\"The “gaps” between terms are  \\n6–2=4, 12–6=6, 20–12=8, 30–20=10,…  \\nso the differences are 4, 6, 8, 10,… i.e. they increase by 2 each time.  A sequence with linearly growing differences is quadratic.  In fact one can check that\\n\\na₁=2, a₂=6, a₃=12 ⇒ aₙ=n²+n.\\n\\nEquivalently\\n\\naₙ=n(n+1),  for n=1,2,3,…\\n\\nwhich indeed gives 1·2=2, 2·3=6, 3·4=12, 4·5=20, 5·6=30,…\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-7c89b40f-1c4f-42b1-be76-7a4c43f4c667.json",
+    "headers" : {
+      "x-request-id" : "req_8f4b682274034888b66baabc21cea6de",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e94383c1f8b346b-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999547",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Wed, 08 Apr 2026 21:03:45 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=es9E6vEWVo96VYPZm6VHSqd1moMyZslQE6Lv4zGoJoE-1775682216.334549-1.0.1.1-t2IhLNXNqsJ8mr6Wm7NLhKEVkVXdCdufNiF_mqWWqjYlNW3sclZvXT8jF7Ov3XzWq2KvnsuB6oy4tzOvFS1HZNLbVrDjq9URG0yprz9HDI110LbMnhS2AWTDEQhitjsR; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 08 Apr 2026 21:33:45 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "8581",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "7c89b40f-1c4f-42b1-be76-7a4c43f4c667",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

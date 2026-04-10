@@ -1,0 +1,47 @@
+{
+  "id" : "7cde4bf4-897d-40ce-993c-976598baeaef",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the capital of France? Reply in one word.\",\"role\":\"user\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"low\",\"summary\":\"auto\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-7cde4bf4-897d-40ce-993c-976598baeaef.json",
+    "headers" : {
+      "x-request-id" : "req_1ed28f358d2d4bc990643a90d0e317c3",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9e943c4a99936e84-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999775",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Wed, 08 Apr 2026 21:06:23 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=Hett57xwJJrZhMG_6nZwM9xyU4wRmHxUM9wVqwdILaQ-1775682382.498547-1.0.1.1-v6h0imIs590UsDFw0J_.ZBEEafW9tV4YfO23H9S8WacAJbMCuo1zmaR_y7PdLI66wnhFx8WYBhx1p9ZJJsPHwy8KoJvMOWSRFtZ.w59UGY_g8t20S9MVKjKCTSQbJVEH; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 08 Apr 2026 21:36:23 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "1301",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "7cde4bf4-897d-40ce-993c-976598baeaef",
+  "persistent" : true,
+  "insertionIndex" : 27
+}
