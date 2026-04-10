@@ -110,7 +110,9 @@ configurations {
 dependencies {
   bootstrap project(':braintrust-java-agent:bootstrap')
 
-  // OTel API + SDK + autoconfigure on bootstrap classpath
+  // OTel API + autoconfigure SPI on bootstrap classpath.
+  // The SPI is needed so OtelAgentCustomizer (also on bootstrap) can implement
+  // AutoConfigurationCustomizerProvider without going through the remapper.
   bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
 
   internal project(path: ':braintrust-java-agent:internal', configuration: 'shadow')
@@ -119,6 +121,9 @@ dependencies {
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
   testImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
   testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
   testCompileOnly project(':braintrust-java-agent:bootstrap')
 }
@@ -131,6 +136,7 @@ jar {
 
   archiveBaseName.set('braintrust-java-agent')
   archiveClassifier.set('')
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
   manifest {
     attributes(
@@ -217,6 +223,36 @@ task testGlobalLogger(type: JavaExec) {
 }
 
 test.dependsOn testGlobalLogger
+
+/**
+ * Verifies that when OTel autoconfigure is on the app classpath, BT's instrumentation of
+ * AutoConfiguredOpenTelemetrySdkBuilder.build() fires alongside the app's own customizer.
+ */
+task testOtelAutoConfigureInstrumentation(type: JavaExec) {
+  dependsOn jar, testClasses
+
+  mainClass = 'dev.braintrust.system.OtelAutoConfigureInstrumentationTest'
+  classpath = sourceSets.test.runtimeClasspath
+  jvmArgs "-javaagent:${jar.archiveFile.get().asFile.absolutePath}"
+  environment 'BRAINTRUST_API_KEY', 'bogus'
+  environment 'OTEL_TRACES_EXPORTER', 'none'
+  environment 'OTEL_METRICS_EXPORTER', 'none'
+  environment 'OTEL_LOGS_EXPORTER', 'none'
+
+  inputs.files(jar)
+  inputs.files(sourceSets.test.output)
+  def markerFile = layout.buildDirectory.file('test-results/otel-autoconfigure-instrumentation-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+test.dependsOn testOtelAutoConfigureInstrumentation
 
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.JavaLibrary

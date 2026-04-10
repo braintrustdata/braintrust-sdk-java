@@ -1,0 +1,136 @@
+plugins {
+  id 'java'
+}
+
+dependencies {
+  // OTel API on the app classpath so the smoke test can call GlobalOpenTelemetry.get().
+  // At runtime the OTel agent intercepts this and bridges to the agent's shaded SDK.
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  // Protobuf for parsing OTLP trace export payloads in the mock collector
+  implementation 'io.opentelemetry.proto:opentelemetry-proto:1.5.0-alpha'
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+// ── Configuration to resolve the OTel Java agent JAR from Maven Central ──
+configurations {
+  otelAgent
+}
+dependencies {
+  otelAgent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.16.0'
+}
+
+def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('jar')
+def braintrustSdkExtJar = project(':braintrust-sdk').tasks.named('otelExtensionJar')
+
+/**
+ * Smoke test: Braintrust agent as -javaagent, SDK JAR as OTel extension.
+ *
+ * - BT agent attaches first (ByteBuddy instrumentation, bootstrap setup)
+ * - OTel agent attaches second, discovers braintrust-sdk.jar as an extension via
+ *   -Dotel.javaagent.extensions. The SDK JAR's OtelAutoConfig SPI provider is picked
+ *   up by the OTel agent's autoconfigure machinery and wires BT into the SDK.
+ *
+ * Two mock OTLP collectors capture exports:
+ *   18240 — OTel collector  (otel.exporter.otlp.endpoint)
+ *   18241 — BT backend      (BRAINTRUST_API_URL / OtelAutoConfig)
+ */
+task smokeTestBTAgentFirst(type: JavaExec) {
+  dependsOn braintrustAgentJar, braintrustSdkExtJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.otelagent.OtelAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def sdkExtJar = braintrustSdkExtJar.map { it.archiveFile.get().asFile.absolutePath }
+  def otelAgentJar = configurations.otelAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${otelAgentJar.absolutePath}",
+    "-Dotel.javaagent.extensions=${sdkExtJar.get()}",
+    "-javaagent:${btAgent.get()}",
+    // Point OTel OTLP exporter at our mock collector (HTTP/1.1 — mock doesn't support HTTP/2)
+    "-Dotel.exporter.otlp.endpoint=http://127.0.0.1:18240",
+    "-Dotel.exporter.otlp.protocol=http/protobuf",
+    "-Dotel.traces.exporter=otlp",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Dotel.service.name=bt-otel-smoke-test",
+    // Port config for the smoke test process itself
+    "-Dbraintrust.smoketest.otel.mock.port=18240",
+    "-Dbraintrust.smoketest.bt.mock.port=18241",
+    // "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5566",
+  ]
+
+  // Prevent host environment from leaking into the test process
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+  environment.remove('OTEL_METRICS_EXPORTER')
+  environment.remove('OTEL_LOGS_EXPORTER')
+
+  environment 'BRAINTRUST_API_KEY', 'bogus'
+  environment 'BRAINTRUST_API_URL', 'http://127.0.0.1:18241'
+  environment 'BRAINTRUST_FILTER_AI_SPANS', 'true'
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(braintrustSdkExtJar)
+  inputs.files(configurations.otelAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/otel-agent-first-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+task smokeTestOtelAgentOnly(type: JavaExec) {
+  dependsOn braintrustAgentJar, braintrustSdkExtJar, classes
+
+  mainClass = 'dev.braintrust.smoketest.otelagent.OtelAgentSmokeTest'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def btAgent = braintrustAgentJar.map { it.archiveFile.get().asFile.absolutePath }
+  def sdkExtJar = braintrustSdkExtJar.map { it.archiveFile.get().asFile.absolutePath }
+  def otelAgentJar = configurations.otelAgent.singleFile
+
+  jvmArgs = [
+    "-javaagent:${otelAgentJar.absolutePath}",
+    // Point OTel OTLP exporter at our mock collector (HTTP/1.1 — mock doesn't support HTTP/2)
+    "-Dotel.exporter.otlp.endpoint=http://127.0.0.1:18242",
+    "-Dotel.exporter.otlp.protocol=http/protobuf",
+    "-Dotel.traces.exporter=otlp",
+    "-Dotel.metrics.exporter=none",
+    "-Dotel.logs.exporter=none",
+    "-Dotel.service.name=bt-otel-smoke-test",
+    // Port config for the smoke test process itself
+    "-Dbraintrust.smoketest.otel.mock.port=18242",
+    // "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5566",
+  ]
+
+  // Prevent host environment from leaking into the test process
+  environment.remove('OTEL_EXPORTER_OTLP_ENDPOINT')
+  environment.remove('OTEL_TRACES_EXPORTER')
+  environment.remove('OTEL_METRICS_EXPORTER')
+  environment.remove('OTEL_LOGS_EXPORTER')
+
+  // ── Caching ──
+  inputs.files(braintrustAgentJar)
+  inputs.files(braintrustSdkExtJar)
+  inputs.files(configurations.otelAgent)
+  inputs.files(sourceSets.main.output)
+  def markerFile = layout.buildDirectory.file('test-results/otel-agent-only-smoke-test.passed')
+  outputs.file(markerFile)
+
+  doLast {
+    markerFile.get().asFile.tap {
+      parentFile.mkdirs()
+      text = "passed at ${java.time.Instant.now()}"
+    }
+  }
+}
+
+test.dependsOn smokeTestBTAgentFirst, smokeTestOtelAgentOnly

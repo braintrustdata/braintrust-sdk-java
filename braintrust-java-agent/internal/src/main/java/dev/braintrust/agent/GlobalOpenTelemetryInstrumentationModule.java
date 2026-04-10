@@ -61,6 +61,17 @@ public class GlobalOpenTelemetryInstrumentationModule extends InstrumentationMod
 
         @Advice.OnMethodExit
         static void onExit(@Advice.Return(readOnly = false) OpenTelemetry result) {
+            try {
+                Class<?> openTelemetrySdkAutoConfiguration =
+                        Class.forName(
+                                "io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk");
+                // if we make it here, otel sdk autoconfigure is on the system classpath and we've
+                // applied instrumentation via our auto configure sdk builder module. So there's
+                // nothing to do.
+                return;
+            } catch (ClassNotFoundException e) {
+                // this is fine, we'll use our otel sdk
+            }
             // almost identical to the original method, but load autoconfigure out of the braintrust
             // classloader
             ClassLoader braintrustClassLoader = BraintrustBridge.getAgentClassLoader();
