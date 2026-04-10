@@ -170,11 +170,19 @@ public class BraintrustSpringAITest {
         assertCommonSpanAttributes(span, provider);
         assertInputMessages(span, 2);
         JsonNode messages = inputMessages(span);
-        assertEquals("system", messages.get(0).get("role").asText());
-        assertEquals("user", messages.get(1).get("role").asText());
-        assertTrue(
-                messages.get(1).get("content").asText().contains("capital"),
-                "user message should contain the prompt text");
+        // Find messages by role — ordering may differ between providers.
+        JsonNode systemMsg = null, userMsg = null;
+        for (int i = 0; i < messages.size(); i++) {
+            String role = messages.get(i).get("role").asText();
+            if ("system".equals(role)) systemMsg = messages.get(i);
+            if ("user".equals(role)) userMsg = messages.get(i);
+        }
+        assertNotNull(systemMsg, "should have a system message");
+        assertNotNull(userMsg, "should have a user message");
+        JsonNode content = userMsg.get("content");
+        String contentText =
+                content.isArray() ? content.get(0).get("text").asText() : content.asText();
+        assertTrue(contentText.contains("capital"), "user message should contain the prompt text");
         assertOutputMentionsParis(span, provider);
     }
 
@@ -210,6 +218,10 @@ public class BraintrustSpringAITest {
         assertEquals("user", inputMessages(span).get(0).get("role").asText());
         assertOutputMentionsParis(span, provider);
         assertTokenMetrics(span);
+        assertTrue(
+                metrics(span).has("time_to_first_token")
+                        && metrics(span).get("time_to_first_token").asLong() >= 0,
+                "streaming responses should capture time to first token");
     }
 
     // -------------------------------------------------------------------------

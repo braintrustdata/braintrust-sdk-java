@@ -26,9 +26,12 @@ public class SpringAIAnthropicInstrumentationModule extends InstrumentationModul
     public List<String> getHelperClassNames() {
         return List.of(
                 PACKAGE + "BraintrustSpringAI",
-                PACKAGE + "AnthropicBuilderWrapper",
-                PACKAGE + "BraintrustObservationHandler",
-                PACKAGE + "TriConsumer",
+                PACKAGE + "BraintrustSpringAI$BraintrustRestInterceptor",
+                PACKAGE + "BraintrustSpringAI$BufferedClientHttpResponse",
+                PACKAGE + "BraintrustSpringAI$BraintrustWebClientFilter",
+                PACKAGE + "BraintrustSpringAI$BodyCapturingRequest",
+                PACKAGE + "BraintrustSpringAI$BodyCapturingOutputMessage",
+                PACKAGE + "BraintrustSpringAI$StreamContext",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }

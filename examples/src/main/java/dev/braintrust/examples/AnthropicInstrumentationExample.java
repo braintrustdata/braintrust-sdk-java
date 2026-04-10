@@ -47,7 +47,7 @@ public class AnthropicInstrumentationExample {
     private static void messagesApiExample(AnthropicClient anthropicClient) {
         var request =
                 MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_5_HAIKU_20241022)
+                        .model("claude-haiku-4-5")
                         .system("Use as few words as possible in your answers")
                         .addUserMessage("Who was the first president of the United States?")
                         .maxTokens(50)

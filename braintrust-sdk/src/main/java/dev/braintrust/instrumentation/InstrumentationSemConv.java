@@ -184,10 +184,14 @@ public class InstrumentationSemConv {
             // Build input array: messages + system (as a synthetic system-role entry)
             if (requestJson.has("messages")) {
                 ArrayNode inputArray = BraintrustJsonMapper.get().createArrayNode();
-                // Append messages first
-                requestJson.get("messages").forEach(inputArray::add);
+                // Append messages, simplifying single-text content blocks to plain strings
+                for (JsonNode msg : requestJson.get("messages")) {
+                    inputArray.add(simplifyAnthropicMessage(msg));
+                }
                 // Append system prompt as a {role:"system", content:"..."} entry if present
-                if (requestJson.has("system")) {
+                if (requestJson.has("system")
+                        && !requestJson.get("system").isNull()
+                        && !requestJson.get("system").asText().isEmpty()) {
                     var systemNode = BraintrustJsonMapper.get().createObjectNode();
                     systemNode.put("role", "system");
                     systemNode.set("content", requestJson.get("system"));
@@ -233,6 +237,31 @@ public class InstrumentationSemConv {
     // -------------------------------------------------------------------------
     // Shared helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Simplifies an Anthropic message node by converting single-text content block arrays (e.g.
+     * {@code [{"type":"text","text":"hello"}]}) to plain strings. This normalizes the format used
+     * by Spring AI's Anthropic client to match the standard Anthropic SDK format.
+     */
+    private static JsonNode simplifyAnthropicMessage(JsonNode msg) {
+        if (!msg.has("content") || !msg.get("content").isArray()) {
+            return msg;
+        }
+        JsonNode contentArray = msg.get("content");
+        // Single element that is a text block → simplify to plain string
+        if (contentArray.size() == 1) {
+            JsonNode block = contentArray.get(0);
+            if (block.isObject()
+                    && block.has("type")
+                    && "text".equals(block.get("type").asText())
+                    && block.has("text")) {
+                var simplified = ((com.fasterxml.jackson.databind.node.ObjectNode) msg.deepCopy());
+                simplified.put("content", block.get("text").asText());
+                return simplified;
+            }
+        }
+        return msg;
+    }
 
     private static String getSpanName(String providerName, List<String> pathSegments) {
         if (pathSegments.isEmpty()) {

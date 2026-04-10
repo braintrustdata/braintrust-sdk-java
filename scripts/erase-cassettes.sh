@@ -2,5 +2,5 @@
 
 cd "$(dirname "$(readlink -f "${BASH_SOURCE}")")"/..
 
-rm -rf src/test/resources/cassettes/
-mkdir -p src/test/resources/cassettes/
+rm -rf test-harness/src/testFixtures/resources/cassettes/
+mkdir -p test-harness/src/testFixtures/resources/cassettes/
