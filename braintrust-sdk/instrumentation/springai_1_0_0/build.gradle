@@ -26,10 +26,6 @@ dependencies {
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
   implementation project(':braintrust-sdk')
 
-  // AutoService for SPI registration
-  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
-  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
   // ByteBuddy for ElementMatcher types used in instrumentation definitions
   compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
 

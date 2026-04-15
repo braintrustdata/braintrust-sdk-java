@@ -1,22 +1,15 @@
 package dev.braintrust.agent;
 
-import com.google.auto.service.AutoService;
 import dev.braintrust.Braintrust;
 import dev.braintrust.agent.dd.BTInterceptor;
-import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.bootstrap.BraintrustClassLoader;
 import dev.braintrust.instrumentation.Instrumenter;
-import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
-import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
-import io.opentelemetry.sdk.logs.SdkLoggerProvider;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import java.lang.instrument.Instrumentation;
 import lombok.extern.slf4j.Slf4j;
 
 /** The real agent installation logic */
 @Slf4j
-@AutoService(AutoConfigurationCustomizerProvider.class)
-public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
+public class BraintrustAgent {
 
     /** Called reflectively from AgentBootstrap premain. */
     public static void install(String agentArgs, Instrumentation inst) {
@@ -36,25 +29,6 @@ public class BraintrustAgent implements AutoConfigurationCustomizerProvider {
         if (jvmRunningWithDatadogOtelConfig() && ddApiOnBootstrapClasspath()) {
             BTInterceptor.install();
         }
-    }
-
-    @Override
-    public void customize(AutoConfigurationCustomizer autoConfiguration) {
-        autoConfiguration.addTracerProviderCustomizer(
-                ((sdkTracerProviderBuilder, configProperties) -> {
-                    if (!BraintrustBridge.otelInstallCount.compareAndSet(0, 1)) {
-                        log.warn(
-                                "otel install invoked more than once. This should not happen."
-                                        + " Bailing.");
-                        return sdkTracerProviderBuilder;
-                    }
-                    var loggerBuilder = SdkLoggerProvider.builder();
-                    var meterBuilder = SdkMeterProvider.builder();
-                    Braintrust.get()
-                            .openTelemetryEnable(
-                                    sdkTracerProviderBuilder, loggerBuilder, meterBuilder);
-                    return sdkTracerProviderBuilder;
-                }));
     }
 
     /** Checks whether the Datadog agent is present and configured for OTel integration */

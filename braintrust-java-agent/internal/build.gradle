@@ -17,10 +17,6 @@ dependencies {
   // Instrumentation framework interfaces
   implementation project(':braintrust-java-agent:instrumenter')
 
-  // AutoService for SPI registration (if any modules are defined directly in internal)
-  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
-  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
   // SLF4J API — needed at compile time for Lombok's @Slf4j annotation
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
