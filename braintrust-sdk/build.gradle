@@ -109,6 +109,8 @@ dependencies {
   api "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   api "io.opentelemetry:opentelemetry-sdk-trace:${otelVersion}"
   api "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${otelVersion}"
+  implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
   implementation "io.opentelemetry:opentelemetry-exporter-logging:${otelVersion}"
   implementation "io.opentelemetry.semconv:opentelemetry-semconv:1.39.0"

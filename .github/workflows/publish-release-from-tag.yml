@@ -108,16 +108,21 @@ jobs:
           # braintrust-java-agent artifact (single fat jar, no sources/javadoc)
           AGENT_JAR=$(find braintrust-java-agent/build/libs -name "braintrust-java-agent-${VERSION}.jar" | head -1)
 
+          # braintrust-otel-extension artifact (fat jar, no sources/javadoc)
+          OTL_EXT_JAR=$(find braintrust-otel-extension/build/libs -name "braintrust-otel-extension-${VERSION}.jar" | head -1)
+
           echo "sdk-main-jar=$SDK_MAIN_JAR" >> $GITHUB_OUTPUT
           echo "sdk-sources-jar=$SDK_SOURCES_JAR" >> $GITHUB_OUTPUT
           echo "sdk-javadoc-jar=$SDK_JAVADOC_JAR" >> $GITHUB_OUTPUT
           echo "agent-jar=$AGENT_JAR" >> $GITHUB_OUTPUT
+          echo "otel-ext-jar=$OTL_EXT_JAR" >> $GITHUB_OUTPUT
 
           echo "Found artifacts:"
           echo "  SDK Main JAR: $SDK_MAIN_JAR"
           echo "  SDK Sources JAR: $SDK_SOURCES_JAR"
           echo "  SDK Javadoc JAR: $SDK_JAVADOC_JAR"
           echo "  Agent JAR: $AGENT_JAR"
+          echo "  OTel Extension JAR: $OTL_EXT_JAR"
 
       - name: Create GitHub Release
         run: |
@@ -133,7 +138,8 @@ jobs:
             "${{ steps.find-artifacts.outputs.sdk-main-jar }}" \
             "${{ steps.find-artifacts.outputs.sdk-sources-jar }}" \
             "${{ steps.find-artifacts.outputs.sdk-javadoc-jar }}" \
-            "${{ steps.find-artifacts.outputs.agent-jar }}"; do
+            "${{ steps.find-artifacts.outputs.agent-jar }}" \
+            "${{ steps.find-artifacts.outputs.otel-ext-jar }}"; do
             if [[ -n "$jar" && -f "$jar" ]]; then
               gh release upload "$TAG" "$jar"
             fi

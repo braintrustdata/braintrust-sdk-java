@@ -40,19 +40,13 @@ public class AgentBootstrap {
         }
 
         log("Braintrust Java Agent starting...");
-
-        if (jvmRunningWithOtelAgent()) {
-            log(
-                    "ERROR: Braintrust agent is not yet compatible with the OTel -javaagent."
-                            + " aborting install.");
-            return;
-        }
         if (jvmRunningWithDatadogOtelConfig() && (!isRunningAfterDatadogAgent())) {
             log("ERROR: Braintrust agent must run _after_ datadog -javaagent. aborting install.");
             return;
         }
 
-        boolean installOnBootstrap = !jvmRunningWithDatadogOtelConfig();
+        boolean installOnBootstrap =
+                !jvmRunningWithDatadogOtelConfig() && !jvmRunningWithOtelAgent();
         try {
             // Locate the agent JAR from our own code source
             URL agentJarURL =
