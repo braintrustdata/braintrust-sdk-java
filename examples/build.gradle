@@ -36,6 +36,7 @@ dependencies {
   implementation 'com.google.genai:google-genai:1.20.0'
   // spring ai examples
   implementation 'org.springframework.ai:spring-ai-anthropic:1.1.0'
+  implementation 'org.springframework.ai:spring-ai-bedrock-converse:1.1.0'
   implementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'
   implementation 'org.springframework.ai:spring-ai-openai:1.1.0'
   // spring-ai-openai requires spring-webflux (WebClient) at runtime
@@ -47,6 +48,8 @@ dependencies {
   // to run langchain4j examples
   implementation 'dev.langchain4j:langchain4j:1.9.1'
   implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
+  // WireMock for stubbing AWS Bedrock Converse API locally
+  implementation 'org.wiremock:wiremock:3.12.1'
 }
 
 application {
