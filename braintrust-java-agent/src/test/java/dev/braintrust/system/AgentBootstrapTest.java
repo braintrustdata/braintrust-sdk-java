@@ -43,7 +43,8 @@ class AgentBootstrapTest {
                         // only these specific classes are allowed to appear on the system
                         // classpath. everything else must be on the bootstrap or braintrust
                         // classpaths
-                        "dev.braintrust.system.AgentBootstrap");
+                        "dev.braintrust.system.AgentBootstrap",
+                        "dev.braintrust.system.AgentBootstrap$AgentKind");
 
         ClassLoader bootstrapClassLoader = null;
         var systemClassloader = ClassLoader.getSystemClassLoader();
@@ -149,6 +150,22 @@ class AgentBootstrapTest {
         for (var set : sets) {
             assertFalse(set.contains(value), "unexpected value for set %s".formatted(value));
         }
+    }
+
+    @Test
+    void detectAgentsIncludesBraintrust() {
+        var agents = AgentBootstrap.detectAgents();
+        // The test JVM is launched with the BT agent attached, so it must appear.
+        assertTrue(
+                agents.contains(AgentBootstrap.AgentKind.BRAINTRUST),
+                "expected BRAINTRUST in detected agents, got: " + agents);
+        // No OTel or DD agent in the plain test JVM.
+        assertFalse(
+                agents.contains(AgentBootstrap.AgentKind.OPENTELEMETRY),
+                "did not expect OPENTELEMETRY in plain test JVM, got: " + agents);
+        assertFalse(
+                agents.contains(AgentBootstrap.AgentKind.DATADOG),
+                "did not expect DATADOG in plain test JVM, got: " + agents);
     }
 
     @Test

@@ -4,7 +4,10 @@ import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 
 /**
  * Braintrust Java Agent entry point.
@@ -38,15 +41,16 @@ public class AgentBootstrap {
             log("Agent already installed, skipping.");
             return;
         }
+        var javaAgents = detectAgents();
 
         log("Braintrust Java Agent starting...");
-        if (jvmRunningWithDatadogOtelConfig() && (!isRunningAfterDatadogAgent())) {
+        if (jvmRunningWithDatadogOtelConfig() && (!isRunningAfterDatadogAgent(javaAgents))) {
             log("ERROR: Braintrust agent must run _after_ datadog -javaagent. aborting install.");
             return;
         }
 
         boolean installOnBootstrap =
-                !jvmRunningWithDatadogOtelConfig() && !jvmRunningWithOtelAgent();
+                !jvmRunningWithDatadogOtelConfig() && !jvmRunningWithOtelAgent(javaAgents);
         try {
             // Locate the agent JAR from our own code source
             URL agentJarURL =
@@ -95,21 +99,56 @@ public class AgentBootstrap {
         return (ClassLoader) createMethod.invoke(null, agentJarURL, btClassLoaderParent);
     }
 
+    enum AgentKind {
+        BRAINTRUST,
+        OPENTELEMETRY,
+        DATADOG,
+        UNKNOWN
+    }
+
     /**
-     * Checks whether the OpenTelemetry Java agent is present by looking for its premain class on
-     * the system classloader. Since {@code -javaagent} JARs are always on the system classpath,
-     * this works regardless of agent ordering.
+     * Inspects all {@code -javaagent} JARs on the command line and returns their kinds by peeking
+     * at each JAR's {@code META-INF/MANIFEST.MF} {@code Premain-Class} attribute. Works regardless
+     * of agent ordering since it reads the command line directly rather than relying on premain
+     * side-effects.
      */
-    private static boolean jvmRunningWithOtelAgent() {
+    static List<AgentKind> detectAgents() {
+        var agents = new ArrayList<AgentKind>();
         try {
-            Class.forName(
-                    "io.opentelemetry.javaagent.OpenTelemetryAgent",
-                    false,
-                    ClassLoader.getSystemClassLoader());
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
+            var info = ProcessHandle.current().info();
+            var arguments = info.arguments();
+            if (arguments.isEmpty()) return agents;
+            for (var arg : arguments.get()) {
+                if (!arg.startsWith("-javaagent:")) continue;
+                // Strip optional =agentargs suffix: -javaagent:/path/to.jar=args
+                var jarPath = arg.substring("-javaagent:".length());
+                var eqIdx = jarPath.indexOf('=');
+                if (eqIdx >= 0) jarPath = jarPath.substring(0, eqIdx);
+                agents.add(classifyAgentJar(jarPath));
+            }
+        } catch (Throwable ignored) {
+            // ProcessHandle unavailable — return empty, callers fall back gracefully.
         }
+        return agents;
+    }
+
+    private static AgentKind classifyAgentJar(String jarPath) {
+        try (var jar = new JarFile(jarPath, false)) {
+            Manifest manifest = jar.getManifest();
+            if (manifest == null) return AgentKind.UNKNOWN;
+            var premain = manifest.getMainAttributes().getValue("Premain-Class");
+            if (premain == null) return AgentKind.UNKNOWN;
+            if (premain.startsWith("dev.braintrust.")) return AgentKind.BRAINTRUST;
+            if (premain.startsWith("io.opentelemetry.javaagent.")) return AgentKind.OPENTELEMETRY;
+            if (premain.startsWith("datadog.")) return AgentKind.DATADOG;
+            return AgentKind.UNKNOWN;
+        } catch (Throwable ignored) {
+            return AgentKind.UNKNOWN;
+        }
+    }
+
+    private static boolean jvmRunningWithOtelAgent(List<AgentKind> agentKinds) {
+        return agentKinds.contains(AgentKind.OPENTELEMETRY);
     }
 
     /** Checks whether the Datadog agent is present and configured for OTel integration */
@@ -122,21 +161,21 @@ public class AgentBootstrap {
         return Boolean.parseBoolean(envVar);
     }
 
-    /**
-     * Returns true if the Datadog agent's premain has already executed, meaning it was listed
-     * before the Braintrust agent in the {@code -javaagent} flags.
-     */
-    private static boolean isRunningAfterDatadogAgent() {
-        // DD's premain appends its jars to the bootstrap classpath, making
-        // {@code datadog.trace.bootstrap.Agent} loadable from the bootstrap (null)
-        // classloader. If that class is not found on bootstrap, DD either isn't
-        // present or hasn't run its premain yet (i.e. BT is first).
-        try {
-            Class.forName("datadog.trace.bootstrap.Agent", false, null);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
+    /** Returns true if dd agent is present and bt agent's premain runs after the dd premain */
+    private static boolean isRunningAfterDatadogAgent(List<AgentKind> agents) {
+        Integer ddIndex = null;
+        Integer btIndex = null;
+        for (int i = 0; i < agents.size(); i++) {
+            if (agents.get(i).equals(AgentKind.DATADOG)) {
+                ddIndex = i;
+            } else if (agents.get(i).equals(AgentKind.BRAINTRUST)) {
+                btIndex = i;
+            }
+            if (ddIndex != null && btIndex != null) {
+                break;
+            }
         }
+        return (ddIndex != null) && (btIndex != null) && btIndex > ddIndex;
     }
 
     private static void enableOtelSDKAutoconfiguration() {
