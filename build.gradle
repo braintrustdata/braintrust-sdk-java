@@ -108,6 +108,11 @@ subprojects {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'io.freefair.lombok'
 
+    dependencies {
+      compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+      annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+    }
+
     spotless {
       java {
         target 'src/*/java/**/*.java'
