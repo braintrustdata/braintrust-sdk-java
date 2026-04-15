@@ -34,9 +34,6 @@ public class OtelAutoConfigureInstrumentationTest {
 
     public static void main(String[] args) {
         AutoConfiguredOpenTelemetrySdk.builder().build();
-        // FIXME TODO
-        if (true) return;
-
         if (!appCustomizerInvoked.get()) {
             throw new RuntimeException("app's tracerProvider customizer was not invoked");
         }
