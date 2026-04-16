@@ -21,6 +21,7 @@ dependencies {
     testImplementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
     testImplementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
     testImplementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
+    testImplementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
 
     // Jackson for JSON processing
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
@@ -30,6 +31,10 @@ dependencies {
 
     // Anthropic SDK
     testImplementation 'com.anthropic:anthropic-java:2.10.0'
+
+    // AWS Bedrock SDK
+    testImplementation 'software.amazon.awssdk:bedrockruntime:2.30.0'
+    testImplementation 'software.amazon.awssdk:netty-nio-client:2.30.0'
 
     // Gemini SDK
     testImplementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'

@@ -258,10 +258,13 @@ public class VCR {
         // Extract request body pattern for matching
         JsonNode bodyPatterns = mapping.at("/request/bodyPatterns");
 
-        // Check if this is an SSE response
+        // Check if this is an SSE response or binary AWS event-stream response
         JsonNode contentType = mapping.at("/response/headers/Content-Type");
         boolean isSse =
                 contentType.isTextual() && contentType.asText().contains("text/event-stream");
+        boolean isEventStream =
+                contentType.isTextual()
+                        && contentType.asText().contains("application/vnd.amazon.eventstream");
 
         // Check if this is a function invoke request with dynamic OTEL parent info
         // Only handle invoke requests that have parent.row_ids (which contains dynamic trace IDs)
@@ -277,12 +280,16 @@ public class VCR {
             }
         }
 
-        if (!isSse && !isFunctionInvokeWithParent) {
+        if (!isSse && !isEventStream && !isFunctionInvokeWithParent) {
             return; // Let WireMock handle other responses normally
         }
 
         if (isSse) {
             log.info("Creating programmatic stub for SSE response: " + mappingPath.getFileName());
+        } else if (isEventStream) {
+            log.info(
+                    "Creating programmatic stub for binary event-stream response: "
+                            + mappingPath.getFileName());
         } else {
             log.info(
                     "Creating programmatic stub for function invoke with parent: "
@@ -293,17 +300,6 @@ public class VCR {
         int status = mapping.at("/response/status").asInt(200);
         String responseContentType =
                 contentType.isTextual() ? contentType.asText() : "application/json";
-
-        String body;
-        if (mapping.at("/response/body").isTextual()) {
-            body = mapping.at("/response/body").asText();
-        } else if (mapping.at("/response/bodyFileName").isTextual()) {
-            String bodyFileName = mapping.at("/response/bodyFileName").asText();
-            Path bodyPath = Paths.get(cassettesRoot, mappingsDir, "__files", bodyFileName);
-            body = Files.readString(bodyPath);
-        } else {
-            return;
-        }
 
         // Create programmatic stub
         com.github.tomakehurst.wiremock.client.MappingBuilder stub =
@@ -330,10 +326,29 @@ public class VCR {
         com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder response =
                 com.github.tomakehurst.wiremock.client.WireMock.aResponse()
                         .withStatus(status)
-                        .withHeader("Content-Type", responseContentType)
-                        .withBody(body);
+                        .withHeader("Content-Type", responseContentType);
 
-        // Use instance method
+        // Binary event-stream bodies must be served as raw bytes to avoid UTF-8 corruption
+        if (isEventStream) {
+            if (mapping.at("/response/bodyFileName").isTextual()) {
+                String bodyFileName = mapping.at("/response/bodyFileName").asText();
+                Path bodyPath = Paths.get(cassettesRoot, mappingsDir, "__files", bodyFileName);
+                response.withBody(Files.readAllBytes(bodyPath));
+            } else {
+                return;
+            }
+        } else {
+            if (mapping.at("/response/body").isTextual()) {
+                response.withBody(mapping.at("/response/body").asText());
+            } else if (mapping.at("/response/bodyFileName").isTextual()) {
+                String bodyFileName = mapping.at("/response/bodyFileName").asText();
+                Path bodyPath = Paths.get(cassettesRoot, mappingsDir, "__files", bodyFileName);
+                response.withBody(Files.readString(bodyPath));
+            } else {
+                return;
+            }
+        }
+
         wireMock.stubFor(stub.willReturn(response));
     }
 

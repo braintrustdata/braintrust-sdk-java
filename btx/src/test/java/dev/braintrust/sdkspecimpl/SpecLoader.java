@@ -55,7 +55,8 @@ public class SpecLoader {
     static final Map<String, List<String>> CLIENTS_BY_PROVIDER =
             Map.of(
                     "openai", List.of("openai", "langchain-openai", "springai-openai"),
-                    "anthropic", List.of("anthropic", "springai-anthropic"));
+                    "anthropic", List.of("anthropic", "springai-anthropic"),
+                    "bedrock", List.of("bedrock"));
 
     /**
      * Returns the clients to test for the given provider. Defaults to {@code [providerName]} if the

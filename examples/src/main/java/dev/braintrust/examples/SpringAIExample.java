@@ -3,6 +3,7 @@ package dev.braintrust.examples;
 import com.google.genai.Client;
 import dev.braintrust.Braintrust;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.instrumentation.awsbedrock.v2_30_0.BraintrustAWSBedrock;
 import dev.braintrust.instrumentation.genai.BraintrustGenAI;
 import dev.braintrust.instrumentation.springai.v1_0_0.BraintrustSpringAI;
 import io.opentelemetry.api.OpenTelemetry;
@@ -30,6 +31,7 @@ import org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfigur
 import org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
 /** Spring Boot application demonstrating Braintrust + Spring AI integration */
 @SpringBootApplication(
@@ -135,12 +137,17 @@ public class SpringAIExample {
 
         if (System.getenv("AWS_ACCESS_KEY_ID") != null
                 && System.getenv("AWS_SECRET_ACCESS_KEY") != null) {
+            var bedrockClient =
+                    BraintrustAWSBedrock.wrap(openTelemetry, BedrockRuntimeClient.builder())
+                            .build();
             models.add(
                     BedrockProxyChatModel.builder()
+                            .bedrockRuntimeClient(bedrockClient)
                             .region(Region.US_EAST_1)
                             .defaultOptions(
                                     BedrockChatOptions.builder()
-                                            .model("anthropic.claude-3-haiku-20240307-v1:0")
+                                            // .model("us.anthropic.claude-haiku-4-5-20251001-v1:0")
+                                            .model("us.amazon.nova-lite-v1:0")
                                             .temperature(0.0)
                                             .maxTokens(50)
                                             .build())

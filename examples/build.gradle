@@ -25,6 +25,7 @@ dependencies {
   implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
   implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
   implementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
+  implementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
   runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   // To run otel examples
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
@@ -48,8 +49,7 @@ dependencies {
   // to run langchain4j examples
   implementation 'dev.langchain4j:langchain4j:1.9.1'
   implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
-  // WireMock for stubbing AWS Bedrock Converse API locally
-  implementation 'org.wiremock:wiremock:3.12.1'
+
 }
 
 application {

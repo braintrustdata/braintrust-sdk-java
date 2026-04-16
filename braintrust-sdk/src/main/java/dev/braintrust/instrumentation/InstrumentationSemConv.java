@@ -17,6 +17,7 @@ import lombok.SneakyThrows;
 public class InstrumentationSemConv {
     public static final String PROVIDER_NAME_OPENAI = "openai";
     public static final String PROVIDER_NAME_ANTHROPIC = "anthropic";
+    public static final String PROVIDER_NAME_BEDROCK = "bedrock";
     public static final String PROVIDER_NAME_OTHER = "generic-ai-provider";
     public static final String UNSET_LLM_SPAN_NAME = "llm";
 
@@ -32,6 +33,25 @@ public class InstrumentationSemConv {
             @Nonnull List<String> pathSegments,
             @Nonnull String method,
             @Nullable String requestBody) {
+        tagLLMSpanRequest(span, providerName, baseUrl, pathSegments, method, requestBody, null);
+    }
+
+    /**
+     * Tag a span with LLM request metadata.
+     *
+     * @param modelId explicit model identifier — used by providers (e.g. Bedrock) where the model
+     *     is not present in the request body. When {@code null} the model is extracted from the
+     *     request body if possible.
+     */
+    @SneakyThrows
+    public static void tagLLMSpanRequest(
+            Span span,
+            @Nonnull String providerName,
+            @Nonnull String baseUrl,
+            @Nonnull List<String> pathSegments,
+            @Nonnull String method,
+            @Nullable String requestBody,
+            @Nullable String modelId) {
         switch (providerName) {
             case PROVIDER_NAME_OPENAI ->
                     tagOpenAIRequest(
@@ -39,6 +59,15 @@ public class InstrumentationSemConv {
             case PROVIDER_NAME_ANTHROPIC ->
                     tagAnthropicRequest(
                             span, providerName, baseUrl, pathSegments, method, requestBody);
+            case PROVIDER_NAME_BEDROCK ->
+                    tagBedrockRequest(
+                            span,
+                            providerName,
+                            baseUrl,
+                            pathSegments,
+                            method,
+                            requestBody,
+                            modelId);
             default ->
                     tagOpenAIRequest(
                             span, providerName, baseUrl, pathSegments, method, requestBody);
@@ -61,6 +90,8 @@ public class InstrumentationSemConv {
                     tagOpenAIResponse(span, responseBody, timeToFirstTokenNanoseconds);
             case PROVIDER_NAME_ANTHROPIC ->
                     tagAnthropicResponse(span, responseBody, timeToFirstTokenNanoseconds);
+            case PROVIDER_NAME_BEDROCK ->
+                    tagBedrockResponse(span, responseBody, timeToFirstTokenNanoseconds);
             default -> tagOpenAIResponse(span, responseBody, timeToFirstTokenNanoseconds);
         }
     }
@@ -235,6 +266,102 @@ public class InstrumentationSemConv {
     }
 
     // -------------------------------------------------------------------------
+    // AWS Bedrock provider implementation
+    // -------------------------------------------------------------------------
+
+    @SneakyThrows
+    private static void tagBedrockRequest(
+            Span span,
+            String providerName,
+            String baseUrl,
+            List<String> pathSegments,
+            String method,
+            @Nullable String requestBody,
+            @Nullable String modelId) {
+        String endpoint = bedrockEndpoint(pathSegments);
+        span.updateName("bedrock." + endpoint);
+        span.setAttribute("braintrust.span_attributes", toJson(Map.of("type", "llm")));
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("provider", "bedrock");
+        metadata.put("endpoint", endpoint);
+        metadata.put("request_path", String.join("/", pathSegments));
+        metadata.put("request_base_uri", baseUrl);
+        metadata.put("request_method", method);
+
+        if (modelId != null) {
+            metadata.put("model", modelId);
+        }
+
+        if (requestBody != null) {
+            JsonNode requestJson = BraintrustJsonMapper.get().readTree(requestBody);
+            // Extract inference parameters from inferenceConfig
+            if (requestJson.has("inferenceConfig")) {
+                JsonNode cfg = requestJson.get("inferenceConfig");
+                if (cfg.has("maxTokens")) metadata.put("max_tokens", cfg.get("maxTokens"));
+                if (cfg.has("temperature")) metadata.put("temperature", cfg.get("temperature"));
+                if (cfg.has("topP")) metadata.put("top_p", cfg.get("topP"));
+                if (cfg.has("stopSequences"))
+                    metadata.put("stop_sequences", cfg.get("stopSequences"));
+            }
+            // Bedrock Converse uses "messages" with typed content block arrays like
+            // [{"text":"..."}]
+            if (requestJson.has("messages")) {
+                ArrayNode inputArray = BraintrustJsonMapper.get().createArrayNode();
+                // Bedrock puts system prompts in a separate top-level "system" array:
+                // [{"text": "..."}]. Prepend as a synthetic {role:"system", content:[...]} entry.
+                if (requestJson.has("system")
+                        && requestJson.get("system").isArray()
+                        && !requestJson.get("system").isEmpty()) {
+                    var systemNode = BraintrustJsonMapper.get().createObjectNode();
+                    systemNode.put("role", "system");
+                    systemNode.set("content", requestJson.get("system"));
+                    inputArray.add(systemNode);
+                }
+                for (JsonNode msg : requestJson.get("messages")) {
+                    inputArray.add(normalizeBedrockMessage(msg));
+                }
+                span.setAttribute("braintrust.input_json", toJson(inputArray));
+            }
+        }
+
+        span.setAttribute("braintrust.metadata", toJson(metadata));
+    }
+
+    @SneakyThrows
+    private static void tagBedrockResponse(
+            Span span, String responseBody, @Nullable Long timeToFirstTokenNanoseconds) {
+        JsonNode responseJson = BraintrustJsonMapper.get().readTree(responseBody);
+
+        // Bedrock output lives at output.message. Normalize to a single-element array matching the
+        // same [{role, content: [...]}] shape as input so the UI can render the LLM thread view.
+        if (responseJson.has("output") && responseJson.get("output").has("message")) {
+            JsonNode message = responseJson.get("output").get("message");
+            ArrayNode outputArray = BraintrustJsonMapper.get().createArrayNode();
+            outputArray.add(normalizeBedrockMessage(message));
+            span.setAttribute("braintrust.output_json", toJson(outputArray));
+        }
+
+        Map<String, Object> metrics = new HashMap<>();
+        if (timeToFirstTokenNanoseconds != null) {
+            metrics.put("time_to_first_token", timeToFirstTokenNanoseconds / 1_000_000_000.0);
+        }
+
+        // Bedrock usage uses camelCase: inputTokens, outputTokens, totalTokens
+        if (responseJson.has("usage")) {
+            JsonNode usage = responseJson.get("usage");
+            if (usage.has("inputTokens")) metrics.put("prompt_tokens", usage.get("inputTokens"));
+            if (usage.has("outputTokens"))
+                metrics.put("completion_tokens", usage.get("outputTokens"));
+            if (usage.has("totalTokens")) metrics.put("tokens", usage.get("totalTokens"));
+        }
+
+        if (!metrics.isEmpty()) {
+            span.setAttribute("braintrust.metrics", toJson(metrics));
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Shared helpers
     // -------------------------------------------------------------------------
 
@@ -261,6 +388,57 @@ public class InstrumentationSemConv {
             }
         }
         return msg;
+    }
+
+    /**
+     * Normalizes a Bedrock Converse message so its content blocks are compatible with the UI's
+     * schema checks. The Converse wire format uses {@code {"text":"..."}} for text blocks, but both
+     * the OpenAI and Anthropic schemas the UI validates against require an explicit {@code
+     * "type":"text"} field. This method adds {@code "type"} to any content block that has a
+     * recognized Bedrock key but is missing it.
+     */
+    private static JsonNode normalizeBedrockMessage(JsonNode msg) {
+        if (!msg.has("content") || !msg.get("content").isArray()) {
+            return msg;
+        }
+        var mapper = BraintrustJsonMapper.get();
+        ArrayNode normalizedContent = mapper.createArrayNode();
+        boolean changed = false;
+        for (JsonNode block : msg.get("content")) {
+            if (block.isObject() && !block.has("type")) {
+                var normalized = (com.fasterxml.jackson.databind.node.ObjectNode) block.deepCopy();
+                if (block.has("text")) {
+                    normalized.put("type", "text");
+                    changed = true;
+                } else if (block.has("toolUse")) {
+                    normalized.put("type", "tool_use");
+                    changed = true;
+                } else if (block.has("toolResult")) {
+                    normalized.put("type", "tool_result");
+                    changed = true;
+                } else if (block.has("image")) {
+                    normalized.put("type", "image");
+                    changed = true;
+                }
+                normalizedContent.add(normalized);
+            } else {
+                normalizedContent.add(block);
+            }
+        }
+        if (!changed) {
+            return msg;
+        }
+        var result = (com.fasterxml.jackson.databind.node.ObjectNode) msg.deepCopy();
+        result.set("content", normalizedContent);
+        return result;
+    }
+
+    /** Returns the Bedrock endpoint name from the last URL path segment (e.g. "converse"). */
+    private static String bedrockEndpoint(List<String> pathSegments) {
+        if (pathSegments.isEmpty()) {
+            return "unknown";
+        }
+        return pathSegments.get(pathSegments.size() - 1);
     }
 
     private static String getSpanName(String providerName, List<String> pathSegments) {
