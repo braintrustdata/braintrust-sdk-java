@@ -95,6 +95,14 @@ tasks.register('fetchSpec', Exec) {
 }
 
 test {
-    dependsOn fetchSpec
-    systemProperty 'btx.spec.root', specOutputDir.get().asFile.absolutePath + '/test/llm_span'
+    // BTX_SPEC_ROOT env var lets you point at a local checkout of braintrust-spec instead of the
+    // fetched copy. When set, fetchSpec is skipped and the system property is set to that path.
+    // Example: BTX_SPEC_ROOT=/Users/you/braintrust/spec/test/llm_span ./gradlew btx:test
+    def specRootEnv = System.getenv('BTX_SPEC_ROOT')
+    if (specRootEnv) {
+        systemProperty 'btx.spec.root', specRootEnv
+    } else {
+        dependsOn fetchSpec
+        systemProperty 'btx.spec.root', specOutputDir.get().asFile.absolutePath + '/test/llm_span'
+    }
 }

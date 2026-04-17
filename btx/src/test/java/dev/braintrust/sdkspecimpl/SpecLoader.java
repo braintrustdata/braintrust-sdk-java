@@ -33,9 +33,16 @@ import org.yaml.snakeyaml.nodes.Tag;
 public class SpecLoader {
 
     /**
-     * The spec root directory. When the {@code btx.spec.root} system property is set (by the {@code
-     * fetchSpec} Gradle task), that path is used. Otherwise falls back to the legacy in-tree
-     * location for local development.
+     * The spec root directory. Resolved in priority order:
+     *
+     * <ol>
+     *   <li>The {@code btx.spec.root} system property — set by the Gradle {@code test} task to the
+     *       output of {@code fetchSpec}, or to {@code $BTX_SPEC_ROOT} when that env var is set.
+     *   <li>The fallback {@code btx/spec/llm_span} in-tree path for ad-hoc local runs.
+     * </ol>
+     *
+     * <p>To use a local checkout of braintrust-spec: {@code
+     * BTX_SPEC_ROOT=/path/to/spec/test/llm_span ./gradlew btx:test}
      */
     private static final String SPEC_ROOT =
             System.getProperty("btx.spec.root", "btx/spec/llm_span");
