@@ -40,6 +40,16 @@ class MuzzleDirective {
      */
     List<String> ignoredInstrumentation = []
 
+    /**
+     * Explicit list of versions to check instead of resolving a range from Maven Central.
+     * When set, {@code versions} is ignored and no network fetch is performed.
+     */
+    List<String> pinnedVersions = []
+
+    void pinVersions(String... versions) {
+        pinnedVersions.addAll(versions)
+    }
+
     void skipVersions(String... versions) {
         skipVersions.addAll(versions)
     }
@@ -54,6 +64,7 @@ class MuzzleDirective {
 
     @Override
     String toString() {
-        "${assertPass ? 'pass' : 'fail'} { ${group}:${module}:${versions} }"
+        def versionStr = pinnedVersions ? "pinned[${pinnedVersions.join(', ')}]" : versions
+        "${assertPass ? 'pass' : 'fail'} { ${group}:${module}:${versionStr} }"
     }
 }
