@@ -1,0 +1,30 @@
+{
+  "id" : "d2a2ec99-c9bf-48e6-b0c6-eb53a928e698",
+  "name" : "model_us.amazon.nova-lite-v10_converse",
+  "request" : {
+    "url" : "/model/us.amazon.nova-lite-v1%3A0/converse",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"What is the capital of France? Reply in one word.\"}]}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-d2a2ec99-c9bf-48e6-b0c6-eb53a928e698.json",
+    "headers" : {
+      "x-amzn-RequestId" : "f62b4526-a86c-4273-a4a7-f8de296a8974",
+      "Date" : "Sun, 19 Apr 2026 23:32:58 GMT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "d2a2ec99-c9bf-48e6-b0c6-eb53a928e698",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

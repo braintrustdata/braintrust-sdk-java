@@ -1,0 +1,30 @@
+{
+  "id" : "400d471f-3f4d-4d3e-9571-cb3f015011c5",
+  "name" : "model_us.amazon.nova-lite-v10_converse",
+  "request" : {
+    "url" : "/model/us.amazon.nova-lite-v1%3A0/converse",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"What color is this image?\"},{\"image\":{\"format\":\"png\",\"source\":{\"bytes\":\"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"}}}]}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-400d471f-3f4d-4d3e-9571-cb3f015011c5.json",
+    "headers" : {
+      "x-amzn-RequestId" : "4d00f377-e51b-4659-b097-044878f09cc4",
+      "Date" : "Sun, 19 Apr 2026 23:33:09 GMT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "400d471f-3f4d-4d3e-9571-cb3f015011c5",
+  "persistent" : true,
+  "insertionIndex" : 6
+}

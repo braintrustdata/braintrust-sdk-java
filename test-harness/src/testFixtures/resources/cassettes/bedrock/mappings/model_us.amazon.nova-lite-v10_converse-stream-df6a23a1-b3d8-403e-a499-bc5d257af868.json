@@ -1,0 +1,30 @@
+{
+  "id" : "df6a23a1-b3d8-403e-a499-bc5d257af868",
+  "name" : "model_us.amazon.nova-lite-v10_converse-stream",
+  "request" : {
+    "url" : "/model/us.amazon.nova-lite-v1%3A0/converse-stream",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"count to 10 slowly\"}]}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-stream-df6a23a1-b3d8-403e-a499-bc5d257af868.txt",
+    "headers" : {
+      "x-amzn-RequestId" : "3f9aae37-90f0-470c-8174-bb9ab43b9ffb",
+      "Date" : "Sun, 19 Apr 2026 23:33:10 GMT",
+      "Content-Type" : "application/vnd.amazon.eventstream"
+    }
+  },
+  "uuid" : "df6a23a1-b3d8-403e-a499-bc5d257af868",
+  "persistent" : true,
+  "insertionIndex" : 4
+}
