@@ -47,16 +47,21 @@ class MuzzleTask extends DefaultTask {
                 logger.lifecycle("[muzzle] Checking: ${directive}")
 
                 List<String> versions
-                try {
-                    versions = MavenVersions.resolve(
-                            directive.group, directive.module, directive.versions, directive.skipVersions)
-                } catch (Exception e) {
-                    throw new GradleException("[muzzle] Failed to resolve versions for ${directive}: ${e.message}", e)
-                }
+                if (directive.pinnedVersions) {
+                    versions = directive.pinnedVersions
+                    logger.lifecycle("[muzzle] Using ${versions.size()} pinned version(s)")
+                } else {
+                    try {
+                        versions = MavenVersions.resolve(
+                                directive.group, directive.module, directive.versions, directive.skipVersions)
+                    } catch (Exception e) {
+                        throw new GradleException("[muzzle] Failed to resolve versions for ${directive}: ${e.message}", e)
+                    }
 
-                if (versions.isEmpty()) {
-                    logger.warn("[muzzle] No versions found for ${directive.group}:${directive.module} in range ${directive.versions}")
-                    continue
+                    if (versions.isEmpty()) {
+                        logger.warn("[muzzle] No versions found for ${directive.group}:${directive.module} in range ${directive.versions}")
+                        continue
+                    }
                 }
 
                 logger.lifecycle("[muzzle] Found ${versions.size()} version(s) to check")

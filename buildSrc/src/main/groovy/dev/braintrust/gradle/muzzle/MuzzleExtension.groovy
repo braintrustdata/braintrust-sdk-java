@@ -38,8 +38,8 @@ class MuzzleExtension {
         if (!directive.module) {
             throw new IllegalArgumentException("muzzle directive requires 'module'")
         }
-        if (!directive.versions) {
-            throw new IllegalArgumentException("muzzle directive requires 'versions'")
+        if (!directive.pinnedVersions && !directive.versions) {
+            throw new IllegalArgumentException("muzzle directive requires either 'versions' or 'pinVersions'")
         }
     }
 }

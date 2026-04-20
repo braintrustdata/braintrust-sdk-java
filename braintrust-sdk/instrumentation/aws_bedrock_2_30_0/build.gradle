@@ -1,0 +1,62 @@
+def awsBedrockVersion = '2.30.0'
+
+muzzle {
+  pass {
+    group = 'software.amazon.awssdk'
+    module = 'bedrockruntime'
+    // num of aws patch versions is huge so list out minor versions instead
+    pinVersions '2.30.0', '2.31.0', '2.32.0', '2.33.0', '2.34.0',
+                '2.35.0', '2.36.0', '2.37.0', '2.38.0', '2.39.0',
+                '2.40.0', '2.41.0'
+    // sdk-core is listed explicitly because SdkDefaultClientBuilder (the ByteBuddy
+    // interception target) lives there, not in bedrockruntime itself
+    extraDependency 'software.amazon.awssdk:sdk-core'
+    extraDependency "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    extraDependency "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    extraDependency "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${jacksonVersion}"
+  }
+  pass {
+    group = 'software.amazon.awssdk'
+    module = 'bedrockruntime'
+    versions = '[2.42.36,)' // latest version and up
+    extraDependency 'software.amazon.awssdk:sdk-core'
+    extraDependency "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    extraDependency "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    extraDependency "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:${jacksonVersion}"
+  }
+}
+
+dependencies {
+  compileOnly project(':braintrust-java-agent:instrumenter')
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation 'com.google.code.findbugs:jsr305:3.0.2'
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+  implementation project(':braintrust-sdk')
+
+  // ByteBuddy for ElementMatcher types used in instrumentation definitions
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Target library — compileOnly because it will be on the app classpath at runtime
+  compileOnly "software.amazon.awssdk:bedrockruntime:${awsBedrockVersion}"
+
+  // Test dependencies
+  testImplementation(testFixtures(project(":test-harness")))
+  testImplementation project(':braintrust-java-agent:instrumenter')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+  testImplementation "software.amazon.awssdk:bedrockruntime:${awsBedrockVersion}"
+  testImplementation "software.amazon.awssdk:netty-nio-client:${awsBedrockVersion}"
+  testImplementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

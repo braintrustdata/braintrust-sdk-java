@@ -41,4 +41,9 @@ dependencies {
   testFixturesImplementation 'com.google.code.findbugs:jsr305:3.0.2'
   testFixturesImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
   testFixturesImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+
+  // Bedrock client builders used by Bedrock30TestUtils — compileOnly so consumers
+  // that don't use Bedrock aren't forced to pull in the AWS SDK.
+  testFixturesCompileOnly 'software.amazon.awssdk:bedrockruntime:2.30.0'
+  testFixturesCompileOnly 'software.amazon.awssdk:netty-nio-client:2.30.0'
 }

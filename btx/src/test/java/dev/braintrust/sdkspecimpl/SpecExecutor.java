@@ -17,8 +17,10 @@ import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
 import com.openai.models.responses.ResponseInputItem;
 import com.openai.models.responses.ResponseOutputItem;
+import dev.braintrust.Bedrock30TestUtils;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.anthropic.BraintrustAnthropic;
+import dev.braintrust.instrumentation.awsbedrock.v2_30_0.BraintrustAWSBedrock;
 import dev.braintrust.instrumentation.genai.BraintrustGenAI;
 import dev.braintrust.instrumentation.langchain.BraintrustLangchain;
 import dev.braintrust.instrumentation.openai.BraintrustOpenAI;
@@ -53,6 +55,16 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock;
+import software.amazon.awssdk.services.bedrockruntime.model.ConversationRole;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamResponseHandler;
+import software.amazon.awssdk.services.bedrockruntime.model.ImageBlock;
+import software.amazon.awssdk.services.bedrockruntime.model.ImageFormat;
+import software.amazon.awssdk.services.bedrockruntime.model.ImageSource;
+import software.amazon.awssdk.services.bedrockruntime.model.Message;
 
 /**
  * Executes LLM spec tests in-process using the Braintrust Java SDK instrumentation.
@@ -73,6 +85,7 @@ public class SpecExecutor {
     private final String openAiApiKey;
     private final String anthropicBaseUrl;
     private final String anthropicApiKey;
+    private final Bedrock30TestUtils bedrockUtils;
     private final io.opentelemetry.api.OpenTelemetry otel;
 
     public SpecExecutor(TestHarness harness) {
@@ -83,6 +96,7 @@ public class SpecExecutor {
         this.openAiApiKey = harness.openAiApiKey();
         this.anthropicBaseUrl = harness.anthropicBaseUrl();
         this.anthropicApiKey = harness.anthropicApiKey();
+        this.bedrockUtils = new Bedrock30TestUtils(harness);
 
         this.openAIClient =
                 BraintrustOpenAI.wrapOpenAI(
@@ -155,6 +169,10 @@ public class SpecExecutor {
             } else {
                 executeAnthropicMessages(request);
             }
+        } else if ("bedrock".equals(provider) && endpoint.contains("/converse-stream")) {
+            executeBedrockConverseStream(request);
+        } else if ("bedrock".equals(provider) && endpoint.contains("/converse")) {
+            executeBedrockConverse(request);
         } else if ("google".equals(provider) && endpoint.contains(":generateContent")) {
             executeGeminiGenerateContent(request, endpoint);
         } else {
@@ -613,6 +631,87 @@ public class SpecExecutor {
         } else {
             anthropicClient.messages().create(params);
         }
+    }
+
+    // ---- AWS Bedrock ------------------------------------------------------------
+
+    @SuppressWarnings("unchecked")
+    private void executeBedrockConverse(Map<String, Object> request) {
+        String modelId = (String) request.get("modelId");
+
+        // Build messages from the spec YAML format: [{role, content: [{text: ...} | {image: ...}]}]
+        List<Message> messages = new ArrayList<>();
+        for (Map<String, Object> msg : (List<Map<String, Object>>) request.get("messages")) {
+            String role = (String) msg.get("role");
+            List<ContentBlock> contentBlocks = new ArrayList<>();
+            for (Map<String, Object> part : (List<Map<String, Object>>) msg.get("content")) {
+                if (part.containsKey("text")) {
+                    contentBlocks.add(ContentBlock.fromText((String) part.get("text")));
+                } else if (part.containsKey("image")) {
+                    contentBlocks.add(
+                            buildBedrockImageBlock((Map<String, Object>) part.get("image")));
+                }
+            }
+            messages.add(
+                    Message.builder()
+                            .role(ConversationRole.fromValue(role))
+                            .content(contentBlocks)
+                            .build());
+        }
+
+        var builder = BraintrustAWSBedrock.wrap(otel, bedrockUtils.syncClientBuilder());
+        try (var client = builder.build()) {
+            client.converse(ConverseRequest.builder().modelId(modelId).messages(messages).build());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void executeBedrockConverseStream(Map<String, Object> request) throws Exception {
+        String modelId = (String) request.get("modelId");
+
+        List<Message> messages = new ArrayList<>();
+        for (Map<String, Object> msg : (List<Map<String, Object>>) request.get("messages")) {
+            String role = (String) msg.get("role");
+            List<ContentBlock> contentBlocks = new ArrayList<>();
+            for (Map<String, Object> part : (List<Map<String, Object>>) msg.get("content")) {
+                if (part.containsKey("text")) {
+                    contentBlocks.add(ContentBlock.fromText((String) part.get("text")));
+                }
+            }
+            messages.add(
+                    Message.builder()
+                            .role(ConversationRole.fromValue(role))
+                            .content(contentBlocks)
+                            .build());
+        }
+
+        var asyncBuilder = BraintrustAWSBedrock.wrap(otel, bedrockUtils.asyncClientBuilder());
+        try (var client = asyncBuilder.build()) {
+            client.converseStream(
+                            ConverseStreamRequest.builder()
+                                    .modelId(modelId)
+                                    .messages(messages)
+                                    .build(),
+                            ConverseStreamResponseHandler.builder()
+                                    .subscriber(
+                                            ConverseStreamResponseHandler.Visitor.builder().build())
+                                    .build())
+                    .get();
+        }
+    }
+
+    /** Builds a Bedrock {@link ContentBlock} image from the YAML {@code image:} map. */
+    @SuppressWarnings("unchecked")
+    private static ContentBlock buildBedrockImageBlock(Map<String, Object> imageMap) {
+        String format = (String) imageMap.getOrDefault("format", "png");
+        Map<String, Object> sourceMap = (Map<String, Object>) imageMap.get("source");
+        String base64 = (String) sourceMap.get("bytes");
+        byte[] imageBytes = java.util.Base64.getDecoder().decode(base64);
+        return ContentBlock.fromImage(
+                ImageBlock.builder()
+                        .format(ImageFormat.fromValue(format))
+                        .source(ImageSource.fromBytes(SdkBytes.fromByteArray(imageBytes)))
+                        .build());
     }
 
     // ---- Google Gemini ----------------------------------------------------------

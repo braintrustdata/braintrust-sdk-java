@@ -153,6 +153,31 @@ public class SpanConverter {
             return part;
         }
 
+        // Bedrock: {type: image, image: {format: "png", source: {bytes: "<base64>"}}}
+        if ("image".equals(p.get("type")) && p.get("image") instanceof Map) {
+            // TODO:
+            //   The Braintrust backend does not transform Bedrock image bytes into attachments,
+            //   so we pass this shape through unchanged to match what the backend stores.
+            //
+            // Map<String, Object> imageMap = (Map<String, Object>) p.get("image");
+            // if (imageMap.get("source") instanceof Map) {
+            //     Map<String, Object> source = (Map<String, Object>) imageMap.get("source");
+            //     String bytes = (String) source.get("bytes");
+            //     if (bytes != null) {
+            //         String format = (String) imageMap.getOrDefault("format", "png");
+            //         String mimeType = "image/" + format;
+            //         Map<String, Object> attachment =
+            //                 toAttachment("data:" + mimeType + ";base64," + bytes);
+            //         Map<String, Object> newImage = new LinkedHashMap<>(imageMap);
+            //         newImage.put("source", attachment);
+            //         Map<String, Object> newPart = new LinkedHashMap<>(p);
+            //         newPart.put("image", newImage);
+            //         return newPart;
+            //     }
+            // }
+            return part;
+        }
+
         if (!"image_url".equals(p.get("type"))) return part;
 
         Object imageUrlObj = p.get("image_url");

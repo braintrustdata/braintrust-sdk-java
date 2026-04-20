@@ -35,7 +35,10 @@ public class TestHarness {
                         getEnv("OPENAI_API_KEY", ""),
                         getEnv("ANTHROPIC_API_KEY", ""),
                         getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "")),
-                        getEnv("BRAINTRUST_API_KEY", ""));
+                        getEnv("BRAINTRUST_API_KEY", ""),
+                        getEnv("AWS_ACCESS_KEY_ID", ""),
+                        getEnv("AWS_SECRET_ACCESS_KEY", ""),
+                        getEnv("AWS_SESSION_TOKEN", ""));
 
         vcr =
                 new VCR(
@@ -43,7 +46,8 @@ public class TestHarness {
                                 "https://api.openai.com/v1", "openai",
                                 "https://api.anthropic.com", "anthropic",
                                 "https://generativelanguage.googleapis.com", "google",
-                                "https://api.braintrust.dev", "braintrust"),
+                                "https://api.braintrust.dev", "braintrust",
+                                "https://bedrock-runtime.us-east-1.amazonaws.com", "bedrock"),
                         apiKeysToNeverRecord);
         vcr.start();
         UnitTestShutdownHook.addShutdownHook(1, vcr::stop);
@@ -155,6 +159,17 @@ public class TestHarness {
 
     public String googleApiKey() {
         return getEnv("GOOGLE_API_KEY", getEnv("GEMINI_API_KEY", "test-key"));
+    }
+
+    /**
+     * Returns the VCR proxy URL for the Bedrock Runtime endpoint in the given region. The region
+     * must have been registered in the VCR target map at init time.
+     */
+    public String bedrockBaseUrl(String region) {
+        if (!"us-east-1".equals(region)) {
+            throw new RuntimeException("unsupported region: " + region);
+        }
+        return vcr.getUrlForTargetBase("https://bedrock-runtime." + region + ".amazonaws.com");
     }
 
     public String braintrustApiBaseUrl() {
