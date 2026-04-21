@@ -20,6 +20,9 @@ dependencies {
   // SLF4J API — needed at compile time for Lombok's @Slf4j annotation
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
+  // SLF4J Simple binding — bundled so the agent always has a logging backend
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
   implementation 'net.bytebuddy:byte-buddy:1.17.5'
 
