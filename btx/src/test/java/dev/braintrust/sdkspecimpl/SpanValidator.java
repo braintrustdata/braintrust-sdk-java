@@ -205,6 +205,14 @@ public class SpanValidator {
                                     context, v));
                 }
             }
+            case "undefined_or_null" -> {
+                if (actual != null) {
+                    fail(
+                            String.format(
+                                    "%s: undefined_or_null: expected null but got %s (value: %s)",
+                                    context, actual.getClass().getSimpleName(), actual));
+                }
+            }
             case "is_non_empty_string" -> {
                 if (!(actual instanceof String) || ((String) actual).isEmpty()) {
                     fail(

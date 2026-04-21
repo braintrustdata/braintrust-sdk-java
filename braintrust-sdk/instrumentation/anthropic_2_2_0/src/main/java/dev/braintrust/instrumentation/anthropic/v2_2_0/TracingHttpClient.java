@@ -303,7 +303,8 @@ public class TracingHttpClient implements HttpClient {
                 InstrumentationSemConv.tagLLMSpanResponse(
                         span,
                         InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
-                        new String(bytes, StandardCharsets.UTF_8));
+                        new String(bytes, StandardCharsets.UTF_8),
+                        null);
             }
         } catch (Exception e) {
             log.error("Could not tag span from Anthropic response buffer", e);
