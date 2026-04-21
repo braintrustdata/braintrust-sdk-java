@@ -118,15 +118,24 @@ public class DDSpanConverter {
 
             // Link to parent context if available
             String parentSpanId = sd.getParentSpanContext().getSpanId();
+            // Determine the base context to use for this span (used both for setParent and for
+            // storing in the map so that grandchildren inherit the full ancestor chain).
+            Context effectiveParentCtx;
             if (sd.getParentSpanContext().isValid()) {
-                Context parentCtx = spanContextMap.get(parentSpanId);
-                if (parentCtx != null) {
-                    builder.setParent(parentCtx);
+                Context localParentCtx = spanContextMap.get(parentSpanId);
+                if (localParentCtx != null) {
+                    // Parent was replayed in this batch — use its stored context so the full
+                    // ancestor chain is preserved for grandchildren.
+                    effectiveParentCtx = localParentCtx;
+                    builder.setParent(effectiveParentCtx);
                 } else {
-                    // Parent not in this batch — create a remote parent context
-                    builder.setParent(Context.current().with(Span.wrap(sd.getParentSpanContext())));
+                    // Parent not in this batch — create a remote parent context.
+                    effectiveParentCtx =
+                            Context.current().with(Span.wrap(sd.getParentSpanContext()));
+                    builder.setParent(effectiveParentCtx);
                 }
             } else {
+                effectiveParentCtx = Context.root();
                 builder.setNoParent();
             }
 
@@ -155,8 +164,10 @@ public class DDSpanConverter {
                 span.setStatus(StatusCode.OK, sd.getStatus().getDescription());
             }
 
-            // Store the context for potential children
-            Context ctx = Context.current().with(span);
+            // Store the context for potential children, nested within the effective parent context
+            // so that grandchildren see the full ancestor chain (e.g. for braintrust.parent
+            // propagation via BraintrustSpanProcessor.onStart).
+            Context ctx = effectiveParentCtx.with(span);
             spanContextMap.put(sd.getSpanContext().getSpanId(), ctx);
 
             // End with original end timestamp
