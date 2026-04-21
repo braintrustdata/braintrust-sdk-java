@@ -117,19 +117,52 @@ public class AgentBootstrap {
         try {
             var info = ProcessHandle.current().info();
             var arguments = info.arguments();
-            if (arguments.isEmpty()) return agents;
-            for (var arg : arguments.get()) {
-                if (!arg.startsWith("-javaagent:")) continue;
-                // Strip optional =agentargs suffix: -javaagent:/path/to.jar=args
-                var jarPath = arg.substring("-javaagent:".length());
-                var eqIdx = jarPath.indexOf('=');
-                if (eqIdx >= 0) jarPath = jarPath.substring(0, eqIdx);
-                agents.add(classifyAgentJar(jarPath));
+            if (arguments.isPresent()) {
+                for (var arg : arguments.get()) {
+                    if (!arg.startsWith("-javaagent:")) continue;
+                    agents.add(classifyAgentJar(stripAgentPath(arg)));
+                }
+            } else {
+                // arguments() is often empty on Linux; fall back to commandLine()
+                var cmdLine = info.commandLine();
+                if (cmdLine.isPresent()) {
+                    agents.addAll(detectAgentsFromCommandLine(cmdLine.get()));
+                }
             }
-        } catch (Throwable ignored) {
-            // ProcessHandle unavailable — return empty, callers fall back gracefully.
+        } catch (Throwable t) {
+            log("error detecting agents: " + t.getMessage());
+            log(t);
         }
         return agents;
+    }
+
+    /** Extracts {@code -javaagent:} entries from a raw command line string. */
+    static List<AgentKind> detectAgentsFromCommandLine(String cmdLine) {
+        var agents = new ArrayList<AgentKind>();
+        var prefix = "-javaagent:";
+        int idx = 0;
+        while ((idx = cmdLine.indexOf(prefix, idx)) >= 0) {
+            int start = idx + prefix.length();
+            // The jar path ends at the next whitespace (or end of string).
+            // An '=' before whitespace separates jar path from agent args.
+            int end = start;
+            while (end < cmdLine.length() && cmdLine.charAt(end) != ' ') {
+                end++;
+            }
+            var token = cmdLine.substring(start, end);
+            var eqIdx = token.indexOf('=');
+            var jarPath = eqIdx >= 0 ? token.substring(0, eqIdx) : token;
+            agents.add(classifyAgentJar(jarPath));
+            idx = end;
+        }
+        return agents;
+    }
+
+    private static String stripAgentPath(String arg) {
+        var jarPath = arg.substring("-javaagent:".length());
+        var eqIdx = jarPath.indexOf('=');
+        if (eqIdx >= 0) jarPath = jarPath.substring(0, eqIdx);
+        return jarPath;
     }
 
     private static AgentKind classifyAgentJar(String jarPath) {

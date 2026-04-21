@@ -169,6 +169,26 @@ class AgentBootstrapTest {
     }
 
     @Test
+    void detectAgentsFromCommandLine() {
+        var cmdLine =
+                "/usr/bin/java -Dfoo=bar"
+                        + " -javaagent:/path/to/dd-java-agent-1.61.1.jar"
+                        + " -javaagent:/tmp/braintrust-java-agent.jar"
+                        + " -XX:TieredStopAtLevel=1 -cp foo.jar Main";
+        var agents = AgentBootstrap.detectAgentsFromCommandLine(cmdLine);
+        assertEquals(2, agents.size(), "expected 2 agents, got: " + agents);
+        // classifyAgentJar won't find real JARs at these paths, so both will be UNKNOWN;
+        // the important thing is that parsing found 2 -javaagent entries.
+    }
+
+    @Test
+    void detectAgentsFromCommandLineWithAgentArgs() {
+        var cmdLine = "/usr/bin/java -javaagent:/path/agent.jar=someArgs -cp foo.jar Main";
+        var agents = AgentBootstrap.detectAgentsFromCommandLine(cmdLine);
+        assertEquals(1, agents.size(), "expected 1 agent, got: " + agents);
+    }
+
+    @Test
     void otelAutoconfigureProducesRealTracer() {
         assertEquals(
                 0, BraintrustBridge.otelInstallCount.get(), "premain should not initialize otel");
