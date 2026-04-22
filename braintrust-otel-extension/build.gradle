@@ -25,6 +25,14 @@ evaluationDependsOn(':braintrust-sdk')
 
 dependencies {
   implementation project(':braintrust-sdk')
+
+  // OTel SDK + autoconfigure SPI — needed to compile OtelAutoConfig.
+  // At runtime these are provided by the OTel Java agent, so they are compileOnly.
+  compileOnly "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  compileOnly "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${otelVersion}"
+
+  // SLF4J API — needed at compile time for Lombok's @Slf4j annotation.
+  compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
 }
 
 jar {

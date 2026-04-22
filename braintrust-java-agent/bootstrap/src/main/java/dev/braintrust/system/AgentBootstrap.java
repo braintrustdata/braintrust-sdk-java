@@ -212,6 +212,9 @@ public class AgentBootstrap {
     }
 
     private static void enableOtelSDKAutoconfiguration() {
+        // Silence agent-internal SLF4J output by default
+        setPropertyIfAbsent("org.slf4j.simpleLogger.log.dev.braintrust", "warn");
+
         // Enable OTel SDK autoconfiguration. When anyone first calls
         // GlobalOpenTelemetry.get(), the SDK will be built using autoconfigure, which
         // discovers our BraintrustAutoConfigCustomizer via ServiceLoader and injects the
