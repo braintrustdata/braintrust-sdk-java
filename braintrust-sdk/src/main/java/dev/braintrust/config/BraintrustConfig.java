@@ -1,8 +1,7 @@
 package dev.braintrust.config;
 
 import dev.braintrust.Braintrust;
-import dev.braintrust.BraintrustUtils;
-import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
 import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
@@ -116,9 +115,7 @@ public final class BraintrustConfig extends BaseConfig {
     /** Deprecated. Please use {@link Braintrust#projectUri()} instead */
     @Deprecated
     public URI fetchProjectURI() {
-        var client = BraintrustApiClient.of(this);
-        var orgAndProject = client.getProjectAndOrgInfo().orElseThrow();
-        return BraintrustUtils.createProjectURI(appUrl(), orgAndProject);
+        return BraintrustOpenApiClient.of(this).fetchProjectUri();
     }
 
     public static Builder builder() {

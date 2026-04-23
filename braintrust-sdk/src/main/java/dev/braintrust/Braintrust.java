@@ -1,6 +1,7 @@
 package dev.braintrust;
 
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.Dataset;
 import dev.braintrust.eval.Eval;
@@ -87,7 +88,7 @@ public class Braintrust {
 
     /** Create a new Braintrust instance from the given config */
     public static Braintrust of(BraintrustConfig config) {
-        BraintrustApiClient apiClient = BraintrustApiClient.of(config);
+        BraintrustOpenApiClient apiClient = BraintrustOpenApiClient.of(config);
         BraintrustPromptLoader promptLoader = BraintrustPromptLoader.of(config, apiClient);
         return new Braintrust(config, apiClient, promptLoader);
     }
@@ -96,9 +97,15 @@ public class Braintrust {
     @Accessors(fluent = true)
     private final BraintrustConfig config;
 
+    /** Deprecated. Please use openApiClient() instead */
+    @Deprecated
+    public BraintrustApiClient apiClient() {
+        return BraintrustApiClient.of(config);
+    }
+
     @Getter
     @Accessors(fluent = true)
-    private final BraintrustApiClient apiClient;
+    private final BraintrustOpenApiClient openApiClient;
 
     @Getter
     @Accessors(fluent = true)
@@ -106,17 +113,16 @@ public class Braintrust {
 
     Braintrust(
             BraintrustConfig config,
-            BraintrustApiClient apiClient,
+            BraintrustOpenApiClient apiClient,
             BraintrustPromptLoader promptLoader) {
         this.config = config;
-        this.apiClient = apiClient;
+        this.openApiClient = apiClient;
         this.promptLoader = promptLoader;
     }
 
-    /** the the URI to the configured braintrust org and project */
+    /** URI to the configured braintrust org and project */
     public URI projectUri() {
-        return BraintrustUtils.createProjectURI(
-                config.appUrl(), apiClient().getOrCreateProjectAndOrgInfo(config()));
+        return openApiClient.fetchProjectUri();
     }
 
     /**
@@ -162,7 +168,7 @@ public class Braintrust {
     /** Create a new eval builder */
     public <INPUT, OUTPUT> Eval.Builder<INPUT, OUTPUT> evalBuilder() {
         return (Eval.Builder<INPUT, OUTPUT>)
-                Eval.builder().config(this.config).apiClient(this.apiClient);
+                Eval.builder().config(this.config).apiClient(this.openApiClient);
     }
 
     public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(String datasetName) {
@@ -171,8 +177,8 @@ public class Braintrust {
 
     public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
             String datasetName, @Nullable String datasetVersion) {
-        var projectName = apiClient.getOrCreateProjectAndOrgInfo(config).project().name();
-        return Dataset.fetchFromBraintrust(apiClient(), projectName, datasetName, datasetVersion);
+        return Dataset.fetchFromBraintrust(
+                openApiClient, resolveProjectName(), datasetName, datasetVersion);
     }
 
     /**
@@ -194,8 +200,7 @@ public class Braintrust {
      */
     public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
             String scorerSlug, @Nullable String version) {
-        var projectName = apiClient.getOrCreateProjectAndOrgInfo(config).project().name();
-        return Scorer.fetchFromBraintrust(apiClient, projectName, scorerSlug, version);
+        return Scorer.fetchFromBraintrust(openApiClient, resolveProjectName(), scorerSlug, version);
     }
 
     /**
@@ -208,6 +213,18 @@ public class Braintrust {
      */
     public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
             String projectName, String scorerSlug, @Nullable String version) {
-        return Scorer.fetchFromBraintrust(apiClient, projectName, scorerSlug, version);
+        return Scorer.fetchFromBraintrust(openApiClient, projectName, scorerSlug, version);
+    }
+
+    /**
+     * Resolve the default project name from config. If only a project ID is configured, looks it up
+     * via the API. Mirrors the behavior of the old hand-rolled client.
+     */
+    private String resolveProjectName() {
+        return openApiClient
+                .fetchOrCreateProject(
+                        config.defaultProjectId().orElse(null),
+                        config.defaultProjectName().orElse(null))
+                .getName();
     }
 }

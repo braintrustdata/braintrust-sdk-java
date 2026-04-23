@@ -17,11 +17,18 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Provides the necessary API calls for the Braintrust SDK. Users of the SDK should favor using
- * {@link dev.braintrust.eval.Eval} or {@link dev.braintrust.trace.BraintrustTracing}
- */
+/** Deprecated. Please use {@link BraintrustOpenApiClient} instead */
+@Deprecated
 public interface BraintrustApiClient {
+    /**
+     * Create an openapi client with the same api key as this one.
+     *
+     * <p>Convenience method for migrating to the new client. It's recommended to not use this
+     * method and simply migrate to the new BraintrustOpenApiClient
+     */
+    @Deprecated
+    BraintrustOpenApiClient openApiClient();
+
     /**
      * Attempt Braintrust login
      *
@@ -168,6 +175,11 @@ public interface BraintrustApiClient {
             } catch (InterruptedException | ExecutionException e) {
                 throw new ApiException(e);
             }
+        }
+
+        @Override
+        public BraintrustOpenApiClient openApiClient() {
+            return BraintrustOpenApiClient.of(config);
         }
 
         @Override

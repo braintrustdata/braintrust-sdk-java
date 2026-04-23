@@ -1,6 +1,8 @@
 package dev.braintrust.eval;
 
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.openapi.api.DatasetsApi;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -62,33 +64,44 @@ public interface Dataset<INPUT, OUTPUT> {
         return new DatasetInMemoryImpl<>(List.of(cases));
     }
 
+    @Deprecated
     static <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchFromBraintrust(
             BraintrustApiClient apiClient,
             String projectName,
             String datasetName,
             @Nullable String datasetVersion) {
-        var datasets = apiClient.queryDatasets(projectName, datasetName);
+        return fetchFromBraintrust(
+                apiClient.openApiClient(), projectName, datasetName, datasetVersion);
+    }
 
-        if (datasets.isEmpty()) {
+    static <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchFromBraintrust(
+            BraintrustOpenApiClient apiClient,
+            String projectName,
+            String datasetName,
+            @Nullable String datasetVersion) {
+        var datasetsApi = new DatasetsApi(apiClient);
+        var objects =
+                datasetsApi
+                        .getDataset(null, null, null, null, datasetName, projectName, null, null)
+                        .getObjects();
+
+        if (objects.isEmpty()) {
             throw new RuntimeException(
                     "Dataset not found: project=" + projectName + ", dataset=" + datasetName);
         }
 
-        if (datasets.size() > 1) {
+        if (objects.size() > 1) {
             throw new RuntimeException(
                     "Multiple datasets found for project="
                             + projectName
                             + ", dataset="
                             + datasetName
                             + ". Found "
-                            + datasets.size()
+                            + objects.size()
                             + " datasets");
         }
 
-        var dataset = datasets.get(0);
-        return new DatasetBrainstoreImpl<>(
-                apiClient,
-                dataset.id(),
-                datasetVersion != null ? datasetVersion : dataset.updatedAt());
+        var dataset = objects.get(0);
+        return new DatasetBrainstoreImpl<>(apiClient, dataset.getId().toString(), datasetVersion);
     }
 }

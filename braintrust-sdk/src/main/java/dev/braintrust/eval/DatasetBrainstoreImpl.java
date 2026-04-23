@@ -1,24 +1,33 @@
 package dev.braintrust.eval;
 
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.openapi.api.DatasetsApi;
+import dev.braintrust.openapi.model.FetchEventsRequest;
 import java.util.*;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /** A dataset loaded externally from Braintrust using paginated API fetches */
 public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTPUT> {
-    private final BraintrustApiClient apiClient;
+    private final BraintrustOpenApiClient apiClient;
     private final String datasetId;
     private final @Nullable String pinnedVersion;
     private final int batchSize;
 
+    @Deprecated
     public DatasetBrainstoreImpl(
             BraintrustApiClient apiClient, String datasetId, @Nullable String datasetVersion) {
+        this(apiClient.openApiClient(), datasetId, datasetVersion, 512);
+    }
+
+    public DatasetBrainstoreImpl(
+            BraintrustOpenApiClient apiClient, String datasetId, @Nullable String datasetVersion) {
         this(apiClient, datasetId, datasetVersion, 512);
     }
 
     DatasetBrainstoreImpl(
-            BraintrustApiClient apiClient,
+            BraintrustOpenApiClient apiClient,
             String datasetId,
             @Nullable String datasetVersion,
             int batchSize) {
@@ -62,7 +71,7 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
     }
 
     private class BrainstoreCursor implements Cursor<DatasetCase<INPUT, OUTPUT>> {
-        private List<Map<String, Object>> currentBatch;
+        private List<dev.braintrust.openapi.model.DatasetEvent> currentBatch;
         private int currentIndex;
         private @Nullable String cursor;
         private boolean exhausted;
@@ -85,33 +94,27 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
                 throw new IllegalStateException("Cursor is closed");
             }
 
-            // Fetch next batch if we've consumed the current one
             if (currentIndex >= currentBatch.size() && !exhausted) {
                 fetchNextBatch();
             }
 
-            // Return empty if no more data
             if (currentIndex >= currentBatch.size()) {
                 return Optional.empty();
             }
 
-            // Parse the event into a DatasetCase
-            Map<String, Object> event = currentBatch.get(currentIndex++);
+            var event = currentBatch.get(currentIndex++);
 
-            INPUT input = (INPUT) event.get("input");
-            OUTPUT expected = (OUTPUT) event.get("expected");
+            INPUT input = (INPUT) event.getInput();
+            OUTPUT expected = (OUTPUT) event.getExpected();
 
-            Map<String, Object> metadata = (Map<String, Object>) event.get("metadata");
-            if (metadata == null) {
-                metadata = Map.of();
-            }
+            var metadataObj = event.getMetadata();
+            Map<String, Object> metadata =
+                    metadataObj != null ? metadataObj.getAdditionalProperties() : Map.of();
+            if (metadata == null) metadata = Map.of();
 
-            List<String> tags = (List<String>) event.get("tags");
-            if (tags == null) {
-                tags = List.of();
-            }
+            List<String> tags = event.getTags() != null ? event.getTags() : List.of();
 
-            DatasetCase<INPUT, OUTPUT> datasetCase =
+            var datasetCase =
                     new DatasetCase<>(
                             input,
                             expected,
@@ -121,26 +124,32 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
                                     new dev.braintrust.Origin(
                                             "dataset",
                                             Objects.requireNonNull(
-                                                    (String) event.get("dataset_id")),
-                                            Objects.requireNonNull((String) event.get("id")),
-                                            Objects.requireNonNull((String) event.get("_xact_id")),
+                                                    event.getDatasetId() != null
+                                                            ? event.getDatasetId().toString()
+                                                            : null),
+                                            Objects.requireNonNull(event.getId()),
+                                            Objects.requireNonNull(event.getXactId()),
                                             Objects.requireNonNull(
-                                                    (String) event.get("created")))));
+                                                    event.getCreated() != null
+                                                            ? event.getCreated().toString()
+                                                            : null))));
 
             return Optional.of(datasetCase);
         }
 
         private void fetchNextBatch() {
             var request =
-                    new BraintrustApiClient.DatasetFetchRequest(batchSize, cursor, cursorVersion);
-            var response = apiClient.fetchDatasetEvents(datasetId, request);
+                    new FetchEventsRequest().limit(batchSize).cursor(cursor).version(cursorVersion);
 
-            currentBatch = new ArrayList<>(response.events());
+            var response =
+                    new DatasetsApi(apiClient)
+                            .postDatasetIdFetch(UUID.fromString(datasetId), request);
+
+            currentBatch = new ArrayList<>(response.getEvents());
             currentIndex = 0;
-            cursor = response.cursor();
+            cursor = response.getCursor();
 
-            // Mark as exhausted if no cursor or no events returned
-            if (cursor == null || cursor.isEmpty() || response.events().isEmpty()) {
+            if (cursor == null || cursor.isEmpty() || response.getEvents().isEmpty()) {
                 exhausted = true;
             }
         }

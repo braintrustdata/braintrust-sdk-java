@@ -42,6 +42,24 @@ public class BraintrustPromptLoaderTest {
     }
 
     @Test
+    void testLoadPromptBySlugWithVersion() {
+        BraintrustPromptLoader loader = testHarness.braintrust().promptLoader();
+
+        BraintrustPrompt prompt =
+                loader.load(
+                        BraintrustPromptLoader.PromptLoadRequest.builder()
+                                .promptSlug("kind-greeter-0bd1")
+                                .version("27fdcc80d22c7ec5")
+                                .build());
+
+        assertNotNull(prompt);
+
+        List<Map<String, Object>> messages = prompt.renderMessages(Map.of("name", "Bob"));
+        assertEquals("system", messages.get(0).get("role"));
+        assertEquals("this is an old version", messages.get(0).get("content"));
+    }
+
+    @Test
     void testLoadPromptWithDefaults() {
         BraintrustPromptLoader loader = testHarness.braintrust().promptLoader();
 
