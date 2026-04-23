@@ -1,0 +1,60 @@
+{
+  "id" : "f17e8d2e-c4cf-43d4-88f4-eab4e2b6c940",
+  "name" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke",
+  "request" : {
+    "url" : "/v1/function/5dd8a26d-3be8-4ecd-af5b-df2a6a592277/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"test input\",\"output\":\"hello world\",\"expected\":\"hello world\",\"metadata\":{}},\"expected\":null,\"messages\":[],\"parent\":{\"object_type\":\"project_logs\",\"object_id\":\"6ae68365-7620-4630-921b-bac416634fc8\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"8b7da4fd8da56081\",\"root_span_id\":\"b9a23dcec0ce2b71f55862b3b4756256\"}},\"mcp_auth\":{}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_5dd8a26d-3be8-4ecd-af5b-df2a6a592277_invoke-f17e8d2e-c4cf-43d4-88f4-eab4e2b6c940.json",
+    "headers" : {
+      "x-bt-function-creds-cached" : "HIT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=GWaC.ZAvffJV8k8Pds2XqjgwmUJhGg.VQiDlndFCQTQ-1777322418.8238926-1.0.1.1-lfxU1U0GArJZU_G4WsfQVQAIihnaQ6vfx50ln5tRvWQqeBTk2tTW2UTWAPQcwPbLoGavIAZGVSLfPROgg2AADsRagDGD0lnIxwcraIDWKv7KkQCpAwDS4zWARzwqehM9; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 27 Apr 2026 21:10:27 GMT",
+      "x-amzn-RequestId" : "cbe8b068-11c6-4e3a-b6e1-61fd8b049164",
+      "X-Amz-Cf-Id" : "Gkrbtn8PDnnwlXrzyHUrHFILXConsh-deU9JjRserStI0H35fiCdqw==",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "cache-control" : "max-age=604800, no-transform",
+      "Age" : "2045",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_173ae2db058f4e3599d3ab7afaf5e852",
+      "X-Cache" : "Miss from cloudfront",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "cf-ray" : "9f30a43d9c1d058a-IAD",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999937",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "x-bt-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69efd1ba-71d7b60e72d2501d18c58787;Parent=167ecf1c142720bd;Sampled=0;Lineage=1:8be8f50d:0",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Mon, 27 Apr 2026 21:14:34 GMT",
+      "Via" : "1.1 a40ac7dad0e348fc93799233c9af5960.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwIDAWrmg2V2IEYwkhu6xBZjT8gCdrLH1FrzRjiaXTAWKzQCtwMtPJ44NnNF/qPC/7RT2zrReyJwcm9wYWdhdGVkX2V2ZW50Ijp7InNwYW5fYXR0cmlidXRlcyI6eyJwdXJwb3NlIjoic2NvcmVyIn19LCJyb290X3NwYW5faWQiOiJiOWEyM2RjZWMwY2UyYjcxZjU1ODYyYjNiNDc1NjI1NiJ9",
+      "x-content-type-options" : "nosniff",
+      "x-ratelimit-limit-requests" : "30000",
+      "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "openai-version" : "2020-10-01",
+      "x-bt-span-id" : "76b2c7d4-5af3-4638-9a5d-30162b3402b7",
+      "openai-processing-ms" : "7802",
+      "x-bt-function-meta-cached" : "HIT"
+    }
+  },
+  "uuid" : "f17e8d2e-c4cf-43d4-88f4-eab4e2b6c940",
+  "persistent" : true,
+  "insertionIndex" : 186
+}

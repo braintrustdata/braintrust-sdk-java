@@ -1,0 +1,39 @@
+{
+  "id" : "e02b29a4-8596-404a-8e85-8fe952f8b285",
+  "name" : "otel_v1_traces",
+  "request" : {
+    "url" : "/otel/v1/traces",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/x-protobuf"
+      }
+    },
+    "bodyPatterns" : [ {
+      "binaryEqualTo" : "CuACCrIBCiAKDHNlcnZpY2UubmFtZRIQCg5icmFpbnRydXN0LWFwcAoiCg9zZXJ2aWNlLnZlcnNpb24SDwoNMC4zLjQtOTczNzYyMQogChZ0ZWxlbWV0cnkuc2RrLmxhbmd1YWdlEgYKBGphdmEKJQoSdGVsZW1ldHJ5LnNkay5uYW1lEg8KDW9wZW50ZWxlbWV0cnkKIQoVdGVsZW1ldHJ5LnNkay52ZXJzaW9uEggKBjEuNTkuMBKoAQoYChZkaXN0cmlidXRlZC10cmFjZS10ZXN0EosBChC5oj3OwM4rcfVYYrO0dWJWEgiLfaT9jaVggSoddGVzdC1kaXN0cmlidXRlZC10cmFjZS1wYXJlbnQwATkoFX8aMVOqGEES94FtMVOqGEoyChFicmFpbnRydXN0LnBhcmVudBIdChtwcm9qZWN0X25hbWU6amF2YS11bml0LXRlc3R6AIUBAQEAAA=="
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "cf21SE7oIAMEk5w=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "0",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "X-Amzn-Trace-Id" : "Root=1-69efd1bb-745994e35a3623381ffccf2b;Parent=585ce84ee19052f3;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Mon, 27 Apr 2026 21:14:35 GMT",
+      "Via" : "1.1 2be627c4e85d6d9d9e32a7523e1b67ee.cloudfront.net (CloudFront), 1.1 566cc276dff9847158a5a9854be4df42.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69efd1bb0000000050b6603e74a2e99e",
+      "x-amzn-RequestId" : "d42d5ad5-4f0b-4eb9-8aa8-66b65ba38ad3",
+      "X-Amz-Cf-Id" : "cUnHMzsffp7urYY3bAHn1rWJUVQZmPMQl3hmny5bKLkj9V_xsldXFw==",
+      "etag" : "W/\"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk\"",
+      "Content-Type" : "application/x-protobuf"
+    }
+  },
+  "uuid" : "e02b29a4-8596-404a-8e85-8fe952f8b285",
+  "persistent" : true,
+  "insertionIndex" : 185
+}
