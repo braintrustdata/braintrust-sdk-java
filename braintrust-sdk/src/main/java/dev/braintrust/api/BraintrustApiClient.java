@@ -485,7 +485,10 @@ public interface BraintrustApiClient {
         }
 
         private static HttpClient createDefaultHttpClient(BraintrustConfig config) {
-            return HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+            return HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .sslContext(config.sslContext())
+                    .build();
         }
     }
 
