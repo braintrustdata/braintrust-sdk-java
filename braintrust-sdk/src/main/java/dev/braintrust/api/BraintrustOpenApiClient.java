@@ -145,12 +145,18 @@ public class BraintrustOpenApiClient extends ApiClient {
                     getHttpClient()
                             .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() / 100 != 2) {
-                throw new RuntimeException(
-                        "BTQL query failed with status "
-                                + response.statusCode()
-                                + ": "
-                                + response.body());
+            if (response.statusCode() == 429) {
+                throw new BtqlRateLimitException(
+                        response.statusCode(),
+                        "BTQL rate limit exceeded",
+                        response.headers(),
+                        response.body());
+            } else if (response.statusCode() / 100 != 2) {
+                throw new ApiException(
+                        response.statusCode(),
+                        "BTQL query failed",
+                        response.headers(),
+                        response.body());
             }
 
             return MAPPER.readValue(response.body(), BtqlQueryResponse.class);
@@ -163,7 +169,38 @@ public class BraintrustOpenApiClient extends ApiClient {
 
     public record OrgInfo(String id, String name) {}
 
-    public record BtqlQueryResponse(List<Map<String, Object>> data) {}
+    /**
+     * Response from a {@code POST /btql} query.
+     *
+     * <p>Freshness is determined by comparing {@link FreshnessState#lastProcessedXactId()} to
+     * {@link FreshnessState#lastConsideredXactId()}: when both are non-null and equal, the query
+     * has caught up to all ingested data and the result is fresh.
+     *
+     * <p>The {@link RealtimeState#type()} field indicates whether realtime indexing is still active
+     * ({@code "on"}) or has timed out ({@code "exhausted_timeout"}).
+     */
+    public record BtqlQueryResponse(
+            List<Map<String, Object>> data,
+            @JsonProperty("freshness_state") FreshnessState freshnessState,
+            @JsonProperty("realtime_state") RealtimeState realtimeState) {
+
+        /** Returns {@code true} when the query result has caught up to all ingested data. */
+        public boolean isFresh() {
+            if (freshnessState == null) {
+                return false;
+            }
+            var processed = freshnessState.lastProcessedXactId();
+            var considered = freshnessState.lastConsideredXactId();
+            return processed != null && processed.equals(considered);
+        }
+    }
+
+    public record FreshnessState(
+            @JsonProperty("last_processed_xact_id") String lastProcessedXactId,
+            @JsonProperty("last_considered_xact_id") String lastConsideredXactId) {}
+
+    /** Real-time indexing state for a BTQL query. */
+    public record RealtimeState(@JsonProperty("type") String type) {}
 
     private record LoginRequest(String token) {}
 
