@@ -1,6 +1,8 @@
 package dev.braintrust.eval;
 
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.openapi.api.FunctionsApi;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -85,6 +87,15 @@ public interface Scorer<INPUT, OUTPUT> {
         };
     }
 
+    @Deprecated
+    static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchFromBraintrust(
+            BraintrustApiClient apiClient,
+            String projectName,
+            String scorerSlug,
+            @Nullable String version) {
+        return fetchFromBraintrust(apiClient.openApiClient(), projectName, scorerSlug, version);
+    }
+
     /**
      * Fetch a scorer from Braintrust by project name and slug.
      *
@@ -96,21 +107,32 @@ public interface Scorer<INPUT, OUTPUT> {
      * @throws RuntimeException if the scorer is not found
      */
     static <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchFromBraintrust(
-            BraintrustApiClient apiClient,
+            BraintrustOpenApiClient apiClient,
             String projectName,
             String scorerSlug,
             @Nullable String version) {
-        var function =
-                apiClient
-                        .getFunction(projectName, scorerSlug, version)
-                        .orElseThrow(
-                                () ->
-                                        new RuntimeException(
-                                                "Scorer not found: project="
-                                                        + projectName
-                                                        + ", slug="
-                                                        + scorerSlug));
+        var functionsApi = new FunctionsApi(apiClient);
+        var objects =
+                functionsApi
+                        .getFunction(
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                projectName,
+                                null,
+                                scorerSlug,
+                                version,
+                                null,
+                                null)
+                        .getObjects();
 
-        return new ScorerBrainstoreImpl<>(apiClient, function.id(), version);
+        if (objects.isEmpty()) {
+            throw new RuntimeException(
+                    "Scorer not found: project=" + projectName + ", slug=" + scorerSlug);
+        }
+
+        return new ScorerBrainstoreImpl<>(apiClient, objects.get(0).getId().toString(), version);
     }
 }

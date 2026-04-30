@@ -1,0 +1,253 @@
+// Placeholder subproject for the Braintrust OpenAPI-generated client.
+//
+// The fetchOpenApiSpec task downloads openapi/spec.yaml from the pinned commit
+// of https://github.com/braintrustdata/braintrust-openapi into
+// build/openapi/spec.yaml, then generateOpenApiSources runs the OpenAPI
+// generator (native Java library) to produce sources under
+// build/generated/openapi/src/main/java, which are compiled as part of the
+// main source set.
+//
+// Future work will wire this generated client in to replace the hand-rolled
+// BraintrustApiClient.HttpImpl.
+//
+// Pin the ref in gradle.properties:
+//   braintrustOpenApiRef=<sha-or-branch>
+//
+// To point at a local checkout instead of fetching:
+//   BRAINTRUST_OPENAPI_ROOT=/path/to/braintrust-openapi ./gradlew braintrust-api:compileJava
+
+plugins {
+    id 'java'
+    id 'org.openapi.generator' version '7.14.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// ── Spec fetch ───────────────────────────────────────────────────────────────
+
+def openApiRef = project.property('braintrustOpenApiRef')
+def openApiSpecDir = layout.buildDirectory.dir('openapi')
+def openApiSpecFile = openApiSpecDir.map { it.file('spec.yaml') }
+
+tasks.register('fetchOpenApiSpec', Exec) {
+    description = 'Fetches openapi/spec.yaml from the pinned braintrust-openapi ref.'
+    group = 'Build'
+
+    def localRoot = System.getenv('BRAINTRUST_OPENAPI_ROOT')
+
+    inputs.property('openApiRef', openApiRef)
+    outputs.dir(openApiSpecDir)
+
+    def outDir = openApiSpecDir.get().asFile
+
+    if (localRoot) {
+        commandLine 'bash', '-c',
+            "mkdir -p '${outDir}' && cp '${localRoot}/openapi/spec.yaml' '${outDir}/spec.yaml'"
+    } else {
+        commandLine 'bash', "${rootProject.projectDir}/scripts/openapi-fetch.sh",
+            openApiRef, outDir.absolutePath
+    }
+}
+
+// ── Code generation ──────────────────────────────────────────────────────────
+
+def generatedSourcesDir = layout.buildDirectory.dir('generated/openapi')
+
+
+openApiGenerate {
+    generatorName = 'java'
+    library = 'native'
+
+    // Custom templates under src/generator/ (not src/main/resources, so they don't
+    // end up on the runtime classpath or in the published JAR — they're only needed
+    // at code-generation time). See src/generator/templates for the diffs from upstream.
+    templateDir = "${projectDir}/src/generator/templates/Java"
+
+    inputSpec = openApiSpecFile.map { it.asFile.absolutePath }
+
+    outputDir = generatedSourcesDir.map { it.asFile.absolutePath }
+
+    apiPackage = 'dev.braintrust.openapi.api'
+    modelPackage = 'dev.braintrust.openapi.model'
+    invokerPackage = 'dev.braintrust.openapi'
+
+    configOptions = [
+        // Use javax (not jakarta) — we're on Java 17 without EE migration
+        useJakartaEe             : 'false',
+        // Dates as java.time types
+        dateLibrary              : 'java8',
+        // Bearer token auth — SDK users supply a Braintrust API key
+        useRuntimeException      : 'true',
+        serializationLibrary     : 'jackson',
+
+        // Skip boilerplate we don't need yet
+        generateApiTests         : 'false',
+        generateModelTests       : 'false',
+        generateApiDocumentation : 'false',
+        generateModelDocumentation : 'false',
+    ]
+
+    // Inline schemas whose titles collide with top-level component schema names, causing the
+    // generator to overwrite the real full POJO with a discriminator stub.
+    // checkClobberedSchemas detects regressions; add new entries here when it fails.
+    inlineSchemaNameMappings = [
+        'prompt'      : 'FunctionDataPrompt',
+        'global'      : 'FunctionDataGlobal',
+        'code'        : 'FunctionDataCode',
+        'remote_eval' : 'FunctionDataRemoteEval',
+        'parameters'  : 'FunctionDataParameters',
+        'function'    : 'InlineFunctionRef',
+        'function_1'  : 'InlineFunction1',
+        'function_2'  : 'InlineFunction2',
+        'function_3'  : 'InlineFunction3',
+        'experiment'  : 'CodeBundleLocationExperiment',
+        'user'        : 'ChatMessageUser',
+    ]
+
+    // Don't generate a full Maven project skeleton — just the sources
+    globalProperties = [
+        apis   : '',
+        models : '',
+        supportingFiles : '',
+        apiTests   : 'false',
+        modelTests : 'false',
+        apiDocs    : 'false',
+        modelDocs  : 'false',
+    ]
+
+}
+
+// ── Clobber detection ────────────────────────────────────────────────────────
+//
+// The generator names inline anyOf/oneOf variant classes after their `title`
+// field, converting it to PascalCase. When that derived name matches an existing
+// components/schemas entry the real POJO gets silently overwritten with a stub.
+//
+// This task detects collisions purely from the spec — no generated code needed.
+// It runs before fetchOpenApiSpec (and thus before generation) so it fails fast.
+
+tasks.register('checkClobberedSchemas') {
+    description = 'Fails if any inline schema title would clobber a component schema name.'
+    group = 'Verification'
+
+    def specFile = openApiSpecFile
+    // Capture the current mappings at configuration time so they're available at execution time.
+    // inlineSchemaNameMappings is a Gradle MapProperty so .get() is needed to resolve it.
+    def mappedTitles = openApiGenerate.inlineSchemaNameMappings.get().keySet() as Set
+    inputs.file(specFile)
+
+    doLast {
+        if (!specFile.get().asFile.exists()) {
+            logger.lifecycle("checkClobberedSchemas: skipped (spec not yet fetched)")
+            return
+        }
+
+        def yaml = new org.yaml.snakeyaml.Yaml()
+        def spec = yaml.load(specFile.get().asFile.text)
+        // Only protect component schemas that are plain POJOs (have `properties`).
+        // anyOf/oneOf wrapper schemas can't be "clobbered" in the same way — their
+        // inline variants are what create the class, not a separate definition.
+        def componentNames = (spec?.components?.schemas?.findAll { name, schema ->
+            schema?.containsKey('properties')
+        }?.keySet() ?: []) as Set
+
+        // Convert a title to the PascalCase class name the generator would use.
+        def toPascalCase = { String s ->
+            s.split('[_\\-\\s]+').collect { it.capitalize() }.join('')
+        }
+
+        // Collect all inline schema titles from anywhere in the spec.
+        def inlineTitles = [:] // title -> example location path
+        def collectTitles
+        collectTitles = { node, path ->
+            if (node instanceof Map) {
+                def title = node.get('title')
+                // Flag titled inline schemas — those nested inside a component schema
+                // definition (path depth > 2 within components.schemas). Top-level
+                // component schemas are at exactly components.schemas.<Name>, which we
+                // skip since those are the schemas we're protecting, not the inliners.
+                def isTopLevelComponent = path ==~ /components\.schemas\.[^.]+/
+                if (title instanceof String && !title.isEmpty() && !isTopLevelComponent
+                        && (node.containsKey('type') || node.containsKey('properties')
+                            || node.containsKey('anyOf') || node.containsKey('oneOf'))) {
+                    inlineTitles.putIfAbsent(title, path)
+                }
+                node.each { k, v -> collectTitles(v, path ? "${path}.${k}" : k) }
+            } else if (node instanceof List) {
+                node.eachWithIndex { v, i -> collectTitles(v, "${path}[${i}]") }
+            }
+        }
+        collectTitles(spec, '')
+
+        // Find titles that would collide with a component schema name, ignoring
+        // any that are already handled by inlineSchemaNameMappings.
+        def collisions = inlineTitles.findAll { entry ->
+            def pascal = toPascalCase(entry.key)
+            componentNames.contains(pascal) && !mappedTitles.contains(entry.key)
+        }
+
+        if (!collisions.isEmpty()) {
+            def msg = new StringBuilder()
+            msg << '\n\nERROR: The following inline schema titles would clobber component schema\n'
+            msg << 'POJOs of the same name. Add them to inlineSchemaNameMappings in\n'
+            msg << 'braintrust-api/build.gradle:\n\n'
+            collisions.sort { it.key }.each { entry ->
+                def pascal = toPascalCase(entry.key)
+                msg << "  '${entry.key}' : 'Inline${pascal}',  // found at: ${entry.value}\n"
+            }
+            throw new GradleException(msg.toString())
+        }
+
+        logger.lifecycle("checkClobberedSchemas: OK (${inlineTitles.size()} inline titles checked against ${componentNames.size()} component schemas)")
+    }
+}
+
+// Wire fetch → check → generate → compile
+// checkClobberedSchemas runs after fetch (needs the spec) but before generation
+// so it fails fast without wasting time on codegen.
+tasks.named('checkClobberedSchemas') {
+    dependsOn tasks.named('fetchOpenApiSpec')
+}
+
+tasks.named('openApiGenerate') {
+    dependsOn tasks.named('checkClobberedSchemas')
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('openApiGenerate')
+}
+
+// Add the generated sources to the main source set
+sourceSets {
+    main {
+        java {
+            srcDir generatedSourcesDir.map { it.dir('src/main/java') }
+        }
+    }
+}
+
+// ── Dependencies ─────────────────────────────────────────────────────────────
+
+dependencies {
+    // Required by the openapi-generator native Java library
+    implementation "com.fasterxml.jackson.core:jackson-databind:${rootProject.ext.jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations:${rootProject.ext.jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${rootProject.ext.jacksonVersion}"
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
+
+    // jsr305 provides javax.annotation.{Nonnull,Nullable} used by the generated code.
+    // javax.annotation-api is also needed for @javax.annotation.Generated on all generated classes.
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.ext.junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.ext.junitVersion}"
+}

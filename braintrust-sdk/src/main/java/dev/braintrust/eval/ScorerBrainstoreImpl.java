@@ -1,7 +1,16 @@
 package dev.braintrust.eval;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.openapi.JSON;
+import dev.braintrust.openapi.api.FunctionsApi;
+import dev.braintrust.openapi.api.ProjectsApi;
+import dev.braintrust.openapi.model.Function;
+import dev.braintrust.openapi.model.InvokeApi;
+import dev.braintrust.openapi.model.InvokeParent;
+import dev.braintrust.openapi.model.SpanParentStruct;
 import dev.braintrust.trace.BraintrustTracing;
 import dev.braintrust.trace.SpanComponents;
 import io.opentelemetry.api.baggage.Baggage;
@@ -10,6 +19,7 @@ import io.opentelemetry.api.trace.SpanContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +37,19 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT> {
-    private final BraintrustApiClient apiClient;
+    private static final ObjectMapper MAPPER = new JSON().getMapper();
+
+    private final BraintrustOpenApiClient apiClient;
     private final String functionId;
     private final @Nullable String version;
-    private final AtomicReference<BraintrustApiClient.Function> braintrustFunction =
-            new AtomicReference<>(null);
+    private final AtomicReference<Function> braintrustFunction = new AtomicReference<>(null);
     private final AtomicReference<String> scorerName = new AtomicReference<>(null);
+
+    @Deprecated
+    public ScorerBrainstoreImpl(
+            BraintrustApiClient apiClient, String functionId, @Nullable String version) {
+        this(apiClient.openApiClient(), functionId, version);
+    }
 
     /**
      * Create a new remote scorer.
@@ -43,7 +60,7 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
      *     version.
      */
     public ScorerBrainstoreImpl(
-            BraintrustApiClient apiClient, String functionId, @Nullable String version) {
+            BraintrustOpenApiClient apiClient, String functionId, @Nullable String version) {
         this.apiClient = apiClient;
         this.functionId = functionId;
         this.version = version;
@@ -57,10 +74,6 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
 
     @Override
     public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
-        // Build parent span components for distributed tracing (as object, not base64 string)
-        Object parent = buildParentSpanComponents();
-
-        // Build scorer args map with optional parameters
         var scorerArgs = new java.util.LinkedHashMap<String, Object>();
         scorerArgs.put("input", taskResult.datasetCase().input());
         scorerArgs.put("output", taskResult.result());
@@ -70,67 +83,66 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
             scorerArgs.put("parameters", taskResult.parameters().getMerged());
         }
 
-        var request = new BraintrustApiClient.FunctionInvokeRequest(scorerArgs, version, parent);
+        var invoke = new InvokeApi().input(scorerArgs).version(version);
 
-        Object result = apiClient.invokeFunction(getFunctionId(), request);
+        InvokeParent parent = buildParent();
+        if (parent != null) {
+            invoke.parent(parent);
+        }
+
+        Object result =
+                new FunctionsApi(apiClient)
+                        .postFunctionIdInvoke(UUID.fromString(getFunctionId()), invoke);
         return parseScoreResult(result);
     }
 
     private String getFunctionName() {
         ensureFunctionInfoCached();
-        return braintrustFunction.get().name();
+        return braintrustFunction.get().getName();
     }
 
     private String getFunctionId() {
         ensureFunctionInfoCached();
-        return braintrustFunction.get().id();
+        return braintrustFunction.get().getId().toString();
     }
 
     private void ensureFunctionInfoCached() {
         if (scorerName.get() == null || braintrustFunction.get() == null) {
-            // we could get multiple threads in here but that's fine (just redundant work)
-            var function = apiClient.getFunctionById(functionId).orElseThrow();
-            var projectAndOrgInfo =
-                    apiClient.getProjectAndOrgInfo(function.projectId()).orElseThrow();
+            var functionsApi = new FunctionsApi(apiClient);
+            var function = functionsApi.getFunctionId(UUID.fromString(functionId), version, null);
+
+            var projectsApi = new ProjectsApi(apiClient);
+            var project = projectsApi.getProjectId(function.getProjectId());
+
             var functionVersion = this.version == null ? "latest" : this.version;
             braintrustFunction.compareAndExchange(null, function);
             scorerName.compareAndExchange(
                     null,
                     "invoke-%s-%s-%s"
-                            .formatted(
-                                    projectAndOrgInfo.project().name(),
-                                    function.slug(),
-                                    functionVersion));
+                            .formatted(project.getName(), function.getSlug(), functionVersion));
         }
     }
 
     /**
-     * Builds the parent span components for distributed tracing.
-     *
-     * <p>Extracts the experiment ID from OTEL baggage and span/trace IDs from the current span
-     * context. Returns the parent as a Map that can be serialized directly (the API accepts both
-     * base64-encoded strings and object format).
-     *
-     * @return parent object for distributed tracing, or null if tracing context not available
+     * Builds an {@link InvokeParent} for distributed tracing, or null if no tracing context is
+     * available.
      */
     @Nullable
-    private Map<String, Object> buildParentSpanComponents() {
+    private InvokeParent buildParent() {
         try {
-            // Get current span context
             SpanContext spanContext = Span.current().getSpanContext();
-            if (!spanContext.isValid()) {
-                return null;
-            }
+            if (!spanContext.isValid()) return null;
 
-            // Get experiment ID from baggage (format: "experiment_id:abc123")
             String parentValue = Baggage.current().getEntryValue(BraintrustTracing.PARENT_KEY);
-            if (parentValue == null || parentValue.isEmpty()) {
-                return null;
-            }
+            if (parentValue == null || parentValue.isEmpty()) return null;
 
             var rowIds =
                     new SpanComponents.RowIds(spanContext.getSpanId(), spanContext.getTraceId());
-            return new SpanComponents(BraintrustUtils.parseParent(parentValue), rowIds).toMap();
+            Map<String, Object> spanMap =
+                    new SpanComponents(BraintrustUtils.parseParent(parentValue), rowIds).toMap();
+
+            SpanParentStruct struct = MAPPER.convertValue(spanMap, SpanParentStruct.class);
+            return new InvokeParent(InvokeParent.SchemaType.SpanParentStruct, struct);
         } catch (Exception e) {
             log.warn("Failed to build parent span components: {}", e.getMessage(), e);
             return null;
@@ -153,17 +165,12 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
      */
     @SuppressWarnings("unchecked")
     private List<Score> parseScoreResult(Object result) {
-        if (result == null) {
-            // Scorer returned null to skip scoring
-            return List.of();
-        }
+        if (result == null) return List.of();
 
-        // Handle a single number
         if (result instanceof Number number) {
             return List.of(new Score(getFunctionName(), number.doubleValue()));
         }
 
-        // Handle a list of scores
         if (result instanceof List<?> list) {
             List<Score> scores = new ArrayList<>();
             for (Object item : list) {
@@ -172,36 +179,27 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
             return scores;
         }
 
-        // Handle a score object (Map)
         if (result instanceof Map<?, ?> map) {
             Map<String, Object> scoreMap = (Map<String, Object>) map;
 
-            // Extract name (use scorer name as fallback)
             String name = getFunctionName();
             Object nameValue = scoreMap.get("name");
-            if (nameValue instanceof String s) {
-                name = s;
-            }
+            if (nameValue instanceof String s) name = s;
 
-            // Extract score value
             Object scoreValue = scoreMap.get("score");
 
-            // If score is null, check for LLM judge response with metadata.choice
             if (scoreValue == null) {
                 Object metadataObj = scoreMap.get("metadata");
                 if (metadataObj instanceof Map<?, ?> metadata) {
                     Object choiceValue = ((Map<String, Object>) metadata).get("choice");
                     if (choiceValue != null) {
-                        double score = parseNumericValue(choiceValue);
-                        return List.of(new Score(name, score));
+                        return List.of(new Score(name, parseNumericValue(choiceValue)));
                     }
                 }
-                // No score field and no choice in metadata - skip
                 return List.of();
             }
 
-            double score = parseNumericValue(scoreValue);
-            return List.of(new Score(name, score));
+            return List.of(new Score(name, parseNumericValue(scoreValue)));
         }
 
         throw new IllegalArgumentException(
@@ -210,17 +208,8 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
                         + ". Expected Number, Map, or List.");
     }
 
-    /**
-     * Parse a numeric value from either a Number or a String.
-     *
-     * @param value the value to parse
-     * @return the double value
-     * @throws IllegalArgumentException if the value cannot be parsed as a number
-     */
     private double parseNumericValue(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
+        if (value instanceof Number number) return number.doubleValue();
         if (value instanceof String str) {
             try {
                 return Double.parseDouble(str);

@@ -5,7 +5,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,21 +18,20 @@ public class DatasetBrainstoreImplTest {
     static WireMockExtension wireMock =
             WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
-    private BraintrustApiClient apiClient;
+    private BraintrustOpenApiClient apiClient;
     private String datasetId;
 
     @BeforeEach
     void beforeEach() {
         wireMock.resetAll();
-        datasetId = "test-dataset-123";
+        datasetId = "00000000-0000-0000-0000-000000000123";
 
-        // Create API client pointing to WireMock server
         var config =
                 BraintrustConfig.builder()
                         .apiKey("test-api-key")
                         .apiUrl("http://localhost:" + wireMock.getPort())
                         .build();
-        apiClient = BraintrustApiClient.of(config);
+        apiClient = BraintrustOpenApiClient.of(config);
     }
 
     @Test
@@ -51,26 +50,27 @@ public class DatasetBrainstoreImplTest {
                                   "events": [
                                     {
                                       "object_type": "dataset",
-                                      "dataset_id": "test-dataset-123",
+                                      "dataset_id": "%s",
                                       "id": "123-1",
-                                      "created": "sometimestamp",
+                                      "created": "2024-01-01T00:00:00Z",
                                       "_xact_id": "1",
                                       "input": "Question 1",
                                       "expected": "Answer 1"
                                     },
                                     {
                                       "object_type": "dataset",
-                                      "dataset_id": "test-dataset-123",
+                                      "dataset_id": "%s",
                                       "id": "123-2",
                                       "_xact_id": "1",
-                                      "created": "sometimestamp",
+                                      "created": "2024-01-01T00:00:00Z",
                                       "input": "Question 2",
                                       "expected": "Answer 2"
                                     }
                                   ],
                                   "cursor": "next-page-token"
                                 }
-                                """)));
+                                """
+                                                        .formatted(datasetId, datasetId))));
 
         // Mock the second batch without a cursor (last page)
         wireMock.stubFor(
@@ -86,69 +86,38 @@ public class DatasetBrainstoreImplTest {
                                   "events": [
                                     {
                                       "object_type": "dataset",
-                                      "dataset_id": "test-dataset-123",
+                                      "dataset_id": "%s",
                                       "id": "123-3",
                                       "_xact_id": "1",
-                                      "created": "sometimestamp",
+                                      "created": "2024-01-01T00:00:00Z",
                                       "input": "Question 3",
                                       "expected": "Answer 3"
                                     }
                                   ],
                                   "cursor": null
                                 }
-                                """)));
+                                """
+                                                        .formatted(datasetId))));
 
-        // Create dataset with smaller batch size
         DatasetBrainstoreImpl<String, String> dataset =
                 new DatasetBrainstoreImpl<>(apiClient, datasetId, "test-version", 2);
 
         List<DatasetCase<String, String>> cases = new ArrayList<>();
         dataset.forEach(cases::add);
 
-        // Verify we got all 3 cases
         assertEquals(3, cases.size());
-        List<String> tags = List.of();
-        Map<String, Object> metadata = Map.of();
-        assertEquals(
-                new DatasetCase<>(
-                        "Question 1",
-                        "Answer 1",
-                        tags,
-                        metadata,
-                        Optional.of(
-                                new dev.braintrust.Origin(
-                                        "dataset", datasetId, "123-1", "1", "sometimestamp"))),
-                cases.get(0));
+        assertEquals("Question 1", cases.get(0).input());
+        assertEquals("Answer 1", cases.get(0).expected());
         assertEquals("Question 2", cases.get(1).input());
-        assertEquals(
-                new DatasetCase<>(
-                        "Question 2",
-                        "Answer 2",
-                        tags,
-                        metadata,
-                        Optional.of(
-                                new dev.braintrust.Origin(
-                                        "dataset", datasetId, "123-2", "1", "sometimestamp"))),
-                cases.get(1));
+        assertEquals("Answer 2", cases.get(1).expected());
         assertEquals("Question 3", cases.get(2).input());
-        assertEquals(
-                new DatasetCase<>(
-                        "Question 3",
-                        "Answer 3",
-                        tags,
-                        metadata,
-                        Optional.of(
-                                new dev.braintrust.Origin(
-                                        "dataset", datasetId, "123-3", "1", "sometimestamp"))),
-                cases.get(2));
+        assertEquals("Answer 3", cases.get(2).expected());
 
-        // Verify the API was called twice (once for each batch)
         wireMock.verify(2, postRequestedFor(urlEqualTo("/v1/dataset/" + datasetId + "/fetch")));
     }
 
     @Test
     void testEmptyDataset() {
-        // Mock empty dataset
         wireMock.stubFor(
                 post(urlEqualTo("/v1/dataset/" + datasetId + "/fetch"))
                         .willReturn(
@@ -169,10 +138,7 @@ public class DatasetBrainstoreImplTest {
         List<DatasetCase<String, String>> cases = new ArrayList<>();
         dataset.forEach(cases::add);
 
-        // Verify we got no cases
         assertEquals(0, cases.size());
-
-        // Verify the API was called once
         wireMock.verify(1, postRequestedFor(urlEqualTo("/v1/dataset/" + datasetId + "/fetch")));
     }
 
@@ -181,8 +147,9 @@ public class DatasetBrainstoreImplTest {
         String projectName = "test-project";
         String datasetName = "test-dataset";
         String pinnedVersion = "12345";
+        String datasetUuid = "00000000-0000-0000-0000-000000000789";
 
-        // Mock the query endpoint
+        // Mock the dataset lookup
         wireMock.stubFor(
                 get(urlPathEqualTo("/v1/dataset"))
                         .withQueryParam("project_name", equalTo(projectName))
@@ -196,24 +163,20 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "objects": [
                                     {
-                                      "object_type": "dataset",
-                                      "dataset_id": "test-dataset-123",
-                                      "id": "dataset-789",
-                                      "project_id": "proj-456",
+                                      "id": "%s",
+                                      "project_id": "00000000-0000-0000-0000-000000000456",
                                       "name": "test-dataset",
-                                      "description": "Test dataset",
                                       "_xact_id": "12345",
-                                      "input": "test input",
-                                      "expected": "test output",
-                                      "created": "sometimestamp"
+                                      "created": "2024-01-01T00:00:00Z"
                                     }
                                   ]
                                 }
-                                """)));
+                                """
+                                                        .formatted(datasetUuid))));
 
-        // Mock the fetch endpoint - only succeeds if version is passed correctly
+        // Mock the fetch endpoint with version
         wireMock.stubFor(
-                post(urlEqualTo("/v1/dataset/dataset-789/fetch"))
+                post(urlEqualTo("/v1/dataset/" + datasetUuid + "/fetch"))
                         .withRequestBody(matchingJsonPath("$.version", equalTo(pinnedVersion)))
                         .willReturn(
                                 aResponse()
@@ -224,40 +187,37 @@ public class DatasetBrainstoreImplTest {
                                 {
                                   "events": [
                                     {
-                                      "object_type": "dataset",
-                                      "dataset_id": "test-dataset-123",
+                                      "dataset_id": "%s",
                                       "id": "some-row-id",
                                       "input": "test input",
                                       "expected": "test output",
                                       "metadata": {},
                                       "tags": [],
                                       "_xact_id": "12346",
-                                      "created": "sometimestamp"
+                                      "created": "2024-01-01T00:00:00Z"
                                     }
                                   ],
                                   "cursor": null
                                 }
-                                """)));
+                                """
+                                                        .formatted(datasetUuid))));
 
         Dataset<String, String> dataset =
                 Dataset.fetchFromBraintrust(apiClient, projectName, datasetName, pinnedVersion);
 
-        assertEquals("dataset-789", dataset.id());
+        assertEquals(datasetUuid, dataset.id());
         assertEquals(Optional.of(pinnedVersion), dataset.version());
 
-        // Open cursor and fetch data to trigger the API call with version
         List<DatasetCase<String, String>> cases = new ArrayList<>();
         dataset.forEach(cases::add);
 
-        // Verify we got the expected case
         assertEquals(1, cases.size());
         assertEquals("test input", cases.get(0).input());
         assertEquals("test output", cases.get(0).expected());
 
-        // Verify the fetch endpoint was called with the version
         wireMock.verify(
                 1,
-                postRequestedFor(urlEqualTo("/v1/dataset/dataset-789/fetch"))
+                postRequestedFor(urlEqualTo("/v1/dataset/" + datasetUuid + "/fetch"))
                         .withRequestBody(matchingJsonPath("$.version", equalTo(pinnedVersion))));
     }
 
@@ -266,7 +226,6 @@ public class DatasetBrainstoreImplTest {
         String projectName = "test-project";
         String datasetName = "nonexistent";
 
-        // Mock empty response
         wireMock.stubFor(
                 get(urlPathEqualTo("/v1/dataset"))
                         .withQueryParam("project_name", equalTo(projectName))

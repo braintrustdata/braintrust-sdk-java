@@ -4,7 +4,11 @@ import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.openapi.api.ExperimentsApi;
+import dev.braintrust.openapi.model.CreateExperiment;
+import dev.braintrust.openapi.model.Project;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
@@ -30,8 +34,9 @@ public final class Eval<INPUT, OUTPUT> {
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
     private final @Nonnull String experimentName;
     private final @Nonnull BraintrustConfig config;
-    private final @Nonnull BraintrustApiClient client;
-    private final @Nonnull BraintrustApiClient.OrganizationAndProjectInfo orgAndProject;
+    private final @Nonnull BraintrustOpenApiClient client;
+    private final @Nonnull Project project;
+    private final @Nonnull BraintrustOpenApiClient.OrgInfo orgInfo;
     private final @Nonnull Tracer tracer;
     private final @Nonnull Dataset<INPUT, OUTPUT> dataset;
     private final @Nonnull Task<INPUT, OUTPUT> task;
@@ -44,16 +49,10 @@ public final class Eval<INPUT, OUTPUT> {
         this.experimentName = builder.experimentName;
         this.config = Objects.requireNonNull(builder.config);
         this.client = Objects.requireNonNull(builder.apiClient);
-        if (null == builder.projectId) {
-            this.orgAndProject = client.getProjectAndOrgInfo().orElseThrow();
-        } else {
-            this.orgAndProject =
-                    client.getProjectAndOrgInfo(builder.projectId)
-                            .orElseThrow(
-                                    () ->
-                                            new RuntimeException(
-                                                    "invalid project id: " + builder.projectId));
-        }
+        this.project =
+                client.fetchOrCreateProject(
+                        builder.projectId, config.defaultProjectName().orElse(null));
+        this.orgInfo = client.fetchOrgInfo(project.getOrgId().toString());
         this.tracer = Objects.requireNonNull(builder.tracer);
         this.dataset = builder.dataset;
         this.task = Objects.requireNonNull(builder.task);
@@ -69,28 +68,32 @@ public final class Eval<INPUT, OUTPUT> {
             Optional<String> datasetVersion = Optional.empty();
             Optional<String> datasetId = Optional.empty();
             if (dataset instanceof DatasetBrainstoreImpl<INPUT, OUTPUT>) {
-                // TODO: come up with a means of expressing this naturally in the dataset api
                 datasetVersion = cursor.version();
                 datasetId = Optional.of(dataset.id());
             }
-            var experiment =
-                    client.getOrCreateExperiment(
-                            new BraintrustApiClient.CreateExperimentRequest(
-                                    orgAndProject.project().id(),
-                                    experimentName,
-                                    Optional.empty(),
-                                    Optional.empty(),
-                                    tags.isEmpty() ? Optional.empty() : Optional.of(tags),
-                                    metadata.isEmpty() ? Optional.empty() : Optional.of(metadata),
-                                    datasetId,
-                                    datasetVersion));
-            cursor.forEach(datasetCase -> evalOne(experiment.id(), datasetCase));
+
+            var createExperiment =
+                    new CreateExperiment().projectId(project.getId()).name(experimentName);
+
+            if (!tags.isEmpty()) {
+                createExperiment.tags(tags);
+            }
+            if (!metadata.isEmpty()) {
+                createExperiment.metadata(metadata);
+            }
+            datasetId.ifPresent(id -> createExperiment.datasetId(UUID.fromString(id)));
+            datasetVersion.ifPresent(createExperiment::datasetVersion);
+
+            var experiment = new ExperimentsApi(client).postExperiment(createExperiment);
+
+            cursor.forEach(datasetCase -> evalOne(experiment.getId().toString(), datasetCase));
         }
 
         var experimentUrl =
                 "%s/experiments/%s"
                         .formatted(
-                                BraintrustUtils.createProjectURI(config.appUrl(), orgAndProject)
+                                BraintrustUtils.createProjectURI(
+                                                config.appUrl(), orgInfo.name(), project.getName())
                                         .toASCIIString(),
                                 experimentName);
         return new EvalResult(experimentUrl);
@@ -249,7 +252,7 @@ public final class Eval<INPUT, OUTPUT> {
         public @Nonnull Dataset<INPUT, OUTPUT> dataset;
         private @Nonnull String experimentName = "unnamed-java-eval";
         private @Nullable BraintrustConfig config;
-        private @Nullable BraintrustApiClient apiClient;
+        private @Nullable BraintrustOpenApiClient apiClient;
         private @Nullable String projectId;
         private @Nullable Tracer tracer = null;
         private @Nullable Task<INPUT, OUTPUT> task;
@@ -273,7 +276,7 @@ public final class Eval<INPUT, OUTPUT> {
                 throw new RuntimeException("must provide at least one scorer");
             }
             if (null == apiClient) {
-                apiClient = BraintrustApiClient.of(config);
+                apiClient = BraintrustOpenApiClient.of(config);
             }
             Objects.requireNonNull(dataset);
             Objects.requireNonNull(task);
@@ -295,9 +298,14 @@ public final class Eval<INPUT, OUTPUT> {
             return this;
         }
 
-        public Builder<INPUT, OUTPUT> apiClient(BraintrustApiClient apiClient) {
+        public Builder<INPUT, OUTPUT> apiClient(BraintrustOpenApiClient apiClient) {
             this.apiClient = apiClient;
             return this;
+        }
+
+        @Deprecated
+        public Builder<INPUT, OUTPUT> apiClient(BraintrustApiClient apiClient) {
+            return apiClient(apiClient.openApiClient());
         }
 
         public Builder<INPUT, OUTPUT> tracer(Tracer tracer) {

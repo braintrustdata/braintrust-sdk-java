@@ -2,7 +2,6 @@ package dev.braintrust;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.trace.UnitTestShutdownHook;
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -199,23 +198,6 @@ public class TestHarness {
     @SneakyThrows
     public List<SpanData> awaitExportedSpans(int minSpanCount) {
         return spanExporter.getFinishedSpanItems(minSpanCount);
-    }
-
-    private static BraintrustApiClient.InMemoryImpl createApiClient() {
-        var orgInfo =
-                new dev.braintrust.api.BraintrustApiClient.OrganizationInfo(
-                        defaultOrgId, defaultOrgName);
-        var project =
-                new dev.braintrust.api.BraintrustApiClient.Project(
-                        defaultProjectId,
-                        defaultProjectName,
-                        "unit_test_org_123",
-                        "2023-01-01T00:00:00Z",
-                        "2023-01-01T00:00:00Z");
-        var orgAndProjectInfo =
-                new dev.braintrust.api.BraintrustApiClient.OrganizationAndProjectInfo(
-                        orgInfo, project);
-        return new dev.braintrust.api.BraintrustApiClient.InMemoryImpl(orgAndProjectInfo);
     }
 
     public static VCR.VcrMode getVcrMode() {

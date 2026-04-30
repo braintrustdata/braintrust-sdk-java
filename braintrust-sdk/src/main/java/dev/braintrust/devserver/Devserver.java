@@ -10,7 +10,7 @@ import com.sun.net.httpserver.HttpServer;
 import dev.braintrust.Braintrust;
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.Origin;
-import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.*;
 import dev.braintrust.trace.BraintrustContext;
@@ -303,7 +303,7 @@ public class Devserver {
             // Resolve remote scorers from the request
             List<Scorer<Object, Object>> remoteScorers = new ArrayList<>();
             if (request.getScores() != null) {
-                var apiClient = context.getBraintrust().apiClient();
+                var apiClient = context.getBraintrust().openApiClient();
                 for (var remoteScorer : request.getScores()) {
                     remoteScorers.add(resolveRemoteScorer(remoteScorer, apiClient));
                 }
@@ -364,27 +364,22 @@ public class Devserver {
             try {
                 // Get Braintrust instance from authenticated context
                 Braintrust braintrust = context.getBraintrust();
-                BraintrustApiClient apiClient = braintrust.apiClient();
+                var apiClient = braintrust.openApiClient();
 
                 // Determine project name and ID from the authenticated Braintrust instance
-                final var orgAndProject =
-                        apiClient.getOrCreateProjectAndOrgInfo(braintrust.config());
-                final var projectName = orgAndProject.project().name();
-                final var projectId = orgAndProject.project().id();
+                final var project = apiClient.fetchOrCreateProject(braintrust.config());
+                final var projectName = project.getName();
+                final var projectId = project.getId().toString();
+                final var orgName = apiClient.fetchOrgInfo(project.getOrgId().toString()).name();
                 final var experimentName =
                         request.getExperimentName() != null
                                 ? request.getExperimentName()
                                 : eval.getName();
-                final var experimentUrl =
-                        BraintrustUtils.createProjectURI(
-                                                braintrust.config().appUrl(), orgAndProject)
-                                        .toASCIIString()
-                                + "/experiments/"
-                                + experimentName;
                 final var projectUrl =
                         BraintrustUtils.createProjectURI(
-                                        braintrust.config().appUrl(), orgAndProject)
+                                        braintrust.config().appUrl(), orgName, projectName)
                                 .toASCIIString();
+                final var experimentUrl = projectUrl + "/experiments/" + experimentName;
 
                 var tracer = BraintrustTracing.getTracer();
 
@@ -1069,7 +1064,7 @@ public class Devserver {
                             }
 
                             var bt = Braintrust.of(configBuilder.build());
-                            bt.apiClient().login();
+                            bt.openApiClient().login(); // validates the API key
                             return bt;
                         });
 
@@ -1170,7 +1165,7 @@ public class Devserver {
      * @throws IllegalArgumentException if dataset or project is not found
      */
     private static Dataset<?, ?> extractDataset(
-            EvalRequest request, BraintrustApiClient apiClient) {
+            EvalRequest request, BraintrustOpenApiClient apiClient) {
         EvalRequest.DataSpec dataSpec = request.getData();
 
         if (dataSpec.getData() != null && !dataSpec.getData().isEmpty()) {
@@ -1197,19 +1192,14 @@ public class Devserver {
         } else if (dataSpec.getDatasetId() != null) {
             // Method 3: Fetch by dataset ID
             log.debug("Fetching dataset from Braintrust by ID: {}", dataSpec.getDatasetId());
-            var datasetMetadata = apiClient.getDataset(dataSpec.getDatasetId());
-            if (datasetMetadata.isEmpty()) {
-                throw new IllegalArgumentException("Dataset not found: " + dataSpec.getDatasetId());
-            }
+            var datasetsApi = new dev.braintrust.openapi.api.DatasetsApi(apiClient);
+            var projectsApi = new dev.braintrust.openapi.api.ProjectsApi(apiClient);
+            var dataset =
+                    datasetsApi.getDatasetId(java.util.UUID.fromString(dataSpec.getDatasetId()));
+            var project = projectsApi.getProjectId(dataset.getProjectId());
 
-            var project = apiClient.getProject(datasetMetadata.get().projectId());
-            if (project.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Project not found: " + datasetMetadata.get().projectId());
-            }
-
-            String fetchedProjectName = project.get().name();
-            String fetchedDatasetName = datasetMetadata.get().name();
+            String fetchedProjectName = project.getName();
+            String fetchedDatasetName = dataset.getName();
             log.debug(
                     "Resolved dataset ID to project={}, dataset={}",
                     fetchedProjectName,
@@ -1231,7 +1221,7 @@ public class Devserver {
      * @throws IllegalArgumentException if the function_id is missing
      */
     private static Scorer<Object, Object> resolveRemoteScorer(
-            EvalRequest.RemoteScorer remoteScorer, BraintrustApiClient apiClient) {
+            EvalRequest.RemoteScorer remoteScorer, BraintrustOpenApiClient apiClient) {
         var functionIdSpec = remoteScorer.getFunctionId();
 
         if (functionIdSpec == null || functionIdSpec.getFunctionId() == null) {

@@ -1,6 +1,8 @@
 package dev.braintrust;
 
 import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.openapi.model.Organization;
+import dev.braintrust.openapi.model.Project;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -9,15 +11,25 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class BraintrustUtils {
-    /** construct a URI to link to a specific braintrust project within an org */
+    @Deprecated
     public static URI createProjectURI(
             String appUrl, BraintrustApiClient.OrganizationAndProjectInfo orgAndProject) {
+        return createProjectURI(
+                appUrl, orgAndProject.orgInfo().name(), orgAndProject.project().name());
+    }
+
+    /**
+     * construct a URI to link to a specific braintrust project within an org, using generated types
+     */
+    public static URI createProjectURI(String appUrl, Organization org, Project project) {
+        return createProjectURI(appUrl, org.getName(), project.getName());
+    }
+
+    /** construct a URI to link to a specific braintrust project within an org by name */
+    public static URI createProjectURI(String appUrl, String orgName, String projectName) {
         try {
             var baseURI = new URI(appUrl);
-            var path =
-                    "/app/%s/p/%s"
-                            .formatted(
-                                    orgAndProject.orgInfo().name(), orgAndProject.project().name());
+            var path = "/app/%s/p/%s".formatted(orgName, projectName);
             return new URI(
                     baseURI.getScheme(),
                     baseURI.getUserInfo(),

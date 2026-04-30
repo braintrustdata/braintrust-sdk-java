@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.braintrust.Origin;
 import dev.braintrust.TestHarness;
 import dev.braintrust.VCR;
-import dev.braintrust.api.BraintrustApiClient;
+import dev.braintrust.openapi.api.ExperimentsApi;
+import dev.braintrust.openapi.model.CreateExperiment;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanId;
@@ -57,19 +58,21 @@ public class EvalTest {
                         .formatted(testHarness.braintrust().projectUri(), experimentName),
                 result.getExperimentUrl());
         var spans = testHarness.awaitExportedSpans();
+        var openApiClient = testHarness.braintrust().openApiClient();
         var experiment =
-                testHarness
-                        .braintrust()
-                        .apiClient()
-                        .getOrCreateExperiment(
-                                new BraintrustApiClient.CreateExperimentRequest(
-                                        TestHarness.defaultProjectId(), experimentName));
+                new ExperimentsApi(openApiClient)
+                        .postExperiment(
+                                new CreateExperiment()
+                                        .projectId(
+                                                java.util.UUID.fromString(
+                                                        TestHarness.defaultProjectId()))
+                                        .name(experimentName));
         final AtomicInteger numRootSpans = new AtomicInteger(0);
         for (SpanData span : spans) {
             var parent =
                     span.getAttributes().get(AttributeKey.stringKey(BraintrustTracing.PARENT_KEY));
             assertEquals(
-                    "experiment_id:" + experiment.id(),
+                    "experiment_id:" + experiment.getId().toString(),
                     parent,
                     "all eval spans must set the parent to the experiment id");
             if (span.getParentSpanId().equals(SpanId.getInvalid())) {
@@ -348,18 +351,25 @@ public class EvalTest {
 
         // Query the experiment from Braintrust API to verify tags and metadata
         var experiments =
-                testHarness
-                        .braintrust()
-                        .apiClient()
-                        .listExperiments(TestHarness.defaultProjectId());
+                new ExperimentsApi(testHarness.braintrust().openApiClient())
+                        .getExperiment(
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                java.util.UUID.fromString(TestHarness.defaultProjectId()),
+                                null)
+                        .getObjects();
         var experiment =
                 experiments.stream()
-                        .filter(e -> e.name().equals(experimentName))
+                        .filter(e -> e.getName().equals(experimentName))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("Experiment not found"));
 
-        assertEquals(expectedTags, experiment.tags(), "Experiment should have tags");
-        assertEquals(expectedMetadata, experiment.metadata(), "Experiment should have metadata");
+        assertEquals(expectedTags, experiment.getTags(), "Experiment should have tags");
+        assertEquals(expectedMetadata, experiment.getMetadata(), "Experiment should have metadata");
     }
 
     @Test
@@ -389,21 +399,27 @@ public class EvalTest {
 
         // Verify the experiment is linked to the dataset
         var experiments =
-                testHarness
-                        .braintrust()
-                        .apiClient()
-                        .listExperiments(TestHarness.defaultProjectId());
+                new ExperimentsApi(testHarness.braintrust().openApiClient())
+                        .getExperiment(
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                java.util.UUID.fromString(TestHarness.defaultProjectId()),
+                                null)
+                        .getObjects();
         var experiment =
                 experiments.stream()
-                        .filter(e -> e.name().equals(experimentName))
+                        .filter(e -> e.getName().equals(experimentName))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("Experiment not found"));
 
-        assertTrue(experiment.datasetId().isPresent(), "Experiment should be linked to a dataset");
-        assertEquals(dataset.id(), experiment.datasetId().get(), "Dataset ID should match");
+        assertTrue(experiment.getDatasetId() != null, "Experiment should be linked to a dataset");
+        assertEquals(dataset.id(), experiment.getDatasetId().toString(), "Dataset ID should match");
         assertTrue(
-                experiment.datasetVersion().isPresent(),
-                "Experiment should have a dataset version");
+                experiment.getDatasetVersion() != null, "Experiment should have a dataset version");
     }
 
     @Test

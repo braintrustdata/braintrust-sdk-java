@@ -1,0 +1,37 @@
+{
+  "id" : "68305887-be5b-43d1-836e-f6c3db244ea7",
+  "name" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke",
+  "request" : {
+    "url" : "/v1/function/efa5f9c3-6ece-4726-a9d6-4ba792980b3f/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"test input\",\"output\":\"hello world\",\"expected\":\"hello world\",\"metadata\":{}},\"expected\":null,\"messages\":[],\"mcp_auth\":{}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_efa5f9c3-6ece-4726-a9d6-4ba792980b3f_invoke-68305887-be5b-43d1-836e-f6c3db244ea7.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P10",
+      "x-amzn-RequestId" : "4fb52d82-e4b1-449d-8382-c03a94fe117e",
+      "X-Amz-Cf-Id" : "pYGtUa5mk-Xr0PLDE4mtDBxHfG07fYkwvrkeaYuwyRGf9DNT96xVYA==",
+      "x-bt-function-creds-cached" : "HIT",
+      "x-bt-function-meta-cached" : "HIT",
+      "X-Amzn-Trace-Id" : "Root=1-69efd1b8-17dc54ad1aea718e1856193f;Parent=68f748ddda43869d;Sampled=0;Lineage=1:8be8f50d:0",
+      "Date" : "Mon, 27 Apr 2026 21:14:32 GMT",
+      "Via" : "1.1 ddea1c07643e5e0bfceb34480eebdc52.cloudfront.net (CloudFront)",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "68305887-be5b-43d1-836e-f6c3db244ea7",
+  "persistent" : true,
+  "insertionIndex" : 190
+}

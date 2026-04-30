@@ -12,17 +12,23 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Provides the necessary API calls for the Braintrust SDK. Users of the SDK should favor using
- * {@link dev.braintrust.eval.Eval} or {@link dev.braintrust.trace.BraintrustTracing}
- */
+/** Deprecated. Please use {@link BraintrustOpenApiClient} instead */
+@Deprecated
 public interface BraintrustApiClient {
+    /**
+     * Create an openapi client with the same api key as this one.
+     *
+     * <p>Convenience method for migrating to the new client. It's recommended to not use this
+     * method and simply migrate to the new BraintrustOpenApiClient
+     */
+    @Deprecated
+    BraintrustOpenApiClient openApiClient();
+
     /**
      * Attempt Braintrust login
      *
@@ -169,6 +175,11 @@ public interface BraintrustApiClient {
             } catch (InterruptedException | ExecutionException e) {
                 throw new ApiException(e);
             }
+        }
+
+        @Override
+        public BraintrustOpenApiClient openApiClient() {
+            return BraintrustOpenApiClient.of(config);
         }
 
         @Override
@@ -489,237 +500,6 @@ public interface BraintrustApiClient {
                     .connectTimeout(Duration.ofSeconds(10))
                     .sslContext(config.sslContext())
                     .build();
-        }
-    }
-
-    /** Implementation for test doubling */
-    @Slf4j
-    class InMemoryImpl implements BraintrustApiClient {
-        private final List<OrganizationAndProjectInfo> organizationAndProjectInfos;
-        private final Set<Experiment> experiments =
-                Collections.newSetFromMap(new ConcurrentHashMap<>());
-        private final List<Prompt> prompts = new ArrayList<>();
-        private final List<Function> functions = new ArrayList<>();
-        private final Map<String, java.util.function.Function<FunctionInvokeRequest, Object>>
-                functionInvokers = new ConcurrentHashMap<>();
-
-        public InMemoryImpl(OrganizationAndProjectInfo... organizationAndProjectInfos) {
-            this.organizationAndProjectInfos =
-                    new ArrayList<>(List.of(organizationAndProjectInfos));
-        }
-
-        public InMemoryImpl(
-                List<OrganizationAndProjectInfo> organizationAndProjectInfos,
-                List<Prompt> prompts) {
-            this.organizationAndProjectInfos = new ArrayList<>(organizationAndProjectInfos);
-            this.prompts.addAll(prompts);
-        }
-
-        @Override
-        public LoginResponse login() {
-            return new LoginResponse(
-                    organizationAndProjectInfos.stream().map(o -> o.orgInfo).toList());
-        }
-
-        @Override
-        public Project getOrCreateProject(String projectName) {
-            // Find existing project by name
-            for (var orgAndProject : organizationAndProjectInfos) {
-                if (orgAndProject.project().name().equals(projectName)) {
-                    return orgAndProject.project();
-                }
-            }
-
-            // Create new project if not found
-            var defaultOrgInfo =
-                    organizationAndProjectInfos.isEmpty()
-                            ? new OrganizationInfo("default-org-id", "Default Organization")
-                            : organizationAndProjectInfos.get(0).orgInfo();
-
-            var newProject =
-                    new Project(
-                            "project-" + UUID.randomUUID().toString(),
-                            projectName,
-                            defaultOrgInfo.id(),
-                            java.time.Instant.now().toString(),
-                            java.time.Instant.now().toString());
-
-            organizationAndProjectInfos.add(
-                    new OrganizationAndProjectInfo(defaultOrgInfo, newProject));
-            return newProject;
-        }
-
-        @Override
-        public Optional<Project> getProject(String projectId) {
-            return organizationAndProjectInfos.stream()
-                    .map(OrganizationAndProjectInfo::project)
-                    .filter(project -> project.id().equals(projectId))
-                    .findFirst();
-        }
-
-        @Override
-        public Experiment getOrCreateExperiment(CreateExperimentRequest request) {
-            var existing =
-                    experiments.stream()
-                            .filter(exp -> exp.name().equals(request.name()))
-                            .findFirst();
-            if (existing.isPresent()) {
-                return existing.get();
-            }
-            var newExperiment =
-                    new Experiment(
-                            request.name().hashCode() + "",
-                            request.projectId(),
-                            request.name(),
-                            request.description(),
-                            request.tags().orElse(List.of()),
-                            request.metadata().orElse(Map.of()),
-                            "notused",
-                            "notused",
-                            request.datasetId(),
-                            request.datasetVersion());
-            experiments.add(newExperiment);
-            return newExperiment;
-        }
-
-        @Override
-        public List<Experiment> listExperiments(String projectId) {
-            return experiments.stream().filter(exp -> exp.projectId().equals(projectId)).toList();
-        }
-
-        @Override
-        public Optional<OrganizationAndProjectInfo> getProjectAndOrgInfo() {
-            return organizationAndProjectInfos.isEmpty()
-                    ? Optional.empty()
-                    : Optional.of(organizationAndProjectInfos.get(0));
-        }
-
-        @Override
-        public Optional<OrganizationAndProjectInfo> getProjectAndOrgInfo(String projectId) {
-            return organizationAndProjectInfos.stream()
-                    .filter(orgAndProject -> orgAndProject.project().id().equals(projectId))
-                    .findFirst();
-        }
-
-        @Override
-        public OrganizationAndProjectInfo getOrCreateProjectAndOrgInfo(BraintrustConfig config) {
-            // Get or create project based on config
-            Project project;
-            if (config.defaultProjectId().isPresent()) {
-                var projectId = config.defaultProjectId().get();
-                project =
-                        getProject(projectId)
-                                .orElseThrow(
-                                        () ->
-                                                new ApiException(
-                                                        "Project with ID '"
-                                                                + projectId
-                                                                + "' not found"));
-            } else if (config.defaultProjectName().isPresent()) {
-                var projectName = config.defaultProjectName().get();
-                project = getOrCreateProject(projectName);
-            } else {
-                throw new ApiException(
-                        "Either project ID or project name must be provided in config");
-            }
-
-            // Find the organization info for this project
-            return organizationAndProjectInfos.stream()
-                    .filter(info -> info.project().id().equals(project.id()))
-                    .findFirst()
-                    .orElseThrow(
-                            () ->
-                                    new ApiException(
-                                            "Unable to find organization for project: "
-                                                    + project.id()));
-        }
-
-        @Override
-        public Optional<Prompt> getPrompt(
-                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
-            Objects.requireNonNull(projectName, slug);
-            List<Prompt> matchingPrompts =
-                    prompts.stream()
-                            .filter(
-                                    prompt -> {
-                                        // Filter by slug if provided
-                                        if (slug != null && !slug.isEmpty()) {
-                                            if (!prompt.slug().equals(slug)) {
-                                                return false;
-                                            }
-                                        }
-
-                                        // Filter by project name if provided
-                                        if (projectName != null && !projectName.isEmpty()) {
-                                            // Find project by name and check if ID matches
-                                            Project project = getOrCreateProject(projectName);
-                                            if (!prompt.projectId().equals(project.id())) {
-                                                return false;
-                                            }
-                                        }
-
-                                        // Filter by version if provided
-                                        // Note: Version filtering would require additional metadata
-                                        // on Prompt
-                                        // For now, we'll skip this as Prompt doesn't have a
-                                        // version field
-
-                                        return true;
-                                    })
-                            .toList();
-
-            if (matchingPrompts.isEmpty()) {
-                return Optional.empty();
-            }
-
-            if (matchingPrompts.size() > 1) {
-                throw new ApiException(
-                        "Multiple objects found for slug: "
-                                + slug
-                                + ", projectName: "
-                                + projectName);
-            }
-
-            return Optional.of(matchingPrompts.get(0));
-        }
-
-        // Will add dataset support if needed in unit tests (this is unlikely to be needed though)
-        @Override
-        public DatasetFetchResponse fetchDatasetEvents(
-                String datasetId, DatasetFetchRequest request) {
-            return new DatasetFetchResponse(List.of(), null);
-        }
-
-        @Override
-        public Optional<Dataset> getDataset(String datasetId) {
-            return Optional.empty();
-        }
-
-        @Override
-        public List<Dataset> queryDatasets(String projectName, String datasetName) {
-            return List.of();
-        }
-
-        @Override
-        public Optional<Function> getFunction(
-                @Nonnull String projectName, @Nonnull String slug, @Nullable String version) {
-            throw new RuntimeException("will not be invoked");
-        }
-
-        @Override
-        public Optional<Function> getFunctionById(@Nonnull String functionId) {
-            throw new RuntimeException("will not be invoked");
-        }
-
-        @Override
-        public Object invokeFunction(
-                @Nonnull String functionId, @Nonnull FunctionInvokeRequest request) {
-            throw new RuntimeException("will not be invoked");
-        }
-
-        @Override
-        public BtqlQueryResponse btqlQuery(@Nonnull String query) {
-            throw new RuntimeException("will not be invoked");
         }
     }
 

@@ -105,6 +105,8 @@ afterEvaluate {
 }
 
 dependencies {
+  implementation project(':braintrust-api')
+
   api "io.opentelemetry:opentelemetry-api:${otelVersion}"
   api "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   api "io.opentelemetry:opentelemetry-sdk-trace:${otelVersion}"

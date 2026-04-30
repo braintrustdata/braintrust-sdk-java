@@ -34,7 +34,7 @@ public class BraintrustTest {
 
         assertNotNull(braintrust);
         assertNotNull(braintrust.config());
-        assertNotNull(braintrust.apiClient());
+        assertNotNull(braintrust.openApiClient());
         assertNotNull(braintrust.promptLoader());
         assertEquals(config, braintrust.config());
     }
