@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustGenAITest {
+    private static final String MODEL_ID = "gemini-3.1-flash-lite-preview";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     @BeforeAll
@@ -47,7 +48,7 @@ public class BraintrustGenAITest {
 
         var response =
                 geminiClient.models.generateContent(
-                        "gemini-2.0-flash-lite", "What is the capital of France?", config);
+                        MODEL_ID, "What is the capital of France?", config);
 
         // Verify the response
         assertNotNull(response);
@@ -67,7 +68,7 @@ public class BraintrustGenAITest {
         assertNotNull(metadataJson, "braintrust.metadata should be set");
         var metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("gemini", metadata.get("provider").asText());
-        assertEquals("gemini-2.0-flash-lite", metadata.get("model").asText());
+        assertEquals(MODEL_ID, metadata.get("model").asText());
         assertEquals(0.0, metadata.get("temperature").asDouble());
         assertEquals(50, metadata.get("maxOutputTokens").asInt());
 
@@ -91,7 +92,7 @@ public class BraintrustGenAITest {
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
         assertNotNull(inputJson, "braintrust.input_json should be set");
         var input = JSON_MAPPER.readTree(inputJson);
-        assertEquals("gemini-2.0-flash-lite", input.get("model").asText());
+        assertEquals(MODEL_ID, input.get("model").asText());
         assertTrue(input.has("contents"), "input should have contents");
         assertTrue(input.has("config"), "input should have config");
 
@@ -123,7 +124,7 @@ public class BraintrustGenAITest {
         // Call async method and wait for completion
         var responseFuture =
                 geminiClient.async.models.generateContent(
-                        "gemini-2.0-flash-lite", "What is the capital of Germany?", config);
+                        MODEL_ID, "What is the capital of Germany?", config);
 
         var response = responseFuture.get(); // Wait for completion
 
@@ -145,7 +146,7 @@ public class BraintrustGenAITest {
         assertNotNull(metadataJson, "braintrust.metadata should be set");
         var metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("gemini", metadata.get("provider").asText());
-        assertEquals("gemini-2.0-flash-lite", metadata.get("model").asText());
+        assertEquals(MODEL_ID, metadata.get("model").asText());
         assertEquals(0.0, metadata.get("temperature").asDouble());
         assertEquals(50, metadata.get("maxOutputTokens").asInt());
 
@@ -169,7 +170,7 @@ public class BraintrustGenAITest {
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
         assertNotNull(inputJson, "braintrust.input_json should be set");
         var input = JSON_MAPPER.readTree(inputJson);
-        assertEquals("gemini-2.0-flash-lite", input.get("model").asText());
+        assertEquals(MODEL_ID, input.get("model").asText());
         assertTrue(input.has("contents"), "input should have contents");
         assertTrue(input.has("config"), "input should have config");
 
