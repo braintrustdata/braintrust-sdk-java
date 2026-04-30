@@ -9,6 +9,7 @@ import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.openapi.api.ExperimentsApi;
 import dev.braintrust.openapi.model.CreateExperiment;
 import dev.braintrust.openapi.model.Project;
+import dev.braintrust.trace.BrainstoreTrace;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
@@ -124,6 +125,7 @@ public final class Eval<INPUT, OUTPUT> {
         }
         try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
             final TaskResult<INPUT, OUTPUT> taskResult;
+            final String taskSpanId;
             { // run task
                 var taskSpan =
                         tracer.spanBuilder("task")
@@ -132,6 +134,7 @@ public final class Eval<INPUT, OUTPUT> {
                                         "braintrust.span_attributes",
                                         toJson(Map.of("type", "task")))
                                 .startSpan();
+                taskSpanId = taskSpan.getSpanContext().getSpanId();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
                     taskResult = task.apply(datasetCase, parameters);
@@ -155,9 +158,19 @@ public final class Eval<INPUT, OUTPUT> {
                 }
                 taskSpan.end();
             }
+
+            // Create a single BrainstoreTrace for this eval case, shared across all scorers.
+            // It fetches spans lazily on first access (only if a TracedScorer actually calls it).
+            // We wait specifically for the task span to appear, which guarantees its children
+            // (LLM spans, tool spans) have also been indexed — since children end before parents.
+            var rootTraceId = rootSpan.getSpanContext().getTraceId();
+            var trace =
+                    BrainstoreTrace.forExperiment(
+                            client, experimentId, rootTraceId, List.of(taskSpanId));
+
             // run scorers - one span per scorer
             for (var scorer : scorers) {
-                runScorer(experimentId, rootSpan, scorer, taskResult);
+                runScorer(experimentId, rootSpan, scorer, taskResult, trace);
             }
         } finally {
             rootSpan.end();
@@ -165,14 +178,16 @@ public final class Eval<INPUT, OUTPUT> {
     }
 
     /**
-     * Runs a scorer against a successful task result. If the scorer throws, falls back to {@link
-     * Scorer#scoreForScorerException}.
+     * Runs a scorer against a successful task result. If the scorer is a {@link TracedScorer}, it
+     * receives the {@link BrainstoreTrace} for the eval case. If the scorer throws, falls back to
+     * {@link Scorer#scoreForScorerException}.
      */
     private void runScorer(
             String experimentId,
             Span rootSpan,
             Scorer<INPUT, OUTPUT> scorer,
-            TaskResult<INPUT, OUTPUT> taskResult) {
+            TaskResult<INPUT, OUTPUT> taskResult,
+            BrainstoreTrace trace) {
         var scoreSpan =
                 tracer.spanBuilder("score")
                         .setAttribute(PARENT, "experiment_id:" + experimentId)
@@ -180,7 +195,11 @@ public final class Eval<INPUT, OUTPUT> {
         try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
             List<Score> scores;
             try {
-                scores = scorer.score(taskResult);
+                if (scorer instanceof TracedScorer<INPUT, OUTPUT> tracedScorer) {
+                    scores = tracedScorer.score(taskResult, trace);
+                } else {
+                    scores = scorer.score(taskResult);
+                }
             } catch (Exception e) {
                 scoreSpan.setStatus(StatusCode.ERROR, e.getMessage());
                 scoreSpan.recordException(e);
