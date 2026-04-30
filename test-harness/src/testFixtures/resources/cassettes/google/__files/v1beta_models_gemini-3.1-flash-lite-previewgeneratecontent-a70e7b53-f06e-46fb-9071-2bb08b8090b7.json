@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "The capital of Germany is Berlin.",
+            "thoughtSignature": "EjQKMgEMOdbH+mJK0xVxWonP9ezZIa/QaSPJy2uSAb0WePGlF/mTUCERQs75tMx46gS9UxsD"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 8,
+    "candidatesTokenCount": 7,
+    "totalTokenCount": 15,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 8
+      }
+    ]
+  },
+  "modelVersion": "gemini-3.1-flash-lite-preview",
+  "responseId": "8eXyadj4IMTiqtsPp7bi8QM"
+}
