@@ -1,0 +1,49 @@
+{
+  "id" : "33ce4449-9151-4981-bfc0-56957ddb31ac",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"system\",\n    \"content\" : \"you are a thoughtful assistant\"\n  }, {\n    \"role\" : \"user\",\n    \"content\" : \"Count from 1 to 10 slowly.\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : true,\n  \"stream_options\" : {\n    \"include_usage\" : true\n  },\n  \"max_tokens\" : 800\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-33ce4449-9151-4981-bfc0-56957ddb31ac.txt",
+    "headers" : {
+      "x-request-id" : "req_1a7460720de24c13bbd38c78d97ddc4b",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f4b2fb2acb8681a-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Fri, 01 May 2026 01:59:21 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=N4hMfj26ZxL1xSbSM_i0ysPFPJij_gtBP17Judogi_A-1777600760.742154-1.0.1.1-mdSzBTdPv9E08JsfgvId7VtsPmWIMYrABwWRT8i7kq8q5zG6ddohMIb6sZaXX0S85xu3ZKpTwR5ro9Rx_gYGc5d_a6_PVLexkJyQDMmgmXVV3vsW6Cws0biRAY2Kk9ue; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 01 May 2026 02:29:21 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "155",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "33ce4449-9151-4981-bfc0-56957ddb31ac",
+  "persistent" : true,
+  "insertionIndex" : 42
+}

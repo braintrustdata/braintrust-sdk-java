@@ -1,0 +1,52 @@
+{
+  "id" : "81a6dc74-3b87-4a7a-b0e9-87e7ffb14ad9",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":[{\"text\":\"What color is this image?\",\"type\":\"text\"},{\"source\":{\"data\":\"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\",\"media_type\":\"image/png\",\"type\":\"base64\"},\"type\":\"image\"}],\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-81a6dc74-3b87-4a7a-b0e9-87e7ffb14ad9.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "1143",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "800000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-05-01T01:59:34Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-05-01T01:59:34Z",
+      "anthropic-ratelimit-tokens-remaining" : "4800000",
+      "set-cookie" : "_cfuvid=CTpa_tVQ2nitIqSEvoqN8vqmEmzheelRWlzi3T6ZHzM-1777600773.615725-1.0.1.1-wazYl9_lHkXkz3WKPoS7c6l3SSLBREURya_U6NpT6PU; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "4000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9f4b30031e2876ee-SEA",
+      "anthropic-ratelimit-tokens-limit" : "4800000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011Cab2Eq3csMNREhiod79mj",
+      "anthropic-ratelimit-tokens-reset" : "2026-05-01T01:59:34Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Fri, 01 May 2026 01:59:34 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-05-01T01:59:33Z",
+      "anthropic-ratelimit-input-tokens-limit" : "4000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "800000"
+    }
+  },
+  "uuid" : "81a6dc74-3b87-4a7a-b0e9-87e7ffb14ad9",
+  "persistent" : true,
+  "insertionIndex" : 16
+}
