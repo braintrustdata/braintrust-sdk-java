@@ -105,7 +105,22 @@ afterEvaluate {
 }
 
 dependencies {
-  implementation project(':braintrust-api')
+  // braintrust-api is an internal subproject whose classes are bundled directly into
+  // the published JAR via the `embed` configuration. It must NOT appear in the published
+  // POM as a transitive dependency (it is not published to Maven Central).
+  // compileOnly makes it available at compile time; embed inlines it into the JAR at package time.
+  compileOnly project(':braintrust-api')
+  embed project(':braintrust-api')
+
+  // Programmatically re-export braintrust-api's implementation dependencies as
+  // implementation deps on braintrust-sdk. Since braintrust-api is embedded (not
+  // published), its transitive deps won't flow to consumers automatically — we
+  // declare them here so they appear in the published POM.
+  // We use the `implementation` configuration directly (not `runtimeClasspath`) to
+  // avoid picking up `runtimeOnly` deps, which should not be forced onto consumers.
+  project(':braintrust-api').configurations.implementation.dependencies.each { dep ->
+    implementation dep
+  }
 
   api "io.opentelemetry:opentelemetry-api:${otelVersion}"
   api "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
@@ -125,6 +140,7 @@ dependencies {
 
   implementation "com.github.spullara.mustache.java:compiler:0.9.14"
 
+  testCompileOnly project(':braintrust-api')
   testImplementation(testFixtures(project(":test-harness")))
 
   testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
