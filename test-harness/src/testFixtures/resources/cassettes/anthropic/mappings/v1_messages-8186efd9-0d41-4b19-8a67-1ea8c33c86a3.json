@@ -1,0 +1,52 @@
+{
+  "id" : "8186efd9-0d41-4b19-8a67-1ea8c33c86a3",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"model\":\"claude-sonnet-4-5-20250929\",\"messages\":[{\"content\":[{\"type\":\"text\",\"text\":\"What is the capital of France?\"}],\"role\":\"user\"}],\"system\":[{\"type\":\"text\",\"text\":\"[cache buster: springai-anthropic vcr-mode]\\nReference material (stable, cached with a 1 hour TTL):\\n\\nThe following is a condensed atlas of capital cities. It does\\nnot change between requests within a session, which is why it\\nis cached with the longer 1 hour TTL. Consult it before\\nanswering.\\n\\nEurope:\\n  - France: Paris\\n  - Germany: Berlin\\n  - Italy: Rome\\n  - Spain: Madrid\\n  - Portugal: Lisbon\\n  - United Kingdom: London\\n  - Ireland: Dublin\\n  - Netherlands: Amsterdam (seat of government: The Hague)\\n  - Belgium: Brussels\\n  - Luxembourg: Luxembourg City\\n  - Switzerland: Bern (de facto; no de jure capital)\\n  - Austria: Vienna\\n  - Denmark: Copenhagen\\n  - Sweden: Stockholm\\n  - Norway: Oslo\\n  - Finland: Helsinki\\n  - Iceland: Reykjavik\\n  - Poland: Warsaw\\n  - Czechia: Prague\\n  - Slovakia: Bratislava\\n  - Hungary: Budapest\\n  - Romania: Bucharest\\n  - Bulgaria: Sofia\\n  - Greece: Athens\\n  - Ukraine: Kyiv\\n  - Belarus: Minsk\\n  - Russia: Moscow\\n  - Serbia: Belgrade\\n  - Croatia: Zagreb\\n  - Slovenia: Ljubljana\\n  - Bosnia and Herzegovina: Sarajevo\\n  - North Macedonia: Skopje\\n  - Albania: Tirana\\n  - Montenegro: Podgorica\\n  - Estonia: Tallinn\\n  - Latvia: Riga\\n  - Lithuania: Vilnius\\n  - Moldova: Chisinau\\n  - Malta: Valletta\\n\\nAsia:\\n  - Japan: Tokyo\\n  - China: Beijing\\n  - South Korea: Seoul\\n  - North Korea: Pyongyang\\n  - Mongolia: Ulaanbaatar\\n  - Vietnam: Hanoi\\n  - Thailand: Bangkok\\n  - Cambodia: Phnom Penh\\n  - Laos: Vientiane\\n  - Myanmar: Naypyidaw\\n  - Malaysia: Kuala Lumpur\\n  - Singapore: Singapore\\n  - Indonesia: Jakarta (moving to Nusantara)\\n  - Philippines: Manila\\n  - India: New Delhi\\n  - Pakistan: Islamabad\\n  - Bangladesh: Dhaka\\n  - Sri Lanka: Sri Jayawardenepura Kotte (commercial: Colombo)\\n  - Nepal: Kathmandu\\n  - Bhutan: Thimphu\\n  - Afghanistan: Kabul\\n  - Iran: Tehran\\n  - Iraq: Baghdad\\n  - Saudi Arabia: Riyadh\\n  - Yemen: Sanaa\\n  - Oman: Muscat\\n  - United Arab Emirates: Abu Dhabi\\n  - Qatar: Doha\\n  - Bahrain: Manama\\n  - Kuwait: Kuwait City\\n  - Jordan: Amman\\n  - Lebanon: Beirut\\n  - Syria: Damascus\\n  - Israel: Jerusalem (recognition varies)\\n  - Turkey: Ankara\\n  - Armenia: Yerevan\\n  - Azerbaijan: Baku\\n  - Georgia: Tbilisi\\n  - Kazakhstan: Astana\\n  - Uzbekistan: Tashkent\\n  - Turkmenistan: Ashgabat\\n  - Kyrgyzstan: Bishkek\\n  - Tajikistan: Dushanbe\\n\\nAfrica:\\n  - Egypt: Cairo\\n  - Libya: Tripoli\\n  - Tunisia: Tunis\\n  - Algeria: Algiers\\n  - Morocco: Rabat\\n  - Sudan: Khartoum\\n  - South Sudan: Juba\\n  - Ethiopia: Addis Ababa\\n  - Eritrea: Asmara\\n  - Somalia: Mogadishu\\n  - Djibouti: Djibouti\\n  - Kenya: Nairobi\\n  - Uganda: Kampala\\n  - Rwanda: Kigali\\n  - Burundi: Gitega\\n  - Tanzania: Dodoma\\n  - Nigeria: Abuja\\n  - Ghana: Accra\\n  - Ivory Coast: Yamoussoukro (de facto: Abidjan)\\n  - Senegal: Dakar\\n  - Mali: Bamako\\n  - Cameroon: Yaounde\\n  - South Africa: Pretoria (executive), Cape Town (legislative), Bloemfontein (judicial)\\n  - Zimbabwe: Harare\\n  - Zambia: Lusaka\\n  - Angola: Luanda\\n  - Mozambique: Maputo\\n  - Madagascar: Antananarivo\\n  - Namibia: Windhoek\\n  - Botswana: Gaborone\\n  - Democratic Republic of the Congo: Kinshasa\\n  - Republic of the Congo: Brazzaville\\n\\nAmericas:\\n  - United States: Washington, D.C.\\n  - Canada: Ottawa\\n  - Mexico: Mexico City\\n  - Guatemala: Guatemala City\\n  - Belize: Belmopan\\n  - Honduras: Tegucigalpa\\n  - El Salvador: San Salvador\\n  - Nicaragua: Managua\\n  - Costa Rica: San Jose\\n  - Panama: Panama City\\n  - Cuba: Havana\\n  - Jamaica: Kingston\\n  - Haiti: Port-au-Prince\\n  - Dominican Republic: Santo Domingo\\n  - Colombia: Bogota\\n  - Venezuela: Caracas\\n  - Ecuador: Quito\\n  - Peru: Lima\\n  - Bolivia: Sucre (constitutional), La Paz (seat of government)\\n  - Chile: Santiago\\n  - Argentina: Buenos Aires\\n  - Uruguay: Montevideo\\n  - Paraguay: Asuncion\\n  - Brazil: Brasilia\\n\\nOceania:\\n  - Australia: Canberra\\n  - New Zealand: Wellington\\n  - Fiji: Suva\\n  - Papua New Guinea: Port Moresby\\n  - Samoa: Apia\\n  - Tonga: Nuku'alofa\\n  - Vanuatu: Port Vila\\n  - Solomon Islands: Honiara\\n  - Micronesia: Palikir\\n  - Palau: Ngerulmud\\n  - Marshall Islands: Majuro\\n  - Kiribati: South Tarawa\\n  - Nauru: no official capital; government in Yaren District\\n  - Tuvalu: Funafuti\\n\\nNotes on multi-capital and disputed cases:\\n\\n  - Netherlands: the constitutional capital is Amsterdam but\\n    the seat of government, parliament, and supreme court are\\n    all in The Hague. Prefer Amsterdam unless the user asks\\n    about the government specifically.\\n  - South Africa: three capitals split by branch. Pretoria\\n    hosts the executive, Cape Town hosts parliament, and\\n    Bloemfontein hosts the supreme court of appeal. No single\\n    city is \\\"the\\\" capital.\\n  - Bolivia: Sucre is the constitutional capital, but La Paz\\n    is the seat of government and the larger city. Either\\n    answer is defensible; list both when asked.\\n  - Ivory Coast: Yamoussoukro has been the official capital\\n    since 1983, but Abidjan remains the economic hub and de\\n    facto administrative center for most purposes.\\n  - Sri Lanka: Sri Jayawardenepura Kotte is the legislative\\n    capital. Colombo is the commercial capital and by far the\\n    more commonly referenced city.\\n  - Switzerland: Bern is the de facto capital (the seat of\\n    the federal authorities), but Swiss law does not\\n    designate any city as \\\"the capital\\\".\\n  - Nauru: has no designated capital. Government offices are\\n    in the Yaren District, which is often listed as the\\n    capital by convention.\\n  - Israel: Jerusalem is the declared capital, but\\n    international recognition of that status is not\\n    universal. Many embassies are in Tel Aviv.\\n  - Palestine: de jure capital is East Jerusalem; de facto\\n    administrative center is Ramallah. Both appear in\\n    official usage.\\n  - Taiwan: Taipei is the capital of the Republic of China.\\n    Recognition as a sovereign state varies by country.\\n  - Kosovo: Pristina is the capital of the Republic of\\n    Kosovo. Recognition as a sovereign state varies by\\n    country.\\n  - Somaliland: Hargeisa is the capital of the self-declared\\n    Republic of Somaliland, which is not widely recognized.\\n    Somalia, which claims the territory, has its capital at\\n    Mogadishu.\\n\\nEnd of reference material.\\n\",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}}],\"max_tokens\":128,\"stream\":false,\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-8186efd9-0d41-4b19-8a67-1ea8c33c86a3.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "835",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "600000",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-05-01T01:59:28Z",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-05-01T01:59:28Z",
+      "anthropic-ratelimit-tokens-remaining" : "3599000",
+      "set-cookie" : "_cfuvid=FY.oGcK4ZMlKGXwn7sw73gO3NMGhsrtmVzK5v4SqH4I-1777600767.7043176-1.0.1.1-CLqrsPkNohYf9SvWYqdH8Z0.9TQ8YkINlGL6YqXjeZs; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "2999000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9f4b2fde2a2f7565-SEA",
+      "anthropic-ratelimit-tokens-limit" : "3600000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011Cab2EPkrBHJ17bKEeLS2v",
+      "anthropic-ratelimit-tokens-reset" : "2026-05-01T01:59:28Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Fri, 01 May 2026 01:59:28 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-05-01T01:59:27Z",
+      "anthropic-ratelimit-input-tokens-limit" : "3000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "600000"
+    }
+  },
+  "uuid" : "8186efd9-0d41-4b19-8a67-1ea8c33c86a3",
+  "persistent" : true,
+  "insertionIndex" : 22
+}

@@ -1,0 +1,50 @@
+{
+  "id" : "a2325d24-d1b8-41b7-9544-cbc25a013b0a",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-a2325d24-d1b8-41b7-9544-cbc25a013b0a.json",
+    "headers" : {
+      "x-request-id" : "req_e406e12ab202421eb08059a75d560c4a",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f4b2fbd3bbb980d-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999752",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Fri, 01 May 2026 01:59:58 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=.r6C0WGdcJdtWCVjHB5JPSGe0xUNim_Pb7CgyM7NKSA-1777600762.4363596-1.0.1.1-U4V7ItBDsAKqhYedVJvVd88mvkQPlW.70smuQXItgDecix2nzT_gkLfRQ5abTpraRHnNpx6rjRTHYUZ.GYkm0i5suHFIbCh3pbKWgYRax147IUw3iSHES6eSMNnJs9qC; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 01 May 2026 02:29:58 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "36163",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "a2325d24-d1b8-41b7-9544-cbc25a013b0a",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-responses",
+  "requiredScenarioState" : "scenario-1-responses-2",
+  "newScenarioState" : "scenario-1-responses-3",
+  "insertionIndex" : 34
+}

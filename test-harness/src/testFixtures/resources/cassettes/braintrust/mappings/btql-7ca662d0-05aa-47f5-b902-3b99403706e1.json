@@ -1,0 +1,46 @@
+{
+  "id" : "7ca662d0-05aa-47f5-b902-3b99403706e1",
+  "name" : "btql",
+  "request" : {
+    "url" : "/btql",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"query\":{\"select\":[{\"op\":\"star\"}],\"from\":{\"name\":{\"op\":\"ident\",\"name\":[\"project_logs\"]},\"op\":\"function\",\"args\":[{\"op\":\"literal\",\"value\":\"6ae68365-7620-4630-921b-bac416634fc8\"}]},\"filter\":{\"right\":{\"right\":{\"op\":\"literal\",\"value\":null},\"left\":{\"op\":\"ident\",\"name\":[\"span_parents\"]},\"op\":\"ne\"},\"left\":{\"right\":{\"op\":\"literal\",\"value\":\"d2230fc189d7f2d5ebfef06134107451\"},\"left\":{\"op\":\"ident\",\"name\":[\"root_span_id\"]},\"op\":\"eq\"},\"op\":\"and\"},\"sort\":[{\"expr\":{\"op\":\"ident\",\"name\":[\"created\"]},\"dir\":\"asc\"}],\"limit\":1000},\"use_columnstore\":true,\"use_brainstore\":true,\"brainstore_realtime\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 429,
+    "bodyFileName" : "btql-7ca662d0-05aa-47f5-b902-3b99403706e1.json",
+    "headers" : {
+      "X-Cache" : "Error from cloudfront",
+      "x-amz-apigw-id" : "cqZp8EXMIAMEQmg=",
+      "vary" : "Origin",
+      "x-amzn-Remapped-content-length" : "434",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "retry-after" : "18.379",
+      "X-Amzn-Trace-Id" : "Root=1-69f40972-1698195a5abd35eb7fba15f5;Parent=0b3ca787c922b91f;Sampled=0;Lineage=1:24be3d11:0",
+      "Date" : "Fri, 01 May 2026 02:01:22 GMT",
+      "Via" : "1.1 4cb8a7f3f7a5d9d545889e0d3926b9c2.cloudfront.net (CloudFront), 1.1 ee5f8da78d4211a93c9dba8864a4067e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "69f409720000000079c92d615c91ea50",
+      "x-amzn-RequestId" : "234eb41e-614b-45b9-8b42-053ed9986806",
+      "X-Amz-Cf-Id" : "-CfFa1ULG-CWyNKG5ujHKihKHvqQZqqQpr3-alCypmC9aOdmDhRcEQ==",
+      "etag" : "W/\"1b2-m+D8+TpzjkL4bPTyHo1vgvt5DpA\"",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "7ca662d0-05aa-47f5-b902-3b99403706e1",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-btql",
+  "requiredScenarioState" : "scenario-1-btql-2",
+  "newScenarioState" : "scenario-1-btql-3",
+  "insertionIndex" : 210
+}

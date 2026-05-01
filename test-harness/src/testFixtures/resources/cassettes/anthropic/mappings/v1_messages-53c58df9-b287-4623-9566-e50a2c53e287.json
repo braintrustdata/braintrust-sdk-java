@@ -1,0 +1,55 @@
+{
+  "id" : "53c58df9-b287-4623-9566-e50a2c53e287",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-53c58df9-b287-4623-9566-e50a2c53e287.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "559",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "800000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-05-01T17:05:30Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-05-01T17:05:29Z",
+      "anthropic-ratelimit-tokens-remaining" : "4800000",
+      "set-cookie" : "_cfuvid=onVfDcSLUDRxCKC.QgSLFK52zkBNF_C5IuElbBDoug0-1777655129.5739021-1.0.1.1-5VG8eDA.0HsBmG6WSfjNxCCorJJnoXPOTPY5oC7psHU; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=562",
+      "anthropic-ratelimit-input-tokens-remaining" : "4000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9f505f0fd947eb9f-SEA",
+      "anthropic-ratelimit-tokens-limit" : "4800000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CacDKe3zuMDeqvgGiF6F8",
+      "anthropic-ratelimit-tokens-reset" : "2026-05-01T17:05:29Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Fri, 01 May 2026 17:05:30 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-05-01T17:05:29Z",
+      "anthropic-ratelimit-input-tokens-limit" : "4000000",
+      "anthropic-ratelimit-output-tokens-remaining" : "800000"
+    }
+  },
+  "uuid" : "53c58df9-b287-4623-9566-e50a2c53e287",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-v1-messages",
+  "requiredScenarioState" : "scenario-2-v1-messages-2",
+  "insertionIndex" : 27
+}

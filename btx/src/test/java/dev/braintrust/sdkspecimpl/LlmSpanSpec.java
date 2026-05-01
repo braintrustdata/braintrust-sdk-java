@@ -30,6 +30,7 @@ public record LlmSpanSpec(
         String provider,
         String endpoint,
         String client,
+        Map<String, String> headers,
         List<Map<String, Object>> requests,
         List<Map<String, Object>> expectedBrainstoreSpans,
         String sourcePath) {
@@ -59,11 +60,28 @@ public record LlmSpanSpec(
         String provider = (String) raw.get("provider");
         String endpoint = (String) raw.get("endpoint");
 
+        Map<String, String> headers = null;
+        if (raw.containsKey("headers")) {
+            Map<String, Object> rawHeaders = (Map<String, Object>) raw.get("headers");
+            headers = new java.util.LinkedHashMap<>();
+            for (var entry : rawHeaders.entrySet()) {
+                headers.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+        }
+
         List<Map<String, Object>> requests = (List<Map<String, Object>>) raw.get("requests");
         List<Map<String, Object>> expectedSpans =
                 (List<Map<String, Object>>) raw.get("expected_brainstore_spans");
 
         return new LlmSpanSpec(
-                name, type, provider, endpoint, client, requests, expectedSpans, sourcePath);
+                name,
+                type,
+                provider,
+                endpoint,
+                client,
+                headers,
+                requests,
+                expectedSpans,
+                sourcePath);
     }
 }

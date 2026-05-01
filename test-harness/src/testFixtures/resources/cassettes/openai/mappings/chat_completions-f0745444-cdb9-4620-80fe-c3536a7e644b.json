@@ -1,0 +1,49 @@
+{
+  "id" : "f0745444-cdb9-4620-80fe-c3536a7e644b",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a thoughtful assistant\",\"role\":\"system\"},{\"content\":\"Count from 1 to 10 slowly.\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":800,\"stream_options\":{\"include_usage\":true},\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-f0745444-cdb9-4620-80fe-c3536a7e644b.txt",
+    "headers" : {
+      "x-request-id" : "req_7ad8f1d1b280453d8e5585547b41a34d",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f4b2fa99830e2da-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Fri, 01 May 2026 01:59:19 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=axVuhC5c1Wr.jVl7ZnL.O2ZYR9Ysj8OqsxLaVpQF42k-1777600759.2976038-1.0.1.1-5T0PBB5iPIDxUKEBLIFhfkj9tIBs9zH7FisH68Z37baPYf_19mYoGiLF0Vm7kfMROuOBkpPOWZ4C.nSg.HaPCjVKfK2P1J_8w_q4pnIrfbpqzPsol02vfL8v8feyZuD6; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 01 May 2026 02:29:19 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "250",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "f0745444-cdb9-4620-80fe-c3536a7e644b",
+  "persistent" : true,
+  "insertionIndex" : 43
+}

@@ -6,8 +6,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -26,6 +29,7 @@ import org.yaml.snakeyaml.nodes.Tag;
  *
  * <ul>
  *   <li>{@code !fn <name>} - a named predicate (e.g. {@code is_non_negative_number})
+ *   <li>{@code !gen <name>} - a named generator for variable values (e.g. {@code vcr_nonce})
  *   <li>{@code !starts_with "prefix"} - asserts the value starts with a string
  *   <li>{@code !or [...]} - asserts the value matches at least one of a list of structures
  * </ul>
@@ -94,10 +98,134 @@ public class SpecLoader {
         try (InputStream is = Files.newInputStream(path)) {
             @SuppressWarnings("unchecked")
             Map<String, Object> raw = yaml.load(is);
+
+            // Extract unresolved variables (may contain SpecGenerator markers).
+            @SuppressWarnings("unchecked")
+            Map<String, Object> unresolvedVars =
+                    (Map<String, Object>) raw.getOrDefault("variables", Collections.emptyMap());
+            raw.remove("variables");
+
             String provider = (String) raw.get("provider");
             return clientsForProvider(provider).stream()
-                    .map(client -> LlmSpanSpec.fromMap(raw, path.toString(), client))
+                    .map(
+                            client -> {
+                                // Deep-copy so each client gets its own substituted tree.
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> copy = (Map<String, Object>) deepCopy(raw);
+
+                                if (!unresolvedVars.isEmpty()) {
+                                    Map<String, Object> resolved =
+                                            resolveVariables(unresolvedVars, client);
+                                    substituteVariables(copy, resolved);
+                                }
+
+                                return LlmSpanSpec.fromMap(copy, path.toString(), client);
+                            })
                     .toList();
+        }
+    }
+
+    /**
+     * Recursively deep-copy a parsed YAML structure (Maps, Lists, and leaf values). Leaf values
+     * (Strings, Numbers, SpecMatchers, etc.) are shared since they are effectively immutable.
+     */
+    @SuppressWarnings("unchecked")
+    private static Object deepCopy(Object node) {
+        if (node instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) node;
+            Map<String, Object> copy = new LinkedHashMap<>(map.size());
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                copy.put(entry.getKey(), deepCopy(entry.getValue()));
+            }
+            return copy;
+        } else if (node instanceof List) {
+            List<Object> list = (List<Object>) node;
+            List<Object> copy = new ArrayList<>(list.size());
+            for (Object item : list) {
+                copy.add(deepCopy(item));
+            }
+            return copy;
+        }
+        return node; // immutable leaf (String, Number, Boolean, SpecMatcher, etc.)
+    }
+
+    /**
+     * Resolve generator markers in the variables map to concrete string values.
+     *
+     * <p>Supported generators (via {@code !gen <name>}):
+     *
+     * <ul>
+     *   <li>{@code test_runner_client} — the client name being tested (e.g. {@code "anthropic"})
+     *   <li>{@code vcr_nonce} — a random UUID when {@code VCR_MODE=off}, otherwise a fixed string
+     *       so that VCR cassette matching still works
+     * </ul>
+     */
+    private static Map<String, Object> resolveVariables(
+            Map<String, Object> unresolvedVars, String client) {
+        Map<String, Object> resolved = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : unresolvedVars.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof SpecGenerator gen) {
+                resolved.put(entry.getKey(), gen.generate(client));
+            } else {
+                resolved.put(entry.getKey(), value);
+            }
+        }
+        return resolved;
+    }
+
+    /**
+     * Recursively walk a parsed YAML structure and replace {@code {{key}}} placeholders in every
+     * string value with the corresponding entry from {@code variables}.
+     */
+    @SuppressWarnings("unchecked")
+    private static void substituteVariables(Object node, Map<String, Object> variables) {
+        if (node instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) node;
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                Object value = entry.getValue();
+                if (value instanceof String s) {
+                    entry.setValue(replaceVariables(s, variables));
+                } else {
+                    substituteVariables(value, variables);
+                }
+            }
+        } else if (node instanceof List) {
+            List<Object> list = (List<Object>) node;
+            for (int i = 0; i < list.size(); i++) {
+                Object value = list.get(i);
+                if (value instanceof String s) {
+                    list.set(i, replaceVariables(s, variables));
+                } else {
+                    substituteVariables(value, variables);
+                }
+            }
+        }
+    }
+
+    /** Replace all {@code {{key}}} occurrences in {@code text} with variable values. */
+    private static String replaceVariables(String text, Map<String, Object> variables) {
+        for (Map.Entry<String, Object> entry : variables.entrySet()) {
+            text = text.replace("{{" + entry.getKey() + "}}", String.valueOf(entry.getValue()));
+        }
+        return text;
+    }
+
+    /**
+     * Marker object produced by the {@code !gen} YAML tag. Holds the generator name and resolves to
+     * a concrete value when {@link #generate(String)} is called.
+     */
+    record SpecGenerator(String name) {
+        String generate(String client) {
+            return switch (name) {
+                case "test_runner_client" -> client;
+                case "vcr_nonce" -> {
+                    String vcrMode =
+                            System.getenv().getOrDefault("VCR_MODE", "replay").toUpperCase();
+                    yield "OFF".equals(vcrMode) ? UUID.randomUUID().toString() : "vcr-mode";
+                }
+                default -> throw new IllegalArgumentException("Unknown generator: " + name);
+            };
         }
     }
 
@@ -145,6 +273,16 @@ public class SpecLoader {
                                 prefix = prefix.substring(1, prefix.length() - 1);
                             }
                             return new SpecMatcher.StartsWithMatcher(prefix);
+                        }
+                    });
+            // !gen <name>  →  SpecGenerator(name)
+            yamlConstructors.put(
+                    new Tag("!gen"),
+                    new AbstractConstruct() {
+                        @Override
+                        public Object construct(Node node) {
+                            String name = ((ScalarNode) node).getValue().trim();
+                            return new SpecGenerator(name);
                         }
                     });
             // !or [...]  →  OrMatcher(alternatives)

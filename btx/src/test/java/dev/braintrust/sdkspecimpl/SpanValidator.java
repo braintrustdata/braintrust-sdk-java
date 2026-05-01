@@ -187,6 +187,32 @@ public class SpanValidator {
                                     context, v));
                 }
             }
+            case "is_positive_number" -> {
+                if (!(actual instanceof Number)) {
+                    fail(
+                            String.format(
+                                    "%s: is_positive_number: expected a Number but got %s"
+                                            + " (value: %s)",
+                                    context,
+                                    actual == null ? "null" : actual.getClass().getSimpleName(),
+                                    actual));
+                }
+                double v = ((Number) actual).doubleValue();
+                if (v <= 0) {
+                    fail(
+                            String.format(
+                                    "%s: is_positive_number: value %s is not positive",
+                                    context, v));
+                }
+            }
+            case "undefined_or_null" -> {
+                if (actual != null) {
+                    fail(
+                            String.format(
+                                    "%s: undefined_or_null: expected null but got %s (value: %s)",
+                                    context, actual.getClass().getSimpleName(), actual));
+                }
+            }
             case "is_non_empty_string" -> {
                 if (!(actual instanceof String) || ((String) actual).isEmpty()) {
                     fail(

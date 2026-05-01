@@ -13,7 +13,9 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class InstrumentationSemConv {
     public static final String PROVIDER_NAME_OPENAI = "openai";
     public static final String PROVIDER_NAME_ANTHROPIC = "anthropic";
@@ -258,11 +260,59 @@ public class InstrumentationSemConv {
                         "tokens",
                         usage.get("input_tokens").asLong() + usage.get("output_tokens").asLong());
             }
+
+            // Prompt caching metrics
+            if (usage.has("cache_read_input_tokens")) {
+                metrics.put("prompt_cached_tokens", usage.get("cache_read_input_tokens"));
+            }
+            if (usage.has("cache_creation_input_tokens")) {
+                long cacheCreationTokens = usage.get("cache_creation_input_tokens").asLong();
+
+                // Per-TTL breakdown from usage.cache_creation (e.g.
+                // ephemeral_5m_input_tokens, ephemeral_1h_input_tokens).
+                // When per-TTL metrics are emitted, the aggregate metric is omitted.
+                boolean emittedPerTtl = addPerTtlCacheMetrics(metrics, usage);
+                if (!emittedPerTtl) {
+                    metrics.put("prompt_cache_creation_tokens", cacheCreationTokens);
+                }
+            }
         }
 
         if (!metrics.isEmpty()) {
             span.setAttribute("braintrust.metrics", toJson(metrics));
         }
+    }
+
+    /**
+     * Mapping from Anthropic {@code usage.cache_creation} field names to Braintrust per-TTL metric
+     * names. Only supported TTL tiers are included.
+     */
+    private static final Map<String, String> CACHE_CREATION_FIELD_TO_METRIC =
+            Map.of(
+                    "ephemeral_5m_input_tokens", "prompt_cache_creation_5m_tokens",
+                    "ephemeral_1h_input_tokens", "prompt_cache_creation_1h_tokens");
+
+    /**
+     * Extract per-TTL cache creation metrics from the Anthropic {@code usage.cache_creation}
+     * response object. Fields like {@code ephemeral_5m_input_tokens} are mapped to {@code
+     * prompt_cache_creation_5m_tokens}.
+     *
+     * @return {@code true} if at least one per-TTL metric was emitted
+     */
+    private static boolean addPerTtlCacheMetrics(Map<String, Object> metrics, JsonNode usage) {
+        if (!usage.has("cache_creation")) {
+            return false;
+        }
+        JsonNode cacheCreation = usage.get("cache_creation");
+        boolean emitted = false;
+        for (Map.Entry<String, String> entry : CACHE_CREATION_FIELD_TO_METRIC.entrySet()) {
+            if (cacheCreation.has(entry.getKey())) {
+                long tokens = cacheCreation.get(entry.getKey()).asLong();
+                metrics.put(entry.getValue(), tokens);
+                emitted = true;
+            }
+        }
+        return emitted;
     }
 
     // -------------------------------------------------------------------------

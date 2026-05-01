@@ -1,0 +1,49 @@
+{
+  "id" : "b1a2b7b1-6dfe-40d6-9ecb-2e541ec703f3",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the weather like in Paris, France?\",\"role\":\"user\"}],\"model\":\"gpt-4o\",\"max_tokens\":500,\"stream\":false,\"temperature\":0.0,\"tools\":[{\"type\":\"function\",\"function\":{\"description\":\"Get the current weather for a location\",\"name\":\"get_weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The city and state, e.g. San Francisco, CA\"},\"unit\":{\"type\":\"string\",\"enum\":[\"celsius\",\"fahrenheit\"],\"description\":\"The unit of temperature\"}},\"required\":[\"location\"]}}}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-b1a2b7b1-6dfe-40d6-9ecb-2e541ec703f3.json",
+    "headers" : {
+      "x-request-id" : "req_b1ae2851e5bd4ccb92a3ca724d6f397d",
+      "x-ratelimit-limit-tokens" : "30000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f4b2f92dbbaf3ea-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Fri, 01 May 2026 01:59:16 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : "X-Request-ID",
+      "set-cookie" : "__cf_bm=UNe6BjO0Phhmt93NFAhGja_toIfhQ.Q08ZgrmXaTtjg-1777600755.6524289-1.0.1.1-_Nyx5mcVILCfwz2mN6Fkna6Xp7TKoQgTPeEewv6NTOzDCFEIPQQqVHDlew2DE77HU8MbWypGHCsvIuW9GO2sTEm0DtE8zXZYuTzrkg3.8.TxzY39zsAnXFdOA2lThZUj; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 01 May 2026 02:29:16 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "459",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "b1a2b7b1-6dfe-40d6-9ecb-2e541ec703f3",
+  "persistent" : true,
+  "insertionIndex" : 46
+}

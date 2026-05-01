@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustAnthropicTest {
+    private static final String TEST_MODEL = "claude-haiku-4-5";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     @BeforeAll
@@ -45,7 +46,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
@@ -82,8 +83,8 @@ public class BraintrustAnthropicTest {
         JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("anthropic", metadata.get("provider").asText());
         assertTrue(
-                metadata.get("model").asText().startsWith("claude-3-haiku"),
-                "model should start with claude-3-haiku");
+                metadata.get("model").asText().startsWith("claude-haiku-4"),
+                "model should start with claude-haiku-4");
 
         // Verify input
         String inputJson =
@@ -128,7 +129,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
@@ -200,7 +201,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
@@ -263,7 +264,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
@@ -322,7 +323,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 com.anthropic.models.beta.messages.MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
@@ -357,8 +358,8 @@ public class BraintrustAnthropicTest {
         JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("anthropic", metadata.get("provider").asText());
         assertTrue(
-                metadata.get("model").asText().startsWith("claude-3-haiku"),
-                "model should start with claude-3-haiku");
+                metadata.get("model").asText().startsWith("claude-haiku-4"),
+                "model should start with claude-haiku-4");
 
         // Verify input
         String inputJson =
@@ -403,7 +404,7 @@ public class BraintrustAnthropicTest {
 
         var request =
                 com.anthropic.models.beta.messages.MessageCreateParams.builder()
-                        .model(Model.CLAUDE_3_HAIKU_20240307)
+                        .model(Model.of(TEST_MODEL))
                         .system("You are a helpful assistant")
                         .addUserMessage("What is the capital of France?")
                         .maxTokens(50)
