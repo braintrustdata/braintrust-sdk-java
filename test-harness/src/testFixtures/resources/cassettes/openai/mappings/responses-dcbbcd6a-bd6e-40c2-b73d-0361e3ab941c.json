@@ -1,0 +1,43 @@
+{
+  "id" : "dcbbcd6a-bd6e-40c2-b73d-0361e3ab941c",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"instructions\":\"You are a helpful assistant\",\"model\":\"gpt-4o-mini\",\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-dcbbcd6a-bd6e-40c2-b73d-0361e3ab941c.txt",
+    "headers" : {
+      "x-request-id" : "req_c8469ae7b7c9458187c4d593c136dc8d",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f72d776e922c52e-SJC",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Tue, 05 May 2026 21:29:37 GMT",
+      "set-cookie" : "__cf_bm=UAfStjUG7TqQO2AT39yQUpEF3Q_JDlRq042ezabkYXA-1778016577.1018875-1.0.1.1-VNRMauYejdNYk4.v11yIKJ579Jmi3R4mS.Bf_q_mrTF.CZJqq_iYJRKPORIck2g6tbs60qsfWLnBlZqQ.anizLw4p3skqM973qWAACvdJmxlhzLZ6CHW3ciX0mCSAuOT; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 05 May 2026 21:59:37 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "109",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "dcbbcd6a-bd6e-40c2-b73d-0361e3ab941c",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-responses",
+  "requiredScenarioState" : "scenario-2-responses-2",
+  "insertionIndex" : 50
+}

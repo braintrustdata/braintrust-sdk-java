@@ -1,0 +1,47 @@
+{
+  "id" : "9798f9bb-c5d0-4c0a-b211-d0c8fa441c00",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the capital of France? Reply in one word.\",\"role\":\"user\"}],\"instructions\":\"You are a helpful assistant\",\"model\":\"gpt-4o-mini\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-9798f9bb-c5d0-4c0a-b211-d0c8fa441c00.json",
+    "headers" : {
+      "x-request-id" : "req_681b1fa879e44b9491024dd90e529aa6",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "9f72d760082397f0-SJC",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999952",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 05 May 2026 21:29:34 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=ZPA5eX5E0g4KsRrSAfIi62P8N18NG2e5ABzcPNC_7uw-1778016573.4467661-1.0.1.1-67VCHBTBjRlsyTBFYN275PenW9RvB0SwxEperowSkj58CqabIy84Xw1Ud0.nS.m7Prd59KLdO2Ceae4vs7lPtETopQMYASJs8oqKbTecBcyZ413W_kEBThkLMwcrmP1v; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 05 May 2026 21:59:34 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "684",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "9798f9bb-c5d0-4c0a-b211-d0c8fa441c00",
+  "persistent" : true,
+  "insertionIndex" : 53
+}
