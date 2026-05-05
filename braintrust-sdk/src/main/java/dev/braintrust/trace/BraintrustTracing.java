@@ -162,6 +162,20 @@ public final class BraintrustTracing {
         return tracerProvider.get(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
     }
 
+    /**
+     * Attempt to flush the all data from the given open telemetry instance. Does not block
+     *
+     * @param openTelemetry the {@link OpenTelemetry} instance whose spans to attempt flushing
+     */
+    static void attemptForceFlush(@Nonnull OpenTelemetry openTelemetry) {
+        if (openTelemetry instanceof OpenTelemetrySdk sdk) {
+            synchronized (BraintrustTracing.class) {
+                sdk.getSdkTracerProvider().forceFlush();
+                log.debug("sdk tracer forceFlush initiated");
+            }
+        }
+    }
+
     private static String sdkInfoLogMessage() {
         return "Initializing Braintrust OpenTelemetry with service=%s, instrumentation-name=%s, instrumentation-version=%s, jvm-version=%s, jvm-vendor=%s, jvm-name=%s"
                 .formatted(
