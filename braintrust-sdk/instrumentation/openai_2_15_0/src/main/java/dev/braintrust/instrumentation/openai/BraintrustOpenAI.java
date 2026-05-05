@@ -9,13 +9,13 @@ import java.util.Map;
 public class BraintrustOpenAI {
     /** Instrument openai client with braintrust traces */
     public static OpenAIClient wrapOpenAI(OpenTelemetry openTelemetry, OpenAIClient openAIClient) {
-        return dev.braintrust.instrumentation.openai.v2_8_0.BraintrustOpenAI.wrapOpenAI(
+        return dev.braintrust.instrumentation.openai.v2_15_0.BraintrustOpenAI.wrapOpenAI(
                 openTelemetry, openAIClient);
     }
 
     public static ChatCompletionCreateParams buildChatCompletionsPrompt(
             BraintrustPrompt prompt, Map<String, Object> parameters) {
-        return dev.braintrust.instrumentation.openai.v2_8_0.BraintrustOpenAI
+        return dev.braintrust.instrumentation.openai.v2_15_0.BraintrustOpenAI
                 .buildChatCompletionsPrompt(prompt, parameters);
     }
 }

@@ -1,4 +1,4 @@
-package dev.braintrust.instrumentation.openai.v2_8_0.auto;
+package dev.braintrust.instrumentation.openai.v2_15_0.auto;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
@@ -8,7 +8,7 @@ import com.openai.client.OpenAIClient;
 import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
 import dev.braintrust.instrumentation.TypeTransformer;
-import dev.braintrust.instrumentation.openai.v2_8_0.BraintrustOpenAI;
+import dev.braintrust.instrumentation.openai.v2_15_0.BraintrustOpenAI;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import java.util.List;
 import java.util.Set;
@@ -20,10 +20,10 @@ import net.bytebuddy.matcher.ElementMatcher;
 @AutoService(InstrumentationModule.class)
 public class OpenAIInstrumentationModule extends InstrumentationModule {
     private static final String MANUAL_INSTRUMENTATION_PACKAGE =
-            "dev.braintrust.instrumentation.openai.v2_8_0.";
+            "dev.braintrust.instrumentation.openai.v2_15_0.";
 
     public OpenAIInstrumentationModule() {
-        super("openai_2_8_0");
+        super("openai_2_15_0");
     }
 
     @Override

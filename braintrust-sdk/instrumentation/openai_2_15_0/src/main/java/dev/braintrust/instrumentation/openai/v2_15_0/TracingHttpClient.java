@@ -1,4 +1,4 @@
-package dev.braintrust.instrumentation.openai.v2_8_0;
+package dev.braintrust.instrumentation.openai.v2_15_0;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.openai.core.ObjectMappers;

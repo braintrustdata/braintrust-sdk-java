@@ -16,7 +16,7 @@ repositories {
 dependencies {
     // Braintrust SDK (local project dependencies)
     testImplementation project(':braintrust-sdk')
-    testImplementation project(':braintrust-sdk:instrumentation:openai_2_8_0')
+    testImplementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
     testImplementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
     testImplementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
     testImplementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
