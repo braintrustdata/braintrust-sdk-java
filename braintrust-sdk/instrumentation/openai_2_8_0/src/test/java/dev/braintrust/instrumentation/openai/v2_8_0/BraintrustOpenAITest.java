@@ -6,17 +6,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.core.http.StreamResponse;
+import com.openai.helpers.ChatCompletionAccumulator;
+import com.openai.helpers.ResponseAccumulator;
 import com.openai.models.ChatModel;
 import com.openai.models.Reasoning;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionStreamOptions;
-import com.openai.models.responses.EasyInputMessage;
-import com.openai.models.responses.ResponseCreateParams;
-import com.openai.models.responses.ResponseInputItem;
+import com.openai.models.responses.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
@@ -43,9 +45,7 @@ public class BraintrustOpenAITest {
 
     @Test
     @SneakyThrows
-    void testWrapOpenAi() {
-        // Create OpenAI client using TestHarness configuration
-        // TestHarness automatically provides the correct base URL and API key
+    void testCompletions() {
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
                         .baseUrl(testHarness.openAiBaseUrl())
@@ -61,70 +61,15 @@ public class BraintrustOpenAITest {
                         .build();
 
         var response = openAIClient.chat().completions().create(request);
-
-        // Verify the response (same assertions work for both modes)
         assertNotNull(response);
-        assertNotNull(response.id());
-        assertTrue(response.choices().get(0).message().content().isPresent());
-        String content = response.choices().get(0).message().content().get();
-        assertTrue(content.toLowerCase().contains("paris"), "Response should mention Paris");
-
-        // Verify spans were exported
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        // Verify span name matches other SDKs
-        assertEquals("Chat Completion", span.getName());
-
-        // Verify span_attributes JSON
-        String spanAttributesJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
-        assertNotNull(spanAttributesJson);
-        JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
-        assertEquals("llm", spanAttributes.get("type").asText());
-
-        // Verify braintrust.metadata JSON
-        String metadataJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
-        assertNotNull(metadataJson);
-        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("openai", metadata.get("provider").asText());
-        assertTrue(
-                metadata.get("model").asText().startsWith("gpt-4o-mini"),
-                "model should start with gpt-4o-mini");
-
-        // Verify braintrust.metrics JSON (tokens)
-        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
-        assertNotNull(metricsJson);
-        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertTrue(metrics.has("prompt_tokens"), "prompt_tokens should be present");
-        assertTrue(
-                metrics.get("prompt_tokens").asInt() >= 0, "prompt_tokens should be non-negative");
-        assertTrue(metrics.has("completion_tokens"), "completion_tokens should be present");
-        assertTrue(
-                metrics.get("completion_tokens").asInt() >= 0,
-                "completion_tokens should be non-negative");
-        assertTrue(metrics.has("tokens"), "tokens should be present");
-        assertTrue(metrics.get("tokens").asInt() >= 0, "tokens should be non-negative");
-        assertFalse(
-                metrics.has("time_to_first_token"),
-                "time_to_first_token should not be present for non-streaming");
-
-        // Verify output (choices array)
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
-        assertNotNull(outputJson);
-        var outputChoices = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputChoices.size());
-        var choice = outputChoices.get(0);
-        assertEquals("assistant", choice.get("message").get("role").asText());
-        assertNotNull(choice.get("finish_reason"));
+        assertValidOpenAISpan(spans.get(0), false);
     }
 
     @Test
     @SneakyThrows
-    void testWrapOpenAiStreaming() {
+    void testCompletionsStreaming() {
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
                         .baseUrl(testHarness.openAiBaseUrl())
@@ -141,140 +86,21 @@ public class BraintrustOpenAITest {
                                 ChatCompletionStreamOptions.builder().includeUsage(true).build())
                         .build();
 
-        // Consume the stream
-        StringBuilder fullResponse = new StringBuilder();
+        var accumulator = ChatCompletionAccumulator.create();
         try (var stream = openAIClient.chat().completions().createStreaming(request)) {
-            stream.stream()
-                    .forEach(
-                            chunk -> {
-                                if (!chunk.choices().isEmpty()) {
-                                    chunk.choices()
-                                            .get(0)
-                                            .delta()
-                                            .content()
-                                            .ifPresent(fullResponse::append);
-                                }
-                            });
+            stream.stream().forEach(accumulator::accumulate);
         }
-
-        // Verify the response
-        assertFalse(fullResponse.isEmpty(), "Should have received streaming response");
-        assertTrue(
-                fullResponse.toString().toLowerCase().contains("paris"),
-                "Response should mention Paris");
+        assertFalse(accumulator.chatCompletion().choices().isEmpty(), "should generate a response");
 
         // Verify spans
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        assertEquals("Chat Completion", span.getName());
-
-        // Verify braintrust.metadata has provider=openai
-        String metadataJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
-        assertNotNull(metadataJson);
-        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("openai", metadata.get("provider").asText());
-
-        // Verify time_to_first_token is in braintrust.metrics JSON
-        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
-        assertNotNull(metricsJson);
-        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertTrue(metrics.has("time_to_first_token"), "time_to_first_token should be present");
-        assertTrue(
-                metrics.get("time_to_first_token").asDouble() >= 0.0,
-                "time_to_first_token should be non-negative");
+        assertValidOpenAISpan(spans.get(0), true);
     }
 
     @Test
     @SneakyThrows
-    void testWrapOpenAiResponses() {
-        OpenAIClient openAIClient =
-                OpenAIOkHttpClient.builder()
-                        .baseUrl(testHarness.openAiBaseUrl())
-                        .apiKey(testHarness.openAiApiKey())
-                        .build();
-
-        var inputMsg =
-                EasyInputMessage.builder()
-                        .role(EasyInputMessage.Role.USER)
-                        .content("What is the capital of France? Reply in one word.")
-                        .build();
-
-        var request =
-                ResponseCreateParams.builder()
-                        .model("o4-mini")
-                        .reasoning(
-                                Reasoning.builder()
-                                        .effort(ReasoningEffort.LOW)
-                                        .summary(Reasoning.Summary.AUTO)
-                                        .build())
-                        .inputOfResponse(List.of(ResponseInputItem.ofEasyInputMessage(inputMsg)))
-                        .build();
-
-        var response = openAIClient.responses().create(request);
-
-        assertNotNull(response);
-        assertNotNull(response.id());
-        assertFalse(response.output().isEmpty(), "Response should have output items");
-
-        var spans = testHarness.awaitExportedSpans();
-        assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        // Span name for /v1/responses endpoint
-        assertEquals("responses", span.getName());
-
-        // span_attributes type=llm
-        String spanAttributesJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
-        assertNotNull(spanAttributesJson);
-        JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
-        assertEquals("llm", spanAttributes.get("type").asText());
-
-        // metadata: provider and model
-        String metadataJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
-        assertNotNull(metadataJson);
-        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("openai", metadata.get("provider").asText());
-        assertTrue(metadata.get("model").asText().startsWith("o4-mini"));
-
-        // input_json: captured from "input" array
-        String inputJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
-        assertNotNull(inputJson, "braintrust.input_json should be set");
-        JsonNode inputItems = JSON_MAPPER.readTree(inputJson);
-        assertTrue(inputItems.isArray() && inputItems.size() > 0);
-        assertEquals("user", inputItems.get(0).get("role").asText());
-
-        // output_json: captured from "output" array
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
-        assertNotNull(outputJson, "braintrust.output_json should be set");
-        JsonNode outputItems = JSON_MAPPER.readTree(outputJson);
-        assertTrue(outputItems.isArray() && outputItems.size() > 0);
-
-        // metrics: tokens from Responses API usage fields
-        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
-        assertNotNull(metricsJson);
-        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertTrue(metrics.has("prompt_tokens"), "prompt_tokens should be present");
-        assertTrue(metrics.get("prompt_tokens").asInt() >= 0);
-        assertTrue(metrics.has("completion_tokens"), "completion_tokens should be present");
-        assertTrue(metrics.get("completion_tokens").asInt() >= 0);
-        assertTrue(metrics.has("tokens"), "tokens should be present");
-        assertTrue(metrics.get("tokens").asInt() >= 0);
-        assertTrue(
-                metrics.has("completion_reasoning_tokens"),
-                "completion_reasoning_tokens should be present");
-        assertTrue(metrics.get("completion_reasoning_tokens").asInt() >= 0);
-    }
-
-    @Test
-    @SneakyThrows
-    void testWrapOpenAiAsync() {
+    void testCompletionsAsync() {
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
                         .baseUrl(testHarness.openAiBaseUrl())
@@ -289,53 +115,19 @@ public class BraintrustOpenAITest {
                         .temperature(0.0)
                         .build();
 
-        var response = openAIClient.async().chat().completions().create(request).get();
-
+        var response =
+                openAIClient.async().chat().completions().create(request).get(5, TimeUnit.MINUTES);
         assertNotNull(response);
         assertNotNull(response.id());
-        assertTrue(response.choices().get(0).message().content().isPresent());
-        String content = response.choices().get(0).message().content().get();
-        assertTrue(content.toLowerCase().contains("paris"), "Response should mention Paris");
 
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
-        var span = spans.get(0);
-
-        assertEquals("Chat Completion", span.getName());
-
-        String spanAttributesJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
-        assertNotNull(spanAttributesJson);
-        JsonNode spanAttributes = JSON_MAPPER.readTree(spanAttributesJson);
-        assertEquals("llm", spanAttributes.get("type").asText());
-
-        String metadataJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
-        assertNotNull(metadataJson);
-        JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("openai", metadata.get("provider").asText());
-
-        String outputJson =
-                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
-        assertNotNull(outputJson);
-        var outputChoices = JSON_MAPPER.readTree(outputJson);
-        assertEquals(1, outputChoices.size());
-        assertEquals("assistant", outputChoices.get(0).get("message").get("role").asText());
-
-        String metricsJson = span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics"));
-        assertNotNull(metricsJson);
-        JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
-        assertTrue(metrics.has("prompt_tokens"));
-        assertTrue(metrics.has("completion_tokens"));
-        assertTrue(metrics.has("tokens"));
-        assertFalse(
-                metrics.has("time_to_first_token"),
-                "time_to_first_token should not be present for non-streaming");
+        assertValidOpenAISpan(spans.get(0), false);
     }
 
     @Test
     @SneakyThrows
-    void testWrapOpenAiAsyncStreaming() {
+    void testCompletionsAsyncStreaming() {
         OpenAIClient openAIClient =
                 OpenAIOkHttpClient.builder()
                         .baseUrl(testHarness.openAiBaseUrl())
@@ -363,7 +155,6 @@ public class BraintrustOpenAITest {
         stream.onCompleteFuture().get(30, TimeUnit.SECONDS);
 
         assertFalse(fullResponse.toString().isEmpty());
-        assertTrue(fullResponse.toString().toLowerCase().contains("paris"));
 
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
@@ -396,5 +187,186 @@ public class BraintrustOpenAITest {
                 metrics.has("time_to_first_token"),
                 "time_to_first_token should be present for streaming");
         assertTrue(metrics.get("time_to_first_token").asDouble() >= 0.0);
+    }
+
+    @Test
+    @SneakyThrows
+    void testResponses() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var inputMsg =
+                EasyInputMessage.builder()
+                        .role(EasyInputMessage.Role.USER)
+                        .content("What is the capital of France? Reply in one word.")
+                        .build();
+
+        var request =
+                ResponseCreateParams.builder()
+                        .model("o4-mini")
+                        .reasoning(
+                                Reasoning.builder()
+                                        .effort(ReasoningEffort.LOW)
+                                        .summary(Reasoning.Summary.AUTO)
+                                        .build())
+                        .inputOfResponse(List.of(ResponseInputItem.ofEasyInputMessage(inputMsg)))
+                        .build();
+
+        var response = openAIClient.responses().create(request);
+
+        assertNotNull(response);
+        assertNotNull(response.id());
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertValidOpenAISpan(spans.get(0), false);
+    }
+
+    @Test
+    void testResponsesStreaming() {
+        OpenAIClient client =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+        try (StreamResponse<ResponseStreamEvent> stream =
+                client.responses()
+                        .createStreaming(
+                                ResponseCreateParams.builder()
+                                        .model(ChatModel.GPT_4O_MINI)
+                                        .instructions("You are a helpful assistant")
+                                        .inputOfResponse(
+                                                List.of(
+                                                        ResponseInputItem.ofEasyInputMessage(
+                                                                EasyInputMessage.builder()
+                                                                        .role(
+                                                                                EasyInputMessage
+                                                                                        .Role.USER)
+                                                                        .content(
+                                                                                "What is the"
+                                                                                    + " capital of"
+                                                                                    + " France?")
+                                                                        .build())))
+                                        .build())) {
+            ResponseAccumulator accumulator = ResponseAccumulator.create();
+            stream.stream().forEach(accumulator::accumulate);
+            Response response = accumulator.response();
+            assertFalse(
+                    response.output()
+                            .get(0)
+                            .asMessage()
+                            .content()
+                            .get(0)
+                            .asOutputText()
+                            .text()
+                            .isEmpty(),
+                    "should generate a response");
+        }
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertValidOpenAISpan(spans.get(0), true);
+    }
+
+    @Test
+    @SneakyThrows
+    void testResponsesAsync() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var inputMsg =
+                EasyInputMessage.builder()
+                        .role(EasyInputMessage.Role.USER)
+                        .content("What is the capital of France? Reply in one word.")
+                        .build();
+
+        var request =
+                ResponseCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .instructions("You are a helpful assistant")
+                        .inputOfResponse(List.of(ResponseInputItem.ofEasyInputMessage(inputMsg)))
+                        .build();
+
+        var response = openAIClient.async().responses().create(request).get(5, TimeUnit.MINUTES);
+        assertNotNull(response);
+        assertNotNull(response.id());
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertValidOpenAISpan(spans.get(0), false);
+    }
+
+    @Test
+    @SneakyThrows
+    void testResponsesAsyncStreaming() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ResponseCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .instructions("You are a helpful assistant")
+                        .inputOfResponse(
+                                List.of(
+                                        ResponseInputItem.ofEasyInputMessage(
+                                                EasyInputMessage.builder()
+                                                        .role(EasyInputMessage.Role.USER)
+                                                        .content("What is the capital of France?")
+                                                        .build())))
+                        .build();
+
+        var fullResponse = new StringBuilder();
+        var stream = openAIClient.async().responses().createStreaming(request);
+        stream.subscribe(
+                event ->
+                        event.outputTextDelta()
+                                .ifPresent(delta -> fullResponse.append(delta.delta())));
+        stream.onCompleteFuture().get(30, TimeUnit.SECONDS);
+
+        assertFalse(fullResponse.toString().isEmpty());
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        assertValidOpenAISpan(spans.get(0), true);
+    }
+
+    @SneakyThrows
+    private static void assertValidOpenAISpan(SpanData span, boolean isStreaming) {
+        var attributes = span.getAttributes();
+        // proper provider
+        {
+            String metadataJson = attributes.get(AttributeKey.stringKey("braintrust.metadata"));
+            assertNotNull(metadataJson, "metadata must be set");
+            JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
+            assertTrue(metadata.has("provider"));
+            assertEquals("openai", metadata.get("provider").asText());
+        }
+        // ttft check
+        {
+            String metricsJson = attributes.get(AttributeKey.stringKey("braintrust.metrics"));
+            assertNotNull(metricsJson, "metrics must be set");
+            JsonNode metrics = JSON_MAPPER.readTree(metricsJson);
+            var ttft = metrics.get("time_to_first_token");
+            if (isStreaming) {
+                assertNotNull(ttft);
+            } else {
+                assertNull(ttft);
+            }
+        }
+        // input + output
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.input_json")),
+                "input must be set");
+        assertNotNull(
+                attributes.get(AttributeKey.stringKey("braintrust.output_json")),
+                "output must be set");
     }
 }

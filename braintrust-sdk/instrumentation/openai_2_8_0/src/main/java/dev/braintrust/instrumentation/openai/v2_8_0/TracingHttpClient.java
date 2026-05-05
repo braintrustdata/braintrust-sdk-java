@@ -1,12 +1,13 @@
 package dev.braintrust.instrumentation.openai.v2_8_0;
 
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.openai.core.ObjectMappers;
 import com.openai.core.RequestOptions;
-import com.openai.core.http.HttpClient;
-import com.openai.core.http.HttpRequest;
-import com.openai.core.http.HttpRequestBody;
-import com.openai.core.http.HttpResponse;
+import com.openai.core.http.*;
 import com.openai.helpers.ChatCompletionAccumulator;
+import com.openai.helpers.ResponseAccumulator;
 import com.openai.models.chat.completions.ChatCompletionChunk;
+import com.openai.models.responses.ResponseStreamEvent;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.json.BraintrustJsonMapper;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class TracingHttpClient implements HttpClient {
+    private static final JsonMapper JSON_MAPPER = ObjectMappers.jsonMapper();
     private final Tracer tracer;
     private final HttpClient underlying;
 
@@ -173,7 +175,8 @@ class TracingHttpClient implements HttpClient {
         if (bytes.length == 0) return;
         try {
             String firstLine = firstNonEmptyLine(bytes);
-            if (firstLine != null && firstLine.startsWith("data:")) {
+            if (firstLine != null
+                    && (firstLine.startsWith("data:") || firstLine.startsWith("event:"))) {
                 tagSpanFromSseBytes(span, bytes, timeToFirstTokenNanos);
             } else {
                 InstrumentationSemConv.tagLLMSpanResponse(
@@ -205,26 +208,60 @@ class TracingHttpClient implements HttpClient {
     private static void tagSpanFromSseBytes(
             Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
         try {
-            var accumulator = ChatCompletionAccumulator.create();
             var reader =
                     new BufferedReader(
                             new InputStreamReader(
                                     new ByteArrayInputStream(sseBytes), StandardCharsets.UTF_8));
             String line;
+            String responseJson = null;
             while ((line = reader.readLine()) != null) {
                 if (!line.startsWith("data:")) continue;
-                String data = line.substring("data:".length()).strip();
-                if (data.isEmpty() || data.equals("[DONE]")) continue;
-                ChatCompletionChunk chunk =
-                        BraintrustJsonMapper.get().readValue(data, ChatCompletionChunk.class);
-                accumulator.accumulate(chunk);
+                var firstEventJson = line.substring("data:".length()).strip();
+                // after the first data chunk is found, read the rest of the stream with the proper
+                // accumulator type
+                var jsonTree = JSON_MAPPER.readTree(firstEventJson);
+                if (jsonTree.has("type") && jsonTree.get("type").asText().startsWith("response")) {
+                    // response API SSEvents
+                    ResponseAccumulator accumulator = ResponseAccumulator.create();
+                    accumulator.accumulate(
+                            JSON_MAPPER.readValue(firstEventJson, ResponseStreamEvent.class));
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.startsWith("data:")) continue;
+                        String data = line.substring("data:".length()).strip();
+                        if (data.isEmpty() || data.equals("[DONE]")) continue;
+                        ResponseStreamEvent rse =
+                                JSON_MAPPER.readValue(data, ResponseStreamEvent.class);
+                        accumulator.accumulate(rse);
+                    }
+                    responseJson = JSON_MAPPER.writeValueAsString(accumulator.response());
+                } else if (jsonTree.has("object")
+                        && jsonTree.get("object").asText().equals("chat.completion.chunk")) {
+                    // completions API SSEvents
+                    var accumulator = ChatCompletionAccumulator.create();
+                    accumulator.accumulate(
+                            JSON_MAPPER.readValue(firstEventJson, ChatCompletionChunk.class));
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.startsWith("data:")) continue;
+                        String data = line.substring("data:".length()).strip();
+                        if (data.isEmpty() || data.equals("[DONE]")) continue;
+                        ChatCompletionChunk chunk =
+                                BraintrustJsonMapper.get()
+                                        .readValue(data, ChatCompletionChunk.class);
+                        accumulator.accumulate(chunk);
+                    }
+                    responseJson = JSON_MAPPER.writeValueAsString(accumulator.chatCompletion());
+                } else {
+                    log.warn("unknown SSE object {}", firstEventJson);
+                }
+                break;
             }
-            var chatCompletion = accumulator.chatCompletion();
-            InstrumentationSemConv.tagLLMSpanResponse(
-                    span,
-                    InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                    BraintrustJsonMapper.toJson(chatCompletion),
-                    timeToFirstTokenNanos);
+            if (null != responseJson) {
+                InstrumentationSemConv.tagLLMSpanResponse(
+                        span,
+                        InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                        responseJson,
+                        timeToFirstTokenNanos);
+            }
         } catch (Exception e) {
             log.error("Could not parse SSE buffer to tag streaming span output", e);
         }
@@ -233,8 +270,7 @@ class TracingHttpClient implements HttpClient {
     /**
      * {@link HttpResponse} wrapper for streaming (SSE) responses. Its {@link #body()} returns a tee
      * {@link InputStream} that copies every byte the caller reads into an in-memory buffer. When
-     * the stream is fully consumed and {@link #close()} is called, the accumulated bytes are
-     * available via {@link #collectedBytes()} for span tagging.
+     * the stream is fully consumed and {@link #close()} is called.
      */
     private static final class TeeingStreamHttpResponse implements HttpResponse {
         private final HttpResponse delegate;
@@ -271,17 +307,13 @@ class TracingHttpClient implements HttpClient {
             }
         }
 
-        byte[] collectedBytes() {
-            return teeBuffer.toByteArray();
-        }
-
         @Override
         public int statusCode() {
             return delegate.statusCode();
         }
 
         @Override
-        public com.openai.core.http.Headers headers() {
+        public Headers headers() {
             return delegate.headers();
         }
 
@@ -295,7 +327,7 @@ class TracingHttpClient implements HttpClient {
             try {
                 teeStream.close(); // triggers onStreamClosed if not already fired (e.g. abandoned
                 // stream)
-            } catch (java.io.IOException ignored) {
+            } catch (IOException ignored) {
             }
             delegate.close();
         }
@@ -322,7 +354,7 @@ class TracingHttpClient implements HttpClient {
         }
 
         @Override
-        public int read() throws java.io.IOException {
+        public int read() throws IOException {
             int b = source.read();
             if (b == -1) {
                 notifyClosed();
