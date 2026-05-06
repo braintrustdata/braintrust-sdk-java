@@ -20,7 +20,7 @@ def braintrustLogLevel = System.getenv('BRAINTRUST_LOG_LEVEL') ?: 'info'
 
 dependencies {
   implementation project(':braintrust-sdk')
-  implementation project(':braintrust-sdk:instrumentation:openai_2_8_0')
+  implementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
   implementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
   implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
   implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
