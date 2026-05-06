@@ -13,27 +13,48 @@ This library provides tools for **evaluating** and **tracing** AI applications i
 
 This SDK is currently in BETA status and APIs may change.
 
-## See Also
+## Quickstart
 
-If you're looking to call the Braintrust REST API with Java code, see the [Braintrust API Client](https://github.com/braintrustdata/braintrust-java)
+The fastest way to report data to Braintrust is to add the [braintrust java agent](https://central.sonatype.com/artifact/dev.braintrust/braintrust-java-agent) to your jvm startup args.
 
-## Quick Start
+springboot+gradle example:
 
-Add the SDK to your package manager. Latest version and full instructions can be found in [Maven Central](https://central.sonatype.com/artifact/dev.braintrust/braintrust-sdk-java/versions)
+```build.gradle
+configurations {
+    btAgent
+}
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    btAgent "dev.braintrust:braintrust-java-agent:<version-goes-here>"
+}
+bootRun {
+    jvmArgs = [
+        // NOTE: if you're running with other java agents, add the braintrust agent last
+        "-javaagent:${configurations.btAgent.singleFile.absolutePath}",
+    ]
+}
+```
 
-build.gradle example:
+This will automatically instrument major AI clients and frameworks. No code changes required. A list of supported instrumentation can be found [here](./braintrust-sdk/instrumentation)
+
+NOTE: Additional steps may be required for users running with other `-javaagent` flags. Consult [braintrust docs](https://www.braintrust.dev/docs/instrument/trace-llm-calls#java) for details.
+
+## Eval Quickstart
+
+Add the [Braintrust SDK](https://central.sonatype.com/artifact/dev.braintrust/braintrust-sdk-java) to your package manager.
+
+gradle example:
 ```gradle
 dependencies {
   implementation 'dev.braintrust:braintrust-sdk-java:<version-goes-here>'
 }
 ```
 
-### Evals
-
+Use the SDK to create and send your eval:
 ```java
 var braintrust = Braintrust.get();
-var openTelemetry = braintrust.openTelemetryCreate();
-var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
+braintrust.openTelemetryCreate();
+var openAIClient = OpenAIOkHttpClient.fromEnv();
 
 Function<String, String> getFoodType =
         (String food) -> {
@@ -42,8 +63,6 @@ Function<String, String> getFoodType =
                             .model(ChatModel.GPT_4O_MINI)
                             .addSystemMessage("Return a one word answer")
                             .addUserMessage("What kind of food is " + food + "?")
-                            .maxTokens(50L)
-                            .temperature(0.0)
                             .build();
             var response = openAIClient.chat().completions().create(request);
             return response.choices().get(0).message().content().orElse("").toLowerCase();
@@ -64,7 +83,9 @@ var result = eval.run();
 System.out.println("\n\n" + result.createReportString());
 ```
 
-### OpenAI Tracing
+### Manual Instrumentation
+
+Alternatively, sdk users can manually apply instrumentation instead of using the java agent.
 
 ```java
 var braintrust = Braintrust.get();
@@ -74,13 +95,13 @@ OpenAIClient openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkH
 var request =
         ChatCompletionCreateParams.builder()
                 .model(ChatModel.GPT_4O_MINI)
-                .addSystemMessage("You are a helpful assistant")
                 .addUserMessage("What is the capital of France?")
-                .temperature(0.0)
                 .build();
-# openai calls will be automatically traced and reported to braintrust
+// openai calls will be traced and reported to braintrust
 var response = openAIClient.chat().completions().create(request);
 ```
+
+A list of supported instrumentation can be found [here](./braintrust-sdk/instrumentation)
 
 ## Running Examples
 
