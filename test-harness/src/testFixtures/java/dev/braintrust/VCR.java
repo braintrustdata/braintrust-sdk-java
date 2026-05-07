@@ -5,16 +5,32 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
 import lombok.Getter;
@@ -35,6 +51,20 @@ public class VCR {
 
     private static final String DEFAULT_CASSETTES_ROOT =
             "test-harness/src/testFixtures/resources/cassettes/";
+
+    /**
+     * URL path prefixes that are excluded from cassette recording on the Braintrust target. In
+     * RECORD mode these paths still proxy to the real backend but are not persisted as cassettes.
+     * In REPLAY mode they receive catch-all stubs so the SDK's calls succeed without real backends.
+     *
+     * <p>Includes:
+     *
+     * <ul>
+     *   <li>{@code /otel/} -- OTEL trace/log exports (binary protobuf with dynamic data)
+     *   <li>{@code /attachment} -- S3 attachment signed-URL requests and status updates
+     * </ul>
+     */
+    private static final Set<String> PASSTHROUGH_PATH_PREFIXES = Set.of("/otel/", "/attachment");
 
     private final String cassettesRoot;
     private final Map<String, WireMockServer> proxyMap;
@@ -188,7 +218,82 @@ public class VCR {
                                 LoginBodyRedactingTransformer.NAME,
                                 ForbiddenTextCheckingTransformer.NAME);
 
+        // For the braintrust target, exclude passthrough paths from cassette recording.
+        // These paths (OTEL exports, attachment uploads) contain dynamic data that doesn't
+        // replay well. The recording proxy still forwards them to the real backend, but
+        // stopRecording() won't persist them as cassette files.
+        // In REPLAY mode, catch-all stubs handle these paths instead.
+        if ("braintrust".equals(mappingsDir)) {
+            String exclusionRegex = buildPassthroughExclusionRegex();
+            recordSpec.onlyRequestsMatching(
+                    RequestPatternBuilder.newRequestPattern(
+                            RequestMethod.ANY, urlPathMatching(exclusionRegex)));
+            log.info(
+                    "Excluding passthrough paths from recording (filter regex: {})",
+                    exclusionRegex);
+        }
+
         wireMock.startRecording(recordSpec);
+    }
+
+    /**
+     * Build a regex that matches any URL path that does NOT start with any of the passthrough path
+     * prefixes. Uses negative lookahead, e.g.: {@code ^(?!/otel/|/attachment).*$}
+     */
+    private static String buildPassthroughExclusionRegex() {
+        var alternatives =
+                PASSTHROUGH_PATH_PREFIXES.stream()
+                        .map(Pattern::quote)
+                        .collect(Collectors.joining("|"));
+        return "^(?!" + alternatives + ").*$";
+    }
+
+    /**
+     * Register catch-all stubs on the Braintrust WireMock server for paths that are excluded from
+     * cassette recording. These stubs allow the SDK's background calls (OTEL export, attachment
+     * upload) to succeed in REPLAY mode without real backends.
+     */
+    private static void addBraintrustPassthroughStubs(WireMockServer braintrustWireMock) {
+        // OTEL trace and log exports -- return 200 OK.
+        // Actual span/log content is validated via UnitTestSpanExporter in-memory.
+        braintrustWireMock.stubFor(
+                post(urlEqualTo("/otel/v1/traces"))
+                        .atPriority(Integer.MAX_VALUE)
+                        .willReturn(aResponse().withStatus(200)));
+        braintrustWireMock.stubFor(
+                post(urlEqualTo("/otel/v1/logs"))
+                        .atPriority(Integer.MAX_VALUE)
+                        .willReturn(aResponse().withStatus(200)));
+
+        // Attachment upload flow:
+        //   1. POST /attachment  -> return a fake signed URL pointing back to this WireMock
+        //   2. PUT  /s3-upload-stub -> accept the upload with 200 OK
+        //   3. POST /attachment/status -> acknowledge with 200 OK
+        // The fake signed URL routes the S3 PUT back through WireMock so it succeeds
+        // without reaching a real object store.
+        String fakeSignedUrl = braintrustWireMock.baseUrl() + "/s3-upload-stub";
+        String attachmentResponse = "{\"signedUrl\": \"" + fakeSignedUrl + "\", \"headers\": {}}";
+        braintrustWireMock.stubFor(
+                post(urlEqualTo("/attachment"))
+                        .atPriority(Integer.MAX_VALUE)
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(attachmentResponse)));
+        braintrustWireMock.stubFor(
+                put(urlEqualTo("/s3-upload-stub"))
+                        .atPriority(Integer.MAX_VALUE)
+                        .willReturn(aResponse().withStatus(200)));
+        braintrustWireMock.stubFor(
+                post(urlEqualTo("/attachment/status"))
+                        .atPriority(Integer.MAX_VALUE)
+                        .willReturn(aResponse().withStatus(200)));
+
+        log.info(
+                "Added passthrough stubs for OTEL endpoints and attachment upload flow"
+                        + " (fake S3 URL: {})",
+                fakeSignedUrl);
     }
 
     /**
@@ -231,17 +336,19 @@ public class VCR {
             }
         }
 
-        // Add catch-all stubs for dynamic requests.
-        // These requests contain timestamps and dynamic data that change between runs.
-        WireMockServer braintrustWireMock = proxyMap.get("https://api.braintrust.dev");
-        if (braintrustWireMock != null) {
-            // OTLP trace exports - return 200 OK. Actual span content is validated via
-            // UnitTestSpanExporter.
-            braintrustWireMock.stubFor(
-                    post(urlEqualTo("/otel/v1/traces"))
-                            .atPriority(Integer.MAX_VALUE) // lowest priority, fallback only
-                            .willReturn(aResponse().withStatus(200)));
-            log.info("Added catch-all stub for OTLP trace exports");
+        // Add catch-all stubs for passthrough paths on the Braintrust target.
+        // These endpoints are not recorded as cassettes -- in REPLAY mode we stub them
+        // so the SDK's background calls succeed without real backends.
+        // Look up by mappings dir name ("braintrust") rather than target URL, since the
+        // Braintrust API URL may vary (e.g., staging vs production).
+        for (Map.Entry<String, String> btEntry : targetUrlToMappingsDir.entrySet()) {
+            if ("braintrust".equals(btEntry.getValue())) {
+                WireMockServer braintrustWireMock = proxyMap.get(btEntry.getKey());
+                if (braintrustWireMock != null) {
+                    addBraintrustPassthroughStubs(braintrustWireMock);
+                }
+                break;
+            }
         }
     }
 
@@ -280,7 +387,15 @@ public class VCR {
             }
         }
 
-        if (!isSse && !isEventStream && !isFunctionInvokeWithParent) {
+        // Check if this is a query-parameter request with a "version" param.
+        // Version-specific fetches must take priority over general fetches for the same
+        // endpoint, because general stubs (which don't constrain on "version") will also
+        // match version-specific requests. Without explicit priority, WireMock may serve
+        // a general (scenario-based) stub instead of the version-specific one.
+        JsonNode queryParams = mapping.at("/request/queryParameters");
+        boolean isVersionSpecificQuery = queryParams.isObject() && queryParams.has("version");
+
+        if (!isSse && !isEventStream && !isFunctionInvokeWithParent && !isVersionSpecificQuery) {
             return; // Let WireMock handle other responses normally
         }
 
@@ -289,6 +404,10 @@ public class VCR {
         } else if (isEventStream) {
             log.info(
                     "Creating programmatic stub for binary event-stream response: "
+                            + mappingPath.getFileName());
+        } else if (isVersionSpecificQuery) {
+            log.info(
+                    "Creating high-priority programmatic stub for version-specific query: "
                             + mappingPath.getFileName());
         } else {
             log.info(
@@ -301,10 +420,38 @@ public class VCR {
         String responseContentType =
                 contentType.isTextual() ? contentType.asText() : "application/json";
 
-        // Create programmatic stub
-        com.github.tomakehurst.wiremock.client.MappingBuilder stub =
-                com.github.tomakehurst.wiremock.client.WireMock.request(
-                        method, com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo(url));
+        // Create programmatic stub.
+        // Version-specific queries use urlPath + queryParameters instead of a full url.
+        String urlPath = mapping.at("/request/urlPath").asText(null);
+        com.github.tomakehurst.wiremock.client.MappingBuilder stub;
+        if (isVersionSpecificQuery && urlPath != null) {
+            stub =
+                    com.github.tomakehurst.wiremock.client.WireMock.request(
+                                    method,
+                                    com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo(
+                                            urlPath))
+                            // Higher priority (lower number) so this matches before general stubs
+                            .atPriority(1);
+
+            // Add all query parameter matchers from the cassette
+            Iterator<Map.Entry<String, JsonNode>> qpFields = queryParams.fields();
+            while (qpFields.hasNext()) {
+                Map.Entry<String, JsonNode> qp = qpFields.next();
+                // Extract the equalTo value from hasExactly[0].equalTo
+                JsonNode hasExactly = qp.getValue().get("hasExactly");
+                if (hasExactly != null && hasExactly.isArray() && !hasExactly.isEmpty()) {
+                    String value = hasExactly.get(0).get("equalTo").asText();
+                    stub.withQueryParam(
+                            qp.getKey(),
+                            com.github.tomakehurst.wiremock.client.WireMock.equalTo(value));
+                }
+            }
+        } else {
+            stub =
+                    com.github.tomakehurst.wiremock.client.WireMock.request(
+                            method,
+                            com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo(url));
+        }
 
         // Add body pattern matching if present
         if (bodyPatterns.isArray() && !bodyPatterns.isEmpty()) {
@@ -388,7 +535,8 @@ public class VCR {
                 String targetUrl = entry.getKey();
                 String mappingsDir = targetUrlToMappingsDir.get(targetUrl);
                 WireMockServer wireMock = entry.getValue();
-                wireMock.stopRecording();
+                var result = wireMock.stopRecording();
+                renameWithDeterministicHashes(mappingsDir, result.getStubMappings());
                 validateNoForbiddenText(mappingsDir);
                 log.info("Recording saved for {}", targetUrl);
             }
@@ -397,6 +545,301 @@ public class VCR {
         // Note: We don't stop the WireMock servers here because they're shared across tests.
         // The servers will be stopped when the JVM shuts down via the shutdown hook.
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Deterministic cassette file naming
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /** ObjectMapper configured for canonical (sorted-key) JSON serialization. */
+    private static final ObjectMapper CANONICAL_MAPPER =
+            new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+
+    /** Number of hex characters to use from the SHA-256 hash (48 bits → ~280 trillion combos). */
+    private static final int HASH_LENGTH = 12;
+
+    /**
+     * Rename cassette files from WireMock's random-UUID naming to deterministic content-based
+     * hashes. Only processes files freshly recorded by WireMock in this session (identified via the
+     * {@code StubMapping} list from {@code stopRecording()}), leaving any previously-renamed files
+     * on disk untouched.
+     *
+     * <p>For each mapping file: computes a SHA-256 hash of the canonicalized {@code request} field,
+     * then renames the mapping file and any associated body file in {@code __files/} to use that
+     * hash instead of the random UUID. Also updates internal JSON references ({@code id}, {@code
+     * bodyFileName}).
+     */
+    private void renameWithDeterministicHashes(
+            String mappingsDir, List<StubMapping> freshMappings) {
+        if (freshMappings.isEmpty()) {
+            return;
+        }
+
+        Path mappingsDirPath = Paths.get(cassettesRoot, mappingsDir, "mappings");
+        Path filesDirPath = Paths.get(cassettesRoot, mappingsDir, "__files");
+
+        if (!Files.exists(mappingsDirPath)) {
+            return;
+        }
+
+        // Build the list of freshly-written file paths from the StubMapping list.
+        // WireMock writes filenames as: sanitise("{name}-{id}") + ".json"
+        // where name is the sanitized URL path and id is the random UUID.
+        List<Path> freshFiles =
+                freshMappings.stream()
+                        .map(
+                                stub -> {
+                                    String filename =
+                                            sanitiseWireMockFilename(
+                                                    stub.getName() + "-" + stub.getId() + ".json");
+                                    return mappingsDirPath.resolve(filename);
+                                })
+                        .sorted() // deterministic processing order
+                        .toList();
+
+        // Track seen hashes to drop duplicates (same request → same hash → redundant cassette)
+        Set<String> seenHashes = new HashSet<>();
+        int renamed = 0;
+        int dropped = 0;
+
+        for (Path mappingFile : freshFiles) {
+            if (!Files.exists(mappingFile)) {
+                log.warn(
+                        "Expected freshly-recorded cassette not found: {}",
+                        mappingFile.getFileName());
+                continue;
+            }
+            try {
+                switch (renameCassetteFile(mappingFile, filesDirPath, seenHashes)) {
+                    case RENAMED -> renamed++;
+                    case DUPLICATE -> dropped++;
+                    case SKIPPED -> {}
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Failed to rename cassette " + mappingFile.getFileName(), e);
+            }
+        }
+
+        if (renamed > 0 || dropped > 0) {
+            log.info(
+                    "Cassettes in {}: renamed {} with deterministic hashes, dropped {} duplicates"
+                            + " (of {} freshly recorded)",
+                    mappingsDir,
+                    renamed,
+                    dropped,
+                    freshFiles.size());
+        }
+    }
+
+    /**
+     * Replicate WireMock's {@code FilenameMaker.sanitise()} logic: replace spaces with dashes,
+     * strip characters that aren't word chars, dashes, or dots, then lowercase.
+     */
+    private static final Pattern WIREMOCK_NON_ALPHANUMERIC = Pattern.compile("[^\\w-.]");
+
+    private static String sanitiseWireMockFilename(String s) {
+        String decorated = String.join("-", s.split(" "));
+        return WIREMOCK_NON_ALPHANUMERIC.matcher(decorated).replaceAll("").toLowerCase(Locale.ROOT);
+    }
+
+    private enum RenameResult {
+        RENAMED,
+        DUPLICATE,
+        SKIPPED
+    }
+
+    /**
+     * Rename a single cassette mapping file (and its body file) to use a deterministic hash. If
+     * another cassette with the same request hash was already processed, the duplicate is deleted
+     * since WireMock matches on request content and would only ever use one of them.
+     */
+    private RenameResult renameCassetteFile(
+            Path mappingFile, Path filesDirPath, Set<String> seenHashes) throws IOException {
+        ObjectMapper mapper = CANONICAL_MAPPER;
+        JsonNode root = mapper.readTree(Files.readString(mappingFile));
+
+        if (!root.isObject() || !root.has("request")) {
+            return RenameResult.SKIPPED;
+        }
+
+        // Extract the stub name (sanitized URL path, e.g. "chat_completions")
+        String name = root.has("name") ? root.get("name").asText() : null;
+        if (name == null || name.isEmpty()) {
+            return RenameResult.SKIPPED;
+        }
+
+        // Canonicalize the request and compute hash.
+        // Include scenario fields in the hash because WireMock scenarios use multiple stubs
+        // with identical request patterns but different scenario states to return different
+        // responses in sequence. Without these, scenario steps would hash identically and
+        // the dedup logic would incorrectly drop them.
+        JsonNode request = root.get("request");
+        String canonicalRequest = canonicalizeJson(request, mapper);
+        String scenarioKey = "";
+        if (root.has("scenarioName")) {
+            scenarioKey += "|scenario=" + root.get("scenarioName").asText();
+        }
+        if (root.has("requiredScenarioState")) {
+            scenarioKey += "|state=" + root.get("requiredScenarioState").asText();
+        }
+        String hash = sha256Hex(canonicalRequest + scenarioKey, HASH_LENGTH);
+        String hashKey = name + "-" + hash;
+
+        // Drop duplicates: same request + same scenario state → truly redundant cassette.
+        // But don't delete a file that already has the target name -- that's the canonical
+        // copy we want to keep (e.g., from a previous recording session).
+        String targetMappingFileName = hashKey + ".json";
+        if (!seenHashes.add(hashKey)) {
+            if (mappingFile.getFileName().toString().equals(targetMappingFileName)) {
+                // This file already has the correct name -- keep it
+                return RenameResult.SKIPPED;
+            }
+            log.debug(
+                    "Dropping duplicate cassette: {} (hash: {})", mappingFile.getFileName(), hash);
+            // Delete the mapping file and its body file
+            String oldBodyFileName = root.at("/response/bodyFileName").asText(null);
+            if (oldBodyFileName != null && !oldBodyFileName.isEmpty()) {
+                Files.deleteIfExists(filesDirPath.resolve(oldBodyFileName));
+            }
+            Files.deleteIfExists(mappingFile);
+            return RenameResult.DUPLICATE;
+        }
+
+        String newBaseName = hashKey;
+
+        // Generate a deterministic UUID from the hash key
+        UUID deterministicId = uuidV5(hashKey);
+
+        // Update the mapping JSON (both "id" and "uuid" map to the same WireMock field;
+        // update both so the file is internally consistent)
+        ObjectNode rootObj = (ObjectNode) root;
+        rootObj.put("id", deterministicId.toString());
+        if (rootObj.has("uuid")) {
+            rootObj.put("uuid", deterministicId.toString());
+        }
+
+        // Rename body file if present
+        String oldBodyFileName = root.at("/response/bodyFileName").asText(null);
+        if (oldBodyFileName != null && !oldBodyFileName.isEmpty()) {
+            String bodyExtension = getExtension(oldBodyFileName);
+            String newBodyFileName = newBaseName + bodyExtension;
+
+            // Update the reference in the mapping JSON
+            ((ObjectNode) root.get("response")).put("bodyFileName", newBodyFileName);
+
+            // Rename the actual body file on disk (REPLACE_EXISTING handles re-records
+            // where the deterministic name already exists from a previous recording session)
+            Path oldBodyPath = filesDirPath.resolve(oldBodyFileName);
+            if (Files.exists(oldBodyPath)) {
+                Path newBodyPath = filesDirPath.resolve(newBodyFileName);
+                Files.move(oldBodyPath, newBodyPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+
+        // Write the updated mapping JSON to the new filename
+        String newMappingFileName = newBaseName + ".json";
+        Path newMappingPath = mappingFile.getParent().resolve(newMappingFileName);
+        String updatedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootObj);
+        Files.writeString(newMappingPath, updatedJson);
+
+        // Delete the old file (if the name actually changed)
+        if (!mappingFile.equals(newMappingPath)) {
+            Files.deleteIfExists(mappingFile);
+        }
+
+        return RenameResult.RENAMED;
+    }
+
+    /**
+     * Canonicalize a JSON node for hashing. Object keys are sorted recursively, and {@code
+     * equalToJson} string values are parsed and re-serialized with sorted keys so that logically
+     * identical JSON bodies produce the same canonical form regardless of original key ordering.
+     */
+    private static String canonicalizeJson(JsonNode node, ObjectMapper mapper) {
+        try {
+            Object canonical = toCanonicalObject(node, mapper);
+            return mapper.writeValueAsString(canonical);
+        } catch (Exception e) {
+            // Fallback: use the raw toString if canonicalization fails
+            return node.toString();
+        }
+    }
+
+    /**
+     * Convert a JsonNode tree into a canonical Java object tree where all objects use sorted-key
+     * TreeMaps. Recursively parses {@code equalToJson} string values as JSON so their key ordering
+     * is also normalized.
+     */
+    private static Object toCanonicalObject(JsonNode node, ObjectMapper mapper) {
+        if (node.isObject()) {
+            TreeMap<String, Object> sorted = new TreeMap<>();
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                sorted.put(field.getKey(), toCanonicalObject(field.getValue(), mapper));
+            }
+            return sorted;
+        } else if (node.isArray()) {
+            List<Object> list = new java.util.ArrayList<>();
+            for (JsonNode element : node) {
+                list.add(toCanonicalObject(element, mapper));
+            }
+            return list;
+        } else if (node.isTextual()) {
+            String text = node.asText();
+            // Try to parse JSON strings (like equalToJson values) for canonical re-serialization
+            if (text.startsWith("{") || text.startsWith("[")) {
+                try {
+                    JsonNode parsed = mapper.readTree(text);
+                    return toCanonicalObject(parsed, mapper);
+                } catch (Exception ignored) {
+                    // Not valid JSON, return as plain string
+                }
+            }
+            return text;
+        } else if (node.isNumber()) {
+            return node.numberValue();
+        } else if (node.isBoolean()) {
+            return node.booleanValue();
+        } else if (node.isNull()) {
+            return null;
+        }
+        return node.toString();
+    }
+
+    /** Compute the first {@code length} hex characters of the SHA-256 hash of a string. */
+    private static String sha256Hex(String input, int length) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+                if (hex.length() >= length) break;
+            }
+            return hex.substring(0, length);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
+
+    /**
+     * Generate a deterministic UUID v5 (name-based, SHA-1) in the URL namespace. This produces the
+     * same UUID for the same input string across JVM runs.
+     */
+    private static UUID uuidV5(String name) {
+        return UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Extract the file extension including the dot, e.g. ".json" from "foo-bar.json". */
+    private static String getExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot >= 0 ? filename.substring(dot) : "";
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Cassette validation
+    // ──────────────────────────────────────────────────────────────────────────
 
     /**
      * Validate that no forbidden text (e.g., API keys) appears in recorded cassettes. Throws an

@@ -49,23 +49,33 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
 
     @Override
     public Cursor<DatasetCase<INPUT, OUTPUT>> openCursor() {
-        return new BrainstoreCursor(null == pinnedVersion ? fetchMaxVersion() : pinnedVersion);
+        if (null != pinnedVersion) {
+            return new BrainstoreCursor(pinnedVersion);
+        }
+        var maxVersion = fetchMaxVersion();
+        if (null == maxVersion) {
+            return EMPTY_CURSOR;
+        } else {
+            return new BrainstoreCursor(maxVersion);
+        }
     }
 
-    private String fetchMaxVersion() {
+    private @Nullable String fetchMaxVersion() {
         var response =
                 apiClient.btqlQuery(
-                        "SELECT max(_xact_id) as version FROM dataset('%s')".formatted(datasetId));
+                        "SELECT max(_xact_id) as version, count(*) as count FROM dataset('%s')"
+                                .formatted(datasetId));
         if (response.data().isEmpty()) {
             throw new RuntimeException(
                     "Failed to fetch max version for dataset: " + datasetId + " (empty response)");
         }
+        if ("0".equals(response.data().get(0).get("count").toString())) {
+            // empty dataset
+            return null;
+        }
         var version = response.data().get(0).get("version");
         if (version == null) {
-            throw new RuntimeException(
-                    "Failed to fetch max version for dataset: "
-                            + datasetId
-                            + " (null version — dataset may be empty)");
+            throw new RuntimeException("failed to fetch max version for dataset: " + datasetId);
         }
         return String.valueOf(version);
     }
@@ -165,4 +175,20 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
             return Optional.of(cursorVersion);
         }
     }
+
+    private final Cursor<DatasetCase<INPUT, OUTPUT>> EMPTY_CURSOR =
+            new Cursor<>() {
+                @Override
+                public Optional<DatasetCase<INPUT, OUTPUT>> next() {
+                    return Optional.empty();
+                }
+
+                @Override
+                public void close() {}
+
+                @Override
+                public Optional<String> version() {
+                    return Optional.empty();
+                }
+            };
 }

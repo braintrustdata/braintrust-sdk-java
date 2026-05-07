@@ -27,7 +27,12 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 
+/**
+ * NOTE: playground UI has been updated and breaks the SDK contract. will have to investigate and
+ * fixe before this test can be re-enabled
+ */
 @Slf4j
+@Disabled
 class DevserverTest {
     private static Devserver server;
     private static Thread serverThread;

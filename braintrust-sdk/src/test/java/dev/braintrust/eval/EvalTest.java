@@ -19,11 +19,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class EvalTest {
+    private static final String REMOTE_DATASET_NAME = "food";
     private TestHarness testHarness;
+
+    @BeforeAll
+    static void beforeAll() {
+        var harness = TestHarness.setup();
+        harness.ensureRemoteDataset(
+                REMOTE_DATASET_NAME, Dataset.of(DatasetCase.of("apple", "fruit")));
+    }
 
     @BeforeEach
     void beforeEach() {
@@ -380,7 +389,8 @@ public class EvalTest {
         }
 
         var experimentName = "test-dataset-linking";
-        Dataset<String, String> dataset = testHarness.braintrust().fetchDataset("food");
+        Dataset<String, String> dataset =
+                testHarness.braintrust().fetchDataset(REMOTE_DATASET_NAME);
 
         var eval =
                 testHarness

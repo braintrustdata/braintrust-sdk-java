@@ -23,7 +23,8 @@ ext {
 
 dependencies {
   // testFixtures dependencies — everything lives in testFixtures source set
-  testFixturesImplementation project(":braintrust-sdk")  // SDK main source (for TestHarness -> Braintrust, BraintrustConfig)
+  testFixturesImplementation project(":braintrust-api")
+  testFixturesImplementation project(":braintrust-sdk")
   testFixturesImplementation project(":braintrust-java-agent:internal")
   testFixturesImplementation project(":braintrust-java-agent:bootstrap")
   testFixturesImplementation project(":braintrust-java-agent:instrumenter")
