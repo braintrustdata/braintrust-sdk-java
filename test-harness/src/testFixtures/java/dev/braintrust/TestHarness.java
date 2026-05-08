@@ -35,7 +35,7 @@ import dev.braintrust.openapi.model.PromptOptionsNullish;
 import dev.braintrust.openapi.model.PromptParserNullish;
 import dev.braintrust.openapi.model.SystemContent;
 import dev.braintrust.openapi.model.UserContent;
-import dev.braintrust.trace.UnitTestShutdownHook;
+import dev.braintrust.trace.HarnessShim;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
@@ -110,7 +110,7 @@ public class TestHarness {
                                 "bedrock"),
                         apiKeysToNeverRecord);
         vcr.start();
-        UnitTestShutdownHook.addShutdownHook(1, vcr::stop);
+        HarnessShim.addShutdownHook(vcr::stop);
         { // set up default project if needed
             var harness = setup();
             var client = harness.braintrust.openApiClient();
@@ -176,9 +176,15 @@ public class TestHarness {
         this.spanExporter = new UnitTestSpanExporter();
         var loggerBuilder = SdkLoggerProvider.builder();
         var meterBuilder = SdkMeterProvider.builder();
-        braintrust.openTelemetryEnable(tracerBuilder, loggerBuilder, meterBuilder);
-        // Add the in-memory span exporter for testing
-        tracerBuilder.addSpanProcessor(SimpleSpanProcessor.create(this.spanExporter));
+        // Wire the in-memory span exporter as an additional delegate inside the
+        // BraintrustSpanProcessor so it sees post-processed spans (attachment references
+        // instead of raw base64 data URIs, etc.).
+        dev.braintrust.trace.HarnessShim.enableTracing(
+                braintrust.config(),
+                tracerBuilder,
+                List.of(SimpleSpanProcessor.create(this.spanExporter)),
+                loggerBuilder,
+                meterBuilder);
         var contextPropagator =
                 ContextPropagators.create(
                         TextMapPropagator.composite(

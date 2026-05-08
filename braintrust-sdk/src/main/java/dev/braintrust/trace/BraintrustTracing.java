@@ -19,9 +19,12 @@ import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.semconv.ServiceAttributes;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -96,6 +99,31 @@ public final class BraintrustTracing {
             @Nonnull SdkTracerProviderBuilder tracerProviderBuilder,
             @Nonnull SdkLoggerProviderBuilder loggerProviderBuilder,
             @Nonnull SdkMeterProviderBuilder meterProviderBuilder) {
+        enable(
+                config,
+                tracerProviderBuilder,
+                List.of(),
+                loggerProviderBuilder,
+                meterProviderBuilder);
+    }
+
+    /**
+     * Add braintrust to existing open telemetry builders, with additional span processors that will
+     * receive spans <em>after</em> Braintrust processing (attachment upload, parent assignment,
+     * etc.).
+     *
+     * <p>The additional processors are composited into the {@link BraintrustSpanProcessor}'s
+     * delegate, so they see the transformed span data rather than the raw original.
+     *
+     * @param additionalDelegates extra span processors that receive post-processed spans alongside
+     *     the Braintrust exporter. Pass {@code List.of()} if none are needed.
+     */
+    static void enable(
+            @Nonnull BraintrustConfig config,
+            @Nonnull SdkTracerProviderBuilder tracerProviderBuilder,
+            @Nonnull List<SpanProcessor> additionalDelegates,
+            @Nonnull SdkLoggerProviderBuilder loggerProviderBuilder,
+            @Nonnull SdkMeterProviderBuilder meterProviderBuilder) {
         final Duration exportInterval = Duration.ofSeconds(5);
         final int maxQueueSize = 2048;
         final int maxExportBatchSize = 512;
@@ -109,14 +137,24 @@ public final class BraintrustTracing {
         var resource = resourceBuilder.build();
 
         // spans
-        var spanProcessor =
-                new BraintrustSpanProcessor(
-                        config,
-                        BatchSpanProcessor.builder(new BraintrustSpanExporter(config))
-                                .setScheduleDelay(exportInterval.toMillis(), TimeUnit.MILLISECONDS)
-                                .setMaxQueueSize(maxQueueSize)
-                                .setMaxExportBatchSize(maxExportBatchSize)
-                                .build());
+        var braintrustExporter =
+                BatchSpanProcessor.builder(new BraintrustSpanExporter(config))
+                        .setScheduleDelay(exportInterval.toMillis(), TimeUnit.MILLISECONDS)
+                        .setMaxQueueSize(maxQueueSize)
+                        .setMaxExportBatchSize(maxExportBatchSize)
+                        .build();
+
+        SpanProcessor delegate;
+        if (additionalDelegates.isEmpty()) {
+            delegate = braintrustExporter;
+        } else {
+            var all = new ArrayList<SpanProcessor>();
+            all.add(braintrustExporter);
+            all.addAll(additionalDelegates);
+            delegate = SpanProcessor.composite(all);
+        }
+
+        var spanProcessor = new BraintrustSpanProcessor(config, delegate);
         tracerProviderBuilder.addResource(resource).addSpanProcessor(spanProcessor);
         // logs
         var logProcessor =
