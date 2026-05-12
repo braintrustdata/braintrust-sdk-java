@@ -1,0 +1,1 @@
+{"name":"close-enough-judge","score":1,"metadata":{"rationale":"The expected output is 'hello world' and the actual output is also 'hello world'. Since both strings are identical, they match perfectly. Therefore, they are a close enough match.","choice":"YES"}}

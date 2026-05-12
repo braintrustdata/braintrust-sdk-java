@@ -1,0 +1,51 @@
+{
+  "id" : "1af798ea-2b1a-3d55-823f-5f523cb2a75b",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-a2ceaa8491c7.json",
+    "headers" : {
+      "x-request-id" : "req_af07a9d5a17441b8984e2bc25cb99a3a",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad50756a0e7526-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999750",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:48:37 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=Z5Yu8mQk5CNVWPZOCsykIArQPYLgPNdSVETt1xZUSQI-1778629707.1036217-1.0.1.1-zl2OMXhA8QjSojKa7XTcVP866_svyEa_kA9soHVQu3iewuoMgNpsLqAVMN6fS8cV5ypcaKmviJyz1q2ZlDpF9nuRxIxrhdFAJn6nku8U7VF3lGVxbH8WP9FCoiF3aqmm; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:37 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "10428",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "1af798ea-2b1a-3d55-823f-5f523cb2a75b",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-responses",
+  "requiredScenarioState" : "scenario-1-responses-2",
+  "newScenarioState" : "scenario-1-responses-3",
+  "insertionIndex" : 4
+}

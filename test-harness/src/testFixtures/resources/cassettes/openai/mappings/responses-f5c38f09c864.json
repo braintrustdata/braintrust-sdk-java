@@ -1,0 +1,48 @@
+{
+  "id" : "213b5cd4-2fd6-3933-8340-107bac4b991f",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0bd976abac729f73006a03bc47c87081958eca888f7f7af5ad\",\"summary\":[{\"text\":\"**Analyzing the sequence**\\n\\nThe user is asking about the sequence: 2, 6, 12, 20, 30. I think these numbers correspond to triangular numbers, but specifically multiplied by 2. So, I realize that a general formula for the nth term can be a(n) = n(n + 1). This captures the pattern perfectly, yielding correct values for each term in the sequence. The differences between terms also reveal an increasing pattern: 4, 6, 8, 10—indicating a consistent growth as well!\",\"type\":\"summary_text\"},{\"text\":\"**Identifying quadratic patterns**\\n\\nI’m observing that the second difference is constant at 2, indicating a quadratic function. I figured out that a(n) could be of the form an^2 + bn + c. By solving equations for n=1, 2, and 3, I find that a = 1, b = 1, and c = 0. This leads me to the formula a(n) = n^2 + n, representing pronic numbers or the product of consecutive integers. So, the final result for the nth term is n(n + 1)!\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_0bd976abac729f73006a03bc4e4adc81958bb9bd1260611f25\",\"content\":[{\"annotations\":[],\"text\":\"The terms are the “pronic” (or oblong) numbers, i.e.  \\n2 = 1·2  \\n6 = 2·3  \\n12 = 3·4  \\n20 = 4·5  \\n30 = 5·6  \\n\\nSo if you label those terms a₁, a₂, a₃,… then\\n\\n  aₙ = n·(n + 1)  \\n\\nEquivalently, aₙ = n² + n.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-f5c38f09c864.json",
+    "headers" : {
+      "x-request-id" : "req_e1802c3347984474a50d7b61f5abb36f",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad508f58dda3a1-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999615",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:48:36 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=IHL5szkXSkNMBW5biX2ZLt3aeD7Sy97zPuvisga7iMY-1778629711.2558053-1.0.1.1-inDT8A4eShFzmHEZYR1suN1v4.PXf7POXHOOJ8jhtIh0YfPfyMCPf4dS8VSkZiMW34SKZEogmHDdbTACwWh1LstNteMJNUS1AbaoHxaLfzu2IhB1sCXwFBMuAxwSlHYr; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:36 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "5013",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "213b5cd4-2fd6-3933-8340-107bac4b991f",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

@@ -1,0 +1,30 @@
+{
+  "id" : "28ae3b41-ff4a-3115-be6b-276b1f584bf2",
+  "name" : "model_us.anthropic.claude-3-haiku-20240307-v10_converse",
+  "request" : {
+    "url" : "/model/us.anthropic.claude-3-haiku-20240307-v1%3A0/converse",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"What is the capital of France? Reply in one word.\"}]}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.anthropic.claude-3-haiku-20240307-v10_converse-720214f8e163.json",
+    "headers" : {
+      "x-amzn-RequestId" : "3ada2eb3-3cc0-44b0-84a4-bf86c0ee74e6",
+      "Date" : "Tue, 12 May 2026 23:50:16 GMT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "28ae3b41-ff4a-3115-be6b-276b1f584bf2",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

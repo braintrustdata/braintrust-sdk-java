@@ -1,0 +1,77 @@
+{
+  "id": "resp_05e25e583bbfa5cb006a03bc55ce208197b77c54bdcbdab0de",
+  "object": "response",
+  "created_at": 1778629717,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1778629722,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_05e25e583bbfa5cb006a03bc563d3c81978e7fee626b25b26f",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_05e25e583bbfa5cb006a03bc5988dc81978e5c36b4d278b136",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The nth term is a\u2099 = n(n + 1).  \n\u2013 The 10th term is a\u2081\u2080 = 10\u00b711 = 110.  \n\u2013 The sum of the first 10 terms is  \n  \u2211\u2099\u208c\u2081\u00b9\u2070 n(n + 1) = \u2211(n\u00b2 + n)  \n                  = (10\u00b711\u00b721)/6 + (10\u00b711)/2  \n                  = 385 + 55  \n                  = 440.  \nOr, using the closed\u2010form for the sum of pronic numbers,  \n  \u2211\u2099\u208c\u2081\u1d3a n(n + 1) = N(N + 1)(N + 2)/3,  \nso for N=10: 10\u00b711\u00b712/3 = 440."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "effort": "high",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 271,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 707,
+    "output_tokens_details": {
+      "reasoning_tokens": 512
+    },
+    "total_tokens": 978
+  },
+  "user": null,
+  "metadata": {}
+}

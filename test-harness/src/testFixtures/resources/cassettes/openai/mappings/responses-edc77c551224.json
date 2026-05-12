@@ -1,0 +1,48 @@
+{
+  "id" : "4e96bfb8-ab7c-36b8-ac67-b1da017db0ac",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_05e25e583bbfa5cb006a03bc4b9ab48197878e5ff07866739a\",\"summary\":[{\"text\":\"**Analyzing the sequence**\\n\\nThe user presents the sequence: 2, 6, 12, 20, 30 and asks for the pattern and the formula for the nth term. I notice that these are pronic numbers, which are expressed as n(n+1). The first term corresponds to n=1, so 1*2=2, then 2*3=6, and so on. Alternatively, these can also be viewed as double triangular numbers. The difference between terms increases by 2, reinforcing that the formula for the nth term is indeed n(n+1).\",\"type\":\"summary_text\"},{\"text\":\"**Clarifying the sequence**\\n\\nThe user is asking about the pattern in the sequence 2, 6, 12, 20, and 30. These numbers are pronic numbers, or the product of two consecutive integers, expressed as n(n+1). If we look at differences, they increase by 2 (4, 6, 8, 10), showing a consistent arithmetic progression. Hence, the general formula for the nth term is a_n = n(n+1) for n starting from 1. For n starting at 2, it would be a_n = n(n-1).\",\"type\":\"summary_text\"},{\"text\":\"**Explaining the pattern**\\n\\nIn this sequence, the differences between terms are 4, 6, 8, and 10, increasing consistently by 2. This indicates that the second difference is constant at 2, suggesting a quadratic relationship. To determine the formula, I solve for a_n = an² + bn + c using three points, which gives me a=1, b=1, and c=0, leading to a_n = n² + n. Therefore, the final formula represents pronic or oblong numbers as a_n = n(n+1).\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_05e25e583bbfa5cb006a03bc54e6d48197b9393e2c6661470e\",\"content\":[{\"annotations\":[],\"text\":\"The easiest way to see it is to look at the first differences:\\n\\n  6–2 = 4  \\n  12–6 = 6  \\n  20–12 = 8  \\n  30–20 = 10  \\n\\nThose go 4, 6, 8, 10, … – an arithmetic progression with common difference 2.  Hence the original sequence is quadratic in n.  If we index so that\\n\\n  a₁ = 2,  a₂ = 6,  a₃ = 12, …\\n\\nthen one finds\\n\\n  aₙ = n² + n\\n\\n(which you can check: 1²+1=2, 2²+2=6, 3²+3=12, …).  \\n\\nEquivalently, aₙ = n(n + 1).  These are called the “pronic” or “oblong” numbers.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-edc77c551224.json",
+    "headers" : {
+      "x-request-id" : "req_4eecee24fc6d4a28ba9ac077bb2105a1",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad50b7da2dc393-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999522",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:48:42 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=yq1Y2chZdWW_pZwWvr8nh3KL2HYRF6zb0Pj.weNiqEk-1778629717.7408414-1.0.1.1-qBuYdn1jFwB1FUCq7dD7iIxqe18G_44OW0TXApM2Tct6V5XUe5js3lLXz6YxrIYFy7Nmtxctm7240WBydzqFaLWbjwwI6da0b9wKNjnrMX5u_uzFqV6Jx3y.L9z1VWqy; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:42 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "4817",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "4e96bfb8-ab7c-36b8-ac67-b1da017db0ac",
+  "persistent" : true,
+  "insertionIndex" : 3
+}

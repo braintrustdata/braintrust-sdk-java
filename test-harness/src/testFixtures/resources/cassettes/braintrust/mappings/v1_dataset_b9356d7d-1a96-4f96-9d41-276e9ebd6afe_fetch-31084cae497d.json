@@ -1,0 +1,44 @@
+{
+  "id" : "fb67303e-fe7a-3a34-b99b-27fb38162407",
+  "name" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch",
+  "request" : {
+    "url" : "/v1/dataset/b9356d7d-1a96-4f96-9d41-276e9ebd6afe/fetch",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"limit\":512,\"cursor\":\"agOGZGQDAAA\",\"version\":\"1000197155625133059\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch-31084cae497d.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "dRpQ9F48IAMEPhQ=",
+      "vary" : "Origin",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "x-bt-brainstore-duration-ms" : "37",
+      "X-Amzn-Trace-Id" : "Root=1-6a03bc05-7f79c9da2016ba1070b83335;Parent=2f253ca942caa500;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "x-bt-api-duration-ms" : "79",
+      "Date" : "Tue, 12 May 2026 23:47:17 GMT",
+      "Via" : "1.1 d525041695bdb6325f78ebba5c11b8a2.cloudfront.net (CloudFront), 1.1 d49bde7225e80ca0dc457ff2b8b4343e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a03bc05000000005a15b49812dcabf8",
+      "x-amzn-RequestId" : "4921ec94-e892-49aa-96d1-4687a1a7f2fa",
+      "X-Amz-Cf-Id" : "z0yTnsUPObg6WFEVaeTEPoEdNb-dSYc5Q64ajAwzpe2LbFqn_ZNQzA==",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "fb67303e-fe7a-3a34-b99b-27fb38162407",
+  "persistent" : true,
+  "scenarioName" : "scenario-13-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch",
+  "requiredScenarioState" : "scenario-13-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch-2",
+  "insertionIndex" : 69
+}

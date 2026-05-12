@@ -1,0 +1,30 @@
+{
+  "id" : "e51d6dbc-0480-3cdc-a520-0d1115ede08a",
+  "name" : "model_us.amazon.nova-lite-v10_converse",
+  "request" : {
+    "url" : "/model/us.amazon.nova-lite-v1%3A0/converse",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"What is the capital of France?\"}]}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-4db0a4c3f9d3.json",
+    "headers" : {
+      "x-amzn-RequestId" : "e963c9e2-452d-488b-b532-e44efad16f48",
+      "Date" : "Tue, 12 May 2026 23:48:20 GMT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "e51d6dbc-0480-3cdc-a520-0d1115ede08a",
+  "persistent" : true,
+  "insertionIndex" : 3
+}

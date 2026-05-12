@@ -1,0 +1,1 @@
+{"metrics":{"latencyMs":566},"output":{"message":{"content":[{"text":"Sorry, I am not able to recognize the image. Can you provide more information about the image?"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":536,"outputTokens":21,"serverToolUsage":{},"totalTokens":557}}
