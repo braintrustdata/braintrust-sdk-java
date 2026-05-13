@@ -1,0 +1,65 @@
+plugins {
+  id 'java'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+def langchainVersion = '1.8.0'
+
+ext {
+  otelVersion = rootProject.ext.otelVersion
+  junitVersion = rootProject.ext.junitVersion
+  slf4jVersion = rootProject.ext.slf4jVersion
+}
+
+dependencies {
+  testImplementation project(":braintrust-sdk")
+  testImplementation project(":braintrust-sdk:instrumentation:langchain_1_8_0")
+  testImplementation project(":braintrust-java-agent:instrumenter")
+  testImplementation(testFixtures(project(":test-harness")))
+
+  testImplementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk-trace:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk-logs:${otelVersion}"
+  testImplementation "io.opentelemetry:opentelemetry-sdk-metrics:${otelVersion}"
+
+  testImplementation "dev.langchain4j:langchain4j:${langchainVersion}"
+  testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
+  testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
+
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+// Disable the default test task so perf tests don't run during ./gradlew test or check.
+// Run explicitly with: ./gradlew :perf-tests:perfTest
+test {
+  enabled = false
+}
+
+task perfTest(type: Test) {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+
+  // Disable JUnit's per-test timeout — perf tests can take a while
+  systemProperty 'junit.jupiter.execution.timeout.default', 'disabled'
+
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}
