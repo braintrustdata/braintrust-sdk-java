@@ -1,0 +1,51 @@
+{
+  "id" : "889ac36c-1463-380f-87c1-3f72f6dd8f12",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-70e93b55b322.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=0n3o.NKHxrLaxPL1_x5qbtvckEHEIYbhhI3d28siF2E-1778629845.2686603-1.0.1.1-P.ucmY5WluAUT0MyZE4dUErqM0zUIBJtFfsKmP3X_MlWUqSTGAk7IlT1CrVuNG51vV0pKGBRBAni7g1IJ2DNuaHnOQfqM7dPNvgnt1se7Ob4VFwZJ_ACayh_eViufyzu; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:20:46 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID" ],
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_3ac88933a652491d8e247f7bba1f2322",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad53d4ea2077cd-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:50:46 GMT",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "439",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "889ac36c-1463-380f-87c1-3f72f6dd8f12",
+  "persistent" : true,
+  "scenarioName" : "scenario-3-chat-completions",
+  "requiredScenarioState" : "scenario-3-chat-completions-2",
+  "insertionIndex" : 18
+}

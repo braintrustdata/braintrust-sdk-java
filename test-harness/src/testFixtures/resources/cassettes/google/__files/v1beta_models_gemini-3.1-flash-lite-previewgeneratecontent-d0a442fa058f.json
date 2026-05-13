@@ -1,0 +1,35 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "The color of the image is red.",
+            "thoughtSignature": "EjQKMgEMOdbHybtr8EmwHuGLfys9tgpWBMp3qeZ/Ng+YVy8UflDwlFyO7779GqC7fU1rDcK7"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1096,
+    "candidatesTokenCount": 8,
+    "totalTokenCount": 1104,
+    "promptTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1089
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 7
+      }
+    ],
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-3.1-flash-lite-preview",
+  "responseId": "P7wDavmDPeWzqtsPuKanmQE"
+}

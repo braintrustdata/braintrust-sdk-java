@@ -1,0 +1,48 @@
+{
+  "id" : "df78db27-1293-3b56-be87-0cac4675363d",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the capital of France? Reply in one word.\",\"role\":\"user\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"low\",\"summary\":\"auto\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-36764bc7833a.json",
+    "headers" : {
+      "x-request-id" : "req_92c781e5d96742f187b32affce868843",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad53b30ed1ba3c-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999775",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:50:43 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=god.N.WDEO2hel._eXfMxme5IquKNkN3w4BygYt8VoM-1778629839.8470933-1.0.1.1-96jdKqnoRRyy4CLo9fJ.JLfxUQQVJ7n_w0fOf3NVG.q1L395ME0jWmicausAZXQ6P9.r.fzZuoX1mfHp6Tm0p0I6C.zjMSWDnpMaNnXTyHKbbKCdHqcRiK8xPW2YeEnK; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:20:43 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "3197",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "df78db27-1293-3b56-be87-0cac4675363d",
+  "persistent" : true,
+  "insertionIndex" : 20
+}

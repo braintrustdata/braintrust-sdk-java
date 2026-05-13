@@ -1,0 +1,48 @@
+{
+  "id" : "50e0d68c-21e6-3144-8d47-5770ec72a6d5",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_00a8a22f65f43348006a03bc5517d081949a71fe6d23aeb69a\",\"summary\":[{\"text\":\"**Identifying the number pattern**\\n\\nThe user has presented a sequence: 2, 6, 12, 20, 30. I'm noticing that these numbers can be expressed as products of two consecutive integers: 2=1*2, 6=2*3, 12=3*4, and so on. The general formula for the nth term seems to be a_n = n(n+1), which relates to pronic numbers. The differences in the sequence also indicate a quadratic pattern, confirming that the quadratic formula applies here. Thus, I conclude that the formula a_n = n(n+1) holds true!\",\"type\":\"summary_text\"},{\"text\":\"**Understanding pronic numbers**\\n\\nI’m thinking about triangular numbers and how they relate to the sequence: 2, 6... It’s clearer to focus on pronic numbers, defined as the product of two consecutive natural numbers: a_n = n(n+1). This fits since each term is the difference of squares, specifically (n+1)² - (n+1). The differences increase by 2: 4, 6, 8, 10, confirming a quadratic sequence. \\n\\nThe formula is straightforward: a_n = n(n+1) or a_n = n² + n, with n starting from 1. I might also mention that it relates to the sum of the first n even numbers.\",\"type\":\"summary_text\"},{\"text\":\"**Finalizing the pronic number pattern**\\n\\nI’m ready to conclude on the pattern of pronic numbers! The sequence is formed by multiplying consecutive numbers: 1×2=2, 2×3=6, 3×4=12, and so on, leading to the nth term being n(n+1). It’s also interesting to note that the difference between successive terms increases by 2, indicating a quadratic relationship, expressed as a_n = n² + n. I can also mention that a_n = 2T_n, linking it to triangular numbers. Now I’ll present this concisely!\",\"type\":\"summary_text\"}],\"type\":\"reasoning\"},{\"id\":\"msg_00a8a22f65f43348006a03bc5f5de48194b9b91f39592ace56\",\"content\":[{\"annotations\":[],\"text\":\"The terms are 2=1·2, 6=2·3, 12=3·4, 20=4·5, 30=5·6,… so each is the product of two consecutive integers.  If you call the first term n=1, the nth term is\\n\\n aₙ = n·(n+1)\\n\\nEquivalently, aₙ = n² + n.\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-172a4267f40e.json",
+    "headers" : {
+      "x-request-id" : "req_fa6d3749c5164f59ae23d7d330986891",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad50fe6815752a-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999625",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:48:57 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=vRMUni5VaZpKzUHGkFuDNIX4MbVI.4wKTyvt0ld1XMc-1778629729.0228689-1.0.1.1-epi9ZiRWZoh6qKBzcNsaTgULiLLTdPT0zr42WzGVCQ1w3qQFS7Pk3GlNePxfmSNs5Cy87JTiTaCtbtNoAYELNcr_FHXxGx4__oISwkdcGIVAUgR40OI7_J9RrYfKf.mp; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:57 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-processing-ms" : "8473",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "50e0d68c-21e6-3144-8d47-5770ec72a6d5",
+  "persistent" : true,
+  "insertionIndex" : 1
+}

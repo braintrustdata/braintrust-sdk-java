@@ -30,6 +30,7 @@ import org.springframework.ai.openai.api.OpenAiApi;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BraintrustSpringAITest {
+    private static final String TEST_MODEL = "claude-haiku-4-5";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     @BeforeAll
@@ -69,7 +70,7 @@ public class BraintrustSpringAITest {
                 new Provider(
                         "anthropic",
                         "anthropic",
-                        "claude-3-haiku",
+                        TEST_MODEL,
                         TestHarness::anthropicBaseUrl,
                         false));
     }
@@ -108,7 +109,7 @@ public class BraintrustSpringAITest {
                         .anthropicApi(api)
                         .defaultOptions(
                                 AnthropicChatOptions.builder()
-                                        .model("claude-3-haiku-20240307")
+                                        .model(TEST_MODEL)
                                         .temperature(0.0)
                                         .maxTokens(50)
                                         .build())

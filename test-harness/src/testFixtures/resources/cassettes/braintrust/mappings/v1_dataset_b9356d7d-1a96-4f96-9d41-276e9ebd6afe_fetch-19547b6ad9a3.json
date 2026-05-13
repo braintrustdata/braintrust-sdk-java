@@ -1,0 +1,46 @@
+{
+  "id" : "40806b6a-c4fb-330d-af1b-3249d160689a",
+  "name" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch",
+  "request" : {
+    "url" : "/v1/dataset/b9356d7d-1a96-4f96-9d41-276e9ebd6afe/fetch",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"limit\":512,\"cursor\":null,\"version\":\"1000197155625133059\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch-19547b6ad9a3.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "dRpPzH4LoAMEnmQ=",
+      "vary" : "Origin",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "x-bt-brainstore-duration-ms" : "111",
+      "X-Amzn-Trace-Id" : "Root=1-6a03bbfe-6e1fe41b3a96cda4679e71ef;Parent=579ea6848114d14d;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "x-bt-api-duration-ms" : "160",
+      "Date" : "Tue, 12 May 2026 23:47:10 GMT",
+      "Via" : "1.1 a40ac7dad0e348fc93799233c9af5960.cloudfront.net (CloudFront), 1.1 55a62c25b77c24cde4014f567fd1c550.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a03bbfe000000003c34a7ce2e685df0",
+      "x-amzn-RequestId" : "8da37ab4-3bb7-4134-b9e7-d45b4a4d9c8b",
+      "X-Amz-Cf-Id" : "8t01w-lNVQ_b54UuqbxQEMMhplTUAsKWbU00a-C43bGTM3lQwi1c7w==",
+      "x-bt-cursor" : "agOGZGQDAAA",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "40806b6a-c4fb-330d-af1b-3249d160689a",
+  "persistent" : true,
+  "scenarioName" : "scenario-14-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-14-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch-2",
+  "insertionIndex" : 83
+}

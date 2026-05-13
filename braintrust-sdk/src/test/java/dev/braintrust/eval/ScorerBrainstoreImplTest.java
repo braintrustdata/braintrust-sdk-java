@@ -10,23 +10,36 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
 public class ScorerBrainstoreImplTest {
-    // NOTE: the remote scorers under test are standard boilerplate autofilled by the braintrust UI
-    // TODO: test is VCR'd so it's fine, but would be nice to have logic to (re)create the score
-    //       objects if they are absent
-
     // returns 1.0 for an exact match, 0.0 otherwise
-    private static final String SCORER_SLUG = "typescriptexactmatch-9e44";
+    private static TestHarness.CodeScorerInfo CODE_SCORER_INFO;
 
-    // LLM judge scorer that returns {"name":"close-enough-judge","metadata":{"choice":"0.9",...}}
-    private static final String LLM_JUDGE_SLUG = "close-enough-judge-d31b";
+    // LLM judge scorer that returns 1.0 if output is close enough to expected
+    private static String LLM_JUDGE_SLUG;
 
     private TestHarness testHarness;
+
+    @BeforeAll
+    static void beforeAll() {
+        var harness = TestHarness.setup();
+        CODE_SCORER_INFO = harness.ensureRemoteCodeScorer("typescript-exact-match", SCORER_CODE);
+        LLM_JUDGE_SLUG =
+                harness.ensureRemoteLLMJudgeScorer(
+                        "close-enough-judge",
+                        """
+are expected and output a close enough match?
+expected: {{expected}}
+output: {{output}}
+                        """,
+                        Map.of("NO", 0.0, "YES", 1.0));
+    }
 
     @BeforeEach
     void beforeEach() {
@@ -39,7 +52,7 @@ public class ScorerBrainstoreImplTest {
                 Scorer.fetchFromBraintrust(
                         testHarness.braintrust().openApiClient(),
                         testHarness.braintrust().config().defaultProjectName().orElseThrow(),
-                        SCORER_SLUG,
+                        CODE_SCORER_INFO.slug(),
                         null);
         assertNotNull(scorer);
         assertNotNull(scorer.getName());
@@ -59,7 +72,7 @@ public class ScorerBrainstoreImplTest {
                 Scorer.fetchFromBraintrust(
                         testHarness.braintrust().openApiClient(),
                         testHarness.braintrust().config().defaultProjectName().orElseThrow(),
-                        SCORER_SLUG,
+                        CODE_SCORER_INFO.slug(),
                         null);
         assertNotNull(scorer);
         assertNotNull(scorer.getName());
@@ -75,14 +88,14 @@ public class ScorerBrainstoreImplTest {
 
     @Test
     void testScorerOldVersion() {
-        // Version 485dbf64e486ab3a of the exact match scorer always returns 0, even for exact
-        // matches
-        String oldVersion = "485dbf64e486ab3a";
+        // The first version of the exact match scorer (index 0) always returns 0.0, even for
+        // exact matches. Fetch it by its version ID to verify old-version behavior.
+        String oldVersion = CODE_SCORER_INFO.versionIds().get(0);
         Scorer<String, String> scorer =
                 Scorer.fetchFromBraintrust(
                         testHarness.braintrust().openApiClient(),
                         testHarness.braintrust().config().defaultProjectName().orElseThrow(),
-                        SCORER_SLUG,
+                        CODE_SCORER_INFO.slug(),
                         oldVersion);
         assertNotNull(scorer);
         assertNotNull(scorer.getName());
@@ -219,4 +232,65 @@ public class ScorerBrainstoreImplTest {
                 "Expected to find a span with parent spanId '%s' in trace '%s'. Found %d spans total."
                         .formatted(spanId, traceId, response.data().size()));
     }
+
+    private static final List<String> SCORER_CODE =
+            List.of(
+                    // language=typescript
+                    """
+import type { Trace } from 'braintrust';
+// an older buggy version that always returns 0.0
+async function handler({
+  input,
+  output,
+  expected,
+  metadata,
+  trace,
+}: {
+  input: any;
+  output: any;
+  expected: any;
+  metadata: Record<string, any>;
+  trace: Trace;
+}): Promise<
+  | number
+  | { score: number; name?: string; metadata?: Record<string, unknown> }
+  | null
+> {
+  if (expected === null) return null;
+
+  return {
+    name: "typescript exact match",
+    score: 0.0
+  };
+}
+""",
+                    // language=typescript
+                    """
+import type { Trace } from 'braintrust';
+// returns 1.0 for exact match, 0.0 otherwise
+async function handler({
+  input,
+  output,
+  expected,
+  metadata,
+  trace,
+}: {
+  input: any;
+  output: any;
+  expected: any;
+  metadata: Record<string, any>;
+  trace: Trace;
+}): Promise<
+  | number
+  | { score: number; name?: string; metadata?: Record<string, unknown> }
+  | null
+> {
+  if (expected === null) return null;
+
+  return {
+    name: "typescript exact match",
+    score: output === expected ? 1.0 : 0.0
+  };
+}
+""");
 }

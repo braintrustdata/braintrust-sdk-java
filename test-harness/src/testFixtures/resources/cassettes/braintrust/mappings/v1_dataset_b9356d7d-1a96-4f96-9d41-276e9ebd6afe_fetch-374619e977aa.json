@@ -1,0 +1,45 @@
+{
+  "id" : "edf4cf50-a9ce-33a7-9b14-8ba488bb3ae3",
+  "name" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch",
+  "request" : {
+    "url" : "/v1/dataset/b9356d7d-1a96-4f96-9d41-276e9ebd6afe/fetch",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"limit\":512,\"cursor\":null,\"version\":\"1000197155625133059\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset_b9356d7d-1a96-4f96-9d41-276e9ebd6afe_fetch-374619e977aa.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "dRpQ5HlboAMEjEQ=",
+      "vary" : "Origin",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "x-bt-brainstore-duration-ms" : "48",
+      "X-Amzn-Trace-Id" : "Root=1-6a03bc05-49661b020ca36573226e873c;Parent=4947a2a268ca14ae;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "x-bt-api-duration-ms" : "92",
+      "Date" : "Tue, 12 May 2026 23:47:17 GMT",
+      "Via" : "1.1 d525041695bdb6325f78ebba5c11b8a2.cloudfront.net (CloudFront), 1.1 d49bde7225e80ca0dc457ff2b8b4343e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a03bc05000000005a840426c27e1237",
+      "x-amzn-RequestId" : "323f575f-08e0-4df3-ba80-88557c8d4c19",
+      "X-Amz-Cf-Id" : "1RCWI4AZ_IWCLUmsW0KMERK9xeuxzmfWFqfRN9VFkZrvN5ve0daPaw==",
+      "x-bt-cursor" : "agOGZGQDAAA",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "edf4cf50-a9ce-33a7-9b14-8ba488bb3ae3",
+  "persistent" : true,
+  "scenarioName" : "scenario-14-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch",
+  "requiredScenarioState" : "scenario-14-v1-dataset-b9356d7d-1a96-4f96-9d41-276e9ebd6afe-fetch-2",
+  "insertionIndex" : 70
+}

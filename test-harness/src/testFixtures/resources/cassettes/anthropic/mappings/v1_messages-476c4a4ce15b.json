@@ -1,0 +1,60 @@
+{
+  "id" : "eee75071-17f6-309e-8389-193ac2c214e6",
+  "name" : "v1_messages",
+  "request" : {
+    "urlPath" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "queryParameters" : {
+      "beta" : {
+        "hasExactly" : [ {
+          "equalTo" : "true"
+        } ]
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5\",\"system\":\"You are a helpful assistant\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-476c4a4ce15b.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "x-envoy-upstream-service-time" : "614",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "800000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-05-12T23:50:03Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-05-12T23:50:03Z",
+      "anthropic-ratelimit-tokens-remaining" : "4800000",
+      "set-cookie" : "_cfuvid=JkSDx4EXs9SNJ6H.cCxQoirOFVBmuPYfkEIR9hoeHrc-1778629802.5748641-1.0.1.1-ZzmvK8hGB0KGgXiR.u9hGPlli_sg0sfgYcWWlzMnjWA; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "4000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "9fad52ca1b167651-SEA",
+      "anthropic-ratelimit-tokens-limit" : "4800000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011Caya4ynWgvg8sCLPngZ2u",
+      "anthropic-ratelimit-tokens-reset" : "2026-05-12T23:50:03Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Tue, 12 May 2026 23:50:03 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-05-12T23:50:02Z",
+      "anthropic-ratelimit-input-tokens-limit" : "4000000",
+      "traceresponse" : "00-681edb3ef1461f084575228df5b778f1-5b03f9dcf3c78dba-01",
+      "anthropic-ratelimit-output-tokens-remaining" : "800000"
+    }
+  },
+  "uuid" : "eee75071-17f6-309e-8389-193ac2c214e6",
+  "persistent" : true,
+  "insertionIndex" : 15
+}

@@ -1,0 +1,52 @@
+{
+  "id" : "5cea2750-b124-385a-adfe-8c8bc74fbb9f",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"You are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"stream_options\":{\"include_usage\":true},\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-7665ccbaa3f2.txt",
+    "headers" : {
+      "x-request-id" : "req_4025d9d32a13419f85be4c43bc4224f4",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "9fad53aaaa17ec1f-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "cf-cache-status" : "DYNAMIC",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 12 May 2026 23:50:38 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=MKMMP4ry10trb7DGVfBDLY8y2.e0D_b.QC0KlxE5JwE-1778629838.5051672-1.0.1.1-lXzaaGK_mGF5JiHZri.L3ovYotvVkvtcL0tMMHe.6e.M2VAQbHx.W2IdF0fefjqNcoEobBm_STQOV33qFIdhQOHEr.e2n3Zkjm5wxQLkYeokGOqKR.GD1ZGQaP6gQ1hj; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:20:38 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "335",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "5cea2750-b124-385a-adfe-8c8bc74fbb9f",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-chat-completions",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-1-chat-completions-2",
+  "insertionIndex" : 21
+}

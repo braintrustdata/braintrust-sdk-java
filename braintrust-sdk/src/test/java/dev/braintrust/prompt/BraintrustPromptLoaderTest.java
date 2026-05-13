@@ -5,11 +5,43 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.braintrust.TestHarness;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustPromptLoaderTest {
+    private static final String PROMPT_NAME = "kind-greeter";
+
+    private static TestHarness.PromptInfo PROMPT_INFO;
+
     private TestHarness testHarness;
+
+    @BeforeAll
+    static void beforeAll() {
+        var harness = TestHarness.setup();
+        PROMPT_INFO =
+                harness.ensureRemotePrompt(
+                        PROMPT_NAME,
+                        List.of(
+                                // oldest version: simple system message
+                                new TestHarness.PromptVersionDef(
+                                        List.of(
+                                                Map.of(
+                                                        "role",
+                                                        "system",
+                                                        "content",
+                                                        "this is an old version")),
+                                        null),
+                                // latest version: user message with template + model
+                                new TestHarness.PromptVersionDef(
+                                        List.of(
+                                                Map.of(
+                                                        "role",
+                                                        "user",
+                                                        "content",
+                                                        "Hello {{name}}, be kind!")),
+                                        "gpt-4o-mini")));
+    }
 
     @BeforeEach
     void beforeEach() {
@@ -20,7 +52,7 @@ public class BraintrustPromptLoaderTest {
     void testLoadPromptBySlug() {
         BraintrustPromptLoader loader = testHarness.braintrust().promptLoader();
 
-        BraintrustPrompt prompt = loader.load("kind-greeter-0bd1");
+        BraintrustPrompt prompt = loader.load(PROMPT_INFO.slug());
 
         assertNotNull(prompt);
 
@@ -45,11 +77,13 @@ public class BraintrustPromptLoaderTest {
     void testLoadPromptBySlugWithVersion() {
         BraintrustPromptLoader loader = testHarness.braintrust().promptLoader();
 
+        // Fetch the oldest version (index 0) by its version ID
+        String oldVersion = PROMPT_INFO.versionIds().get(0);
         BraintrustPrompt prompt =
                 loader.load(
                         BraintrustPromptLoader.PromptLoadRequest.builder()
-                                .promptSlug("kind-greeter-0bd1")
-                                .version("27fdcc80d22c7ec5")
+                                .promptSlug(PROMPT_INFO.slug())
+                                .version(oldVersion)
                                 .build());
 
         assertNotNull(prompt);
@@ -66,7 +100,7 @@ public class BraintrustPromptLoaderTest {
         BraintrustPrompt prompt =
                 loader.load(
                         BraintrustPromptLoader.PromptLoadRequest.builder()
-                                .promptSlug("kind-greeter-0bd1")
+                                .promptSlug(PROMPT_INFO.slug())
                                 .defaults("max_tokens", "2000", "top_p", "0.95")
                                 .build());
 
@@ -89,7 +123,7 @@ public class BraintrustPromptLoaderTest {
         BraintrustPrompt prompt =
                 loader.load(
                         BraintrustPromptLoader.PromptLoadRequest.builder()
-                                .promptSlug("kind-greeter-0bd1")
+                                .promptSlug(PROMPT_INFO.slug())
                                 .projectName(TestHarness.defaultProjectName())
                                 .build());
 
