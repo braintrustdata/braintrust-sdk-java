@@ -8,6 +8,7 @@ import io.opentelemetry.proto.common.v1.KeyValue;
 import io.opentelemetry.proto.trace.v1.ResourceSpans;
 import io.opentelemetry.proto.trace.v1.ScopeSpans;
 import io.opentelemetry.proto.trace.v1.Span;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
 
 /**
  * A mock Braintrust OTLP backend that captures trace export requests sent to {@code POST
@@ -219,6 +221,7 @@ public class MockBraintrustBackend {
             return;
         }
         byte[] body = exchange.getRequestBody().readAllBytes();
+        body = maybeDecompress(exchange, body);
         List<OtlpSpan> spans = new ArrayList<>();
         try {
             ExportTraceServiceRequest request = ExportTraceServiceRequest.parseFrom(body);
@@ -268,5 +271,14 @@ public class MockBraintrustBackend {
                         .formatted(exchange.getRequestMethod(), exchange.getRequestURI()));
         exchange.sendResponseHeaders(404, -1);
         exchange.close();
+    }
+
+    /** Decompress the body if the request has {@code Content-Encoding: gzip}. */
+    private static byte[] maybeDecompress(HttpExchange exchange, byte[] body) throws IOException {
+        var encoding = exchange.getRequestHeaders().getFirst("Content-Encoding");
+        if ("gzip".equalsIgnoreCase(encoding)) {
+            return new GZIPInputStream(new ByteArrayInputStream(body)).readAllBytes();
+        }
+        return body;
     }
 }

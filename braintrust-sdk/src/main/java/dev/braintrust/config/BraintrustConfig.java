@@ -40,6 +40,9 @@ public final class BraintrustConfig extends BaseConfig {
             Duration.ofSeconds(getConfig("BRAINTRUST_REQUEST_TIMEOUT", 30));
     private final Boolean filterAISpans = getConfig("BRAINTRUST_FILTER_AI_SPANS", false);
 
+    /** compress otel data before exporting to braintrust */
+    private final Boolean compressOtelPayload = getConfig("BRAINTRUST_COMPRESS_OTEL_PAYLOAD", true);
+
     /** Custom SSL context for OTLP exporter. Builder-only field, not backed by envars. */
     private final SSLContext sslContext;
 
@@ -187,6 +190,11 @@ public final class BraintrustConfig extends BaseConfig {
 
         public Builder filterAISpans(boolean value) {
             envOverrides.put("BRAINTRUST_FILTER_AI_SPANS", String.valueOf(value));
+            return this;
+        }
+
+        public Builder compressOtelPayload(boolean value) {
+            envOverrides.put("BRAINTRUST_COMPRESS_OTEL_PAYLOAD", String.valueOf(value));
             return this;
         }
 

@@ -74,7 +74,8 @@ class BraintrustLogExporter implements LogRecordExporter {
                                                 .addHeader(
                                                         "Authorization",
                                                         "Bearer " + config.apiKey())
-                                                .setTimeout(config.requestTimeout());
+                                                .setTimeout(config.requestTimeout())
+                                                .setCompression("gzip");
 
                                 // Add x-bt-parent header if we have a parent
                                 if (!p.isEmpty()) {
