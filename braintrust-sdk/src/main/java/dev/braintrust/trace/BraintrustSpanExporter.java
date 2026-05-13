@@ -78,7 +78,9 @@ class BraintrustSpanExporter implements SpanExporter {
                                                         "Authorization",
                                                         "Bearer " + config.apiKey())
                                                 .setTimeout(config.requestTimeout());
-
+                                if (config.compressOtelPayload()) {
+                                    exporterBuilder.setCompression("gzip");
+                                }
                                 // Add x-bt-parent header if we have a parent
                                 if (!p.isEmpty()) {
                                     exporterBuilder.addHeader("x-bt-parent", p);
