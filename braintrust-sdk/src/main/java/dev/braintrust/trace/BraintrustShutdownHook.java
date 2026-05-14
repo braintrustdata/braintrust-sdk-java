@@ -6,6 +6,14 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 class BraintrustShutdownHook {
+
+    /** Shutdown ordering. Lower ordinal values run first. */
+    enum ShutdownOrder {
+        SPAN_PROCESSOR,
+        ATTACHMENT_UPLOADER,
+        TEST_HARNESS;
+    }
+
     private record OrderedTarget(int order, Runnable target) {}
 
     private static final List<OrderedTarget> shutdownTargets = new CopyOnWriteArrayList<>();
@@ -22,10 +30,21 @@ class BraintrustShutdownHook {
     }
 
     public static void addShutdownHook(Runnable target) {
-        addShutdownHook(0, target);
+        addShutdownHook(ShutdownOrder.SPAN_PROCESSOR, target);
     }
 
-    public static void addShutdownHook(int order, Runnable target) {
+    public static void addShutdownHook(ShutdownOrder order, Runnable target) {
+        addShutdownHook(order.ordinal(), target);
+    }
+
+    /**
+     * Add a jvm shutdown hook.
+     *
+     * @param order lower numbers run first. targets with the same order number can run in any
+     *     order. Span processor/exporter flush runs at level 0
+     * @param target the shutdown code to run
+     */
+    private static void addShutdownHook(int order, Runnable target) {
         shutdownTargets.add(new OrderedTarget(order, target));
     }
 }
