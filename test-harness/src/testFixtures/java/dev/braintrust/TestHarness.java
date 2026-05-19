@@ -47,6 +47,7 @@ import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,7 +57,8 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 
-public class TestHarness {
+public class TestHarness implements AutoCloseable {
+    private static final Cleaner CLEANER = Cleaner.create();
     private static final String TEST_HARNESS_CREATED_TAG = "test-harness-created";
     private static final VCR vcr;
     private static final BraintrustConfig envConfig =
@@ -164,6 +166,8 @@ public class TestHarness {
     @Accessors(fluent = true)
     private final OpenTelemetrySdk openTelemetry;
 
+    private final Cleaner.Cleanable cleaner;
+
     @Getter
     @Accessors(fluent = true)
     private final Braintrust braintrust;
@@ -179,7 +183,7 @@ public class TestHarness {
         // Wire the in-memory span exporter as an additional delegate inside the
         // BraintrustSpanProcessor so it sees post-processed spans (attachment references
         // instead of raw base64 data URIs, etc.).
-        dev.braintrust.trace.HarnessShim.enableTracing(
+        HarnessShim.enableTracing(
                 braintrust.config(),
                 tracerBuilder,
                 List.of(SimpleSpanProcessor.create(this.spanExporter)),
@@ -190,14 +194,19 @@ public class TestHarness {
                         TextMapPropagator.composite(
                                 W3CTraceContextPropagator.getInstance(),
                                 W3CBaggagePropagator.getInstance()));
-        var openTelemetry =
+        this.openTelemetry =
                 OpenTelemetrySdk.builder()
                         .setTracerProvider(tracerBuilder.build())
                         .setLoggerProvider(loggerBuilder.build())
                         .setMeterProvider(meterBuilder.build())
                         .setPropagators(contextPropagator)
                         .build();
-        this.openTelemetry = openTelemetry;
+        cleaner = CLEANER.register(this, this.openTelemetry::close);
+    }
+
+    @Override
+    public void close() throws Exception {
+        cleaner.clean();
     }
 
     private static String apiKeyFromEnv() {

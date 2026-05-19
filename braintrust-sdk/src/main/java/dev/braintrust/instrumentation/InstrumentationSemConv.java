@@ -211,6 +211,11 @@ public class InstrumentationSemConv {
 
         if (requestBody != null) {
             JsonNode requestJson = BraintrustJsonMapper.get().readTree(requestBody);
+            if (requestJson.has("stream")
+                    && requestJson.get("stream").isBoolean()
+                    && requestJson.get("stream").asBoolean()) {
+                span.updateName(getStreamingSpanName(providerName, pathSegments));
+            }
             if (requestJson.has("model")) {
                 metadata.put("model", requestJson.get("model").asText());
             }
@@ -501,6 +506,17 @@ public class InstrumentationSemConv {
             case PROVIDER_NAME_OPENAI + ":embeddings" -> "Embeddings";
             case PROVIDER_NAME_ANTHROPIC + ":messages" -> "anthropic.messages.create";
             default -> lastSegment;
+        };
+    }
+
+    private static String getStreamingSpanName(String providerName, List<String> pathSegments) {
+        if (pathSegments.isEmpty()) {
+            return UNSET_LLM_SPAN_NAME;
+        }
+        String lastSegment = pathSegments.get(pathSegments.size() - 1);
+        return switch (providerName + ":" + lastSegment) {
+            case PROVIDER_NAME_ANTHROPIC + ":messages" -> "anthropic.messages.stream";
+            default -> getSpanName(providerName, pathSegments);
         };
     }
 }
