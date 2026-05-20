@@ -17,6 +17,39 @@ Because the SDK is new and under active development, third-party contribution be
   - These hooks automatically run common checks for you but CI also runs the same checks before merging to the main branch is allowed
   - NOTE: this will overwrite existing hooks. Take backups before running
 
+## Releasing
+
+Releases are driven end-to-end from a single GitHub Actions workflow. You do not need to tag locally or push tags from your machine.
+
+To cut a release:
+
+1. Make sure everything you want included is merged to `main` and CI is green.
+2. Go to **Actions → Release → Run workflow**.
+3. Enter:
+   - `version`: the release version as `vX.Y.Z` (semver, no `-SNAPSHOT`).
+   - `sha`: the **full 40-character commit SHA** on `main` you want to release. Copy it from the commit page on GitHub using "Copy full SHA". A branch name is intentionally not accepted — pinning to a SHA prevents commits that land on `main` during the approval gate from sneaking into the release.
+4. The job runs in the protected `release` GitHub Environment and will pause for **required-reviewer approval** before doing anything. Approve from the workflow run page (or the repo's Deployments tab).
+5. Once approved, the `Release` workflow will, in one job:
+   - Validate the version and the SHA, and verify the SHA is reachable from `origin/main`.
+   - Check out the pinned SHA and run `./gradlew check`.
+   - Create and push the annotated tag `vX.Y.Z` pointing at the SHA (using the default `GITHUB_TOKEN` — no separate bot identity is needed since the publish steps are in the same workflow).
+   - Check out the tag, re-run `./gradlew check`, and build release artifacts.
+   - Create the GitHub Release with the SDK, agent, and OTel extension jars attached.
+   - Publish to Maven Central via Sonatype, signed with the project GPG key.
+   - Poll Maven Central until the new version is visible (this can take many hours).
+
+The Sonatype and GPG signing secrets (`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `GPG_SIGNING_KEY`, `GPG_SIGNING_PASSWORD`) are scoped to the `release` environment.
+
+The SDK version is computed from git tags at build time (see `generateVersion()` in `build.gradle`) and embedded into `braintrust.properties`, so there are no version constants to bump in source.
+
+### Re-publishing a failed release
+
+If the workflow fails partway through, re-run **Release** with the same version. The workflow detects that the tag already exists, skips tag creation, and resumes from the build/publish steps against the existing tag. GitHub Release asset uploads use `--clobber` so partial uploads from a prior run are replaced.
+
+### Local fallback
+
+`scripts/release.sh` can still create and push a tag from a clean local checkout if the Actions-driven flow is unavailable. Prefer the workflow.
+
 ## Misc Tips
 
 ### Running a local OpenTelemetry collector

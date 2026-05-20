@@ -1,0 +1,233 @@
+# Drives a release end-to-end from GitHub Actions in a single workflow.
+#
+# Click "Run workflow", enter a version like v1.2.3, and this will:
+#   1. Validate the version (semver, no -SNAPSHOT) and the SHA.
+#   2. Run ./gradlew check on the pinned SHA as a final gate.
+#   3. Create and push the annotated tag vX.Y.Z pointing at the SHA
+#      (using GITHUB_TOKEN).
+#
+# The releaser must supply an explicit commit SHA (not a branch name) so
+# that commits which land on main during the environment approval gate
+# are NOT silently included in the release.
+#   4. Build release artifacts at that tag.
+#   5. Create the GitHub Release and upload the SDK / agent / OTel
+#      extension jars.
+#   6. Publish to Maven Central via Sonatype, signed with the project
+#      GPG key.
+#   7. Poll Maven Central until the new version is visible.
+#
+# Re-publishing a failed release: re-run this workflow with the same
+# version. If the tag already exists, the tag-creation step is skipped
+# and the rest of the pipeline runs against the existing tag.
+#
+# The entire job runs in the protected `release` GitHub Environment,
+# which holds the Sonatype / GPG secrets and requires reviewer approval
+# before any tag is pushed or any artifact is published.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.3)'
+        required: true
+        type: string
+      sha:
+        description: 'Full 40-char commit SHA to tag. Required so the releaser controls exactly what ships, even if main advances during the approval gate. Ignored if the tag already exists.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    # Gate the entire release behind a protected GitHub Environment.
+    # Required reviewers, deployment branch/tag rules, and the Sonatype /
+    # GPG secrets are configured on the environment itself in repo
+    # settings (Settings → Environments → release).
+    environment: release
+    steps:
+      - name: Validate inputs
+        run: |
+          V="${{ inputs.version }}"
+          if [[ ! "$V" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: version must be semver (e.g. v1.2.3)" >&2
+            exit 1
+          fi
+          if [[ "$V" == *-SNAPSHOT ]]; then
+            echo "Error: version cannot end with -SNAPSHOT" >&2
+            exit 1
+          fi
+          SHA="${{ inputs.sha }}"
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Error: sha must be a full 40-character lowercase commit SHA. Got: '$SHA'" >&2
+            echo "Tip: copy the SHA from the commit page on GitHub (use the 'Copy full SHA' button)." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Verify SHA is reachable from main
+        run: |
+          SHA="${{ inputs.sha }}"
+          git fetch origin main --quiet
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "Error: commit $SHA is not an ancestor of origin/main." >&2
+            echo "Releases must be cut from commits that have landed on main." >&2
+            exit 1
+          fi
+          echo "Commit $SHA is reachable from origin/main."
+
+      - name: Determine whether tag already exists
+        id: tag-state
+        run: |
+          TAG="${{ inputs.version }}"
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag '$TAG' already exists; will publish from the existing tag."
+          elif git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag '$TAG' exists on origin but not locally; fetching."
+            git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag '$TAG' does not exist yet; will create at $SHA."
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0
+
+      - name: Run CI (pre-tag, on chosen ref)
+        if: steps.tag-state.outputs.exists == 'false'
+        run: ./gradlew check
+
+      - name: Configure git identity
+        if: steps.tag-state.outputs.exists == 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        if: steps.tag-state.outputs.exists == 'false'
+        run: |
+          TAG="${{ inputs.version }}"
+          SHA="${{ inputs.sha }}"
+          git tag -a "$TAG" -m "Release $TAG" "$SHA"
+          git push origin "$TAG"
+
+      - name: Checkout tag
+        run: git checkout "${{ inputs.version }}"
+
+      - name: Run CI (at tag)
+        run: ./gradlew check
+
+      - name: Build release artifacts
+        run: ./gradlew build publishToMavenLocal
+
+      - name: Find built artifacts
+        id: find-artifacts
+        run: |
+          TAG="${{ inputs.version }}"
+          # Strip 'v' prefix to get the actual version used by Gradle
+          VERSION="${TAG#v}"
+
+          # braintrust-sdk artifacts
+          SDK_MAIN_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1)
+          SDK_SOURCES_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}-sources.jar" | head -1)
+          SDK_JAVADOC_JAR=$(find braintrust-sdk/build/libs -name "*-${VERSION}-javadoc.jar" | head -1)
+
+          # braintrust-java-agent artifact (single fat jar, no sources/javadoc)
+          AGENT_JAR=$(find braintrust-java-agent/build/libs -name "braintrust-java-agent-${VERSION}.jar" | head -1)
+
+          # braintrust-otel-extension artifact (fat jar, no sources/javadoc)
+          OTL_EXT_JAR=$(find braintrust-otel-extension/build/libs -name "braintrust-otel-extension-${VERSION}.jar" | head -1)
+
+          echo "sdk-main-jar=$SDK_MAIN_JAR" >> $GITHUB_OUTPUT
+          echo "sdk-sources-jar=$SDK_SOURCES_JAR" >> $GITHUB_OUTPUT
+          echo "sdk-javadoc-jar=$SDK_JAVADOC_JAR" >> $GITHUB_OUTPUT
+          echo "agent-jar=$AGENT_JAR" >> $GITHUB_OUTPUT
+          echo "otel-ext-jar=$OTL_EXT_JAR" >> $GITHUB_OUTPUT
+
+          echo "Found artifacts:"
+          echo "  SDK Main JAR: $SDK_MAIN_JAR"
+          echo "  SDK Sources JAR: $SDK_SOURCES_JAR"
+          echo "  SDK Javadoc JAR: $SDK_JAVADOC_JAR"
+          echo "  Agent JAR: $AGENT_JAR"
+          echo "  OTel Extension JAR: $OTL_EXT_JAR"
+
+      - name: Create or update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.version }}"
+
+          # Create the release if it doesn't already exist (re-publish path).
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --generate-notes \
+              --title "Release $TAG"
+          else
+            echo "Release '$TAG' already exists; will upload (clobber) assets."
+          fi
+
+          # Upload artifacts, clobbering any partial uploads from a prior run.
+          for jar in \
+            "${{ steps.find-artifacts.outputs.sdk-main-jar }}" \
+            "${{ steps.find-artifacts.outputs.sdk-sources-jar }}" \
+            "${{ steps.find-artifacts.outputs.sdk-javadoc-jar }}" \
+            "${{ steps.find-artifacts.outputs.agent-jar }}" \
+            "${{ steps.find-artifacts.outputs.otel-ext-jar }}"; do
+            if [[ -n "$jar" && -f "$jar" ]]; then
+              gh release upload "$TAG" "$jar" --clobber
+            fi
+          done
+
+      - name: Publish to Sonatype
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+        run: |-
+          if [ -z "$SONATYPE_USERNAME" ]; then
+            echo "Error: SONATYPE_USERNAME is not set"
+            exit 1
+          fi
+          if [ -z "$SONATYPE_PASSWORD" ]; then
+            echo "Error: SONATYPE_PASSWORD is not set"
+            exit 1
+          fi
+          if [ -z "$GPG_SIGNING_KEY" ]; then
+            echo "Error: GPG_SIGNING_KEY is not set"
+            exit 1
+          fi
+          if [ -z "$GPG_SIGNING_PASSWORD" ]; then
+            echo "Error: GPG_SIGNING_PASSWORD is not set"
+            exit 1
+          fi
+          echo "All required credentials are set"
+          export -- GPG_SIGNING_KEY_ID
+          printenv -- GPG_SIGNING_KEY | gpg --batch --passphrase-fd 3 --import 3<<< "$GPG_SIGNING_PASSWORD"
+          GPG_SIGNING_KEY_ID="$(gpg --with-colons --list-keys | awk -F : -- '/^pub:/ { getline; print "0x" substr($10, length($10) - 7) }')"
+          ./gradlew publishAndReleaseToMavenCentral --stacktrace -PmavenCentralUsername="$SONATYPE_USERNAME" -PmavenCentralPassword="$SONATYPE_PASSWORD" --no-configuration-cache
+
+      - name: Wait for Maven Central sync
+        run: |
+          TAG="${{ inputs.version }}"
+          VERSION="${TAG#v}"
+          echo "Waiting for version $VERSION to sync to Maven Central. THIS CAN TAKE MANY HOURS! Godspeed"
+          ./scripts/wait-for-maven.sh "$VERSION"
