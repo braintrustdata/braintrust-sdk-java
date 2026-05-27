@@ -42,6 +42,7 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull Dataset<INPUT, OUTPUT> dataset;
     private final @Nonnull Task<INPUT, OUTPUT> task;
     private final @Nonnull List<Scorer<INPUT, OUTPUT>> scorers;
+    private final @Nonnull List<Classifier<INPUT, OUTPUT>> classifiers;
     private final @Nonnull List<String> tags;
     private final @Nonnull Map<String, Object> metadata;
     private final @Nonnull Parameters parameters;
@@ -58,6 +59,7 @@ public final class Eval<INPUT, OUTPUT> {
         this.dataset = builder.dataset;
         this.task = Objects.requireNonNull(builder.task);
         this.scorers = List.copyOf(builder.scorers);
+        this.classifiers = List.copyOf(builder.classifiers);
         this.tags = List.copyOf(builder.tags);
         this.metadata = Map.copyOf(builder.metadata);
         this.parameters = builder.buildParameters();
@@ -172,6 +174,42 @@ public final class Eval<INPUT, OUTPUT> {
             for (var scorer : scorers) {
                 runScorer(experimentId, rootSpan, scorer, taskResult, trace);
             }
+
+            // run classifiers - one span per classifier. Classifier exceptions are non-fatal:
+            // they are recorded on the classifier span and surfaced in the root span's metadata
+            // under `classifier_errors`, but do not abort the eval or affect other classifiers/
+            // scorers. Classifiers only run when the task succeeded (no scoreForTaskException
+            // analogue).
+            if (!classifiers.isEmpty()) {
+                Map<String, List<Map<String, Object>>> caseClassifications = new LinkedHashMap<>();
+                Map<String, String> classifierErrors = new LinkedHashMap<>();
+                for (int i = 0; i < classifiers.size(); i++) {
+                    var classifier = classifiers.get(i);
+                    var classifierName = classifier.getName();
+                    if (classifierName == null || classifierName.isBlank()) {
+                        classifierName = "classifier_" + i;
+                    }
+                    runClassifier(
+                            experimentId,
+                            classifier,
+                            classifierName,
+                            taskResult,
+                            trace,
+                            caseClassifications,
+                            classifierErrors);
+                }
+                if (!caseClassifications.isEmpty()) {
+                    rootSpan.setAttribute(
+                            "braintrust.classifications", toJson(caseClassifications));
+                }
+                if (!classifierErrors.isEmpty()) {
+                    Map<String, Object> mergedMetadata =
+                            new LinkedHashMap<>(datasetCase.metadata());
+                    mergedMetadata.put("classifier_errors", classifierErrors);
+                    rootSpan.setAttribute(
+                            AttributeKey.stringKey("braintrust.metadata"), toJson(mergedMetadata));
+                }
+            }
         } finally {
             rootSpan.end();
         }
@@ -236,6 +274,84 @@ public final class Eval<INPUT, OUTPUT> {
         }
     }
 
+    /**
+     * Runs a classifier inside its own span. Exceptions are recorded on the classifier span and
+     * surfaced via {@code classifierErrors}; they do not propagate.
+     */
+    private void runClassifier(
+            String experimentId,
+            Classifier<INPUT, OUTPUT> classifier,
+            String resolvedName,
+            TaskResult<INPUT, OUTPUT> taskResult,
+            BrainstoreTrace trace,
+            Map<String, List<Map<String, Object>>> caseClassifications,
+            Map<String, String> classifierErrors) {
+        var classifierSpan =
+                tracer.spanBuilder(resolvedName)
+                        .setAttribute(PARENT, "experiment_id:" + experimentId)
+                        .startSpan();
+        try (var unused =
+                BraintrustContext.ofExperiment(experimentId, classifierSpan).makeCurrent()) {
+            Map<String, Object> spanAttrs = new LinkedHashMap<>();
+            spanAttrs.put("type", "classifier");
+            spanAttrs.put("name", resolvedName);
+            spanAttrs.put("purpose", "scorer");
+            classifierSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
+
+            List<Classification> classifications;
+            try {
+                if (classifier instanceof TracedClassifier<INPUT, OUTPUT> tracedClassifier) {
+                    classifications = tracedClassifier.classify(taskResult, trace);
+                } else {
+                    classifications = classifier.classify(taskResult);
+                }
+                if (classifications == null) {
+                    classifications = List.of();
+                }
+            } catch (Exception e) {
+                classifierSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                classifierSpan.recordException(e);
+                log.debug("Classifier '{}' threw exception", resolvedName, e);
+                classifierErrors.put(
+                        resolvedName, e.getMessage() == null ? e.toString() : e.getMessage());
+                return;
+            }
+
+            // Group results by resolved item name (item.name, falling back to the classifier
+            // name when blank). Same map is logged to the classifier span and merged into the
+            // per-case aggregate logged on the root span.
+            Map<String, List<Map<String, Object>>> outputByName = new LinkedHashMap<>();
+            for (var item : classifications) {
+                var itemName = item.name();
+                if (itemName == null || itemName.isBlank()) {
+                    itemName = resolvedName;
+                }
+                var itemMap = toClassificationItem(item);
+                outputByName.computeIfAbsent(itemName, k -> new ArrayList<>()).add(itemMap);
+                caseClassifications.computeIfAbsent(itemName, k -> new ArrayList<>()).add(itemMap);
+            }
+            classifierSpan.setAttribute("braintrust.output_json", toJson(outputByName));
+        } finally {
+            classifierSpan.end();
+        }
+    }
+
+    /**
+     * Converts a {@link Classification} to the wire-format {@code ClassificationItem}: drops {@code
+     * name}, includes {@code label} and {@code metadata} only when present.
+     */
+    private static Map<String, Object> toClassificationItem(Classification c) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", c.id());
+        if (c.label() != null) {
+            m.put("label", c.label());
+        }
+        if (c.metadata() != null) {
+            m.put("metadata", c.metadata());
+        }
+        return m;
+    }
+
     /** Validates and records scores on the score span and root span. */
     private void recordScores(
             Span scoreSpan, Span rootSpan, Scorer<INPUT, OUTPUT> scorer, List<Score> scores) {
@@ -276,6 +392,7 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nullable Tracer tracer = null;
         private @Nullable Task<INPUT, OUTPUT> task;
         private @Nonnull List<Scorer<INPUT, OUTPUT>> scorers = List.of();
+        private @Nonnull List<Classifier<INPUT, OUTPUT>> classifiers = List.of();
         private @Nonnull List<ParameterDef<?>> parameterDefs = List.of();
         private @Nonnull Map<String, Object> parameterValues = Map.of();
         private @Nonnull List<String> tags = List.of();
@@ -291,8 +408,8 @@ public final class Eval<INPUT, OUTPUT> {
             if (projectId == null) {
                 projectId = config.defaultProjectId().orElse(null);
             }
-            if (scorers.isEmpty()) {
-                throw new RuntimeException("must provide at least one scorer");
+            if (scorers.isEmpty() && classifiers.isEmpty()) {
+                throw new RuntimeException("must provide at least one scorer or classifier");
             }
             if (null == apiClient) {
                 apiClient = BraintrustOpenApiClient.of(config);
@@ -377,6 +494,12 @@ public final class Eval<INPUT, OUTPUT> {
         @SafeVarargs
         public final Builder<INPUT, OUTPUT> scorers(Scorer<INPUT, OUTPUT>... scorers) {
             this.scorers = List.of(scorers);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder<INPUT, OUTPUT> classifiers(Classifier<INPUT, OUTPUT>... classifiers) {
+            this.classifiers = List.of(classifiers);
             return this;
         }
 
