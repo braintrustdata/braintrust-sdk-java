@@ -313,7 +313,7 @@ public class TestHarness implements AutoCloseable {
 
         // verify
         var btDataset = braintrust.fetchDataset(datasetName);
-        if (datasetsEqual(expectedData, btDataset)) {
+        if (!datasetsEqual(expectedData, btDataset)) {
             throw new RuntimeException(
                     "failed to ensure expected dataset: %s -- %s"
                             .formatted(toList(expectedData), toList(btDataset)));
