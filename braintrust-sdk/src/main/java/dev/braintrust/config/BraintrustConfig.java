@@ -24,7 +24,7 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 public final class BraintrustConfig extends BaseConfig {
-    private final String apiKey = getRequiredConfig("BRAINTRUST_API_KEY");
+    private final BraintrustApiKey apiKey = new BraintrustApiKey(envOverrides);
     private final String apiUrl = getConfig("BRAINTRUST_API_URL", "https://api.braintrust.dev");
     private final String appUrl = getConfig("BRAINTRUST_APP_URL", "https://www.braintrust.dev");
     private final String tracesPath = getConfig("BRAINTRUST_TRACES_PATH", "/otel/v1/traces");
@@ -66,6 +66,10 @@ public final class BraintrustConfig extends BaseConfig {
 
     public static BraintrustConfig fromEnvironment() {
         return of();
+    }
+
+    public String apiKey() {
+        return apiKey.getRequired();
     }
 
     public static BraintrustConfig of(String... envOverrides) {
