@@ -1,0 +1,18 @@
+application {
+  mainClass = 'dev.braintrust.examples.OpenAIInstrumentationExample'
+}
+
+dependencies {
+  implementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
+  implementation 'com.openai:openai-java:2.8.1'
+}
+
+run {
+  description = 'Run the OpenAI instrumentation example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

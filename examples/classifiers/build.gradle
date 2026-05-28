@@ -1,0 +1,7 @@
+application {
+  mainClass = 'dev.braintrust.examples.ClassifiersExample'
+}
+
+run {
+  description = 'Run the classifiers example'
+}

@@ -1,201 +1,45 @@
-plugins {
-  id 'java'
-  id 'application'
-}
+// Shared convention for all example subprojects.
+//
+// Each example lives in its own subproject under examples/ and applies the
+// 'application' plugin so it can be launched with:
+//
+//     ./gradlew :examples:<example-name>:run
+//
+// List every example via:
+//
+//     ./gradlew projects
+//
+// Per-example build.gradle files only declare their mainClass, extra
+// dependencies, and (optionally) a description / debugOptions block on the
+// inherited 'run' task.
 
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(17)
-    vendor = JvmVendorSpec.ADOPTIUM // eclipse JVM
+subprojects {
+  apply plugin: 'java'
+  apply plugin: 'application'
+
+  group = rootProject.group
+  version = rootProject.version
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      vendor = JvmVendorSpec.ADOPTIUM // eclipse JVM
+    }
   }
-  withJavadocJar()
-  withSourcesJar()
-}
 
-repositories {
-  mavenCentral()
-}
-
-def braintrustLogLevel = System.getenv('BRAINTRUST_LOG_LEVEL') ?: 'info'
-
-dependencies {
-  implementation project(':braintrust-sdk')
-  implementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
-  implementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
-  implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
-  implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
-  implementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
-  implementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
-  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
-  // To run otel examples
-  implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
-  // to run OAI instrumentation examples
-  implementation 'com.openai:openai-java:2.8.1'
-  // to run anthropic examples
-  implementation "com.anthropic:anthropic-java:2.8.1"
-  // to run gemini examples
-  implementation 'com.google.genai:google-genai:1.20.0'
-  // spring ai examples
-  implementation 'org.springframework.ai:spring-ai-anthropic:1.1.0'
-  implementation 'org.springframework.ai:spring-ai-bedrock-converse:1.1.0'
-  implementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'
-  implementation 'org.springframework.ai:spring-ai-openai:1.1.0'
-  // spring-ai-openai requires spring-webflux (WebClient) at runtime
-  implementation 'org.springframework:spring-webflux:6.2.3'
-  // spring boot for SpringAIExample (exclude logback, use slf4j-simple like other examples)
-  implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
-    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+  repositories {
+    mavenCentral()
   }
-  // to run langchain4j examples
-  implementation 'dev.langchain4j:langchain4j:1.9.1'
-  implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
 
-}
+  def braintrustLogLevel = System.getenv('BRAINTRUST_LOG_LEVEL') ?: 'info'
 
-application {
-  mainClass = 'dev.braintrust.examples.SimpleOpenTelemetryExample'
-}
-
-task runSimpleOpenTelemetry(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the simple OpenTelemetry example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.SimpleOpenTelemetryExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-}
-
-task runCustomOpenTelemetry(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the custom OpenTelemetry example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.CustomOpenTelemetryExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-}
-
-task runOpenAIInstrumentation(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the OpenAI instrumentation example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.OpenAIInstrumentationExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
+  dependencies {
+    implementation project(':braintrust-sdk')
+    runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   }
-}
 
-task runExperiment(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the experiment example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.ExperimentExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runAnthropicInstrumentation(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the Anthropic instrumentation example. NOTE: this requires ANTHROPIC_API_KEY to be exported and will make a small call to anthropic, using your tokens'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.AnthropicInstrumentationExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-
-task runPromptFetching(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the prompt fetching example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.PromptFetchingExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runGeminiInstrumentation(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the Gemini instrumentation example. NOTE: this requires GOOGLE_API_KEY or GEMINI_API_KEY to be exported and will make a small call to google, using your tokens'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.GeminiInstrumentationExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runSpringAI(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the Spring Boot + Spring AI example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.SpringAIExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runRemoteEval(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the remote eval example'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.RemoteEvalExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runLangchainSimple(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the LangChain4j instrumentation example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.LangchainSimpleExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
-  }
-}
-
-task runLangchainAIServices(type: JavaExec) {
-  group = 'Braintrust SDK Examples'
-  description = 'Run the LangChain4j AI Services example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'dev.braintrust.examples.LangchainAIServicesExample'
-  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
-  debugOptions {
-    enabled = true
-    port = 5566
-    server = true
-    suspend = false
+  tasks.named('run') {
+    group = 'Braintrust SDK Examples'
+    systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
   }
 }

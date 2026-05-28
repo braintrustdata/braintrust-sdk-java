@@ -1,0 +1,7 @@
+application {
+  mainClass = 'dev.braintrust.examples.SimpleOpenTelemetryExample'
+}
+
+run {
+  description = 'Run the simple OpenTelemetry example'
+}

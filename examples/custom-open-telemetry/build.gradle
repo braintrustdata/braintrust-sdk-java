@@ -1,0 +1,11 @@
+application {
+  mainClass = 'dev.braintrust.examples.CustomOpenTelemetryExample'
+}
+
+dependencies {
+  implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
+}
+
+run {
+  description = 'Run the custom OpenTelemetry example'
+}
