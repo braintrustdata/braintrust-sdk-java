@@ -1,0 +1,18 @@
+application {
+  mainClass = 'dev.braintrust.examples.GeminiInstrumentationExample'
+}
+
+dependencies {
+  implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
+  implementation 'com.google.genai:google-genai:1.20.0'
+}
+
+run {
+  description = 'Run the Gemini instrumentation example. NOTE: this requires GOOGLE_API_KEY or GEMINI_API_KEY to be exported and will make a small call to google, using your tokens'
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

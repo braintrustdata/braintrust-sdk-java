@@ -1,0 +1,18 @@
+application {
+  mainClass = 'dev.braintrust.examples.AnthropicInstrumentationExample'
+}
+
+dependencies {
+  implementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
+  implementation "com.anthropic:anthropic-java:2.8.1"
+}
+
+run {
+  description = 'Run the Anthropic instrumentation example. NOTE: this requires ANTHROPIC_API_KEY to be exported and will make a small call to anthropic, using your tokens'
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

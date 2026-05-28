@@ -1,0 +1,36 @@
+application {
+  mainClass = 'dev.braintrust.examples.SpringAIExample'
+}
+
+dependencies {
+  implementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
+  implementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
+  implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
+
+  // spring ai
+  implementation 'org.springframework.ai:spring-ai-anthropic:1.1.0'
+  implementation 'org.springframework.ai:spring-ai-bedrock-converse:1.1.0'
+  implementation 'org.springframework.ai:spring-ai-google-genai:1.1.0'
+  implementation 'org.springframework.ai:spring-ai-openai:1.1.0'
+
+  // spring-ai-openai requires spring-webflux (WebClient) at runtime
+  implementation 'org.springframework:spring-webflux:6.2.3'
+
+  // spring boot (exclude logback, use slf4j-simple like other examples)
+  implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+  }
+
+  // google genai client
+  implementation 'com.google.genai:google-genai:1.20.0'
+}
+
+run {
+  description = 'Run the Spring Boot + Spring AI example'
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}

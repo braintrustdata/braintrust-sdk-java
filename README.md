@@ -105,7 +105,7 @@ A list of supported instrumentation can be found [here](./braintrust-sdk/instrum
 
 ## Running Examples
 
-Example source code can be found [here](./examples/src/main/java/dev/braintrust/examples)
+Example source code can be found [here](./examples). Each example is its own Gradle subproject under `examples/` with its own `:run` target.
 
 ```bash
 export BRAINTRUST_API_KEY="your-braintrust-api-key"
@@ -115,9 +115,9 @@ export ANTHROPIC_API_KEY="your-anthropic-api-key" # to run anthropic examples
 brew install openjdk@17 # macOS
 sudo apt install openjdk-17-jdk # ubuntu
 # to run a specific example
-./gradlew :examples:runSimpleOpenTelemetry
-# to see all examples
-./gradlew :examples:tasks --group="Braintrust SDK Examples"
+./gradlew :examples:simple-open-telemetry:run
+# to list every example subproject
+./gradlew projects
 ```
 
 ## Logging
