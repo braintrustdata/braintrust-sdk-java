@@ -26,6 +26,7 @@ import java.util.List;
 public class ClassifiersExample {
     public static void main(String[] args) throws Exception {
         var braintrust = Braintrust.get();
+        braintrust.openTelemetryCreate();
 
         // 1. Single-label classifier.
         Classifier<String, String> intentClassifier =
