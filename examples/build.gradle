@@ -100,6 +100,20 @@ task runExperiment(type: JavaExec) {
   }
 }
 
+task runClassifiers(type: JavaExec) {
+  group = 'Braintrust SDK Examples'
+  description = 'Run the classifiers example'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.braintrust.examples.ClassifiersExample'
+  systemProperty 'org.slf4j.simpleLogger.log.dev.braintrust', braintrustLogLevel
+  debugOptions {
+    enabled = true
+    port = 5566
+    server = true
+    suspend = false
+  }
+}
+
 task runAnthropicInstrumentation(type: JavaExec) {
   group = 'Braintrust SDK Examples'
   description = 'Run the Anthropic instrumentation example. NOTE: this requires ANTHROPIC_API_KEY to be exported and will make a small call to anthropic, using your tokens'
