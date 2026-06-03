@@ -195,24 +195,24 @@ task generateBraintrustProperties {
   def outputDir = layout.buildDirectory.dir("generated/resources").get().asFile
   def outputFile = new File(outputDir, "braintrust.properties")
 
-  // Tell Gradle what affects this task so it can cache properly
-  inputs.property("gitSha", {
-    ['git', 'rev-parse', 'HEAD'].execute().text.trim()
-  })
-  inputs.property("gitStatus", {
-    ['git', 'status', '--porcelain'].execute().text.trim()
-  })
+  // Capture the project version (computed once, at configuration time) so the
+  // generated properties file and the GRADLE_SDK_VERSION env var used by tests
+  // always agree. Recomputing the git-based version inside doLast caused the two
+  // to diverge in CI (e.g. 0.3.11 vs 0.3.10-<sha>) when git describe resolved the
+  // release tag differently between configuration and execution time.
+  def resolvedVersion = project.version.toString()
+
+  // Tell Gradle the version affects this task so it caches/regenerates correctly.
+  inputs.property("sdkVersion", resolvedVersion)
 
   outputs.file outputFile
 
   doLast {
     outputDir.mkdirs()
 
-    def version = rootProject.generateVersion()
+    outputFile.text = "sdk.version=${resolvedVersion}\n"
 
-    outputFile.text = "sdk.version=${version}\n"
-
-    logger.info("Generated braintrust.properties with sdk.version=${version}")
+    logger.info("Generated braintrust.properties with sdk.version=${resolvedVersion}")
   }
 }
 
