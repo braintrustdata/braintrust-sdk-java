@@ -604,6 +604,10 @@ class DevserverTest {
 
         JsonNode eval = root.get(REMOTE_EVAL_NAME);
 
+        assertFalse(
+                eval.has("parameters"),
+                "parameters field must be omitted (not null) when the eval has no parameters");
+
         // Check scores
         assertTrue(eval.has("scores"));
         JsonNode scores = eval.get("scores");
