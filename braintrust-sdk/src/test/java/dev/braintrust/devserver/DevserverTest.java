@@ -27,12 +27,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 
-/**
- * NOTE: playground UI has been updated and breaks the SDK contract. will have to investigate and
- * fixe before this test can be re-enabled
- */
 @Slf4j
-@Disabled
 class DevserverTest {
     private static Devserver server;
     private static Thread serverThread;
@@ -49,14 +44,26 @@ class DevserverTest {
     private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
             new BraintrustUtils.Parent("playground_id", "ceea7422-3507-4d1c-a5f7-7acf41d9fac2");
 
-    // Remote scorer from java-unit-test project (returns 1.0 for exact match, 0.0 otherwise)
-    private static final String REMOTE_SCORER_FUNCTION_ID = "efa5f9c3-6ece-4726-a9d6-4ba792980b3f";
-    private static final String REMOTE_SCORER_NAME = "typescript_exact_match";
+    // Remote scorer created in the java-unit-test project via the test harness. Its latest version
+    // returns 1.0 for an exact match and 0.0 otherwise. The score is keyed in results by the
+    // scorer's resolved name: "invoke-<project>-<slug>-<version>".
+    private static final String REMOTE_SCORER_SLUG = "typescript-exact-match";
+    private static String remoteScorerFunctionId;
+    // Resolved scorer name (set in setUp once the project name is known).
+    private static String REMOTE_SCORER_NAME;
 
     @BeforeAll
     static void setUp() throws Exception {
         // Set up test harness with VCR (records/replays HTTP interactions)
         testHarness = TestHarness.setup();
+
+        // Ensure the remote code scorer exists and resolve its function ID. The latest version
+        // returns {name: "typescript exact match", score: output === expected ? 1.0 : 0.0}.
+        var scorerInfo = testHarness.ensureRemoteCodeScorer(REMOTE_SCORER_SLUG, REMOTE_SCORER_CODE);
+        remoteScorerFunctionId =
+                lookupFunctionId(TestHarness.defaultProjectName(), scorerInfo.slug());
+        REMOTE_SCORER_NAME =
+                "invoke-" + TestHarness.defaultProjectName() + "-" + scorerInfo.slug() + "-latest";
 
         // Create a shared eval for all tests
         RemoteEval<String, String> testEval =
@@ -229,7 +236,7 @@ class DevserverTest {
         EvalRequest.RemoteScorer remoteScorer = new EvalRequest.RemoteScorer();
         remoteScorer.setName(REMOTE_SCORER_NAME);
         EvalRequest.FunctionId functionId = new EvalRequest.FunctionId();
-        functionId.setFunctionId(REMOTE_SCORER_FUNCTION_ID);
+        functionId.setFunctionId(remoteScorerFunctionId);
         remoteScorer.setFunctionId(functionId);
         evalRequest.setScores(List.of(remoteScorer));
 
@@ -485,13 +492,13 @@ class DevserverTest {
             assertEquals("scorer", spanAttrs.get("purpose").asText());
             assertEquals("test-gen-1", spanAttrs.get("generation").asText());
 
-            // Scorer name should be either simple_scorer or the remote scorer
+            // Scorer name should be either simple_scorer or the remote scorer. The remote
+            // scorer's span name is "invoke-<project>-<slug>-<version>".
             String scorerName = spanAttrs.get("name").asText();
             assertTrue(
-                    scorerName.contains("simple_scorer")
-                            || scorerName.contains(REMOTE_SCORER_NAME.replaceAll("_", "")),
-                    "Score span name should be simple_scorer or %s -- got: %s"
-                            .formatted(REMOTE_EVAL_NAME, scorerName));
+                    scorerName.contains("simple_scorer") || scorerName.contains(REMOTE_SCORER_SLUG),
+                    "Score span name should be simple_scorer or contain %s -- got: %s"
+                            .formatted(REMOTE_SCORER_SLUG, scorerName));
 
             // Verify braintrust.output_json contains scores
             String outputJson =
@@ -1064,4 +1071,83 @@ class DevserverTest {
         reader.close();
         return events;
     }
+
+    /** Resolve a function's ID by project name + slug. */
+    private static String lookupFunctionId(String projectName, String slug) {
+        var functionsApi =
+                new dev.braintrust.openapi.api.FunctionsApi(
+                        testHarness.braintrust().openApiClient());
+        var response =
+                functionsApi.getFunction(
+                        1, null, null, null, null, projectName, null, slug, null, null, null);
+        var objects = response.getObjects();
+        if (objects == null || objects.isEmpty()) {
+            throw new IllegalStateException("function not found for slug: " + slug);
+        }
+        return objects.get(0).getId().toString();
+    }
+
+    // Code scorer source matching ScorerBrainstoreImplTest so the recorded cassettes are shared.
+    // First element is the oldest version (always returns 0.0); the last (latest) returns 1.0 for
+    // an exact match and 0.0 otherwise.
+    private static final List<String> REMOTE_SCORER_CODE =
+            List.of(
+                    // language=typescript
+                    """
+import type { Trace } from 'braintrust';
+// an older buggy version that always returns 0.0
+async function handler({
+  input,
+  output,
+  expected,
+  metadata,
+  trace,
+}: {
+  input: any;
+  output: any;
+  expected: any;
+  metadata: Record<string, any>;
+  trace: Trace;
+}): Promise<
+  | number
+  | { score: number; name?: string; metadata?: Record<string, unknown> }
+  | null
+> {
+  if (expected === null) return null;
+
+  return {
+    name: "typescript exact match",
+    score: 0.0
+  };
+}
+""",
+                    // language=typescript
+                    """
+import type { Trace } from 'braintrust';
+// returns 1.0 for exact match, 0.0 otherwise
+async function handler({
+  input,
+  output,
+  expected,
+  metadata,
+  trace,
+}: {
+  input: any;
+  output: any;
+  expected: any;
+  metadata: Record<string, any>;
+  trace: Trace;
+}): Promise<
+  | number
+  | { score: number; name?: string; metadata?: Record<string, unknown> }
+  | null
+> {
+  if (expected === null) return null;
+
+  return {
+    name: "typescript exact match",
+    score: output === expected ? 1.0 : 0.0
+  };
+}
+""");
 }
