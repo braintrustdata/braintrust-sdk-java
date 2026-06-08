@@ -146,9 +146,14 @@ public class BrainstoreTrace {
     public List<Map<String, Object>> getLLMConversationThread() {
         var allSpans = getSpans();
 
-        // Build children map: parent_id → children sorted by start_time
+        // Build children map: parent_id → children sorted by start_time, and collect the set of
+        // span IDs present in the fetched results.
         var children = new java.util.LinkedHashMap<String, List<Map<String, Object>>>();
+        var presentSpanIds = new java.util.HashSet<String>();
         for (var span : allSpans) {
+            if (span.get("span_id") instanceof String sid) {
+                presentSpanIds.add(sid);
+            }
             var parents = span.get("span_parents");
             if (parents instanceof List<?> parentList && !parentList.isEmpty()) {
                 if (parentList.get(0) instanceof String pid) {
@@ -163,24 +168,34 @@ public class BrainstoreTrace {
                                         (a, b) ->
                                                 Double.compare(getStartTime(a), getStartTime(b))));
 
-        // Find root span (no parents)
-        var root =
+        // Find forest roots: spans with no parents, or whose parent is absent from the fetched
+        // set (their true ancestor hasn't been ingested yet). Sort by start time so the DFS
+        // visits orphan subtrees in chronological order.
+        var forestRoots =
                 allSpans.stream()
                         .filter(
                                 s -> {
                                     var p = s.get("span_parents");
-                                    return p == null || (p instanceof List<?> l && l.isEmpty());
+                                    if (p == null || (p instanceof List<?> l && l.isEmpty())) {
+                                        return true;
+                                    }
+                                    return p instanceof List<?> l
+                                            && l.get(0) instanceof String pid
+                                            && !presentSpanIds.contains(pid);
                                 })
-                        .findFirst()
-                        .orElse(null);
-        if (root == null) return List.of();
+                        .sorted((a, b) -> Double.compare(getStartTime(a), getStartTime(b)))
+                        .toList();
+        if (forestRoots.isEmpty()) return List.of();
 
         // Pre-order DFS to get all LLM spans in hierarchy order.
         // Prune entire subtrees rooted at scorer spans (purpose == "scorer") — these are
         // synthetic spans injected by the Braintrust backend and not part of the real trace.
         var llmSpansInOrder = new ArrayList<Map<String, Object>>();
         var stack = new java.util.ArrayDeque<Map<String, Object>>();
-        stack.push(root);
+        // Push forest roots in reverse start order so the earliest is processed first.
+        for (int i = forestRoots.size() - 1; i >= 0; i--) {
+            stack.push(forestRoots.get(i));
+        }
         while (!stack.isEmpty()) {
             var span = stack.pop();
             if ("automation".equals(getSpanType(span))) {

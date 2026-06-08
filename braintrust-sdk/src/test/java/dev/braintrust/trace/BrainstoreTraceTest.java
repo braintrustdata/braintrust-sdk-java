@@ -370,6 +370,60 @@ public class BrainstoreTraceTest {
         assertEquals(choice, thread.get(1));
     }
 
+    @Test
+    void getLLMConversationThreadWorksWithoutRootSpan() {
+        // Trace scorers run mid-flight: spans close bottom-up, so the parent/root span may not
+        // yet be ingested. Here the task span's parent ("root") is absent from the fetched set,
+        // making the task span a forest root. The thread must still be reconstructed.
+        var sysMsg = Map.<String, Object>of("role", "system", "content", "be helpful");
+        var userMsg = Map.<String, Object>of("role", "user", "content", "strawberry");
+        var assistantMsg = Map.<String, Object>of("role", "assistant", "content", "fruit");
+        var choice =
+                Map.<String, Object>of(
+                        "finish_reason", "stop", "index", 0, "message", assistantMsg);
+
+        // task span points at a "root" parent that was NOT fetched (root not ended/ingested yet)
+        var task = taskSpan("task", "root", 1.0);
+        var llm = llmSpan("llm1", "task", 1.1, List.of(sysMsg, userMsg), List.of(choice));
+
+        var trace = traceWithSpans(List.of(task, llm)); // no root span present
+        var thread = trace.getLLMConversationThread();
+
+        assertEquals(3, thread.size(), "thread must be reconstructed even without the root span");
+        assertEquals("system", thread.get(0).get("role"));
+        assertEquals("user", thread.get(1).get("role"));
+        assertEquals(assistantMsg, thread.get(2).get("message"));
+    }
+
+    @Test
+    void getLLMConversationThreadHandlesMultipleOrphanSubtrees() {
+        // Multiple orphan subtrees whose common ancestor ("root") is absent. Each subtree is a
+        // forest root; they must be visited in start-time order and their messages concatenated.
+        var user1 = Map.<String, Object>of("role", "user", "content", "Q1");
+        var asst1 = Map.<String, Object>of("role", "assistant", "content", "A1");
+        var choice1 = Map.<String, Object>of("finish_reason", "stop", "message", asst1);
+
+        var user2 = Map.<String, Object>of("role", "user", "content", "Q2");
+        var asst2 = Map.<String, Object>of("role", "assistant", "content", "A2");
+        var choice2 = Map.<String, Object>of("finish_reason", "stop", "message", asst2);
+
+        // Two task subtrees both parented at a missing "root". Provide out of order; turn2 starts
+        // later than turn1, so turn1's messages must come first.
+        var turn2 = taskSpan("turn2", "root", 2.0);
+        var llm2 = llmSpan("llm2", "turn2", 2.1, List.of(user2), List.of(choice2));
+        var turn1 = taskSpan("turn1", "root", 1.0);
+        var llm1 = llmSpan("llm1", "turn1", 1.1, List.of(user1), List.of(choice1));
+
+        var trace = traceWithSpans(List.of(turn2, llm2, turn1, llm1)); // root absent, out of order
+        var thread = trace.getLLMConversationThread();
+
+        assertEquals(4, thread.size());
+        assertEquals("Q1", thread.get(0).get("content"));
+        assertEquals(asst1, thread.get(1).get("message"));
+        assertEquals("Q2", thread.get(2).get("content"));
+        assertEquals(asst2, thread.get(3).get("message"));
+    }
+
     // -------------------------------------------------------------------------
     // fetchWithRetry — retry logic (via package-private constructor with custom supplier)
     // -------------------------------------------------------------------------
