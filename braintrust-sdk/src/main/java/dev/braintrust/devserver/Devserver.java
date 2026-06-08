@@ -181,10 +181,8 @@ public class Devserver {
 
                 Map<String, Object> metadata = new LinkedHashMap<>();
 
-                // Serialize parameters in the container format
-                if (eval.getParameters().isEmpty()) {
-                    metadata.put("parameters", NullNode.getInstance());
-                } else {
+                // Serialize parameters in the container format.
+                if (!eval.getParameters().isEmpty()) {
                     Map<String, Map<String, Object>> schemaMap = new LinkedHashMap<>();
                     for (ParameterDef<?> param : eval.getParameters()) {
                         Map<String, Object> paramMetadata = new LinkedHashMap<>();
