@@ -118,9 +118,18 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
             OUTPUT expected = (OUTPUT) event.getExpected();
 
             var metadataObj = event.getMetadata();
-            Map<String, Object> metadata =
-                    metadataObj != null ? metadataObj.getAdditionalProperties() : Map.of();
-            if (metadata == null) metadata = Map.of();
+            // InsertProjectLogsEventMetadata extends HashMap<String,Object>. Jackson stores
+            // unknown fields in the HashMap base (not in additionalProperties) for Map subclasses,
+            // so copy from both sources defensively.
+            Map<String, Object> metadata;
+            if (metadataObj != null) {
+                metadata = new HashMap<>(metadataObj);
+                if (metadataObj.getAdditionalProperties() != null) {
+                    metadata.putAll(metadataObj.getAdditionalProperties());
+                }
+            } else {
+                metadata = Map.of();
+            }
 
             List<String> tags = event.getTags() != null ? event.getTags() : List.of();
 
