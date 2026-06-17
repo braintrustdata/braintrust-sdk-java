@@ -4,7 +4,7 @@ muzzle {
   pass {
     group = 'org.springframework.ai'
     module = 'spring-ai-openai'
-    versions = "[${springAiVersion},)"
+    versions = "[${springAiVersion},2.0.0)"
     ignoredInstrumentation = ["dev.braintrust.instrumentation.springai.v1_0_0.auto.SpringAIAnthropicInstrumentationModule"]
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
@@ -12,7 +12,7 @@ muzzle {
   pass {
     group = 'org.springframework.ai'
     module = 'spring-ai-anthropic'
-    versions = "[${springAiVersion},)"
+    versions = "[${springAiVersion},2.0.0)"
     ignoredInstrumentation = ["dev.braintrust.instrumentation.springai.v1_0_0.auto.SpringAIOpenAIInstrumentationModule"]
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
