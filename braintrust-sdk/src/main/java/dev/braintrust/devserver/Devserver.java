@@ -13,6 +13,8 @@ import dev.braintrust.Origin;
 import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.*;
+import dev.braintrust.openapi.api.ExperimentsApi;
+import dev.braintrust.openapi.model.CreateExperiment;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
 import io.opentelemetry.api.common.AttributeKey;
@@ -391,7 +393,8 @@ public class Devserver {
 
                 // Execute task and scorers for each case
                 final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
-                final var parentInfo = extractParentInfo(request);
+                final var parentInfo =
+                        extractParentInfo(request, project.getId(), experimentName, apiClient);
                 final var braintrustParent = parentInfo.braintrustParent();
                 final var braintrustGeneration = parentInfo.generation();
 
@@ -1107,21 +1110,39 @@ public class Devserver {
     /**
      * Extracts parent information from the eval request.
      *
+     * <p>There are two ways a remote eval is triggered from the Braintrust UI:
+     *
+     * <ul>
+     *   <li><b>Playground</b>: the request carries a {@code parent} object ({@code object_type} +
+     *       {@code object_id}); the eval spans are parented to {@code playground_id:<id>}.
+     *   <li><b>Experiment</b>: the request carries {@code parent=null} plus {@code experiment_name}
+     *       + {@code project_id}. In this case the dev server creates the experiment and parents
+     *       the eval spans to {@code experiment_id:<id>} -- mirroring {@code Eval.java} (the CLI
+     *       runner) and the TS dev server (sdk/js/src/framework.ts creates an experiment whenever
+     *       no parent is present).
+     * </ul>
+     *
      * @param request The eval request
+     * @param projectId The resolved project ID (from the authenticated request) the experiment is
+     *     created under
+     * @param experimentName The experiment name to use when creating an experiment
+     * @param apiClient The Braintrust API client used to create the experiment
      * @return ParentInfo containing braintrustParent and generation
      */
-    private static ParentInfo extractParentInfo(EvalRequest request) {
-        String parentSpec = null;
-        String generation = null;
-
-        // Extract parent spec and generation from request
-        if (request.getParent() != null && request.getParent() instanceof Map) {
+    private static ParentInfo extractParentInfo(
+            EvalRequest request,
+            UUID projectId,
+            String experimentName,
+            BraintrustOpenApiClient apiClient) {
+        // Playground path: the request carries an explicit parent object.
+        if (request.getParent() instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
             String objectType = (String) parentMap.get("object_type");
             String objectId = (String) parentMap.get("object_id");
 
             // Extract generation from propagated_event.span_attributes.generation
+            String generation = null;
             Object propEventObj = parentMap.get("propagated_event");
             if (propEventObj instanceof Map) {
                 @SuppressWarnings("unchecked")
@@ -1135,14 +1156,30 @@ public class Devserver {
             }
 
             if (objectType != null && objectId != null) {
-                parentSpec = "playground_id:" + objectId;
+                return new ParentInfo(
+                        BraintrustUtils.parseParent("playground_id:" + objectId), generation);
             }
         }
 
-        if (parentSpec == null) {
-            throw new IllegalArgumentException("braintrust parent (playground_id) not found");
+        // Experiment path: no parent object, so create an experiment and parent to it.
+        if (experimentName != null) {
+            var experiment =
+                    new ExperimentsApi(apiClient)
+                            .postExperiment(
+                                    new CreateExperiment()
+                                            .projectId(projectId)
+                                            .name(experimentName));
+            log.debug(
+                    "Created experiment '{}' ({}) for experiment-triggered remote eval",
+                    experimentName,
+                    experiment.getId());
+            return new ParentInfo(
+                    BraintrustUtils.parseParent("experiment_id:" + experiment.getId()), null);
         }
-        return new ParentInfo(BraintrustUtils.parseParent(parentSpec), generation);
+
+        throw new IllegalArgumentException(
+                "braintrust parent not found: request has neither a playground parent nor an"
+                        + " experiment_name");
     }
 
     /**

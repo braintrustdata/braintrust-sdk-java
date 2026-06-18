@@ -43,6 +43,8 @@ class DevserverTest {
     private static final String SCORER_ERROR_EVAL_NAME = "scorer-error-eval";
     private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
             new BraintrustUtils.Parent("playground_id", "ceea7422-3507-4d1c-a5f7-7acf41d9fac2");
+    // Experiment name used by the experiment-triggered run (parent=null) test.
+    private static final String EXPERIMENT_EVAL_NAME = "java-experiment-repro";
 
     // Remote scorer created in the java-unit-test project via the test harness. Its latest version
     // returns 1.0 for an exact match and 0.0 otherwise. The score is keyed in results by the
@@ -1044,6 +1046,104 @@ class DevserverTest {
 
         assertEquals(1, events.stream().filter(e -> "summary".equals(e.get("event"))).count());
         assertEquals(1, events.stream().filter(e -> "done".equals(e.get("event"))).count());
+    }
+
+    /**
+     * Reproduces Pylon #17986: a remote eval triggered as an <b>Experiment</b> from the Braintrust
+     * UI. Unlike a Playground run, the platform sends {@code parent=null} together with {@code
+     * experiment_name} + {@code project_id}, and expects the dev server to create the experiment
+     * itself and parent the eval spans to {@code experiment_id:<id>} (the same way {@code
+     * Eval.java} does for CLI-driven experiments).
+     *
+     * <p>The TS SDK dev server does this by forwarding {@code experimentName}/{@code projectId}
+     * into {@code Eval()}, which creates the experiment whenever no playground parent is present
+     * (sdk/js/src/framework.ts: {@code options.parent ? null : initExperiment(...)}).
+     *
+     * <p>Until the experiment-parent branch is implemented in {@code Devserver.extractParentInfo},
+     * this run fails: the server throws {@code IllegalArgumentException: braintrust parent
+     * (playground_id) not found} and emits an SSE {@code error} event instead of {@code
+     * summary}/{@code done}.
+     */
+    @Test
+    void testExperimentEval() throws Exception {
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(REMOTE_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        // Experiment runs carry experiment_name + project_id but NO parent.
+        evalRequest.setExperimentName(EXPERIMENT_EVAL_NAME);
+        evalRequest.setProjectId(TestHarness.defaultProjectId());
+        assertNull(evalRequest.getParent(), "experiment runs send parent=null");
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("apple");
+        case1.setExpected("fruit");
+        dataSpec.setData(List.of(case1));
+        evalRequest.setData(dataSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        assertEquals(200, conn.getResponseCode());
+        assertEquals("text/event-stream", conn.getHeaderField("Content-Type"));
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        // The run must complete cleanly -- no error event, exactly one summary + done.
+        List<Map<String, String>> errorEvents =
+                events.stream().filter(e -> "error".equals(e.get("event"))).toList();
+        assertTrue(
+                errorEvents.isEmpty(),
+                "experiment run should not emit an error event, got: " + errorEvents);
+        assertEquals(
+                1,
+                events.stream().filter(e -> "summary".equals(e.get("event"))).count(),
+                "Should have 1 summary event");
+        assertEquals(
+                1,
+                events.stream().filter(e -> "done".equals(e.get("event"))).count(),
+                "Should have 1 done event");
+
+        // Summary should report the experiment name from the request.
+        Map<String, String> summaryEvent =
+                events.stream()
+                        .filter(e -> "summary".equals(e.get("event")))
+                        .findFirst()
+                        .orElseThrow();
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvent.get("data"));
+        assertEquals(EXPERIMENT_EVAL_NAME, summaryData.get("experimentName").asText());
+
+        // Eval spans must be parented to an experiment (experiment_id:<id>), not a playground.
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        List<SpanData> experimentEvalSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("eval"))
+                        .filter(
+                                s -> {
+                                    String parent =
+                                            s.getAttributes()
+                                                    .get(
+                                                            AttributeKey.stringKey(
+                                                                    "braintrust.parent"));
+                                    return parent != null && parent.startsWith("experiment_id:");
+                                })
+                        .toList();
+        assertEquals(
+                1,
+                experimentEvalSpans.size(),
+                "Should have 1 eval span parented to experiment_id:<id>");
     }
 
     /** Helper to read SSE events from an HttpURLConnection response. */
