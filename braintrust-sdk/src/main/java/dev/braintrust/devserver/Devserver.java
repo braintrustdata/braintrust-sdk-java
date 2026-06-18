@@ -1163,12 +1163,18 @@ public class Devserver {
 
         // Experiment path: no parent object, so create an experiment and parent to it.
         if (experimentName != null) {
+            // ensure_new=true makes each UI-triggered run create a distinct experiment: without
+            // it, POST /v1/experiment returns the existing experiment for a name that already
+            // exists, so repeated runs would append to the first experiment instead of creating
+            // new ones. (The TS SDK gets the same effect from the register-experiment endpoint's
+            // default behavior.)
             var experiment =
                     new ExperimentsApi(apiClient)
                             .postExperiment(
                                     new CreateExperiment()
                                             .projectId(projectId)
-                                            .name(experimentName));
+                                            .name(experimentName)
+                                            .ensureNew(true));
             log.debug(
                     "Created experiment '{}' ({}) for experiment-triggered remote eval",
                     experimentName,

@@ -10,7 +10,7 @@
       }
     },
     "bodyPatterns" : [ {
-      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"java-experiment-repro\"}",
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"java-experiment-repro\",\"ensure_new\":true}",
       "ignoreArrayOrder" : true,
       "ignoreExtraElements" : false
     } ]

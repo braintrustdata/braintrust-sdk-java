@@ -1075,6 +1075,14 @@ class DevserverTest {
         evalRequest.setProjectId(TestHarness.defaultProjectId());
         assertNull(evalRequest.getParent(), "experiment runs send parent=null");
 
+        // The dev server must create the experiment with ensure_new=true so repeated UI runs each
+        // get a distinct experiment instead of appending to the first (POST /v1/experiment reuses
+        // an experiment of the same name by default). This is enforced by the cassette stub for
+        // POST /v1/experiment, whose body matcher requires {"...","ensure_new":true} with
+        // ignoreExtraElements=false: if extractParentInfo stops sending ensure_new (or changes the
+        // request shape), the stub won't match, postExperiment fails, and this test fails on the
+        // assertions below. Keep that matcher in sync with the request the SDK sends.
+
         EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
         EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
         case1.setInput("apple");
