@@ -13,14 +13,7 @@ import dev.braintrust.Origin;
 import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.eval.*;
-import dev.braintrust.trace.BraintrustContext;
-import dev.braintrust.trace.BraintrustTracing;
-import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -68,9 +61,6 @@ public class Devserver {
 
     private static final String EXPOSED_HEADERS =
             "x-bt-cursor, x-bt-found-existing-experiment, x-bt-span-id, x-bt-span-export";
-
-    private static final AttributeKey<String> PARENT =
-            AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
 
     private final List<String> corsOriginWhitelist;
     private final BraintrustConfig config;
@@ -347,7 +337,7 @@ public class Devserver {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private <I, O> void handleStreamingEval(
             HttpExchange exchange,
-            RemoteEval eval,
+            RemoteEval<I, O> eval,
             EvalRequest request,
             RequestContext context,
             List<Scorer<I, O>> remoteScorers)
@@ -377,184 +367,60 @@ public class Devserver {
                         BraintrustUtils.createProjectURI(
                                         braintrust.config().appUrl(), orgName, projectName)
                                 .toASCIIString();
-                final var experimentUrl = projectUrl + "/experiments/" + experimentName;
 
-                var tracer = BraintrustTracing.getTracer();
+                // Combine local scorers from RemoteEval with remote scorers from the request
+                List<Scorer<I, O>> allScorers = new ArrayList<>(eval.getScorers());
+                allScorers.addAll(remoteScorers);
 
-                // Merge parameters: evaluator defaults + request overrides
-                final Parameters mergedParameters =
-                        new Parameters(
-                                eval.getParameters(),
-                                null == request.getParameters()
-                                        ? Map.of()
-                                        : request.getParameters());
+                var sseListener =
+                        new SseEvalListener(
+                                os,
+                                eval.getName(),
+                                projectName,
+                                projectId,
+                                projectUrl,
+                                experimentName);
 
-                // Execute task and scorers for each case
-                final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
-                final var parentInfo = extractParentInfo(request);
-                final var braintrustParent = parentInfo.braintrustParent();
-                final var braintrustGeneration = parentInfo.generation();
+                var builder =
+                        Eval.<I, O>builder()
+                                .name(experimentName)
+                                .config(braintrust.config())
+                                .apiClient(apiClient)
+                                .projectId(projectId)
+                                .dataset((Dataset<I, O>) extractDataset(request, apiClient))
+                                .task(eval.getTask())
+                                .scorers(allScorers.toArray(new Scorer[0]))
+                                .parameters(eval.getParameters())
+                                .parameterValues(
+                                        request.getParameters() == null
+                                                ? Map.of()
+                                                : request.getParameters());
 
-                // NOTE: this code is serial but written in a thread-safe manner to support
-                // concurrent dataset fetching and eval execution
-                extractDataset(request, apiClient)
-                        .forEach(
-                                rawDataset -> {
-                                    final DatasetCase<I, O> datasetCase =
-                                            (DatasetCase<I, O>) rawDataset;
-                                    var evalSpan =
-                                            tracer.spanBuilder("eval")
-                                                    .setNoParent()
-                                                    .setSpanKind(SpanKind.CLIENT)
-                                                    .setAttribute(
-                                                            PARENT,
-                                                            braintrustParent.toParentValue())
-                                                    .startSpan();
-                                    Context evalContext = Context.current().with(evalSpan);
-                                    evalContext =
-                                            BraintrustContext.setParentInBaggage(
-                                                    evalContext,
-                                                    braintrustParent.type(),
-                                                    braintrustParent.id());
-                                    // Make the eval context (with span and baggage) current
-                                    try (var rootScope = evalContext.makeCurrent()) {
-                                        final TaskResult<I, O> taskResult;
-                                        { // run task
-                                            var taskSpan = tracer.spanBuilder("task").startSpan();
-                                            try (var unused =
-                                                    Context.current()
-                                                            .with(taskSpan)
-                                                            .makeCurrent()) {
-                                                var task = eval.getTask();
-                                                try {
-                                                    taskResult =
-                                                            task.apply(
-                                                                    datasetCase, mergedParameters);
-                                                } catch (Exception e) {
-                                                    taskSpan.setStatus(
-                                                            StatusCode.ERROR, e.getMessage());
-                                                    taskSpan.recordException(e);
-                                                    taskSpan.end();
-                                                    evalSpan.setStatus(
-                                                            StatusCode.ERROR, e.getMessage());
-                                                    evalSpan.setAttribute(
-                                                            "braintrust.output_json",
-                                                            toJson(
-                                                                    Collections.singletonMap(
-                                                                            "output", null)));
-                                                    log.debug(
-                                                            "Task threw exception for input: "
-                                                                    + datasetCase.input(),
-                                                            e);
-                                                    // Set eval span attributes so Braintrust can
-                                                    // resolve the trace
-                                                    setEvalSpanAttributesForError(
-                                                            evalSpan,
-                                                            braintrustParent,
-                                                            braintrustGeneration,
-                                                            datasetCase);
-                                                    // Send progress event even on error so the
-                                                    // Playground can link to the trace
-                                                    sendProgressEvent(
-                                                            os,
-                                                            evalSpan.getSpanContext().getSpanId(),
-                                                            datasetCase.origin(),
-                                                            eval.getName(),
-                                                            null);
-                                                    // run scoreForTaskException on each scorer
-                                                    List<Scorer<I, O>> allScorersForError =
-                                                            new ArrayList<>(eval.getScorers());
-                                                    allScorersForError.addAll(remoteScorers);
-                                                    for (var scorer : allScorersForError) {
-                                                        runScoreForTaskException(
-                                                                tracer,
-                                                                evalSpan,
-                                                                braintrustParent,
-                                                                braintrustGeneration,
-                                                                scorer,
-                                                                e,
-                                                                datasetCase,
-                                                                scoresByName);
-                                                    }
-                                                    return;
-                                                }
-                                                // Send progress event for task completion
-                                                sendProgressEvent(
-                                                        os,
-                                                        evalSpan.getSpanContext().getSpanId(),
-                                                        datasetCase.origin(),
-                                                        eval.getName(),
-                                                        taskResult.result());
-                                                setTaskSpanAttributes(
-                                                        taskSpan,
-                                                        braintrustParent,
-                                                        braintrustGeneration,
-                                                        datasetCase,
-                                                        taskResult);
-                                            } finally {
-                                                taskSpan.end();
-                                            }
-                                            // setting eval span attributes here because we need the
-                                            // task output
-                                            setEvalSpanAttributes(
-                                                    evalSpan,
-                                                    braintrustParent,
-                                                    braintrustGeneration,
-                                                    datasetCase,
-                                                    taskResult);
-                                        }
-                                        // run scorers - one score span per scorer
-                                        // Combine local scorers from RemoteEval with remote scorers
-                                        // from request
-                                        List<Scorer<I, O>> allScorers =
-                                                new ArrayList<>(eval.getScorers());
-                                        allScorers.addAll(remoteScorers);
-                                        for (var scorer : allScorers) {
-                                            runScorer(
-                                                    tracer,
-                                                    evalSpan,
-                                                    braintrustParent,
-                                                    braintrustGeneration,
-                                                    scorer,
-                                                    taskResult,
-                                                    scoresByName);
-                                        }
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(
-                                                "Failed to send progress event", e);
-                                    } finally {
-                                        evalSpan.end();
-                                    }
-                                });
-
-                // Aggregate scores
-                Map<String, EvalResponse.ScoreSummary> scoreSummaries = new LinkedHashMap<>();
-                for (Map.Entry<String, List<Double>> entry : scoresByName.entrySet()) {
-                    String scoreName = entry.getKey();
-                    List<Double> values = entry.getValue();
-
-                    double avgScore =
-                            values.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-
-                    scoreSummaries.put(
-                            scoreName,
-                            EvalResponse.ScoreSummary.builder()
-                                    .name(scoreName)
-                                    .score(avgScore)
-                                    .improvements(0)
-                                    .regressions(0)
-                                    .build());
+                var playgroundParent = extractPlaygroundParent(request);
+                if (playgroundParent.isPresent()) {
+                    // Playground run: target a playground_id parent (no experiment is created),
+                    // weave the request's generation into span attributes, and use the playground
+                    // span decorator in place of the standard one.
+                    var pi = playgroundParent.get();
+                    builder.evalTargetProvider(
+                                    ctx ->
+                                            new EvalRunInfo(
+                                                    pi.braintrustParent(),
+                                                    pi.generation(),
+                                                    null,
+                                                    null,
+                                                    null,
+                                                    false))
+                            .clearListeners()
+                            .addListener(new PlaygroundSpanDecorator());
+                } else {
+                    // Experiment run (snapshot): create a fresh experiment (ensure_new) and use the
+                    // standard span decorator / experiment_id parent — i.e. a plain Eval run.
+                    builder.evalTargetProvider(new ExperimentTargetProvider(true));
                 }
 
-                sendSummaryEvent(
-                        os,
-                        projectName,
-                        projectId,
-                        experimentName,
-                        projectUrl,
-                        experimentUrl,
-                        scoreSummaries);
-                sendDoneEvent(os);
+                // SSE streaming (progress per case, summary + done on completion).
+                builder.addListener(sseListener).build().run();
             } catch (Exception e) {
                 // Send error event via SSE
                 log.error("Error during streaming evaluation", e);
@@ -577,194 +443,132 @@ public class Devserver {
         }
     }
 
-    private void setEvalSpanAttributes(
-            Span evalSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            DatasetCase<?, ?> datasetCase,
-            TaskResult<?, ?> taskResult) {
-        var spanAttrs = new LinkedHashMap<>();
-        spanAttrs.put("type", "eval");
-        spanAttrs.put("name", "eval");
-        if (braintrustGeneration != null) {
-            spanAttrs.put("generation", braintrustGeneration);
-        }
-        evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
-                .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
-
-        if (datasetCase.origin().isPresent()) {
-            evalSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
-        }
-        if (!datasetCase.tags().isEmpty()) {
-            evalSpan.setAttribute(
-                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
-        }
-        if (!datasetCase.metadata().isEmpty()) {
-            evalSpan.setAttribute("braintrust.metadata", toJson(datasetCase.metadata()));
-        }
-        evalSpan.setAttribute(
-                "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
-    }
-
     /**
-     * Sets eval span attributes when the task threw an exception. Similar to {@link
-     * #setEvalSpanAttributes} but does not require a TaskResult.
+     * An {@link EvalListener} that streams SSE {@code progress} events (one per case, including on
+     * task error), accumulates per-scorer averages, and emits the {@code summary} + {@code done}
+     * events when the run completes. Span decoration is handled separately by the standard {@link
+     * dev.braintrust.eval.EvalSpanDecorator} (experiment runs) or {@link PlaygroundSpanDecorator}
+     * (playground runs).
      */
-    private void setEvalSpanAttributesForError(
-            Span evalSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            DatasetCase<?, ?> datasetCase) {
-        var spanAttrs = new LinkedHashMap<>();
-        spanAttrs.put("type", "eval");
-        spanAttrs.put("name", "eval");
-        if (braintrustGeneration != null) {
-            spanAttrs.put("generation", braintrustGeneration);
-        }
-        evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
-                .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
+    private final class SseEvalListener implements EvalListener {
+        private final OutputStream os;
+        private final String evalName;
+        private final String projectName;
+        private final String projectId;
+        private final String projectUrl;
+        private final String experimentName;
+        private final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
 
-        if (datasetCase.origin().isPresent()) {
-            evalSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
-        }
-        if (!datasetCase.tags().isEmpty()) {
-            evalSpan.setAttribute(
-                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
-        }
-        if (!datasetCase.metadata().isEmpty()) {
-            evalSpan.setAttribute("braintrust.metadata", toJson(datasetCase.metadata()));
-        }
-    }
-
-    private void setTaskSpanAttributes(
-            Span taskSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            DatasetCase<?, ?> datasetCase,
-            TaskResult<?, ?> taskResult) {
-        Map<String, Object> taskSpanAttrs = new LinkedHashMap<>();
-        taskSpanAttrs.put("type", "task");
-        taskSpanAttrs.put("name", "task");
-        if (braintrustGeneration != null) {
-            taskSpanAttrs.put("generation", braintrustGeneration);
+        SseEvalListener(
+                OutputStream os,
+                String evalName,
+                String projectName,
+                String projectId,
+                String projectUrl,
+                String experimentName) {
+            this.os = os;
+            this.evalName = evalName;
+            this.projectName = projectName;
+            this.projectId = projectId;
+            this.projectUrl = projectUrl;
+            this.experimentName = experimentName;
         }
 
-        taskSpan.setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", toJson(taskSpanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
-                .setAttribute(
-                        "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
-    }
-
-    private void setScoreSpanAttributes(
-            Span scoreSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            String scorerName,
-            Map<String, Double> scorerScores) {
-        Map<String, Object> scoreSpanAttrs = new LinkedHashMap<>();
-        scoreSpanAttrs.put("type", "score");
-        scoreSpanAttrs.put("name", scorerName);
-        scoreSpanAttrs.put("purpose", "scorer");
-        if (braintrustGeneration != null) {
-            scoreSpanAttrs.put("generation", braintrustGeneration);
-        }
-
-        var scoresJson = toJson(scorerScores);
-        scoreSpan
-                .setAttribute(PARENT, braintrustParent.toParentValue())
-                .setAttribute("braintrust.span_attributes", toJson(scoreSpanAttrs))
-                .setAttribute("braintrust.output_json", scoresJson)
-                .setAttribute("braintrust.scores", scoresJson);
-    }
-
-    /**
-     * Runs a scorer against a successful task result. If the scorer throws, falls back to {@link
-     * Scorer#scoreForScorerException}.
-     */
-    private <I, O> void runScorer(
-            Tracer tracer,
-            Span evalSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            Scorer<I, O> scorer,
-            TaskResult<I, O> taskResult,
-            Map<String, List<Double>> scoresByName) {
-        var scoreSpan = tracer.spanBuilder("score").startSpan();
-        try (var unused = Context.current().with(scoreSpan).makeCurrent()) {
-            List<Score> scores;
-            try {
-                scores = scorer.score(taskResult);
-            } catch (Exception e) {
-                scoreSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                scoreSpan.recordException(e);
-                log.debug("Scorer '{}' threw exception", scorer.getName(), e);
-                // fall back to scoreForScorerException — if this throws, eval aborts
-                scores = scorer.scoreForScorerException(e, taskResult);
+        private Map<String, EvalResponse.ScoreSummary> scoreSummaries() {
+            Map<String, EvalResponse.ScoreSummary> scoreSummaries = new LinkedHashMap<>();
+            for (var entry : scoresByName.entrySet()) {
+                double avgScore =
+                        entry.getValue().stream()
+                                .mapToDouble(Double::doubleValue)
+                                .average()
+                                .orElse(0.0);
+                scoreSummaries.put(
+                        entry.getKey(),
+                        EvalResponse.ScoreSummary.builder()
+                                .name(entry.getKey())
+                                .score(avgScore)
+                                .improvements(0)
+                                .regressions(0)
+                                .build());
             }
-            recordScores(
-                    scoreSpan,
-                    braintrustParent,
-                    braintrustGeneration,
-                    scorer,
-                    scores,
-                    scoresByName);
-        } finally {
-            scoreSpan.end();
+            return scoreSummaries;
         }
-    }
 
-    /**
-     * Runs {@link Scorer#scoreForTaskException} when the task threw. If the fallback throws, the
-     * eval aborts.
-     */
-    private <I, O> void runScoreForTaskException(
-            Tracer tracer,
-            Span evalSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            Scorer<I, O> scorer,
-            Exception taskException,
-            DatasetCase<I, O> datasetCase,
-            Map<String, List<Double>> scoresByName) {
-        var scoreSpan = tracer.spanBuilder("score").startSpan();
-        try (var unused = Context.current().with(scoreSpan).makeCurrent()) {
-            // if this throws, it propagates and the eval aborts
-            var scores = scorer.scoreForTaskException(taskException, datasetCase);
-            recordScores(
-                    scoreSpan,
-                    braintrustParent,
-                    braintrustGeneration,
-                    scorer,
-                    scores,
-                    scoresByName);
-        } finally {
-            scoreSpan.end();
-        }
-    }
+        @Override
+        public RunListener createRunListener(EvalRunInfo info) {
+            return new RunListener() {
+                @Override
+                public CaseListener createCaseListener(DatasetCase<?, ?> datasetCase) {
+                    return new SseCaseListener();
+                }
 
-    /** Records scores on the score span and accumulates them into scoresByName. */
-    private void recordScores(
-            Span scoreSpan,
-            BraintrustUtils.Parent braintrustParent,
-            String braintrustGeneration,
-            Scorer<?, ?> scorer,
-            List<Score> scores,
-            Map<String, List<Double>> scoresByName) {
-        if (scores == null || scores.isEmpty()) {
-            return;
+                @Override
+                public void onRunEnd() {
+                    // experimentId/experimentName/experimentUrl are non-null for experiment runs,
+                    // null for playground runs. For experiment runs prefer the actual (possibly
+                    // deduped) experiment name from the run info so the UI links to the real
+                    // experiment.
+                    var resolvedExperimentName =
+                            info.experimentName() != null ? info.experimentName() : experimentName;
+                    try {
+                        sendSummaryEvent(
+                                os,
+                                projectName,
+                                projectId,
+                                info.experimentId(),
+                                resolvedExperimentName,
+                                projectUrl,
+                                info.experimentUrl(),
+                                scoreSummaries());
+                        sendDoneEvent(os);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to send summary/done event", e);
+                    }
+                }
+            };
         }
-        Map<String, Double> scorerScores = new LinkedHashMap<>();
-        for (Score score : scores) {
-            scoresByName.computeIfAbsent(score.name(), k -> new ArrayList<>()).add(score.value());
-            scorerScores.put(score.name(), score.value());
+
+        private final class SseCaseListener implements CaseListener {
+            @Override
+            public void onTaskSuccess(Span rootSpan, Span taskSpan, TaskResult<?, ?> taskResult) {
+                sendProgress(rootSpan, taskResult.datasetCase(), taskResult.result());
+            }
+
+            @Override
+            public void onTaskError(
+                    Span rootSpan, Span taskSpan, DatasetCase<?, ?> datasetCase, Exception error) {
+                // Send progress even on error so the Playground can link to the trace.
+                sendProgress(rootSpan, datasetCase, null);
+            }
+
+            @Override
+            public void onScoreResult(
+                    Span scoreSpan,
+                    Span rootSpan,
+                    Scorer<?, ?> scorer,
+                    List<Score> scores,
+                    @Nullable Exception scoreException) {
+                for (var score : scores) {
+                    scoresByName
+                            .computeIfAbsent(score.name(), k -> new ArrayList<>())
+                            .add(score.value());
+                }
+            }
+
+            private void sendProgress(
+                    Span rootSpan, DatasetCase<?, ?> datasetCase, @Nullable Object output) {
+                try {
+                    sendProgressEvent(
+                            os,
+                            rootSpan.getSpanContext().getSpanId(),
+                            datasetCase.origin(),
+                            evalName,
+                            output);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to send progress event", e);
+                }
+            }
         }
-        setScoreSpanAttributes(
-                scoreSpan, braintrustParent, braintrustGeneration, scorer.getName(), scorerScores);
     }
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {
@@ -800,18 +604,19 @@ public class Devserver {
             OutputStream os,
             String projectName,
             String projectId,
+            @Nullable String experimentId,
             String experimentName,
             String projectUrl,
-            String experimentUrl,
+            @Nullable String experimentUrl,
             Map<String, EvalResponse.ScoreSummary> scoreSummaries)
             throws IOException {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("projectName", projectName);
         summary.put("projectId", projectId);
-        summary.put("experimentId", null);
+        summary.put("experimentId", experimentId);
         summary.put("experimentName", experimentName);
         summary.put("projectUrl", projectUrl);
-        summary.put("experimentUrl", null);
+        summary.put("experimentUrl", experimentUrl);
         summary.put("comparisonExperimentName", null);
 
         Map<String, Object> scoresWithMeta = new LinkedHashMap<>();
@@ -1105,44 +910,45 @@ public class Devserver {
             @Nonnull BraintrustUtils.Parent braintrustParent, @Nullable String generation) {}
 
     /**
-     * Extracts parent information from the eval request.
+     * Extracts the playground parent (and generation) from the eval request, if present.
+     *
+     * <p>Playground runs send a {@code parent} object carrying {@code object_type}/{@code
+     * object_id}; experiment ("snapshot") runs send no such parent (instead {@code
+     * experiment_name}/{@code project_id}) and a fresh experiment is created. Returns empty for the
+     * latter case.
      *
      * @param request The eval request
-     * @return ParentInfo containing braintrustParent and generation
+     * @return the playground {@link ParentInfo} if the request is a playground run, else empty
      */
-    private static ParentInfo extractParentInfo(EvalRequest request) {
-        String parentSpec = null;
+    private static Optional<ParentInfo> extractPlaygroundParent(EvalRequest request) {
+        if (!(request.getParent() instanceof Map)) {
+            return Optional.empty();
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
+        String objectType = (String) parentMap.get("object_type");
+        String objectId = (String) parentMap.get("object_id");
+        if (objectType == null || objectId == null) {
+            return Optional.empty();
+        }
+
+        // Extract generation from propagated_event.span_attributes.generation
         String generation = null;
-
-        // Extract parent spec and generation from request
-        if (request.getParent() != null && request.getParent() instanceof Map) {
+        Object propEventObj = parentMap.get("propagated_event");
+        if (propEventObj instanceof Map) {
             @SuppressWarnings("unchecked")
-            Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
-            String objectType = (String) parentMap.get("object_type");
-            String objectId = (String) parentMap.get("object_id");
-
-            // Extract generation from propagated_event.span_attributes.generation
-            Object propEventObj = parentMap.get("propagated_event");
-            if (propEventObj instanceof Map) {
+            Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
+            Object spanAttrsObj = propEvent.get("span_attributes");
+            if (spanAttrsObj instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
-                Object spanAttrsObj = propEvent.get("span_attributes");
-                if (spanAttrsObj instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
-                    generation = (String) spanAttrs.get("generation");
-                }
-            }
-
-            if (objectType != null && objectId != null) {
-                parentSpec = "playground_id:" + objectId;
+                Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
+                generation = (String) spanAttrs.get("generation");
             }
         }
 
-        if (parentSpec == null) {
-            throw new IllegalArgumentException("braintrust parent (playground_id) not found");
-        }
-        return new ParentInfo(BraintrustUtils.parseParent(parentSpec), generation);
+        return Optional.of(
+                new ParentInfo(
+                        BraintrustUtils.parseParent("playground_id:" + objectId), generation));
     }
 
     /**

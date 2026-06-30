@@ -544,6 +544,101 @@ class DevserverTest {
     }
 
     @Test
+    void testExperimentEval() throws Exception {
+        // A remote eval triggered as an *Experiment* (snapshot) from the UI sends no playground
+        // parent — instead an experiment_name (+ project via headers). The devserver should fire a
+        // standard Eval, which creates a fresh experiment and parents spans to experiment_id:<id>.
+        final String experimentName = "java-experiment-repro";
+
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(REMOTE_EVAL_NAME);
+        evalRequest.setStream(true);
+        evalRequest.setExperimentName(experimentName);
+        // Note: no parent set -> experiment-snapshot path.
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("apple");
+        case1.setExpected("fruit");
+        EvalRequest.EvalCaseData case2 = new EvalRequest.EvalCaseData();
+        case2.setInput("carrot");
+        case2.setExpected("vegetable");
+        dataSpec.setData(List.of(case1, case2));
+        evalRequest.setData(dataSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        List<Map<String, String>> progressEvents =
+                events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        List<Map<String, String>> doneEvents =
+                events.stream().filter(e -> "done".equals(e.get("event"))).toList();
+        assertEquals(2, progressEvents.size(), "Should have 2 progress events");
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+        assertEquals(1, doneEvents.size(), "Should have 1 done event");
+
+        // The summary should reference the created experiment (unlike playground runs). The id is
+        // whatever the backend assigned — derive it from the summary rather than hardcoding.
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
+        assertTrue(summaryData.get("experimentName").asText().startsWith(experimentName));
+        assertFalse(
+                summaryData.get("experimentId").isNull(),
+                "experiment run should have an experimentId");
+        assertFalse(
+                summaryData.get("experimentUrl").isNull(),
+                "experiment run should have an experimentUrl");
+        assertTrue(summaryData.get("scores").has("simple_scorer"));
+        String experimentId = summaryData.get("experimentId").asText();
+
+        // Spans should be parented to experiment_id:<id> using the standard decorator shape.
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        String expectedParent = "experiment_id:" + experimentId;
+        var evalSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("eval"))
+                        .filter(
+                                s ->
+                                        expectedParent.equals(
+                                                s.getAttributes()
+                                                        .get(
+                                                                AttributeKey.stringKey(
+                                                                        "braintrust.parent"))))
+                        .toList();
+        assertEquals(2, evalSpans.size(), "Should have 2 eval spans parented to the experiment");
+
+        for (SpanData evalSpan : evalSpans) {
+            JsonNode spanAttrs =
+                    JSON_MAPPER.readTree(
+                            evalSpan.getAttributes()
+                                    .get(AttributeKey.stringKey("braintrust.span_attributes")));
+            assertEquals("eval", spanAttrs.get("type").asText());
+            // Standard decorator shape: no playground-specific "generation"/"name" keys.
+            assertFalse(
+                    spanAttrs.has("generation"), "experiment spans should not carry generation");
+            // Standard decorator uses braintrust.expected (not the playground's expected_json).
+            assertNotNull(
+                    evalSpan.getAttributes().get(AttributeKey.stringKey("braintrust.expected")),
+                    "standard decorator should set braintrust.expected");
+        }
+    }
+
+    @Test
     void testEvaluatorNotFound() throws Exception {
         EvalRequest request = new EvalRequest();
         request.setName("non-existent-eval");
@@ -793,9 +888,9 @@ class DevserverTest {
                 erroredTaskSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
                 "task span should have an exception event");
 
-        // The errored case should still have a score span (from scoreForTaskException default 0.0)
-        // The score span is a child of the task span (since the task scope is still active when
-        // runScoreForTaskException is called from the catch block)
+        // The errored case should still have a score span (from scoreForTaskException default 0.0).
+        // The score span is a child of the eval (root) span: scoreForTaskException runs after the
+        // task scope has closed, so its span nests under the root rather than the task span.
         var erroredScoreSpans =
                 allSpans.stream()
                         .filter(s -> s.getName().equals("score"))
@@ -804,7 +899,7 @@ class DevserverTest {
                                         s.getParentSpanContext()
                                                 .getSpanId()
                                                 .equals(
-                                                        erroredTaskSpan
+                                                        erroredEvalSpan
                                                                 .getSpanContext()
                                                                 .getSpanId()))
                         .toList();

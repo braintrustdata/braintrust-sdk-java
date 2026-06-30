@@ -1,22 +1,20 @@
 package dev.braintrust.eval;
 
-import static dev.braintrust.json.BraintrustJsonMapper.toJson;
-
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
-import dev.braintrust.openapi.api.ExperimentsApi;
-import dev.braintrust.openapi.model.CreateExperiment;
+import dev.braintrust.eval.EvalListener.CaseListener;
+import dev.braintrust.eval.EvalListener.RunListener;
 import dev.braintrust.openapi.model.Project;
 import dev.braintrust.trace.BrainstoreTrace;
 import dev.braintrust.trace.BraintrustContext;
 import dev.braintrust.trace.BraintrustTracing;
-import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.util.*;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -31,8 +29,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class Eval<INPUT, OUTPUT> {
-    private static final AttributeKey<String> PARENT =
-            AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
     private final @Nonnull String experimentName;
     private final @Nonnull BraintrustConfig config;
     private final @Nonnull BraintrustOpenApiClient client;
@@ -46,6 +42,8 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull List<String> tags;
     private final @Nonnull Map<String, Object> metadata;
     private final @Nonnull Parameters parameters;
+    private final @Nonnull EvalTargetProvider targetProvider;
+    private final @Nonnull List<EvalListener> listeners;
 
     private Eval(Builder<INPUT, OUTPUT> builder) {
         this.experimentName = builder.experimentName;
@@ -63,10 +61,13 @@ public final class Eval<INPUT, OUTPUT> {
         this.tags = List.copyOf(builder.tags);
         this.metadata = Map.copyOf(builder.metadata);
         this.parameters = builder.buildParameters();
+        this.targetProvider = Objects.requireNonNull(builder.targetProvider);
+        this.listeners = List.copyOf(builder.listeners);
     }
 
     /** Runs the evaluation and returns results. */
     public EvalResult run() {
+        final EvalRunInfo runInfo;
         try (var cursor = dataset.openCursor()) {
             Optional<String> datasetVersion = Optional.empty();
             Optional<String> datasetId = Optional.empty();
@@ -75,142 +76,120 @@ public final class Eval<INPUT, OUTPUT> {
                 datasetId = Optional.of(dataset.id());
             }
 
-            var createExperiment =
-                    new CreateExperiment().projectId(project.getId()).name(experimentName);
+            runInfo =
+                    targetProvider.create(
+                            new EvalTargetProvider.Context(
+                                    config,
+                                    client,
+                                    project,
+                                    orgInfo,
+                                    experimentName,
+                                    tags,
+                                    metadata,
+                                    datasetId,
+                                    datasetVersion));
 
-            if (!tags.isEmpty()) {
-                createExperiment.tags(tags);
+            var runListeners = new ArrayList<RunListener>(listeners.size());
+            for (var listener : listeners) {
+                runListeners.add(listener.createRunListener(runInfo));
             }
-            if (!metadata.isEmpty()) {
-                createExperiment.metadata(metadata);
-            }
-            datasetId.ifPresent(id -> createExperiment.datasetId(UUID.fromString(id)));
-            datasetVersion.ifPresent(createExperiment::datasetVersion);
 
-            var experiment = new ExperimentsApi(client).postExperiment(createExperiment);
-
-            cursor.forEach(datasetCase -> evalOne(experiment.getId().toString(), datasetCase));
+            runListeners.forEach(RunListener::onRunStart);
+            cursor.forEach(datasetCase -> evalOne(runInfo, datasetCase, runListeners));
+            runListeners.forEach(RunListener::onRunEnd);
         }
 
-        var experimentUrl =
-                "%s/experiments/%s"
-                        .formatted(
-                                BraintrustUtils.createProjectURI(
-                                                config.appUrl(), orgInfo.name(), project.getName())
-                                        .toASCIIString(),
-                                experimentName);
-        return new EvalResult(experimentUrl);
+        return new EvalResult(runInfo.experimentUrl());
     }
 
-    private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
+    /** Makes {@code span} current with the braintrust parent set in baggage for child spans. */
+    private Scope makeCurrent(Span span, BraintrustUtils.Parent parent) {
+        var ctx = Context.current().with(span);
+        ctx = BraintrustContext.setParentInBaggage(ctx, parent.type(), parent.id());
+        return ctx.makeCurrent();
+    }
+
+    private void evalOne(
+            EvalRunInfo runInfo,
+            DatasetCase<INPUT, OUTPUT> datasetCase,
+            List<RunListener> runListeners) {
+        var caseListeners = new ArrayList<CaseListener>(runListeners.size());
+        for (var runListener : runListeners) {
+            caseListeners.add(runListener.createCaseListener(datasetCase));
+        }
+        var parent = runInfo.parent();
+
+        // Eval owns the span structure: create the root span (name only), then let listeners
+        // decorate it.
         var rootSpan =
                 tracer.spanBuilder("eval") // TODO: allow names for eval cases
                         .setNoParent() // each eval case is its own trace
                         .setSpanKind(SpanKind.CLIENT)
-                        .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .setAttribute("braintrust.span_attributes", toJson(Map.of("type", "eval")))
-                        .setAttribute(
-                                "braintrust.input_json",
-                                toJson(Map.of("input", datasetCase.input())))
-                        .setAttribute("braintrust.expected", toJson(datasetCase.expected()))
                         .startSpan();
-        if (datasetCase.origin().isPresent()) {
-            rootSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
+        for (var cl : caseListeners) {
+            cl.onRootSpan(rootSpan, datasetCase);
         }
-        if (!datasetCase.tags().isEmpty()) {
-            rootSpan.setAttribute(
-                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
-        }
-        if (!datasetCase.metadata().isEmpty()) {
-            rootSpan.setAttribute(
-                    AttributeKey.stringKey("braintrust.metadata"), toJson(datasetCase.metadata()));
-        }
-        try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
-            final TaskResult<INPUT, OUTPUT> taskResult;
-            final String taskSpanId;
-            { // run task
-                var taskSpan =
-                        tracer.spanBuilder("task")
-                                .setAttribute(PARENT, "experiment_id:" + experimentId)
-                                .setAttribute(
-                                        "braintrust.span_attributes",
-                                        toJson(Map.of("type", "task")))
-                                .startSpan();
-                taskSpanId = taskSpan.getSpanContext().getSpanId();
-                try (var unused =
-                        BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
-                    taskResult = task.apply(datasetCase, parameters);
-                    rootSpan.setAttribute(
-                            "braintrust.output_json",
-                            toJson(Map.of("output", taskResult.result())));
-                } catch (Exception e) {
-                    taskSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                    taskSpan.recordException(e);
-                    taskSpan.end();
-                    rootSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                    rootSpan.setAttribute(
-                            "braintrust.output_json",
-                            toJson(Collections.singletonMap("output", null)));
-                    log.debug("Task threw exception for input: " + datasetCase.input(), e);
-                    // run scoreForTaskException on each scorer
-                    for (var scorer : scorers) {
-                        runScoreForTaskException(experimentId, rootSpan, scorer, e, datasetCase);
-                    }
-                    return;
+        try (var rootScope = makeCurrent(rootSpan, parent)) {
+            TaskResult<INPUT, OUTPUT> taskResult = null;
+            Exception taskError = null;
+            var taskSpan = tracer.spanBuilder("task").startSpan();
+            final String taskSpanId = taskSpan.getSpanContext().getSpanId();
+            for (var cl : caseListeners) {
+                cl.onTaskSpan(taskSpan, datasetCase);
+            }
+            try (var taskScope = makeCurrent(taskSpan, parent)) {
+                taskResult = task.apply(datasetCase, parameters);
+                for (var cl : caseListeners) {
+                    cl.onTaskSuccess(rootSpan, taskSpan, taskResult);
                 }
-                taskSpan.end();
+            } catch (Exception e) {
+                taskError = e;
+                for (var cl : caseListeners) {
+                    cl.onTaskError(rootSpan, taskSpan, datasetCase, e);
+                }
+            }
+            taskSpan.end();
+
+            if (taskError != null) {
+                log.debug("Task threw exception for input: " + datasetCase.input(), taskError);
+                // run scoreForTaskException on each scorer (score spans nest under the root span,
+                // since the task scope is now closed); classifiers are skipped
+                for (var scorer : scorers) {
+                    runScoreForTaskException(
+                            caseListeners, rootSpan, parent, scorer, taskError, datasetCase);
+                }
+                return;
             }
 
-            // Create a single BrainstoreTrace for this eval case, shared across all scorers.
-            // It fetches spans lazily on first access (only if a TracedScorer actually calls it).
-            // We wait specifically for the task span to appear, which guarantees its children
-            // (LLM spans, tool spans) have also been indexed — since children end before parents.
-            var rootTraceId = rootSpan.getSpanContext().getTraceId();
-            var trace =
-                    BrainstoreTrace.forExperiment(
-                            client, experimentId, rootTraceId, List.of(taskSpanId));
+            // A single BrainstoreTrace for this eval case, shared across all scorers/classifiers.
+            // It fetches spans lazily on first access (only if a traced scorer/classifier calls
+            // it). Only available when targeting an experiment.
+            BrainstoreTrace trace =
+                    runInfo.tracingSupported()
+                            ? BrainstoreTrace.forExperiment(
+                                    client,
+                                    Objects.requireNonNull(runInfo.experimentId()),
+                                    rootSpan.getSpanContext().getTraceId(),
+                                    List.of(taskSpanId))
+                            : null;
 
-            // run scorers - one span per scorer
+            // run scorers
             for (var scorer : scorers) {
-                runScorer(experimentId, rootSpan, scorer, taskResult, trace);
+                runScorer(caseListeners, rootSpan, parent, scorer, taskResult, trace);
             }
 
-            // run classifiers - one span per classifier. Classifier exceptions are non-fatal:
-            // they are recorded on the classifier span and surfaced in the root span's metadata
-            // under `classifier_errors`, but do not abort the eval or affect other classifiers/
-            // scorers. Classifiers only run when the task succeeded (no scoreForTaskException
-            // analogue).
-            if (!classifiers.isEmpty()) {
-                Map<String, List<Map<String, Object>>> caseClassifications = new LinkedHashMap<>();
-                Map<String, String> classifierErrors = new LinkedHashMap<>();
-                for (int i = 0; i < classifiers.size(); i++) {
-                    var classifier = classifiers.get(i);
-                    var classifierName = classifier.getName();
-                    if (classifierName == null || classifierName.isBlank()) {
-                        classifierName = "classifier_" + i;
-                    }
-                    runClassifier(
-                            experimentId,
-                            classifier,
-                            classifierName,
-                            taskResult,
-                            trace,
-                            caseClassifications,
-                            classifierErrors);
-                }
-                if (!caseClassifications.isEmpty()) {
-                    rootSpan.setAttribute(
-                            "braintrust.classifications", toJson(caseClassifications));
-                }
-                if (!classifierErrors.isEmpty()) {
-                    Map<String, Object> mergedMetadata =
-                            new LinkedHashMap<>(datasetCase.metadata());
-                    mergedMetadata.put("classifier_errors", classifierErrors);
-                    rootSpan.setAttribute(
-                            AttributeKey.stringKey("braintrust.metadata"), toJson(mergedMetadata));
-                }
+            // run classifiers. Classifier exceptions are non-fatal: they are recorded on the
+            // classifier span and surfaced in the root span's metadata under `classifier_errors`,
+            // but do not abort the eval or affect other classifiers/scorers. Classifiers only run
+            // when the task succeeded (no scoreForTaskException analogue).
+            for (int i = 0; i < classifiers.size(); i++) {
+                runClassifier(
+                        caseListeners, rootSpan, parent, classifiers.get(i), i, taskResult, trace);
             }
         } finally {
+            for (var cl : caseListeners) {
+                cl.onCaseEnd(rootSpan);
+            }
             rootSpan.end();
         }
     }
@@ -218,20 +197,24 @@ public final class Eval<INPUT, OUTPUT> {
     /**
      * Runs a scorer against a successful task result. If the scorer is a {@link TracedScorer}, it
      * receives the {@link BrainstoreTrace} for the eval case. If the scorer throws, falls back to
-     * {@link Scorer#scoreForScorerException}.
+     * {@link Scorer#scoreForScorerException}. {@code onScoreResult} is dispatched only when scores
+     * are valid; on validation/fallback failure the span is still ended and the eval aborts.
      */
     private void runScorer(
-            String experimentId,
+            List<CaseListener> caseListeners,
             Span rootSpan,
+            BraintrustUtils.Parent parent,
             Scorer<INPUT, OUTPUT> scorer,
             TaskResult<INPUT, OUTPUT> taskResult,
-            BrainstoreTrace trace) {
-        var scoreSpan =
-                tracer.spanBuilder("score")
-                        .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .startSpan();
-        try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
+            @Nullable BrainstoreTrace trace) {
+        var scoreSpan = tracer.spanBuilder("score").startSpan();
+        for (var cl : caseListeners) {
+            cl.onScoreSpan(scoreSpan, scorer);
+        }
+        RuntimeException pending = null;
+        try (var unused = makeCurrent(scoreSpan, parent)) {
             List<Score> scores;
+            Exception scoreException = null;
             try {
                 if (scorer instanceof TracedScorer<INPUT, OUTPUT> tracedScorer) {
                     scores = tracedScorer.score(taskResult, trace);
@@ -239,142 +222,125 @@ public final class Eval<INPUT, OUTPUT> {
                     scores = scorer.score(taskResult);
                 }
             } catch (Exception e) {
-                scoreSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                scoreSpan.recordException(e);
+                scoreException = e;
                 log.debug("Scorer '{}' threw exception", scorer.getName(), e);
                 // fall back to scoreForScorerException — if this throws, eval aborts
                 scores = scorer.scoreForScorerException(e, taskResult);
             }
-            recordScores(scoreSpan, rootSpan, scorer, scores);
+            validateScores(scorer, scores);
+            final var finalScores = scores;
+            final var finalException = scoreException;
+            for (var cl : caseListeners) {
+                cl.onScoreResult(scoreSpan, rootSpan, scorer, finalScores, finalException);
+            }
+        } catch (RuntimeException re) {
+            // validation (or a throwing fallback) aborts the eval; record nothing for this score
+            pending = re;
         } finally {
             scoreSpan.end();
+        }
+        if (pending != null) {
+            throw pending;
         }
     }
 
     /**
-     * Runs {@link Scorer#scoreForTaskException} when the task threw. If the fallback throws, the
-     * eval aborts.
+     * Runs {@link Scorer#scoreForTaskException} when the task threw. If the fallback (or score
+     * validation) throws, the eval aborts — but the score span is still ended.
      */
     private void runScoreForTaskException(
-            String experimentId,
+            List<CaseListener> caseListeners,
             Span rootSpan,
+            BraintrustUtils.Parent parent,
             Scorer<INPUT, OUTPUT> scorer,
             Exception taskException,
             DatasetCase<INPUT, OUTPUT> datasetCase) {
-        var scoreSpan =
-                tracer.spanBuilder("score")
-                        .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .startSpan();
-        try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
-            // if this throws, it propagates and the eval aborts
+        var scoreSpan = tracer.spanBuilder("score").startSpan();
+        for (var cl : caseListeners) {
+            cl.onScoreSpan(scoreSpan, scorer);
+        }
+        RuntimeException pending = null;
+        try (var unused = makeCurrent(scoreSpan, parent)) {
             var scores = scorer.scoreForTaskException(taskException, datasetCase);
-            recordScores(scoreSpan, rootSpan, scorer, scores);
+            validateScores(scorer, scores);
+            for (var cl : caseListeners) {
+                cl.onScoreResult(scoreSpan, rootSpan, scorer, scores, null);
+            }
+        } catch (RuntimeException re) {
+            pending = re;
         } finally {
             scoreSpan.end();
+        }
+        if (pending != null) {
+            throw pending;
         }
     }
 
     /**
-     * Runs a classifier inside its own span. Exceptions are recorded on the classifier span and
-     * surfaced via {@code classifierErrors}; they do not propagate.
+     * Runs a classifier inside its own span. Exceptions are non-fatal: they are surfaced to
+     * listeners via the {@code classifierException} argument of {@code onClassifierResult} and do
+     * not propagate.
      */
     private void runClassifier(
-            String experimentId,
+            List<CaseListener> caseListeners,
+            Span rootSpan,
+            BraintrustUtils.Parent parent,
             Classifier<INPUT, OUTPUT> classifier,
-            String resolvedName,
+            int index,
             TaskResult<INPUT, OUTPUT> taskResult,
-            BrainstoreTrace trace,
-            Map<String, List<Map<String, Object>>> caseClassifications,
-            Map<String, String> classifierErrors) {
-        var classifierSpan =
-                tracer.spanBuilder(resolvedName)
-                        .setAttribute(PARENT, "experiment_id:" + experimentId)
-                        .startSpan();
-        try (var unused =
-                BraintrustContext.ofExperiment(experimentId, classifierSpan).makeCurrent()) {
-            Map<String, Object> spanAttrs = new LinkedHashMap<>();
-            spanAttrs.put("type", "classifier");
-            spanAttrs.put("name", resolvedName);
-            spanAttrs.put("purpose", "scorer");
-            classifierSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
-
-            List<Classification> classifications;
-            try {
-                if (classifier instanceof TracedClassifier<INPUT, OUTPUT> tracedClassifier) {
-                    classifications = tracedClassifier.classify(taskResult, trace);
-                } else {
-                    classifications = classifier.classify(taskResult);
-                }
-                if (classifications == null) {
-                    classifications = List.of();
-                }
-            } catch (Exception e) {
-                classifierSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                classifierSpan.recordException(e);
-                log.debug("Classifier '{}' threw exception", resolvedName, e);
-                classifierErrors.put(
-                        resolvedName, e.getMessage() == null ? e.toString() : e.getMessage());
-                return;
+            @Nullable BrainstoreTrace trace) {
+        var resolvedName = classifier.getName();
+        if (resolvedName == null || resolvedName.isBlank()) {
+            resolvedName = "classifier_" + index;
+        }
+        var classifierSpan = tracer.spanBuilder(resolvedName).startSpan();
+        for (var cl : caseListeners) {
+            cl.onClassifierSpan(classifierSpan, classifier, resolvedName);
+        }
+        List<Classification> classifications = List.of();
+        Exception classifierException = null;
+        try (var unused = makeCurrent(classifierSpan, parent)) {
+            if (classifier instanceof TracedClassifier<INPUT, OUTPUT> tracedClassifier) {
+                classifications = tracedClassifier.classify(taskResult, trace);
+            } else {
+                classifications = classifier.classify(taskResult);
             }
-
-            // Group results by resolved item name (item.name, falling back to the classifier
-            // name when blank). Same map is logged to the classifier span and merged into the
-            // per-case aggregate logged on the root span.
-            Map<String, List<Map<String, Object>>> outputByName = new LinkedHashMap<>();
-            for (var item : classifications) {
-                var itemName = item.name();
-                if (itemName == null || itemName.isBlank()) {
-                    itemName = resolvedName;
-                }
-                var itemMap = toClassificationItem(item);
-                outputByName.computeIfAbsent(itemName, k -> new ArrayList<>()).add(itemMap);
-                caseClassifications.computeIfAbsent(itemName, k -> new ArrayList<>()).add(itemMap);
+            if (classifications == null) {
+                classifications = List.of();
             }
-            classifierSpan.setAttribute("braintrust.output_json", toJson(outputByName));
+        } catch (Exception e) {
+            classifierException = e;
+            classifications = List.of();
+            log.debug("Classifier '{}' threw exception", resolvedName, e);
         } finally {
+            final var finalClassifications = classifications;
+            final var finalException = classifierException;
+            final var finalResolvedName = resolvedName;
+            for (var cl : caseListeners) {
+                cl.onClassifierResult(
+                        classifierSpan,
+                        rootSpan,
+                        classifier,
+                        finalResolvedName,
+                        finalClassifications,
+                        finalException);
+            }
             classifierSpan.end();
         }
     }
 
-    /**
-     * Converts a {@link Classification} to the wire-format {@code ClassificationItem}: drops {@code
-     * name}, includes {@code label} and {@code metadata} only when present.
-     */
-    private static Map<String, Object> toClassificationItem(Classification c) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", c.id());
-        if (c.label() != null) {
-            m.put("label", c.label());
-        }
-        if (c.metadata() != null) {
-            m.put("metadata", c.metadata());
-        }
-        return m;
-    }
-
-    /** Validates and records scores on the score span and root span. */
-    private void recordScores(
-            Span scoreSpan, Span rootSpan, Scorer<INPUT, OUTPUT> scorer, List<Score> scores) {
-        if (scores == null || scores.isEmpty()) {
+    /** Validates that every score value is between 0 and 1 inclusive. Throws (aborting) if not. */
+    private void validateScores(Scorer<INPUT, OUTPUT> scorer, @Nullable List<Score> scores) {
+        if (scores == null) {
             return;
         }
-        final Map<String, Double> scorerScores = new LinkedHashMap<>();
         for (var score : scores) {
             if (score.value() < 0.0 || score.value() > 1.0) {
                 throw new RuntimeException(
                         "score must be between 0 and 1: %s : %s"
                                 .formatted(scorer.getName(), score));
             }
-            scorerScores.put(score.name(), score.value());
         }
-        Map<String, Object> spanAttrs = new LinkedHashMap<>();
-        spanAttrs.put("type", "score");
-        spanAttrs.put("name", scorer.getName());
-        spanAttrs.put("purpose", "scorer");
-        scoreSpan.setAttribute("braintrust.span_attributes", toJson(spanAttrs));
-        var scoresJson = toJson(scorerScores);
-        scoreSpan.setAttribute("braintrust.output_json", scoresJson);
-        scoreSpan.setAttribute("braintrust.scores", scoresJson);
     }
 
     /** Creates a new eval builder. */
@@ -384,7 +350,7 @@ public final class Eval<INPUT, OUTPUT> {
 
     /** Builder for creating evaluations with fluent API. */
     public static final class Builder<INPUT, OUTPUT> {
-        public @Nonnull Dataset<INPUT, OUTPUT> dataset;
+        private @Nonnull Dataset<INPUT, OUTPUT> dataset;
         private @Nonnull String experimentName = "unnamed-java-eval";
         private @Nullable BraintrustConfig config;
         private @Nullable BraintrustOpenApiClient apiClient;
@@ -397,6 +363,10 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nonnull Map<String, Object> parameterValues = Map.of();
         private @Nonnull List<String> tags = List.of();
         private @Nonnull Map<String, Object> metadata = Map.of();
+        private @Nonnull EvalTargetProvider targetProvider = new ExperimentTargetProvider();
+        // Seeded with the standard span decorator; removable via clearListeners().
+        private @Nonnull List<EvalListener> listeners =
+                new ArrayList<>(List.of(new EvalSpanDecorator()));
 
         public Eval<INPUT, OUTPUT> build() {
             if (config == null) {
@@ -512,6 +482,30 @@ public final class Eval<INPUT, OUTPUT> {
         /** Sets tags for the experiment (varargs convenience method). */
         public Builder<INPUT, OUTPUT> tags(String... tags) {
             this.tags = List.of(tags);
+            return this;
+        }
+
+        /** Adds a listener which will be notified of eval lifecycle events. */
+        public Builder<INPUT, OUTPUT> addListener(@Nonnull EvalListener listener) {
+            this.listeners.add(Objects.requireNonNull(listener));
+            return this;
+        }
+
+        /**
+         * Removes all attached listeners, including the built-in {@link EvalSpanDecorator}. Use
+         * this to fully control span decoration (e.g. the playground attaches its own decorator).
+         */
+        public Builder<INPUT, OUTPUT> clearListeners() {
+            this.listeners.clear();
+            return this;
+        }
+
+        /**
+         * Overrides how the eval target (parent / experiment) is resolved. Defaults to creating a
+         * Braintrust experiment ({@link ExperimentTargetProvider}).
+         */
+        public Builder<INPUT, OUTPUT> evalTargetProvider(@Nonnull EvalTargetProvider provider) {
+            this.targetProvider = Objects.requireNonNull(provider);
             return this;
         }
 
