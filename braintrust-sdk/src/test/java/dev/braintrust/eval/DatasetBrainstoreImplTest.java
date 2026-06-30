@@ -266,6 +266,47 @@ public class DatasetBrainstoreImplTest {
     }
 
     @Test
+    void testTagsPopulatedFromDatasetRow() {
+        wireMock.stubFor(
+                post(urlEqualTo("/v1/dataset/" + datasetId + "/fetch"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                {
+                                  "events": [
+                                    {
+                                      "object_type": "dataset",
+                                      "dataset_id": "%s",
+                                      "id": "meta-row-1",
+                                      "_xact_id": "1",
+                                      "created": "2024-01-01T00:00:00Z",
+                                      "input": "test input",
+                                      "expected": "test output",
+                                      "tags": ["unit-test"]
+                                    }
+                                  ],
+                                  "cursor": null
+                                }
+                                """
+                                                        .formatted(datasetId))));
+
+        DatasetBrainstoreImpl<String, String> dataset =
+                new DatasetBrainstoreImpl<>(apiClient, datasetId, "test-version");
+
+        List<DatasetCase<String, String>> cases = new ArrayList<>();
+        dataset.forEach(cases::add);
+
+        assertEquals(1, cases.size());
+        List<String> tags = cases.get(0).tags();
+        assertFalse(tags.isEmpty(), "tags should not be empty");
+        assertEquals(1, tags.size());
+        assertEquals("unit-test", tags.get(0));
+    }
+
+    @Test
     void testFetchFromBraintrustNotFound() {
         String projectName = "test-project";
         String datasetName = "nonexistent";
