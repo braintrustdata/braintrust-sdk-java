@@ -64,7 +64,6 @@ public final class ExperimentTargetProvider implements EvalTargetProvider {
                 null,
                 experimentId,
                 experimentName,
-                experimentUrl,
-                true);
+                experimentUrl);
     }
 }

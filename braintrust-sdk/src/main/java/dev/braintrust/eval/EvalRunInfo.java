@@ -15,13 +15,10 @@ import javax.annotation.Nullable;
  * @param experimentName the experiment's actual (possibly deduped) name, when running against an
  *     experiment; otherwise null
  * @param experimentUrl the experiment URL, when applicable; otherwise null
- * @param tracingSupported whether a {@link dev.braintrust.trace.BrainstoreTrace} can be built for
- *     traced scorers/classifiers (true only in experiment mode)
  */
 public record EvalRunInfo(
         @Nonnull BraintrustUtils.Parent parent,
         @Nullable String generation,
         @Nullable String experimentId,
         @Nullable String experimentName,
-        @Nullable String experimentUrl,
-        boolean tracingSupported) {}
+        @Nullable String experimentUrl) {}

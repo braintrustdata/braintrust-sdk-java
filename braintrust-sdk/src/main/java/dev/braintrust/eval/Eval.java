@@ -163,12 +163,14 @@ public final class Eval<INPUT, OUTPUT> {
 
             // A single BrainstoreTrace for this eval case, shared across all scorers/classifiers.
             // It fetches spans lazily on first access (only if a traced scorer/classifier calls
-            // it). Only available when targeting an experiment.
+            // it). Built via forExperiment(...), which queries experiment('<id>'), so it can only
+            // be built when there is an experiment to read spans back from. Runs without an
+            // experiment id (e.g. playground) get a null trace.
             BrainstoreTrace trace =
-                    runInfo.tracingSupported()
+                    runInfo.experimentId() != null
                             ? BrainstoreTrace.forExperiment(
                                     client,
-                                    Objects.requireNonNull(runInfo.experimentId()),
+                                    runInfo.experimentId(),
                                     rootSpan.getSpanContext().getTraceId(),
                                     List.of(taskSpanId))
                             : null;

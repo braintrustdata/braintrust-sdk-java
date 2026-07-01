@@ -402,6 +402,8 @@ public class Devserver {
                     // weave the request's generation into span attributes, and use the playground
                     // span decorator in place of the standard one.
                     var pi = playgroundParent.get();
+                    // No experiment id -> Eval won't build a BrainstoreTrace (traced scorers get a
+                    // null trace). The devserver bypasses tracing this way rather than via a flag.
                     builder.evalTargetProvider(
                                     ctx ->
                                             new EvalRunInfo(
@@ -409,8 +411,7 @@ public class Devserver {
                                                     pi.generation(),
                                                     null,
                                                     null,
-                                                    null,
-                                                    false))
+                                                    null))
                             .clearListeners()
                             .addListener(new PlaygroundSpanDecorator());
                 } else {
