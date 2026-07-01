@@ -1,0 +1,45 @@
+{
+  "id" : "f0bf4ccb-ccb4-3056-affc-61b178ead1c4",
+  "name" : "v1_experiment",
+  "request" : {
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"java-experiment-repro\",\"ensure_new\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_experiment-b23c58a28a5b.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "f1kwoE4aoAMEXmg=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "466",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a454e6a-747e473e09a004224201fe22;Parent=6f5343f5544a6754;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Wed, 01 Jul 2026 17:29:14 GMT",
+      "Via" : "1.1 b669d9add7767f73665f1f8b7e8cd802.cloudfront.net (CloudFront), 1.1 d49bde7225e80ca0dc457ff2b8b4343e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a454e6a0000000025ad31443b9fc415",
+      "x-amzn-RequestId" : "4be097f3-2353-4649-98a7-c0bafc1b2956",
+      "X-Amz-Cf-Id" : "Vz-aNJEkBtvye6O2gPxE5g16lR4THiAAvMTxLbV_NAB9f6ViAmB4Sw==",
+      "etag" : "W/\"1d2-2vX1I97rHgKA0rtbQJQk3D0j8Xs\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "f0bf4ccb-ccb4-3056-affc-61b178ead1c4",
+  "persistent" : true,
+  "insertionIndex" : 141
+}

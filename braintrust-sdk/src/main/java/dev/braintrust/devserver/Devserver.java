@@ -377,9 +377,30 @@ public class Devserver {
                         BraintrustUtils.createProjectURI(
                                         braintrust.config().appUrl(), orgName, projectName)
                                 .toASCIIString();
-                final var experimentUrl = projectUrl + "/experiments/" + experimentName;
 
                 var tracer = BraintrustTracing.getTracer();
+
+                // A remote eval can be triggered two ways:
+                //   1. Playground run: the request carries a `parent` object (playground_id). We
+                //      stream per-case progress under that parent (handled by the loop below).
+                //   2. Experiment "snapshot": no such parent (instead experiment_name + project).
+                //      We run a standard Eval, which creates a real experiment and emits standard
+                //      spans, then send a summary + done with the experiment link.
+                final var playgroundParent = extractPlaygroundParent(request);
+                if (playgroundParent.isEmpty()) {
+                    handleExperimentSnapshot(
+                            os,
+                            eval,
+                            request,
+                            braintrust,
+                            apiClient,
+                            projectId,
+                            projectName,
+                            projectUrl,
+                            experimentName,
+                            remoteScorers);
+                    return;
+                }
 
                 // Merge parameters: evaluator defaults + request overrides
                 final Parameters mergedParameters =
@@ -391,7 +412,7 @@ public class Devserver {
 
                 // Execute task and scorers for each case
                 final Map<String, List<Double>> scoresByName = new ConcurrentHashMap<>();
-                final var parentInfo = extractParentInfo(request);
+                final var parentInfo = playgroundParent.get();
                 final var braintrustParent = parentInfo.braintrustParent();
                 final var braintrustGeneration = parentInfo.generation();
 
@@ -547,13 +568,7 @@ public class Devserver {
                 }
 
                 sendSummaryEvent(
-                        os,
-                        projectName,
-                        projectId,
-                        experimentName,
-                        projectUrl,
-                        experimentUrl,
-                        scoreSummaries);
+                        os, projectName, projectId, experimentName, projectUrl, scoreSummaries);
                 sendDoneEvent(os);
             } catch (Exception e) {
                 // Send error event via SSE
@@ -575,6 +590,73 @@ public class Devserver {
                 }
             }
         }
+    }
+
+    /**
+     * Handles an experiment "snapshot" run: a remote eval triggered as an Experiment from the UI
+     * (no playground parent). Rather than re-implementing experiment creation and span emission, it
+     * builds a first-class {@link Eval} and runs it synchronously — so snapshots get the exact same
+     * behavior as a normal {@code Eval.run()} (experiment creation with {@code ensure_new}, dataset
+     * id/version linkage for Braintrust-backed datasets, standard span shape). When the run
+     * completes it streams a single {@code summary} (with the created experiment's id/name/url) and
+     * a {@code done} event.
+     *
+     * <p>Unlike playground runs, snapshots do not stream per-case {@code progress} events: the user
+     * is handed the experiment link and views results in the experiment UI.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <I, O> void handleExperimentSnapshot(
+            OutputStream os,
+            RemoteEval<I, O> eval,
+            EvalRequest request,
+            Braintrust braintrust,
+            BraintrustOpenApiClient apiClient,
+            String projectId,
+            String projectName,
+            String projectUrl,
+            String experimentName,
+            List<Scorer<I, O>> remoteScorers)
+            throws IOException {
+        // Combine local scorers (from the RemoteEval) with remote scorers (from the request).
+        List<Scorer<I, O>> allScorers = new ArrayList<>(eval.getScorers());
+        allScorers.addAll(remoteScorers);
+
+        // TODO: when async evals are supported, simply begin the eval and hand back the link to the
+        // user and finish eval in the background
+
+        var evalResult =
+                Eval.<I, O>builder()
+                        .name(experimentName)
+                        .config(braintrust.config())
+                        .apiClient(apiClient)
+                        .projectId(projectId)
+                        .dataset((Dataset<I, O>) extractDataset(request, apiClient))
+                        .task(eval.getTask())
+                        .scorers(allScorers.toArray(new Scorer[0]))
+                        .parameters(eval.getParameters())
+                        .parameterValues(
+                                request.getParameters() == null
+                                        ? Map.of()
+                                        : request.getParameters())
+                        // Each snapshot run should produce a distinct experiment even if a prior
+                        // run used the same name (the backend dedupes the name on conflict).
+                        .ensureNew(true)
+                        .build()
+                        .run();
+
+        // Snapshots don't stream per-scorer progress. The scores are recorded on the experiment
+        // and visible via the experiment link.
+        sendExperimentSnapshotSummaryEvent(
+                os,
+                projectName,
+                projectId,
+                evalResult.getExperimentId(),
+                evalResult.getExperimentName() != null
+                        ? evalResult.getExperimentName()
+                        : experimentName,
+                projectUrl,
+                evalResult.getExperimentUrl());
+        sendExperimentSnapshotDoneEvent(os);
     }
 
     private void setEvalSpanAttributes(
@@ -802,7 +884,6 @@ public class Devserver {
             String projectId,
             String experimentName,
             String projectUrl,
-            String experimentUrl,
             Map<String, EvalResponse.ScoreSummary> scoreSummaries)
             throws IOException {
         Map<String, Object> summary = new LinkedHashMap<>();
@@ -832,6 +913,40 @@ public class Devserver {
     }
 
     private void sendDoneEvent(OutputStream os) throws IOException {
+        sendSSEEvent(os, "done", "");
+    }
+
+    /**
+     * Sends the {@code summary} event for an experiment snapshot run. Unlike {@link
+     * #sendSummaryEvent} (playground), this references the created experiment via {@code
+     * experimentId}/{@code experimentUrl} so the UI can link straight to it, and carries no
+     * streamed per-scorer scores (results live on the experiment itself).
+     */
+    private void sendExperimentSnapshotSummaryEvent(
+            OutputStream os,
+            String projectName,
+            String projectId,
+            @Nullable String experimentId,
+            String experimentName,
+            String projectUrl,
+            @Nullable String experimentUrl)
+            throws IOException {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("projectName", projectName);
+        summary.put("projectId", projectId);
+        summary.put("experimentId", experimentId);
+        summary.put("experimentName", experimentName);
+        summary.put("projectUrl", projectUrl);
+        summary.put("experimentUrl", experimentUrl);
+        summary.put("comparisonExperimentName", null);
+        summary.put("scores", Map.of());
+        summary.put("metrics", Map.of());
+
+        sendSSEEvent(os, "summary", toJson(summary));
+    }
+
+    /** Sends the terminating {@code done} event for an experiment snapshot run. */
+    private void sendExperimentSnapshotDoneEvent(OutputStream os) throws IOException {
         sendSSEEvent(os, "done", "");
     }
 
@@ -1105,44 +1220,50 @@ public class Devserver {
             @Nonnull BraintrustUtils.Parent braintrustParent, @Nullable String generation) {}
 
     /**
-     * Extracts parent information from the eval request.
+     * Extracts the playground parent (and generation) from the eval request, if present.
+     *
+     * <p>Playground runs send a {@code parent} object carrying {@code object_type}/{@code
+     * object_id}; experiment ("snapshot") runs send no such parent (instead {@code experiment_name}
+     * + project via headers) and are handled by {@link #handleExperimentSnapshot}. Returns empty
+     * for the latter case.
      *
      * @param request The eval request
-     * @return ParentInfo containing braintrustParent and generation
+     * @return the playground {@link ParentInfo} if this is a playground run, else empty
      */
-    private static ParentInfo extractParentInfo(EvalRequest request) {
-        String parentSpec = null;
+    private static Optional<ParentInfo> extractPlaygroundParent(EvalRequest request) {
+        if (!(request.getParent() instanceof Map)) {
+            return Optional.empty();
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
+        String objectType = (String) parentMap.get("object_type");
+        String objectId = (String) parentMap.get("object_id");
+        if (objectType == null && objectId == null) {
+            return Optional.empty();
+        }
+
+        if (objectType == null || objectId == null) {
+            throw new IllegalArgumentException(
+                    "malformed braintrust parent: %s, %s".formatted(objectType, objectId));
+        }
+
+        // Extract generation from propagated_event.span_attributes.generation
         String generation = null;
-
-        // Extract parent spec and generation from request
-        if (request.getParent() != null && request.getParent() instanceof Map) {
+        Object propEventObj = parentMap.get("propagated_event");
+        if (propEventObj instanceof Map) {
             @SuppressWarnings("unchecked")
-            Map<String, Object> parentMap = (Map<String, Object>) request.getParent();
-            String objectType = (String) parentMap.get("object_type");
-            String objectId = (String) parentMap.get("object_id");
-
-            // Extract generation from propagated_event.span_attributes.generation
-            Object propEventObj = parentMap.get("propagated_event");
-            if (propEventObj instanceof Map) {
+            Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
+            Object spanAttrsObj = propEvent.get("span_attributes");
+            if (spanAttrsObj instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> propEvent = (Map<String, Object>) propEventObj;
-                Object spanAttrsObj = propEvent.get("span_attributes");
-                if (spanAttrsObj instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
-                    generation = (String) spanAttrs.get("generation");
-                }
-            }
-
-            if (objectType != null && objectId != null) {
-                parentSpec = "playground_id:" + objectId;
+                Map<String, Object> spanAttrs = (Map<String, Object>) spanAttrsObj;
+                generation = (String) spanAttrs.get("generation");
             }
         }
 
-        if (parentSpec == null) {
-            throw new IllegalArgumentException("braintrust parent (playground_id) not found");
-        }
-        return new ParentInfo(BraintrustUtils.parseParent(parentSpec), generation);
+        return Optional.of(
+                new ParentInfo(
+                        BraintrustUtils.parseParent("playground_id:" + objectId), generation));
     }
 
     /**

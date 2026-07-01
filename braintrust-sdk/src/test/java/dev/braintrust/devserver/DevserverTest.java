@@ -544,6 +544,156 @@ class DevserverTest {
     }
 
     @Test
+    void testExperimentEval() throws Exception {
+        // A remote eval triggered as an *Experiment* (snapshot) from the UI sends no playground
+        // parent — instead an experiment_name (+ project via headers). The devserver should build
+        // and run a standard Eval, which creates a fresh experiment and parents spans to
+        // experiment_id:<id>. It then streams only summary + done (no per-case progress).
+        final String experimentName = "java-experiment-repro";
+
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(REMOTE_EVAL_NAME);
+        evalRequest.setStream(true);
+        evalRequest.setExperimentName(experimentName);
+        // Note: no parent set -> experiment-snapshot path.
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("apple");
+        case1.setExpected("fruit");
+        EvalRequest.EvalCaseData case2 = new EvalRequest.EvalCaseData();
+        case2.setInput("carrot");
+        case2.setExpected("vegetable");
+        dataSpec.setData(List.of(case1, case2));
+        evalRequest.setData(dataSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        List<Map<String, String>> progressEvents =
+                events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        List<Map<String, String>> doneEvents =
+                events.stream().filter(e -> "done".equals(e.get("event"))).toList();
+        // Snapshots don't stream per-case progress: only a terminating summary + done.
+        assertEquals(0, progressEvents.size(), "Snapshot runs should not send progress events");
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+        assertEquals(1, doneEvents.size(), "Should have 1 done event");
+
+        // The summary should reference the created experiment (unlike playground runs). The id is
+        // whatever the backend assigned — derive it from the summary rather than hardcoding.
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
+        assertEquals(TestHarness.defaultProjectName(), summaryData.get("projectName").asText());
+        assertTrue(summaryData.get("experimentName").asText().startsWith(experimentName));
+        assertFalse(
+                summaryData.get("experimentId").isNull(),
+                "experiment run should have an experimentId");
+        assertFalse(
+                summaryData.get("experimentUrl").isNull(),
+                "experiment run should have an experimentUrl");
+        String experimentId = summaryData.get("experimentId").asText();
+
+        // Spans should be parented to experiment_id:<id> using the standard Eval span shape.
+        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        String expectedParent = "experiment_id:" + experimentId;
+        var evalSpans =
+                allSpans.stream()
+                        .filter(s -> s.getName().equals("eval"))
+                        .filter(
+                                s ->
+                                        expectedParent.equals(
+                                                s.getAttributes()
+                                                        .get(
+                                                                AttributeKey.stringKey(
+                                                                        "braintrust.parent"))))
+                        .toList();
+        assertEquals(2, evalSpans.size(), "Should have 2 eval spans parented to the experiment");
+
+        for (SpanData evalSpan : evalSpans) {
+            JsonNode spanAttrs =
+                    JSON_MAPPER.readTree(
+                            evalSpan.getAttributes()
+                                    .get(AttributeKey.stringKey("braintrust.span_attributes")));
+            assertEquals("eval", spanAttrs.get("type").asText());
+            // Standard Eval span shape uses braintrust.expected (not the playground's
+            // expected_json) and carries no playground-specific "generation" key.
+            assertFalse(
+                    spanAttrs.has("generation"), "experiment spans should not carry generation");
+            assertNotNull(
+                    evalSpan.getAttributes().get(AttributeKey.stringKey("braintrust.expected")),
+                    "standard Eval decorator should set braintrust.expected");
+        }
+    }
+
+    @Test
+    void testMalformedParent() throws Exception {
+        // A parent with only one of object_type/object_id set is neither a valid playground run
+        // nor an experiment snapshot (which sends no parent at all). extractPlaygroundParent
+        // rejects it with an IllegalArgumentException, which is streamed back as an SSE error
+        // event.
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(REMOTE_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput("apple");
+        case1.setExpected("fruit");
+        dataSpec.setData(List.of(case1));
+        evalRequest.setData(dataSpec);
+
+        // object_type present but object_id missing -> malformed parent.
+        Map<String, Object> parentSpec = Map.of("object_type", PLAYGROUND_PARENT.type());
+        evalRequest.setParent(parentSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        // Streaming has already begun, so the failure surfaces as an SSE error event (not an HTTP
+        // error status).
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSSEEvents(conn);
+
+        List<Map<String, String>> errorEvents =
+                events.stream().filter(e -> "error".equals(e.get("event"))).toList();
+        assertEquals(1, errorEvents.size(), "Malformed parent should produce a single error event");
+        assertTrue(
+                errorEvents.get(0).get("data").contains("malformed braintrust parent"),
+                "Error message should mention the malformed parent");
+
+        // A malformed parent should abort before any experiment is created or summarized.
+        assertTrue(
+                events.stream().noneMatch(e -> "summary".equals(e.get("event"))),
+                "Malformed parent should not produce a summary event");
+    }
+
+    @Test
     void testEvaluatorNotFound() throws Exception {
         EvalRequest request = new EvalRequest();
         request.setName("non-existent-eval");
