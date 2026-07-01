@@ -46,6 +46,7 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull List<String> tags;
     private final @Nonnull Map<String, Object> metadata;
     private final @Nonnull Parameters parameters;
+    private final boolean ensureNew;
 
     private Eval(Builder<INPUT, OUTPUT> builder) {
         this.experimentName = builder.experimentName;
@@ -63,6 +64,7 @@ public final class Eval<INPUT, OUTPUT> {
         this.tags = List.copyOf(builder.tags);
         this.metadata = Map.copyOf(builder.metadata);
         this.parameters = builder.buildParameters();
+        this.ensureNew = builder.ensureNew;
     }
 
     /** Runs the evaluation and returns results. */
@@ -78,6 +80,9 @@ public final class Eval<INPUT, OUTPUT> {
             var createExperiment =
                     new CreateExperiment().projectId(project.getId()).name(experimentName);
 
+            if (ensureNew) {
+                createExperiment.ensureNew(true);
+            }
             if (!tags.isEmpty()) {
                 createExperiment.tags(tags);
             }
@@ -90,16 +95,22 @@ public final class Eval<INPUT, OUTPUT> {
             var experiment = new ExperimentsApi(client).postExperiment(createExperiment);
 
             cursor.forEach(datasetCase -> evalOne(experiment.getId().toString(), datasetCase));
-        }
 
-        var experimentUrl =
-                "%s/experiments/%s"
-                        .formatted(
-                                BraintrustUtils.createProjectURI(
-                                                config.appUrl(), orgInfo.name(), project.getName())
-                                        .toASCIIString(),
-                                experimentName);
-        return new EvalResult(experimentUrl);
+            // Use the experiment's actual name from the response: with ensure_new the backend may
+            // dedupe a conflicting name (e.g. "foo" -> "foo-2f8ca776"), and the URL must point at
+            // the real, created experiment.
+            var resolvedName = experiment.getName() != null ? experiment.getName() : experimentName;
+            var experimentUrl =
+                    "%s/experiments/%s"
+                            .formatted(
+                                    BraintrustUtils.createProjectURI(
+                                                    config.appUrl(),
+                                                    orgInfo.name(),
+                                                    project.getName())
+                                            .toASCIIString(),
+                                    resolvedName);
+            return new EvalResult(experiment.getId().toString(), resolvedName, experimentUrl);
+        }
     }
 
     private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
@@ -397,6 +408,7 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nonnull Map<String, Object> parameterValues = Map.of();
         private @Nonnull List<String> tags = List.of();
         private @Nonnull Map<String, Object> metadata = Map.of();
+        private boolean ensureNew = false;
 
         public Eval<INPUT, OUTPUT> build() {
             if (config == null) {
@@ -518,6 +530,17 @@ public final class Eval<INPUT, OUTPUT> {
         /** Sets metadata for the experiment. */
         public Builder<INPUT, OUTPUT> metadata(Map<String, Object> metadata) {
             this.metadata = Map.copyOf(metadata);
+            return this;
+        }
+
+        /**
+         * When {@code true}, sets {@code ensure_new} on the create-experiment request so a new
+         * experiment is always created even if one with the same name already exists (the backend
+         * dedupes the name on conflict). Useful for repeated runs (e.g. UI/remote snapshots) that
+         * should each produce a distinct experiment. Defaults to {@code false}.
+         */
+        public Builder<INPUT, OUTPUT> ensureNew(boolean ensureNew) {
+            this.ensureNew = ensureNew;
             return this;
         }
 
