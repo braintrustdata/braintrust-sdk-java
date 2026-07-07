@@ -39,6 +39,12 @@ class DevserverTest {
 
     private static final String REMOTE_EVAL_NAME = "food-type-classifier";
     private static final String PARAM_EVAL_NAME = "param-eval";
+    private static final String TYPED_EVAL_NAME = "typed-eval";
+
+    public record TypedInput(String prompt, int n) {}
+
+    public record TypedOutput(String answer) {}
+
     private static final String TASK_ERROR_EVAL_NAME = "task-error-eval";
     private static final String SCORER_ERROR_EVAL_NAME = "scorer-error-eval";
     private static final BraintrustUtils.Parent PLAYGROUND_PARENT =
@@ -154,8 +160,23 @@ class DevserverTest {
                         .scorer(Scorer.of("static_scorer", (expected, result) -> 1.0))
                         .build();
 
+        // Typed eval: input/expected are deserialized into records via builder(Class, Class)
+        RemoteEval<TypedInput, TypedOutput> typedEval =
+                RemoteEval.builder(TypedInput.class, TypedOutput.class)
+                        .name(TYPED_EVAL_NAME)
+                        .taskFunction(input -> new TypedOutput(input.prompt() + ":" + input.n()))
+                        .scorer(
+                                Scorer.of(
+                                        "typed_scorer",
+                                        (expected, result) ->
+                                                expected.answer().equals(result.answer())
+                                                        ? 1.0
+                                                        : 0.0))
+                        .build();
+
         server =
                 Devserver.builder()
+                        .registerEval(typedEval)
                         .config(testHarness.braintrust().config())
                         .registerEval(testEval)
                         .registerEval(paramEval)
@@ -207,6 +228,91 @@ class DevserverTest {
         assertEquals(200, response.statusCode());
         assertEquals("Hello, world!", response.body());
         assertEquals("text/plain", response.headers().firstValue("Content-Type").orElse(""));
+    }
+
+    @Test
+    void testStreamingEvalWithTypedInputOutput() throws Exception {
+        // Inline case data arrives as raw JSON; the typed eval (built via
+        // RemoteEval.builder(Class, Class)) must deserialize it into records before
+        // invoking the task and scorers.
+        EvalRequest evalRequest = new EvalRequest();
+        evalRequest.setName(TYPED_EVAL_NAME);
+        evalRequest.setStream(true);
+
+        EvalRequest.DataSpec dataSpec = new EvalRequest.DataSpec();
+        EvalRequest.EvalCaseData case1 = new EvalRequest.EvalCaseData();
+        case1.setInput(Map.of("prompt", "apple", "n", 2));
+        case1.setExpected(Map.of("answer", "apple:2"));
+        dataSpec.setData(List.of(case1));
+        evalRequest.setData(dataSpec);
+
+        Map<String, Object> parentSpec =
+                Map.of(
+                        "object_type", PLAYGROUND_PARENT.type(),
+                        "object_id", PLAYGROUND_PARENT.id(),
+                        "propagated_event",
+                                Map.of("span_attributes", Map.of("generation", "test-gen-typed")));
+        evalRequest.setParent(parentSpec);
+
+        String requestBody = JSON_MAPPER.writeValueAsString(evalRequest);
+
+        HttpURLConnection conn =
+                (HttpURLConnection) new URI(TEST_URL + "/eval").toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("x-bt-auth-token", testHarness.braintrustApiKey());
+        conn.setRequestProperty("x-bt-project-id", TestHarness.defaultProjectId());
+        conn.setRequestProperty("x-bt-org-name", TestHarness.defaultOrgName());
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(requestBody.getBytes(StandardCharsets.UTF_8));
+        conn.getOutputStream().flush();
+
+        assertEquals(200, conn.getResponseCode());
+
+        List<Map<String, String>> events = readSseEvents(conn);
+
+        List<Map<String, String>> progressEvents =
+                events.stream().filter(e -> "progress".equals(e.get("event"))).toList();
+        List<Map<String, String>> summaryEvents =
+                events.stream().filter(e -> "summary".equals(e.get("event"))).toList();
+        assertEquals(1, progressEvents.size(), "Should have 1 progress event");
+        assertEquals(1, summaryEvents.size(), "Should have 1 summary event");
+
+        // The task only compiles/runs against typed records: output proves input was
+        // deserialized into TypedInput rather than passed through as a LinkedHashMap.
+        JsonNode progressData = JSON_MAPPER.readTree(progressEvents.get(0).get("data"));
+        JsonNode taskResult = JSON_MAPPER.readTree(progressData.get("data").asText());
+        assertEquals("apple:2", taskResult.get("answer").asText());
+
+        // The scorer compares typed expected vs typed result: 1.0 proves expected was
+        // deserialized into TypedOutput.
+        JsonNode summaryData = JSON_MAPPER.readTree(summaryEvents.get(0).get("data"));
+        JsonNode typedScorer = summaryData.get("scores").get("typed_scorer");
+        assertEquals(1.0, typedScorer.get("score").asDouble(), 0.001);
+    }
+
+    private static List<Map<String, String>> readSseEvents(HttpURLConnection conn)
+            throws Exception {
+        try (BufferedReader reader =
+                new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            List<Map<String, String>> events = new ArrayList<>();
+            String line;
+            String currentEvent = null;
+            StringBuilder currentData = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("event: ")) {
+                    currentEvent = line.substring(7);
+                } else if (line.startsWith("data: ")) {
+                    currentData.append(line.substring(6));
+                } else if (line.isEmpty() && currentEvent != null) {
+                    events.add(Map.of("event", currentEvent, "data", currentData.toString()));
+                    currentEvent = null;
+                    currentData = new StringBuilder();
+                }
+            }
+            return events;
+        }
     }
 
     @Test

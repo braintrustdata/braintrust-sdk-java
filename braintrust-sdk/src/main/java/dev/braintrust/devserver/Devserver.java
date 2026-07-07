@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -347,7 +348,7 @@ public class Devserver {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private <I, O> void handleStreamingEval(
             HttpExchange exchange,
-            RemoteEval eval,
+            RemoteEval<I, O> eval,
             EvalRequest request,
             RequestContext context,
             List<Scorer<I, O>> remoteScorers)
@@ -418,11 +419,13 @@ public class Devserver {
 
                 // NOTE: this code is serial but written in a thread-safe manner to support
                 // concurrent dataset fetching and eval execution
-                extractDataset(request, apiClient)
+                extractDataset(
+                                request,
+                                apiClient,
+                                eval.getInputConverter(),
+                                eval.getOutputConverter())
                         .forEach(
-                                rawDataset -> {
-                                    final DatasetCase<I, O> datasetCase =
-                                            (DatasetCase<I, O>) rawDataset;
+                                datasetCase -> {
                                     var evalSpan =
                                             tracer.spanBuilder("eval")
                                                     .setNoParent()
@@ -630,7 +633,12 @@ public class Devserver {
                         .config(braintrust.config())
                         .apiClient(apiClient)
                         .projectId(projectId)
-                        .dataset((Dataset<I, O>) extractDataset(request, apiClient))
+                        .dataset(
+                                extractDataset(
+                                        request,
+                                        apiClient,
+                                        eval.getInputConverter(),
+                                        eval.getOutputConverter()))
                         .task(eval.getTask())
                         .scorers(allScorers.toArray(new Scorer[0]))
                         .parameters(eval.getParameters())
@@ -1283,23 +1291,28 @@ public class Devserver {
      * @throws IllegalStateException if no dataset specification is provided
      * @throws IllegalArgumentException if dataset or project is not found
      */
-    private static Dataset<?, ?> extractDataset(
-            EvalRequest request, BraintrustOpenApiClient apiClient) {
+    private static <I, O> Dataset<I, O> extractDataset(
+            EvalRequest request,
+            BraintrustOpenApiClient apiClient,
+            Function<Object, I> inputConverter,
+            Function<Object, O> outputConverter) {
         EvalRequest.DataSpec dataSpec = request.getData();
 
         if (dataSpec.getData() != null && !dataSpec.getData().isEmpty()) {
             // Method 1: Inline data
-            List<DatasetCase> cases = new ArrayList<>();
+            List<DatasetCase<I, O>> cases = new ArrayList<>();
             for (EvalRequest.EvalCaseData caseData : dataSpec.getData()) {
-                DatasetCase datasetCase =
+                DatasetCase<I, O> datasetCase =
                         DatasetCase.of(
-                                caseData.getInput(),
-                                caseData.getExpected(),
+                                inputConverter.apply(caseData.getInput()),
+                                outputConverter.apply(caseData.getExpected()),
                                 caseData.getTags() != null ? caseData.getTags() : List.of(),
                                 caseData.getMetadata() != null ? caseData.getMetadata() : Map.of());
                 cases.add(datasetCase);
             }
-            return Dataset.of(cases.toArray(new DatasetCase[0]));
+            @SuppressWarnings("unchecked")
+            DatasetCase<I, O>[] caseArray = cases.toArray(new DatasetCase[0]);
+            return Dataset.of(caseArray);
         } else if (dataSpec.getProjectName() != null && dataSpec.getDatasetName() != null) {
             // Method 2: Fetch by project name and dataset name
             log.debug(
@@ -1307,7 +1320,12 @@ public class Devserver {
                     dataSpec.getProjectName(),
                     dataSpec.getDatasetName());
             return Dataset.fetchFromBraintrust(
-                    apiClient, dataSpec.getProjectName(), dataSpec.getDatasetName(), null);
+                    apiClient,
+                    dataSpec.getProjectName(),
+                    dataSpec.getDatasetName(),
+                    null,
+                    inputConverter,
+                    outputConverter);
         } else if (dataSpec.getDatasetId() != null) {
             // Method 3: Fetch by dataset ID
             log.debug("Fetching dataset from Braintrust by ID: {}", dataSpec.getDatasetId());
@@ -1325,7 +1343,12 @@ public class Devserver {
                     fetchedDatasetName);
 
             return Dataset.fetchFromBraintrust(
-                    apiClient, fetchedProjectName, fetchedDatasetName, null);
+                    apiClient,
+                    fetchedProjectName,
+                    fetchedDatasetName,
+                    null,
+                    inputConverter,
+                    outputConverter);
         } else {
             throw new IllegalStateException("No dataset specification provided");
         }

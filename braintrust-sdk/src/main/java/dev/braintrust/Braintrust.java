@@ -14,6 +14,7 @@ import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -171,14 +172,148 @@ public class Braintrust {
                 Eval.builder().config(this.config).apiClient(this.openApiClient);
     }
 
+    /**
+     * Fetch the latest version of a dataset from Braintrust, using the default project from
+     * configuration.
+     *
+     * @deprecated the {@code INPUT} and {@code OUTPUT} type parameters are not applied at runtime:
+     *     case values are returned as raw JSON-decoded objects (e.g. {@code LinkedHashMap}), and
+     *     accessing them as {@code INPUT}/{@code OUTPUT} will throw {@link ClassCastException}
+     *     unless those types are {@code Object} or {@code Map}. Use {@link #fetchDataset(String,
+     *     Class, Class)} instead.
+     */
+    @Deprecated
     public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(String datasetName) {
         return fetchDataset(datasetName, null);
     }
 
+    /**
+     * Fetch the latest version of a dataset from Braintrust, deserializing each case's {@code
+     * input} and {@code expected} values into the given types.
+     *
+     * <p>Values are deserialized using the SDK's shared Jackson mapper (see {@link
+     * dev.braintrust.json.BraintrustJsonMapper}), which may be customized via {@link
+     * dev.braintrust.json.BraintrustJsonMapper#configure}. For full control over per-value
+     * conversion (custom mappers, fixups, generic types), use {@link #fetchDataset(String,
+     * Function, Function)}.
+     *
+     * <p>The returned dataset preserves experiment-to-dataset linking when used with {@link Eval}:
+     * experiments created by {@code Eval.run()} are stamped with this dataset's id and version.
+     *
+     * @param datasetName the name of the dataset within the configured project
+     * @param inputClass the type to deserialize each case's {@code input} into
+     * @param outputClass the type to deserialize each case's {@code expected} into
+     * @return a typed view of the remote dataset; cases are fetched lazily, and deserialization
+     *     errors surface during iteration
+     */
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
+            String datasetName, Class<INPUT> inputClass, Class<OUTPUT> outputClass) {
+        return fetchDataset(datasetName, null, inputClass, outputClass);
+    }
+
+    /**
+     * Fetch a specific version of a dataset from Braintrust, deserializing each case's {@code
+     * input} and {@code expected} values into the given types.
+     *
+     * <p>See {@link #fetchDataset(String, Class, Class)} for deserialization and experiment-linking
+     * semantics.
+     *
+     * @param datasetName the name of the dataset within the configured project
+     * @param datasetVersion the dataset version to pin, or null to fetch the latest version upon
+     *     every cursor open
+     * @param inputClass the type to deserialize each case's {@code input} into
+     * @param outputClass the type to deserialize each case's {@code expected} into
+     * @return a typed view of the remote dataset; cases are fetched lazily, and deserialization
+     *     errors surface during iteration
+     */
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
+            String datasetName,
+            @Nullable String datasetVersion,
+            Class<INPUT> inputClass,
+            Class<OUTPUT> outputClass) {
+        return Dataset.fetchFromBraintrust(
+                openApiClient,
+                resolveProjectName(),
+                datasetName,
+                datasetVersion,
+                inputClass,
+                outputClass);
+    }
+
+    /**
+     * Fetch a specific version of a dataset from Braintrust, using the default project from
+     * configuration.
+     *
+     * @deprecated the {@code INPUT} and {@code OUTPUT} type parameters are not applied at runtime;
+     *     see {@link #fetchDataset(String)}. Use {@link #fetchDataset(String, String, Class,
+     *     Class)} instead.
+     */
+    @Deprecated
     public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
             String datasetName, @Nullable String datasetVersion) {
         return Dataset.fetchFromBraintrust(
                 openApiClient, resolveProjectName(), datasetName, datasetVersion);
+    }
+
+    /**
+     * Fetch the latest version of a dataset from Braintrust, converting each case's {@code input}
+     * and {@code expected} values with the supplied converter functions.
+     *
+     * <p>Converters receive the raw JSON-decoded value (typically a {@code Map<String, Object>},
+     * {@code List}, {@code String}, {@code Number}, {@code Boolean}, or null) and are responsible
+     * for producing the typed value. This gives the caller full control over deserialization — e.g.
+     * a custom Jackson {@code ObjectMapper}, generic types, or row fixups:
+     *
+     * <pre>{@code
+     * Dataset<MyInput, MyOutput> ds = braintrust.fetchDataset(
+     *         "golden-cases",
+     *         raw -> myMapper.convertValue(raw, MyInput.class),
+     *         raw -> myMapper.convertValue(raw, MyOutput.class));
+     * }</pre>
+     *
+     * <p>The returned dataset preserves experiment-to-dataset linking when used with {@link Eval}:
+     * experiments created by {@code Eval.run()} are stamped with this dataset's id and version.
+     *
+     * @param datasetName the name of the dataset within the configured project
+     * @param inputConverter converts each case's raw {@code input} value; must tolerate null
+     * @param outputConverter converts each case's raw {@code expected} value; must tolerate null
+     * @return a typed view of the remote dataset; cases are fetched lazily, and converter errors
+     *     surface during iteration
+     */
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
+            String datasetName,
+            Function<Object, INPUT> inputConverter,
+            Function<Object, OUTPUT> outputConverter) {
+        return fetchDataset(datasetName, null, inputConverter, outputConverter);
+    }
+
+    /**
+     * Fetch a specific version of a dataset from Braintrust, converting each case's {@code input}
+     * and {@code expected} values with the supplied converter functions.
+     *
+     * <p>See {@link #fetchDataset(String, Function, Function)} for converter and experiment-linking
+     * semantics.
+     *
+     * @param datasetName the name of the dataset within the configured project
+     * @param datasetVersion the dataset version to pin, or null to fetch the latest version upon
+     *     every cursor open
+     * @param inputConverter converts each case's raw {@code input} value; must tolerate null
+     * @param outputConverter converts each case's raw {@code expected} value; must tolerate null
+     * @return a typed view of the remote dataset; cases are fetched lazily, and converter errors
+     *     surface during iteration
+     */
+    public <INPUT, OUTPUT> Dataset<INPUT, OUTPUT> fetchDataset(
+            String datasetName,
+            @Nullable String datasetVersion,
+            Function<Object, INPUT> inputConverter,
+            Function<Object, OUTPUT> outputConverter) {
+        return Dataset.fetchFromBraintrust(
+                openApiClient,
+                resolveProjectName(),
+                datasetName,
+                datasetVersion,
+                inputConverter,
+                outputConverter);
     }
 
     /**
@@ -204,6 +339,39 @@ public class Braintrust {
     }
 
     /**
+     * Fetch a scorer from Braintrust by slug, using the default project from configuration, with
+     * custom converters that transform the {@code input}, {@code output}, and {@code expected}
+     * scorer argument values into a JSON-serializable form.
+     *
+     * <p>By default, argument values are serialized with the SDK's shared mapper ({@link
+     * dev.braintrust.json.BraintrustJsonMapper}). Use this variant to control serialization, e.g.
+     * with a custom {@code ObjectMapper}: {@code fetchScorer(slug, null, myMapper::valueToTree,
+     * myMapper::valueToTree)}. Case {@code metadata} and eval {@code parameters} are always
+     * serialized with the OpenAPI client's mapper.
+     *
+     * @param scorerSlug the unique slug identifier for the scorer
+     * @param version optional version of the scorer to fetch
+     * @param inputConverter converts each case's {@code input} value into a JSON-serializable form
+     *     (e.g. a Jackson {@code JsonNode}, {@code Map}, or scalar); never invoked with null
+     * @param outputConverter converts the task {@code output} and case {@code expected} values into
+     *     a JSON-serializable form; never invoked with null
+     * @return a Scorer that invokes the remote function
+     */
+    public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
+            String scorerSlug,
+            @Nullable String version,
+            Function<INPUT, Object> inputConverter,
+            Function<OUTPUT, Object> outputConverter) {
+        return Scorer.fetchFromBraintrust(
+                openApiClient,
+                resolveProjectName(),
+                scorerSlug,
+                version,
+                inputConverter,
+                outputConverter);
+    }
+
+    /**
      * Fetch a scorer from Braintrust by project name and slug.
      *
      * @param projectName the name of the project containing the scorer
@@ -214,6 +382,31 @@ public class Braintrust {
     public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
             String projectName, String scorerSlug, @Nullable String version) {
         return Scorer.fetchFromBraintrust(openApiClient, projectName, scorerSlug, version);
+    }
+
+    /**
+     * Fetch a scorer from Braintrust by project name and slug, with custom converters that
+     * transform the {@code input}, {@code output}, and {@code expected} scorer argument values into
+     * a JSON-serializable form. See {@link #fetchScorer(String, String, Function, Function)} for
+     * converter semantics.
+     *
+     * @param projectName the name of the project containing the scorer
+     * @param scorerSlug the unique slug identifier for the scorer
+     * @param version optional version of the scorer to fetch
+     * @param inputConverter converts each case's {@code input} value into a JSON-serializable form;
+     *     never invoked with null
+     * @param outputConverter converts the task {@code output} and case {@code expected} values into
+     *     a JSON-serializable form; never invoked with null
+     * @return a Scorer that invokes the remote function
+     */
+    public <INPUT, OUTPUT> Scorer<INPUT, OUTPUT> fetchScorer(
+            String projectName,
+            String scorerSlug,
+            @Nullable String version,
+            Function<INPUT, Object> inputConverter,
+            Function<OUTPUT, Object> outputConverter) {
+        return Scorer.fetchFromBraintrust(
+                openApiClient, projectName, scorerSlug, version, inputConverter, outputConverter);
     }
 
     /**

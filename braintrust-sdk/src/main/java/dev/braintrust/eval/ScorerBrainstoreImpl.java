@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.BraintrustUtils;
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.json.BraintrustJsonMapper;
 import dev.braintrust.openapi.JSON;
 import dev.braintrust.openapi.api.FunctionsApi;
 import dev.braintrust.openapi.api.ProjectsApi;
@@ -39,9 +40,26 @@ import lombok.extern.slf4j.Slf4j;
 public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT> {
     private static final ObjectMapper MAPPER = new JSON().getMapper();
 
+    /**
+     * Default conversion for user-supplied input/output/expected scorer argument values: serializes
+     * to a JSON tree using the SDK's shared mapper ({@link
+     * dev.braintrust.json.BraintrustJsonMapper}), matching how typed dataset values are
+     * deserialized and how eval span data is logged. To apply custom serialization rules, supply
+     * custom input/output converters.
+     */
+    private static final java.util.function.Function<Object, Object> DEFAULT_CONVERTER =
+            value -> BraintrustJsonMapper.get().valueToTree(value);
+
+    @SuppressWarnings("unchecked")
+    private static <T> java.util.function.Function<T, Object> defaultConverter() {
+        return (java.util.function.Function<T, Object>) DEFAULT_CONVERTER;
+    }
+
     private final BraintrustOpenApiClient apiClient;
     private final String functionId;
     private final @Nullable String version;
+    private final java.util.function.Function<INPUT, Object> inputConverter;
+    private final java.util.function.Function<OUTPUT, Object> outputConverter;
     private final AtomicReference<Function> braintrustFunction = new AtomicReference<>(null);
     private final AtomicReference<String> scorerName = new AtomicReference<>(null);
 
@@ -52,7 +70,10 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
     }
 
     /**
-     * Create a new remote scorer.
+     * Create a new remote scorer. Input, output, and expected values are serialized with the SDK's
+     * shared mapper ({@link dev.braintrust.json.BraintrustJsonMapper}); use {@link
+     * #ScorerBrainstoreImpl(BraintrustOpenApiClient, String, String, java.util.function.Function,
+     * java.util.function.Function)} to customize serialization.
      *
      * @param apiClient the API client to use for invoking the function
      * @param functionId braintrust function id
@@ -61,9 +82,38 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
      */
     public ScorerBrainstoreImpl(
             BraintrustOpenApiClient apiClient, String functionId, @Nullable String version) {
+        this(apiClient, functionId, version, defaultConverter(), defaultConverter());
+    }
+
+    /**
+     * Create a new remote scorer with custom input/output converters.
+     *
+     * @param apiClient the API client to use for invoking the function
+     * @param functionId braintrust function id
+     * @param version optional version of the function to invoke. null always invokes latest
+     *     version.
+     * @param inputConverter converts each case's {@code input} value into a JSON-serializable form
+     *     (e.g. a Jackson {@code JsonNode}, {@code Map}, or scalar) before the invoke request is
+     *     sent; never invoked with null
+     * @param outputConverter converts the task {@code output} and case {@code expected} values into
+     *     a JSON-serializable form; never invoked with null
+     */
+    public ScorerBrainstoreImpl(
+            BraintrustOpenApiClient apiClient,
+            String functionId,
+            @Nullable String version,
+            java.util.function.Function<INPUT, Object> inputConverter,
+            java.util.function.Function<OUTPUT, Object> outputConverter) {
         this.apiClient = apiClient;
         this.functionId = functionId;
         this.version = version;
+        this.inputConverter = java.util.Objects.requireNonNull(inputConverter);
+        this.outputConverter = java.util.Objects.requireNonNull(outputConverter);
+    }
+
+    private static <T> Object convert(
+            java.util.function.Function<T, Object> converter, @Nullable T value) {
+        return value == null ? null : converter.apply(value);
     }
 
     @Override
@@ -74,13 +124,23 @@ public class ScorerBrainstoreImpl<INPUT, OUTPUT> implements Scorer<INPUT, OUTPUT
 
     @Override
     public List<Score> score(TaskResult<INPUT, OUTPUT> taskResult) {
+        // Convert user-supplied input/output/expected values into a JSON-serializable form.
+        // The default converters serialize with the SDK's shared BraintrustJsonMapper, matching
+        // typed dataset deserialization and eval span logging; custom converters can be supplied
+        // to control serialization. Metadata and parameters are plain JSON maps and are always
+        // serialized with the OpenAPI client's mapper. The OpenAPI client's own mapper then
+        // writes the converted values verbatim, keeping wire-protocol handling of the request
+        // envelope unchanged.
         var scorerArgs = new java.util.LinkedHashMap<String, Object>();
-        scorerArgs.put("input", taskResult.datasetCase().input());
-        scorerArgs.put("output", taskResult.result());
-        scorerArgs.put("expected", taskResult.datasetCase().expected());
-        scorerArgs.put("metadata", taskResult.datasetCase().metadata());
+        scorerArgs.put("input", convert(inputConverter, taskResult.datasetCase().input()));
+        scorerArgs.put("output", convert(outputConverter, taskResult.result()));
+        scorerArgs.put("expected", convert(outputConverter, taskResult.datasetCase().expected()));
+        scorerArgs.put(
+                "metadata", convert(MAPPER::valueToTree, taskResult.datasetCase().metadata()));
         if (!taskResult.parameters().isEmpty()) {
-            scorerArgs.put("parameters", taskResult.parameters().getMerged());
+            scorerArgs.put(
+                    "parameters",
+                    convert(MAPPER::valueToTree, taskResult.parameters().getMerged()));
         }
 
         var invoke = new InvokeApi().input(scorerArgs).version(version);
