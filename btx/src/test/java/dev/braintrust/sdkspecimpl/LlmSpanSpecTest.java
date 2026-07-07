@@ -64,7 +64,13 @@ class LlmSpanSpecTest {
         }
 
         final AtomicInteger totalExpectedSpans = new AtomicInteger(0);
-        var pool = new ForkJoinPool(3);
+        // In replay mode, execution must be sequential: cassettes for identical request bodies
+        // (e.g. the same spec executed for multiple clients) are recorded as stateful WireMock
+        // scenarios,
+        // and concurrent requests race on the scenario state, causing intermittent
+        // "Request was not matched" failures.
+        boolean isReplay = TestHarness.getVcrMode().equals(dev.braintrust.VCR.VcrMode.REPLAY);
+        var pool = new ForkJoinPool(isReplay ? 1 : 3);
         var results =
                 pool.submit(
                                 () ->

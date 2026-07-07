@@ -51,6 +51,12 @@ class DevserverTest {
     private static String remoteScorerFunctionId;
     // Resolved scorer name (set in setUp once the project name is known).
     private static String REMOTE_SCORER_NAME;
+    // The name embedded in the remote scorer's return payload (see REMOTE_SCORER_CODE). When the
+    // remote invoke actually executes (VCR record/off), the score is keyed by this name. In replay
+    // mode the invoke request cannot be matched by a cassette (its body embeds live span IDs via
+    // `parent`), so the scorer falls back to scoreForScorerException and the score is keyed by
+    // REMOTE_SCORER_NAME instead. Assertions must accept both.
+    private static final String REMOTE_SCORER_PAYLOAD_NAME = "typescript exact match";
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -336,10 +342,18 @@ class DevserverTest {
             assertEquals(0.7, simpleScorer.get("score").asDouble(), 0.001);
 
             // Verify remote scorer (returns 0.0 because output "java-fruit" != expected
-            // "fruit"/"vegetable")
-            assertTrue(scores.has(REMOTE_SCORER_NAME), "Summary should have remote scorer");
-            JsonNode remoteScorerResult = scores.get(REMOTE_SCORER_NAME);
-            assertEquals(REMOTE_SCORER_NAME, remoteScorerResult.get("name").asText());
+            // "fruit"/"vegetable"). Keyed by the payload name on a real invoke (record/off) or
+            // by the resolved scorer name when replay falls back on an unmatched invoke request.
+            String remoteScorerKey =
+                    scores.has(REMOTE_SCORER_PAYLOAD_NAME)
+                            ? REMOTE_SCORER_PAYLOAD_NAME
+                            : REMOTE_SCORER_NAME;
+            assertTrue(
+                    scores.has(remoteScorerKey),
+                    "Summary should have remote scorer under '%s' or '%s' -- got: %s"
+                            .formatted(REMOTE_SCORER_PAYLOAD_NAME, REMOTE_SCORER_NAME, scores));
+            JsonNode remoteScorerResult = scores.get(remoteScorerKey);
+            assertEquals(remoteScorerKey, remoteScorerResult.get("name").asText());
             assertEquals(0.0, remoteScorerResult.get("score").asDouble(), 0.001);
         }
 
@@ -515,10 +529,17 @@ class DevserverTest {
                         output.has("simple_scorer"), "Output should contain simple_scorer results");
                 assertEquals(0.7, output.get("simple_scorer").asDouble(), 0.001);
             } else {
+                // Keyed by the payload name on a real invoke (record/off) or by the resolved
+                // scorer name when replay falls back on an unmatched invoke request.
+                String remoteScorerKey =
+                        output.has(REMOTE_SCORER_PAYLOAD_NAME)
+                                ? REMOTE_SCORER_PAYLOAD_NAME
+                                : REMOTE_SCORER_NAME;
                 assertTrue(
-                        output.has(REMOTE_SCORER_NAME),
-                        "Output should contain remote scorer results");
-                assertEquals(0.0, output.get(REMOTE_SCORER_NAME).asDouble(), 0.001);
+                        output.has(remoteScorerKey),
+                        "Output should contain remote scorer results under '%s' or '%s' -- got: %s"
+                                .formatted(REMOTE_SCORER_PAYLOAD_NAME, REMOTE_SCORER_NAME, output));
+                assertEquals(0.0, output.get(remoteScorerKey).asDouble(), 0.001);
             }
         }
 

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class BraintrustGenAITest {
-    private static final String MODEL_ID = "gemini-3.1-flash-lite-preview";
+    private static final String MODEL_ID = "gemini-3.1-flash-lite";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     @BeforeAll
