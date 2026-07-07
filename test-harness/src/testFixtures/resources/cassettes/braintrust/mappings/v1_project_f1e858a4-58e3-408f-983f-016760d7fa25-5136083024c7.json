@@ -1,0 +1,38 @@
+{
+  "id" : "e65924fc-07b7-3ebb-ad51-1d77fb8b6efb",
+  "name" : "v1_project_f1e858a4-58e3-408f-983f-016760d7fa25",
+  "request" : {
+    "url" : "/v1/project/f1e858a4-58e3-408f-983f-016760d7fa25",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_project_f1e858a4-58e3-408f-983f-016760d7fa25-5136083024c7.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUHjEDOIAMEHlw=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "347",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33c9-3fd0cea15549701138de509e;Parent=346fda3f1c270cd8;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:13:45 GMT",
+      "Via" : "1.1 d9d466ed70d93f34739969f91577ec74.cloudfront.net (CloudFront), 1.1 63560dd3f856b0f7bfe68a0cad46924a.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33c90000000050de10c30a381b22",
+      "x-amzn-RequestId" : "ed3c90e7-f9e0-4a7c-a769-f3c3a0aa95d8",
+      "X-Amz-Cf-Id" : "oIJ4LZXzXK2oLkRsSzO8DP378HywCmZHuZWIOxMaKmF9lJCt28JIcw==",
+      "etag" : "W/\"15b-B/X+Uhf+FLkzqf65d24KDLzFxgc\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "e65924fc-07b7-3ebb-ad51-1d77fb8b6efb",
+  "persistent" : true,
+  "scenarioName" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25",
+  "requiredScenarioState" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25-8",
+  "newScenarioState" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25-9",
+  "insertionIndex" : 109
+}

@@ -10,7 +10,7 @@
       }
     },
     "bodyPatterns" : [ {
-      "equalToJson" : "{\"messages\":[{\"content\":\"you are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"temperature\":0.0,\"stream\":false}",
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.0}",
       "ignoreArrayOrder" : true,
       "ignoreExtraElements" : false
     } ]
@@ -21,29 +21,29 @@
     "headers" : {
       "Server" : "cloudflare",
       "x-ratelimit-reset-tokens" : "0s",
-      "set-cookie" : "__cf_bm=FxvBoHxGXnZtnjkC6EfrG87YdtLUp_Yh.sHOJKFRS58-1778629712.0083988-1.0.1.1-PgHE7UOyHGXwpQf2ufBwlKN.Y.6VoKF0ZeZyDAhBdi8wkHBVi2nilGen7eQrf5rsVRJAZIeEpNRzzhw_r95ZavTTTJSAWl3AV2N2wsv_Rm2lRPMIENRT8.WSwW2xkRgu; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:32 GMT",
+      "set-cookie" : "__cf_bm=FJRcQ8E58CT_zxLqTilL_i0ykrMjfzqmfS2WyCWd6xI-1783444495.4855378-1.0.1.1-cpdLnXagw_H4jhSyPc8.gGJYIfFl.rbyHq4_l3juUsTJzU4Q52IJNwW__pgK1O4dXFd9E5.BQYRx6RYHaI43ZD8UKhwO4icLf4wwunmuIWb4QeK2g8I7b890L9DOwOH5; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:44:56 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
-      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID" ],
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json",
-      "x-request-id" : "req_deb9a25b55ac4b55aedf13c587a1a4a4",
+      "x-request-id" : "req_8ec71f506f304932b30bcd5d67579228",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
-      "CF-RAY" : "9fad50940d397676-SEA",
+      "CF-Ray" : "a1787d00cef030b7-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
-      "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-tokens" : "149999982",
-      "cf-cache-status" : "DYNAMIC",
+      "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Tue, 12 May 2026 23:48:32 GMT",
+      "Date" : "Tue, 07 Jul 2026 17:14:56 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "608",
+      "openai-processing-ms" : "484",
       "alt-svc" : "h3=\":443\"; ma=86400"
     }
   },
   "uuid" : "d62ea05d-48c0-36af-a773-6cf92596ddb1",
   "persistent" : true,
-  "insertionIndex" : 7
+  "insertionIndex" : 17
 }

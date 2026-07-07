@@ -1,7 +1,7 @@
 {
-  "id": "chatcmpl-Der9oRYLm2AiwWoh06RSWnisloLV6",
+  "id": "chatcmpl-Dz3iPn5yJ35jwqIWdPzmCMs5VN1IW",
   "object": "chat.completion",
-  "created": 1778629828,
+  "created": 1783444661,
   "model": "gpt-4o-mini-2024-07-18",
   "choices": [
     {
@@ -11,7 +11,7 @@
         "content": null,
         "tool_calls": [
           {
-            "id": "call_OqJ4x3QwIY05sO9bUZV2Yb2T",
+            "id": "call_98ldPIkcCpmBfBmlDcE8eyGc",
             "type": "function",
             "function": {
               "name": "getWeather",
@@ -19,7 +19,7 @@
             }
           },
           {
-            "id": "call_aZdPBsOZq3nKGnOl0t7GDHXC",
+            "id": "call_4zaqPEiMyli90JuM2ScfSg9Z",
             "type": "function",
             "function": {
               "name": "getWeather",
@@ -50,5 +50,5 @@
     }
   },
   "service_tier": "default",
-  "system_fingerprint": "fp_2d3cd316d9"
+  "system_fingerprint": "fp_810e56f10f"
 }

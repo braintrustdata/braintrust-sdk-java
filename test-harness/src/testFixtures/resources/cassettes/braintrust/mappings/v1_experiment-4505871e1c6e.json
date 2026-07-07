@@ -20,23 +20,26 @@
     "bodyFileName" : "v1_experiment-4505871e1c6e.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
-      "x-amz-apigw-id" : "dRpQyHlWoAMEOnw=",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUKCE13IAMEMGQ=",
       "vary" : "Origin, Accept-Encoding",
       "x-amzn-Remapped-content-length" : "529",
       "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a03bc04-7014dd9445b8b9731fbed8d9;Parent=7e41da19a5b0d5b7;Sampled=0;Lineage=1:fc3b4ff1:0",
-      "Date" : "Tue, 12 May 2026 23:47:16 GMT",
-      "Via" : "1.1 a40ac7dad0e348fc93799233c9af5960.cloudfront.net (CloudFront), 1.1 dea0b5e705fff834db8ae3992ea09cfa.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33d9-7cfa8a2d504605d471979346;Parent=6cd1d244e9fd6e1d;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:01 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 55a62c25b77c24cde4014f567fd1c550.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
       "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a03bc0400000000608ca8638ae3a9c0",
-      "x-amzn-RequestId" : "96aa9d6f-b5d6-4b01-84ed-b88bdea0d5aa",
-      "X-Amz-Cf-Id" : "4hNJuI_bCphDR5xShdUPwKrNdji9F20rjelL9yVnoBydhn3SBM-k6g==",
+      "x-bt-internal-trace-id" : "6a4d33d900000000039794b04e1b6736",
+      "x-amzn-RequestId" : "bbbb8bdf-a6de-47b8-9f29-b191e4e3c9e2",
+      "X-Amz-Cf-Id" : "k8OFqhfNt3ywvXokUNK7iVro1z60wRPqBAv2ttvq6fgotoVDFzn0ZQ==",
       "etag" : "W/\"211-qVCZH2Q8waC10QyI4t+xLS470s8\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
   "uuid" : "7b052aee-212a-3672-83b2-04fe7e916e5a",
   "persistent" : true,
-  "insertionIndex" : 71
+  "insertionIndex" : 72
 }

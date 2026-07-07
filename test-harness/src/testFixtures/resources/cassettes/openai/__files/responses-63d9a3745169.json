@@ -1,0 +1,107 @@
+{
+  "id": "resp_0348cfee672d66ba006a4d3423a6d48199815a94fccaa5d0df",
+  "object": "response",
+  "created_at": 1783444515,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1783444523,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_0348cfee672d66ba006a4d34242224819998603a2f2c0e3512",
+      "type": "reasoning",
+      "content": [],
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating pronic numbers**\n\nI'm working through pronic numbers, defined as a_n = n(n+1). For the 10th term, a_{10} is 110 since 10*11 equals 110. To find the sum of the first 10 terms, I break it down: I need the sum of squares and the sum of integers, which adds up to 440. I confirm that summing the pronic numbers directly gives the same total, and I also derive a formula for the partial sum, which checks out. So, the results are the 10th term is 110, and the sum is 440."
+        },
+        {
+          "type": "summary_text",
+          "text": "**Finalizing pronic numbers**\n\nTo finalize my calculations, I find that a_{10} is 110, calculated as 10*11. For the sum of the first 10 terms, I break it down into the sum of squares and the sum of integers, which equals 440 (385 + 55). I also have a formula for the partial sum, S_N = N(N+1)(N+2)/3, which confirms this when I calculate S_{10} as 440. So, I've got my answer: 110 for the term and 440 for the sum."
+        }
+      ]
+    },
+    {
+      "id": "msg_0348cfee672d66ba006a4d342b6304819993c7c9771c741f6b",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The nth term is a\u2099 = n(n + 1).  \nSo the 10th term is  \n  a\u2081\u2080 = 10\u00b711 = 110.  \n\nThe sum of the first 10 terms is  \n  S\u2081\u2080 = \u2211\u2099\u208c\u2081\u00b9\u2070 n(n + 1)  \n     = \u2211\u2099\u208c\u2081\u00b9\u2070 n\u00b2  +  \u2211\u2099\u208c\u2081\u00b9\u2070 n  \n     = (10\u00b711\u00b721)/6  +  (10\u00b711)/2  \n     = 385 + 55  \n     = 440.  \n\nEquivalently, one can use the closed\u2010form  \n  S_N = N(N + 1)(N + 2)/3  \nto get S\u2081\u2080 = 10\u00b711\u00b712/3 = 440."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": "current_turn",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 177,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 574,
+    "output_tokens_details": {
+      "reasoning_tokens": 320
+    },
+    "total_tokens": 751
+  },
+  "user": null,
+  "metadata": {}
+}

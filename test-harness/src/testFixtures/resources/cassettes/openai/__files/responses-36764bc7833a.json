@@ -1,13 +1,13 @@
 {
-  "id": "resp_0f3fa2a7edd3506b006a03bccfe5fc819697f169b8a553717b",
+  "id": "resp_00c6daa36ade876c006a4d34c00e44819ba57e38cc1e78d16f",
   "object": "response",
-  "created_at": 1778629839,
+  "created_at": 1783444672,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1778629841,
+  "completed_at": 1783444673,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,12 +18,13 @@
   "moderation": null,
   "output": [
     {
-      "id": "rs_0f3fa2a7edd3506b006a03bcd0557c819688ff4980428fc0b5",
+      "id": "rs_00c6daa36ade876c006a4d34c089b4819b82a34feee4170ca5",
       "type": "reasoning",
+      "content": [],
       "summary": []
     },
     {
-      "id": "msg_0f3fa2a7edd3506b006a03bcd0fa5481968138d4c3dc3a4771",
+      "id": "msg_00c6daa36ade876c006a4d34c111b4819b81c99786dc5b160a",
       "type": "message",
       "status": "completed",
       "content": [
@@ -43,7 +44,9 @@
   "prompt_cache_key": null,
   "prompt_cache_retention": "in_memory",
   "reasoning": {
+    "context": "current_turn",
     "effort": "low",
+    "mode": "standard",
     "summary": "detailed"
   },
   "safety_identifier": null,
@@ -57,6 +60,24 @@
     "verbosity": "medium"
   },
   "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
   "tools": [],
   "top_logprobs": 0,
   "top_p": 1.0,
@@ -66,11 +87,11 @@
     "input_tokens_details": {
       "cached_tokens": 0
     },
-    "output_tokens": 39,
+    "output_tokens": 28,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 57
+    "total_tokens": 46
   },
   "user": null,
   "metadata": {}

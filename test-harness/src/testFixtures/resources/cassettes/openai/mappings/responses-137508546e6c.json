@@ -1,0 +1,48 @@
+{
+  "id" : "bd843a3c-5719-321d-b2f7-3e2063611ca7",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"},{\"id\":\"rs_0ff02e989ebfcde4006a4d342cbddc8199a202842893922128\",\"summary\":[{\"text\":\"**Exploring the sequence of pronic numbers**\\n\\nThe user is asking about the pattern in the sequence: 2, 6, 12, 20, 30. These numbers represent the first five pronic or oblong numbers, calculated with the formula n(n+1). For instance, 2 is from 1*2, 6 is from 2*3, and so on. The general formula reflects this, and I also recognize that the differences between terms form an even sequence, leading me to confirm it as a quadratic pattern.\",\"type\":\"summary_text\"},{\"text\":\"**Establishing the pronic numbers pattern**\\n\\nThe pattern in the sequence is pronic numbers, where the formula is a_n = n(n+1). I can express it differently as n^2 + n, starting from n = 1. The first term is 2, and if indexing begins at 0, it shifts slightly. However, most commonly we index from 1, so the general term remains n(n+1). The differences between terms increase by 2, confirming it's indeed the pronic numbers—also known as oblong numbers.\",\"type\":\"summary_text\"}],\"type\":\"reasoning\",\"content\":[]},{\"id\":\"msg_0ff02e989ebfcde4006a4d3433942481999a50df50f13e8985\",\"content\":[{\"annotations\":[],\"text\":\"The easiest way to see the pattern is to look at the successive differences:\\n\\n  6–2 = 4,  \\n  12–6 = 6,  \\n  20–12 = 8,  \\n  30–20 = 10,  \\n\\nso you’re adding 4, then 6, then 8, then 10, … i.e. successive even numbers.  Equivalently each term is the product of two consecutive integers:\\n\\n  2  = 1·2  \\n  6  = 2·3  \\n  12 = 3·4  \\n  20 = 4·5  \\n  30 = 5·6  \\n\\nIf we call the first term “n = 1,” the nth term is\\n\\n  aₙ = n·(n + 1) = n² + n.\\n\\nHence the general formula is  \\n\\n  aₙ = n(n+1).\",\"type\":\"output_text\",\"logprobs\":[]}],\"role\":\"assistant\",\"status\":\"completed\",\"type\":\"message\"},{\"role\":\"user\",\"content\":\"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"}],\"model\":\"o4-mini\",\"reasoning\":{\"effort\":\"high\",\"summary\":\"detailed\"}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-137508546e6c.json",
+    "headers" : {
+      "x-request-id" : "b4e0d475-66fa-4d9f-aeda-82496edb2ac7",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a1787dee3cda756b-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999517",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Tue, 07 Jul 2026 17:15:40 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=CoghTuQo3AE4UIox1VL.t8reAf3IEeHzWk1j6EtPiwQ-1783444533.480722-1.0.1.1-ttbC2Jm7pqqMxGswIg_r4qv.75EybL319l3yDbDWe5hcwnQhue3ZFakRfNBPFAnz7Hzr6.mcbj8ncgqqGI73BHnyH3y_ZDDO8ngMKf3ETC12gygUCh.nL0TnRLOTub4.; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:45:40 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "7146",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "bd843a3c-5719-321d-b2f7-3e2063611ca7",
+  "persistent" : true,
+  "insertionIndex" : 1
+}
