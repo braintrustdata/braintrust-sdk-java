@@ -1,0 +1,50 @@
+{
+  "id" : "8ac7f453-6162-3fe8-956f-d9a8df569396",
+  "name" : "v1_prompt",
+  "request" : {
+    "urlPath" : "/v1/prompt",
+    "method" : "GET",
+    "queryParameters" : {
+      "project_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "java-unit-test"
+        } ]
+      },
+      "slug" : {
+        "hasExactly" : [ {
+          "equalTo" : "kind-greeter"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_prompt-6abea74af1d6.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUQ6GSPoAMEU2A=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "620",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d3405-77fe828531f23bf7137049ce;Parent=31090bf10793c8ab;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:45 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 2501b465adde8e5aedc3f38e3dfcdc22.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d34050000000004dfc44b9e0de62a",
+      "x-amzn-RequestId" : "cad76a52-8ce4-42d3-bedf-d116048823e8",
+      "X-Amz-Cf-Id" : "43rfFnwKuqmXvuwkLfPiqp-pTk5funQzXcb97Wia-6fO-3HredlZNw==",
+      "etag" : "W/\"26c-riOyN5RbmfHlEEsjRs+9qiI2OCs\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "8ac7f453-6162-3fe8-956f-d9a8df569396",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-v1-prompt",
+  "requiredScenarioState" : "scenario-2-v1-prompt-2",
+  "newScenarioState" : "scenario-2-v1-prompt-3",
+  "insertionIndex" : 3
+}

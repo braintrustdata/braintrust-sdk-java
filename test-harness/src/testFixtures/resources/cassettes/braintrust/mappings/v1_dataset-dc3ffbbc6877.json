@@ -1,0 +1,49 @@
+{
+  "id" : "6350aebd-cfc3-3eef-9191-936993b99da0",
+  "name" : "v1_dataset",
+  "request" : {
+    "urlPath" : "/v1/dataset",
+    "method" : "GET",
+    "queryParameters" : {
+      "dataset_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "food"
+        } ]
+      },
+      "project_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "java-unit-test"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset-dc3ffbbc6877.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUJ2EIPoAMEZFQ=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "314",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33d8-03cb919a6ff9642129b22055;Parent=064ea95c726ebe0d;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:00 GMT",
+      "Via" : "1.1 73b0c4a85645a8031ba157e0b3e28ffc.cloudfront.net (CloudFront), 1.1 6ebf93cd3baadad602a5fd706f0df16e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33d80000000006d5de47b78f29ee",
+      "x-amzn-RequestId" : "f76ac276-a4d8-42ff-8915-322167ca1236",
+      "X-Amz-Cf-Id" : "PbuyxA9xZLuW-ZZTdt8ZKAWwrWWPeDuflMaEHYQDJmiJhSaAESLPyQ==",
+      "etag" : "W/\"13a-eLtgbJfKc7jJ88Dx26MAIlt+WAM\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "6350aebd-cfc3-3eef-9191-936993b99da0",
+  "persistent" : true,
+  "scenarioName" : "scenario-17-v1-dataset",
+  "requiredScenarioState" : "scenario-17-v1-dataset-2",
+  "insertionIndex" : 76
+}

@@ -46,7 +46,7 @@ public class BraintrustAWSBedrockTest {
 
     static Stream<Arguments> modelProvider() {
         return Stream.of(
-                Arguments.of("us.anthropic.claude-3-haiku-20240307-v1:0"),
+                Arguments.of("us.anthropic.claude-haiku-4-5-20251001-v1:0"),
                 Arguments.of("us.amazon.nova-lite-v1:0"));
     }
 
@@ -94,7 +94,7 @@ public class BraintrustAWSBedrockTest {
     @Test
     @SneakyThrows
     void converseStreamProducesLlmSpan() {
-        String modelId = "us.anthropic.claude-3-haiku-20240307-v1:0";
+        String modelId = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
         try (var client = bedrockUtils.asyncClientBuilder().build()) {
             var accumulatedText = new AtomicReference<>(new StringBuilder());

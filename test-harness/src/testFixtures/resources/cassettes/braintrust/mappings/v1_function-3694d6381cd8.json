@@ -1,0 +1,55 @@
+{
+  "id" : "a9a308e4-c8ed-30c6-a2fd-ff54230a0dcc",
+  "name" : "v1_function",
+  "request" : {
+    "urlPath" : "/v1/function",
+    "method" : "GET",
+    "queryParameters" : {
+      "limit" : {
+        "hasExactly" : [ {
+          "equalTo" : "1"
+        } ]
+      },
+      "project_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "java-unit-test"
+        } ]
+      },
+      "slug" : {
+        "hasExactly" : [ {
+          "equalTo" : "typescript-exact-match"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function-3694d6381cd8.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUDbH2LIAMEoBQ=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "1170",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33af-090d20e1040986c41f445e5c;Parent=55a510630ec7e689;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:13:19 GMT",
+      "Via" : "1.1 73b0c4a85645a8031ba157e0b3e28ffc.cloudfront.net (CloudFront), 1.1 dea0b5e705fff834db8ae3992ea09cfa.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33af000000005c21e8351c2cd700",
+      "x-amzn-RequestId" : "51d15e68-4efa-437d-b07c-8adfb20217b8",
+      "X-Amz-Cf-Id" : "vXdG6AMFwEmq8u_uRZtANV7KxaaLkDZscOYXv2RPGbpGNNjFveS9Sg==",
+      "etag" : "W/\"492-RO/825PoX6pROhna2qh49OKEAvg\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "a9a308e4-c8ed-30c6-a2fd-ff54230a0dcc",
+  "persistent" : true,
+  "scenarioName" : "scenario-12-v1-function",
+  "requiredScenarioState" : "scenario-12-v1-function-2",
+  "newScenarioState" : "scenario-12-v1-function-3",
+  "insertionIndex" : 128
+}

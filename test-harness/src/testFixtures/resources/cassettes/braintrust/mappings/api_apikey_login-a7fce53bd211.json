@@ -11,19 +11,19 @@
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "expires" : "0",
-      "x-amz-apigw-id" : "eBXBuEjeIAMEoWA=",
+      "x-amz-apigw-id" : "AJUS8GS3oAMEFdw=",
       "vary" : "Origin, Accept-Encoding",
-      "x-amzn-Remapped-content-length" : "259",
-      "X-Amz-Cf-Pop" : [ "MNL51-P1", "MNL51-P1" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a16d20a-6fe2e1c81e8436bf350a6d90;Parent=3e3aa626a4ed2918;Sampled=0;Lineage=1:24be3d11:0",
-      "Date" : "Wed, 27 May 2026 11:14:18 GMT",
-      "Via" : "1.1 1cb50957fd77e1eaad139f90b2e44564.cloudfront.net (CloudFront), 1.1 f39ba1c0189814d2897853765b8684b2.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "x-amzn-Remapped-content-length" : "376",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d3412-1cce144175425e704af862e1;Parent=4f796a49b08e7563;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:58 GMT",
+      "Via" : "1.1 73b0c4a85645a8031ba157e0b3e28ffc.cloudfront.net (CloudFront), 1.1 38842c146ccd8f527d2de72671759d96.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
       "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a16d20a00000000328b1fb874b22495",
-      "x-amzn-RequestId" : "b0e5f526-399c-4690-8af8-ea2a6f63f480",
-      "X-Amz-Cf-Id" : "MN5c5XBw2VvbGJhjz_UbWpOPK5qKEhA-pYNbZVYBqJekJsreM0TI6w==",
-      "etag" : "W/\"103-nNkLTyyrgUiaGMR62zMegGj/5Ig\"",
+      "x-bt-internal-trace-id" : "6a4d3412000000004276e9d7e156b266",
+      "x-amzn-RequestId" : "0f2bec23-fcc5-49ce-b7d3-fdae254641fd",
+      "X-Amz-Cf-Id" : "YZOPlkj4X8NPQXebMpE21oGckr1Uja5uLmBaINneBSkT7Z_Z3_E7aw==",
+      "etag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
       "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
       "surrogate-control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
@@ -33,6 +33,5 @@
   "persistent" : true,
   "scenarioName" : "scenario-1-api-apikey-login",
   "requiredScenarioState" : "scenario-1-api-apikey-login-2",
-  "newScenarioState" : "scenario-1-api-apikey-login-3",
-  "insertionIndex" : 137
+  "insertionIndex" : 164
 }

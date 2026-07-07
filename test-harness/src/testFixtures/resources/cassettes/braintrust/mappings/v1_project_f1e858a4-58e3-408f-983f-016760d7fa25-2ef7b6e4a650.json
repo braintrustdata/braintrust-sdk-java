@@ -1,0 +1,38 @@
+{
+  "id" : "a65ea8d8-8088-3414-be78-8601e9866eab",
+  "name" : "v1_project_f1e858a4-58e3-408f-983f-016760d7fa25",
+  "request" : {
+    "url" : "/v1/project/f1e858a4-58e3-408f-983f-016760d7fa25",
+    "method" : "GET"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_project_f1e858a4-58e3-408f-983f-016760d7fa25-2ef7b6e4a650.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUMxGKwoAMEkwQ=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "347",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33ea-43a2aa8c2b1a2bf85c2cad05;Parent=04cd866b58865472;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:18 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 2772a76c066120d1905e8bfcd08c4d1c.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33ea00000000692b53f8b641b26c",
+      "x-amzn-RequestId" : "5969ffe2-550a-4056-95f5-3620b754ba53",
+      "X-Amz-Cf-Id" : "kjeJ8cklsokAx1L-7JJqnKmJLgn-jVojFqTFq_CJWuYhuPTiZwoohA==",
+      "etag" : "W/\"15b-B/X+Uhf+FLkzqf65d24KDLzFxgc\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "a65ea8d8-8088-3414-be78-8601e9866eab",
+  "persistent" : true,
+  "scenarioName" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25",
+  "requiredScenarioState" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25-11",
+  "newScenarioState" : "scenario-7-v1-project-f1e858a4-58e3-408f-983f-016760d7fa25-12",
+  "insertionIndex" : 32
+}

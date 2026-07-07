@@ -1,0 +1,50 @@
+{
+  "id" : "0d4bb85c-4058-3ea5-9156-a058c497be43",
+  "name" : "v1_dataset",
+  "request" : {
+    "urlPath" : "/v1/dataset",
+    "method" : "GET",
+    "queryParameters" : {
+      "dataset_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "food"
+        } ]
+      },
+      "project_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "java-unit-test"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_dataset-b424fbf4bfd5.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUJMEVqIAMEEPA=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "314",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33d3-77fbe81e1d7f8ab162e84370;Parent=5916968912644e87;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:13:56 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 3062c1f9ccf5f043983bc180e222dd9c.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33d3000000003f4d9309cb504355",
+      "x-amzn-RequestId" : "a99f2401-6d6d-42ea-820b-0be6d8c5a307",
+      "X-Amz-Cf-Id" : "bi3LacB9vv1P7l208aVo3Bx4UL5zRxCdCHzaf13Rx4JmZocDumoytQ==",
+      "etag" : "W/\"13a-eLtgbJfKc7jJ88Dx26MAIlt+WAM\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "0d4bb85c-4058-3ea5-9156-a058c497be43",
+  "persistent" : true,
+  "scenarioName" : "scenario-17-v1-dataset",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-17-v1-dataset-2",
+  "insertionIndex" : 86
+}

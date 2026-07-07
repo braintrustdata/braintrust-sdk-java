@@ -19,24 +19,24 @@
     "status" : 200,
     "bodyFileName" : "responses-a2ceaa8491c7.json",
     "headers" : {
-      "x-request-id" : "req_af07a9d5a17441b8984e2bc25cb99a3a",
+      "x-request-id" : "ece7fbf1-3e45-45fb-9a65-144cbcff8051",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
-      "CF-RAY" : "9fad50756a0e7526-SEA",
       "Server" : "cloudflare",
+      "CF-Ray" : "a1787d058836dee5-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
       "x-ratelimit-remaining-tokens" : "149999750",
-      "cf-cache-status" : "DYNAMIC",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Tue, 12 May 2026 23:48:37 GMT",
-      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "Date" : "Tue, 07 Jul 2026 17:15:22 GMT",
       "x-ratelimit-reset-tokens" : "0s",
-      "set-cookie" : "__cf_bm=Z5Yu8mQk5CNVWPZOCsykIArQPYLgPNdSVETt1xZUSQI-1778629707.1036217-1.0.1.1-zl2OMXhA8QjSojKa7XTcVP866_svyEa_kA9soHVQu3iewuoMgNpsLqAVMN6fS8cV5ypcaKmviJyz1q2ZlDpF9nuRxIxrhdFAJn6nku8U7VF3lGVxbH8WP9FCoiF3aqmm; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 13 May 2026 00:18:37 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=BQ9N71IWWcxhmXaEopz8yqmhggGoLfx8j4bldtJ_t3o-1783444496.2428062-1.0.1.1-8pZeWcXZ0sfpcBOWOOwYJZnodMsJkmHAysHs21i5F0MOUwdlYOs5jux8QexHOew9dib4LaVMagGFeN3e.oFbQOzZ2jqgdgn7bniU.tXzRcMeaQ9tR4koIcdEkbfvyxg4; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:45:22 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
-      "openai-processing-ms" : "10428",
       "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "26077",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json"
@@ -47,5 +47,5 @@
   "scenarioName" : "scenario-1-responses",
   "requiredScenarioState" : "scenario-1-responses-2",
   "newScenarioState" : "scenario-1-responses-3",
-  "insertionIndex" : 4
+  "insertionIndex" : 8
 }

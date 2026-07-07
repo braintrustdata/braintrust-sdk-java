@@ -165,6 +165,12 @@ public class InstrumentationSemConv {
             if (usage.has("completion_tokens"))
                 metrics.put("completion_tokens", usage.get("completion_tokens"));
             if (usage.has("total_tokens")) metrics.put("tokens", usage.get("total_tokens"));
+            if (usage.has("prompt_tokens_details")) {
+                JsonNode details = usage.get("prompt_tokens_details");
+                if (details.has("cached_tokens")) {
+                    metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
+                }
+            }
             // Responses API field names
             if (usage.has("input_tokens")) metrics.put("prompt_tokens", usage.get("input_tokens"));
             if (usage.has("output_tokens"))
@@ -173,6 +179,12 @@ public class InstrumentationSemConv {
                 metrics.put(
                         "tokens",
                         usage.get("input_tokens").asLong() + usage.get("output_tokens").asLong());
+            }
+            if (usage.has("input_tokens_details")) {
+                JsonNode details = usage.get("input_tokens_details");
+                if (details.has("cached_tokens")) {
+                    metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
+                }
             }
             // Reasoning tokens (Responses API)
             if (usage.has("output_tokens_details")) {

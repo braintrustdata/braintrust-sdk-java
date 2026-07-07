@@ -1,0 +1,1 @@
+{"metrics":{"latencyMs":971},"output":{"message":{"content":[{"text":"Paris"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":19,"outputTokens":4,"serverToolUsage":{},"totalTokens":23}}

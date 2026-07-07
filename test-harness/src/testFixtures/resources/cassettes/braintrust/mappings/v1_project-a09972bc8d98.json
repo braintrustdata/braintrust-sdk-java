@@ -17,19 +17,22 @@
     "bodyFileName" : "v1_project-a09972bc8d98.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
-      "x-amz-apigw-id" : "dRpYtGmioAMEVfg=",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJULDHDboAMEYKw=",
       "vary" : "Origin, Accept-Encoding",
       "x-amzn-Remapped-content-length" : "361",
       "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a03bc37-6a2c7c3f38a7a2d147097497;Parent=0159379a4ac8df25;Sampled=0;Lineage=1:fc3b4ff1:0",
-      "Date" : "Tue, 12 May 2026 23:48:07 GMT",
-      "Via" : "1.1 a40ac7dad0e348fc93799233c9af5960.cloudfront.net (CloudFront), 1.1 6ebf93cd3baadad602a5fd706f0df16e.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33df-123a94d07ae590be1dab7c68;Parent=0b3bc3715e732f38;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:07 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 b3a8bdee20374465a3f2aa64f19ec30e.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
       "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a03bc370000000016a48d4f3075a344",
-      "x-amzn-RequestId" : "b52ccf9e-d0e8-461c-aeb5-437d06ec100b",
-      "X-Amz-Cf-Id" : "PNS-6TGYtU0Ipbuij1urzRRA3vu9is3gCR_CRn01mX1JtnAWh1Spgw==",
+      "x-bt-internal-trace-id" : "6a4d33df000000005136cd7a743dd1a4",
+      "x-amzn-RequestId" : "c7f24a4e-125e-4265-9092-c7400d962966",
+      "X-Amz-Cf-Id" : "2Mv_OYlBICgNfeKAOxZuGwNXUxaMkY0ciZ03OiYT_KpdJBDSvoQ_Gw==",
       "etag" : "W/\"169-XiwCuJsCqAZuAH8JspCgkYonnKw\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
@@ -37,5 +40,6 @@
   "persistent" : true,
   "scenarioName" : "scenario-4-v1-project",
   "requiredScenarioState" : "scenario-4-v1-project-19",
-  "insertionIndex" : 8
+  "newScenarioState" : "scenario-4-v1-project-20",
+  "insertionIndex" : 57
 }

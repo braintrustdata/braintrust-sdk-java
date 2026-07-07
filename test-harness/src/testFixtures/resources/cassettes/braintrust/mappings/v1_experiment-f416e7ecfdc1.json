@@ -1,0 +1,48 @@
+{
+  "id" : "d4a68f7f-4c04-3eff-8c73-bf2417dd2211",
+  "name" : "v1_experiment",
+  "request" : {
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"unit-test-eval\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_experiment-f416e7ecfdc1.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJULdE2qIAMEOfA=",
+      "vary" : "Origin, Accept-Encoding",
+      "x-amzn-Remapped-content-length" : "448",
+      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33e2-21d2bf356bcef1942c6bbdac;Parent=740900f399f6c6e6;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:14:10 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 0ddbf3138c96d4b7c9f8047edb515414.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a4d33e20000000000daca917bebcccb",
+      "x-amzn-RequestId" : "b63d8177-e728-4c4e-8e5d-f402debcef2a",
+      "X-Amz-Cf-Id" : "EWEB1-7Hir7B6RrLben8aWPnTgdDWlbdCWSs7jhbyVleCKYGg_0LqQ==",
+      "etag" : "W/\"1c0-rOfZfVMj+H5rmOzu1dSCnRShoyM\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "d4a68f7f-4c04-3eff-8c73-bf2417dd2211",
+  "persistent" : true,
+  "scenarioName" : "scenario-3-v1-experiment",
+  "requiredScenarioState" : "scenario-3-v1-experiment-2",
+  "newScenarioState" : "scenario-3-v1-experiment-3",
+  "insertionIndex" : 51
+}

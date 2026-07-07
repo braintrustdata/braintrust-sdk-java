@@ -10,19 +10,22 @@
     "bodyFileName" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28-e2eccc10be35.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
-      "x-amz-apigw-id" : "dRpTvGqvoAMEZsA=",
+      "expires" : "0",
+      "x-amz-apigw-id" : "AJUD0GoIIAMER0g=",
       "vary" : "Origin, Accept-Encoding",
       "x-amzn-Remapped-content-length" : "1156",
       "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a03bc17-145dfdb55304d936405c8f21;Parent=6f350a35d2edd04a;Sampled=0;Lineage=1:fc3b4ff1:0",
-      "Date" : "Tue, 12 May 2026 23:47:36 GMT",
-      "Via" : "1.1 a40ac7dad0e348fc93799233c9af5960.cloudfront.net (CloudFront), 1.1 c72e48ed2f0a994f695ca2fb4bc9247e.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id",
+      "X-Amzn-Trace-Id" : "Root=1-6a4d33b1-2004bcd1399986c17dda30c8;Parent=0df3fc78fd400f30;Sampled=0;Lineage=1:fc3b4ff1:0",
+      "Date" : "Tue, 07 Jul 2026 17:13:22 GMT",
+      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 e8b22a8fa8511f8f972b4965a9af80b4.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
       "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a03bc17000000003864804369a70bbe",
-      "x-amzn-RequestId" : "0bc4842b-b33f-4d13-ada3-87aae3fd68c6",
-      "X-Amz-Cf-Id" : "2GxhU8MkH8yTWftlnjdLDnyoD2AHyaxjoIW-vBI1eaY1iN5TPmGkOQ==",
+      "x-bt-internal-trace-id" : "6a4d33b100000000680988a6a152d8cb",
+      "x-amzn-RequestId" : "1b7d345b-1d87-45bb-95ed-3b27764ed95e",
+      "X-Amz-Cf-Id" : "lGbQFL8x4mljGex94_jtmU6VzEtSHL8owKhm04FhxfA6mxvC6m7Qyw==",
       "etag" : "W/\"484-KUHUs0ytlrOyv+d1b83LJCSkHwY\"",
+      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "surrogate-control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
@@ -31,5 +34,5 @@
   "scenarioName" : "scenario-10-v1-function-7a164cb2-6c74-4de7-aa86-6b28c464ab28",
   "requiredScenarioState" : "Started",
   "newScenarioState" : "scenario-10-v1-function-7a164cb2-6c74-4de7-aa86-6b28c464ab28-2",
-  "insertionIndex" : 40
+  "insertionIndex" : 124
 }
