@@ -2,9 +2,11 @@ package dev.braintrust.eval;
 
 import dev.braintrust.api.BraintrustApiClient;
 import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.json.BraintrustJsonMapper;
 import dev.braintrust.openapi.api.DatasetsApi;
 import dev.braintrust.openapi.model.FetchEventsRequest;
 import java.util.*;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -14,16 +16,72 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
     private final String datasetId;
     private final @Nullable String pinnedVersion;
     private final int batchSize;
+    private final Function<Object, INPUT> inputConverter;
+    private final Function<Object, OUTPUT> outputConverter;
 
     @Deprecated
     public DatasetBrainstoreImpl(
             BraintrustApiClient apiClient, String datasetId, @Nullable String datasetVersion) {
-        this(apiClient.openApiClient(), datasetId, datasetVersion, 512);
+        this(apiClient.openApiClient(), datasetId, datasetVersion);
     }
 
+    /**
+     * @deprecated the {@code INPUT} and {@code OUTPUT} type parameters are not applied at runtime:
+     *     case values are returned as raw JSON-decoded objects. Use {@link
+     *     #DatasetBrainstoreImpl(BraintrustOpenApiClient, String, String, Class, Class)} instead.
+     */
+    @Deprecated
     public DatasetBrainstoreImpl(
             BraintrustOpenApiClient apiClient, String datasetId, @Nullable String datasetVersion) {
-        this(apiClient, datasetId, datasetVersion, 512);
+        this(apiClient, datasetId, datasetVersion, 512, uncheckedCast(), uncheckedCast());
+    }
+
+    /**
+     * Create a dataset whose case {@code input} and {@code expected} values are deserialized into
+     * the given types using the SDK's shared Jackson mapper (see {@link BraintrustJsonMapper}).
+     *
+     * @param apiClient the Braintrust API client
+     * @param datasetId the Braintrust dataset id
+     * @param datasetVersion the dataset version to pin, or null to fetch the latest version upon
+     *     every cursor open
+     * @param inputClass the type to deserialize each case's {@code input} into
+     * @param outputClass the type to deserialize each case's {@code expected} into
+     */
+    public DatasetBrainstoreImpl(
+            BraintrustOpenApiClient apiClient,
+            String datasetId,
+            @Nullable String datasetVersion,
+            Class<INPUT> inputClass,
+            Class<OUTPUT> outputClass) {
+        this(
+                apiClient,
+                datasetId,
+                datasetVersion,
+                512,
+                BraintrustJsonMapper.converter(inputClass),
+                BraintrustJsonMapper.converter(outputClass));
+    }
+
+    /**
+     * Create a dataset whose case {@code input} and {@code expected} values are converted with the
+     * supplied functions. Converters receive the raw JSON-decoded value (typically a {@code
+     * Map<String, Object>}, {@code List}, {@code String}, {@code Number}, {@code Boolean}, or
+     * null).
+     *
+     * @param apiClient the Braintrust API client
+     * @param datasetId the Braintrust dataset id
+     * @param datasetVersion the dataset version to pin, or null to fetch the latest version upon
+     *     every cursor open
+     * @param inputConverter converts each case's raw {@code input} value; must tolerate null
+     * @param outputConverter converts each case's raw {@code expected} value; must tolerate null
+     */
+    public DatasetBrainstoreImpl(
+            BraintrustOpenApiClient apiClient,
+            String datasetId,
+            @Nullable String datasetVersion,
+            Function<Object, INPUT> inputConverter,
+            Function<Object, OUTPUT> outputConverter) {
+        this(apiClient, datasetId, datasetVersion, 512, inputConverter, outputConverter);
     }
 
     DatasetBrainstoreImpl(
@@ -31,10 +89,28 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
             String datasetId,
             @Nullable String datasetVersion,
             int batchSize) {
+        this(apiClient, datasetId, datasetVersion, batchSize, uncheckedCast(), uncheckedCast());
+    }
+
+    DatasetBrainstoreImpl(
+            BraintrustOpenApiClient apiClient,
+            String datasetId,
+            @Nullable String datasetVersion,
+            int batchSize,
+            Function<Object, INPUT> inputConverter,
+            Function<Object, OUTPUT> outputConverter) {
         this.apiClient = apiClient;
         this.datasetId = datasetId;
         this.batchSize = batchSize;
         this.pinnedVersion = datasetVersion;
+        this.inputConverter = Objects.requireNonNull(inputConverter);
+        this.outputConverter = Objects.requireNonNull(outputConverter);
+    }
+
+    /** Legacy behavior: pass the raw JSON-decoded value through via an unchecked cast. */
+    @SuppressWarnings("unchecked")
+    private static <T> Function<Object, T> uncheckedCast() {
+        return raw -> (T) raw;
     }
 
     @Override
@@ -98,7 +174,6 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public Optional<DatasetCase<INPUT, OUTPUT>> next() {
             if (closed) {
                 throw new IllegalStateException("Cursor is closed");
@@ -114,8 +189,8 @@ public class DatasetBrainstoreImpl<INPUT, OUTPUT> implements Dataset<INPUT, OUTP
 
             var event = currentBatch.get(currentIndex++);
 
-            INPUT input = (INPUT) event.getInput();
-            OUTPUT expected = (OUTPUT) event.getExpected();
+            INPUT input = inputConverter.apply(event.getInput());
+            OUTPUT expected = outputConverter.apply(event.getExpected());
 
             var metadataObj = event.getMetadata();
             // InsertProjectLogsEventMetadata extends HashMap<String,Object>. Jackson stores

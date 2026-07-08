@@ -8,7 +8,9 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.SneakyThrows;
 
 /** Centralized ObjectMapper for the Braintrust SDK. */
@@ -67,6 +69,16 @@ public final class BraintrustJsonMapper {
     @SneakyThrows
     public static <T> T fromJson(String jsonString, Class<T> targetClass) {
         return get().readValue(jsonString, targetClass);
+    }
+
+    /**
+     * Returns a converter function that deserializes raw JSON-decoded values (e.g. {@code
+     * Map<String, Object>}, {@code List}, {@code String}, {@code Number}, {@code Boolean}) into the
+     * given type using the shared mapper. Null values pass through as null.
+     */
+    public static <T> Function<Object, T> converter(Class<T> targetClass) {
+        Objects.requireNonNull(targetClass);
+        return raw -> raw == null ? null : get().convertValue(raw, targetClass);
     }
 
     static synchronized void reset() {

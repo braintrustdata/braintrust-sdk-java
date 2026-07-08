@@ -306,6 +306,169 @@ public class DatasetBrainstoreImplTest {
         assertEquals("unit-test", tags.get(0));
     }
 
+    public record MyInput(String prompt, int temperature) {}
+
+    public record MyOutput(String answer) {}
+
+    private void stubTypedRow() {
+        wireMock.stubFor(
+                post(urlEqualTo("/v1/dataset/" + datasetId + "/fetch"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                {
+                                  "events": [
+                                    {
+                                      "object_type": "dataset",
+                                      "dataset_id": "%s",
+                                      "id": "typed-row-1",
+                                      "_xact_id": "1",
+                                      "created": "2024-01-01T00:00:00Z",
+                                      "input": {"prompt": "hello", "temperature": 7},
+                                      "expected": {"answer": "world"}
+                                    }
+                                  ],
+                                  "cursor": null
+                                }
+                                """
+                                                        .formatted(datasetId))));
+    }
+
+    @Test
+    void testTypedDeserializationWithClasses() {
+        stubTypedRow();
+
+        Dataset<MyInput, MyOutput> dataset =
+                new DatasetBrainstoreImpl<>(
+                        apiClient, datasetId, "test-version", MyInput.class, MyOutput.class);
+
+        List<DatasetCase<MyInput, MyOutput>> cases = new ArrayList<>();
+        dataset.forEach(cases::add);
+
+        assertEquals(1, cases.size());
+        assertEquals(MyInput.class, cases.get(0).input().getClass());
+        assertEquals(new MyInput("hello", 7), cases.get(0).input());
+        assertEquals(new MyOutput("world"), cases.get(0).expected());
+    }
+
+    @Test
+    void testTypedDeserializationWithConverters() {
+        stubTypedRow();
+
+        Dataset<MyInput, String> dataset =
+                new DatasetBrainstoreImpl<>(
+                        apiClient,
+                        datasetId,
+                        "test-version",
+                        raw -> {
+                            @SuppressWarnings("unchecked")
+                            var map = (Map<String, Object>) raw;
+                            return new MyInput(
+                                    (String) map.get("prompt"),
+                                    ((Number) map.get("temperature")).intValue());
+                        },
+                        raw -> {
+                            @SuppressWarnings("unchecked")
+                            var map = (Map<String, Object>) raw;
+                            return (String) map.get("answer");
+                        });
+
+        List<DatasetCase<MyInput, String>> cases = new ArrayList<>();
+        dataset.forEach(cases::add);
+
+        assertEquals(1, cases.size());
+        assertEquals(new MyInput("hello", 7), cases.get(0).input());
+        assertEquals("world", cases.get(0).expected());
+    }
+
+    @Test
+    void testTypedDeserializationNullValues() {
+        wireMock.stubFor(
+                post(urlEqualTo("/v1/dataset/" + datasetId + "/fetch"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                {
+                                  "events": [
+                                    {
+                                      "object_type": "dataset",
+                                      "dataset_id": "%s",
+                                      "id": "null-row-1",
+                                      "_xact_id": "1",
+                                      "created": "2024-01-01T00:00:00Z",
+                                      "input": {"prompt": "hello", "temperature": 7}
+                                    }
+                                  ],
+                                  "cursor": null
+                                }
+                                """
+                                                        .formatted(datasetId))));
+
+        Dataset<MyInput, MyOutput> dataset =
+                new DatasetBrainstoreImpl<>(
+                        apiClient, datasetId, "test-version", MyInput.class, MyOutput.class);
+
+        List<DatasetCase<MyInput, MyOutput>> cases = new ArrayList<>();
+        dataset.forEach(cases::add);
+
+        assertEquals(1, cases.size());
+        assertEquals(new MyInput("hello", 7), cases.get(0).input());
+        assertNull(cases.get(0).expected());
+    }
+
+    @Test
+    void testTypedFetchFromBraintrust() {
+        String projectName = "test-project";
+        String datasetName = "typed-dataset";
+
+        wireMock.stubFor(
+                get(urlPathEqualTo("/v1/dataset"))
+                        .withQueryParam("project_name", equalTo(projectName))
+                        .withQueryParam("dataset_name", equalTo(datasetName))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
+                                {
+                                  "objects": [
+                                    {
+                                      "id": "%s",
+                                      "project_id": "00000000-0000-0000-0000-000000000456",
+                                      "name": "typed-dataset",
+                                      "_xact_id": "1",
+                                      "created": "2024-01-01T00:00:00Z"
+                                    }
+                                  ]
+                                }
+                                """
+                                                        .formatted(datasetId))));
+        stubTypedRow();
+
+        Dataset<MyInput, MyOutput> dataset =
+                Dataset.fetchFromBraintrust(
+                        apiClient, projectName, datasetName, "1", MyInput.class, MyOutput.class);
+
+        // typed fetch must still return the Brainstore-backed impl so Eval.run() links
+        // experiment <-> dataset
+        assertInstanceOf(DatasetBrainstoreImpl.class, dataset);
+        assertEquals(datasetId, dataset.id());
+
+        List<DatasetCase<MyInput, MyOutput>> cases = new ArrayList<>();
+        dataset.forEach(cases::add);
+
+        assertEquals(1, cases.size());
+        assertEquals(new MyInput("hello", 7), cases.get(0).input());
+        assertEquals(new MyOutput("world"), cases.get(0).expected());
+    }
+
     @Test
     void testFetchFromBraintrustNotFound() {
         String projectName = "test-project";

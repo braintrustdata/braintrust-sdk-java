@@ -18,7 +18,7 @@ public class RemoteEvalExample {
         var openAIClient = BraintrustOpenAI.wrapOpenAI(openTelemetry, OpenAIOkHttpClient.fromEnv());
 
         RemoteEval<String, String> foodTypeEval =
-                RemoteEval.<String, String>builder()
+                RemoteEval.builder(String.class, String.class)
                         .name("food-type-classifier")
                         .taskFunction(
                                 food -> {
