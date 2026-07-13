@@ -41,6 +41,8 @@ public final class BraintrustTracing {
     static final String OTEL_SERVICE_NAME = "braintrust-app";
     static final String INSTRUMENTATION_NAME = "braintrust-java";
     static final String INSTRUMENTATION_VERSION = loadVersionFromProperties();
+    private static final String ENVIRONMENT_TYPE_KEY = "braintrust.environment.type";
+    private static final String ENVIRONMENT_NAME_KEY = "braintrust.environment.name";
 
     /**
      * Quick start method that sets up global OpenTelemetry with Braintrust defaults. <br>
@@ -134,6 +136,14 @@ public final class BraintrustTracing {
                 Resource.getDefault().toBuilder()
                         .put(ServiceAttributes.SERVICE_NAME, OTEL_SERVICE_NAME)
                         .put(ServiceAttributes.SERVICE_VERSION, INSTRUMENTATION_VERSION);
+        config.spanOriginEnvironment()
+                .ifPresent(
+                        environment -> {
+                            resourceBuilder.put(ENVIRONMENT_TYPE_KEY, environment.type());
+                            if (environment.name() != null && !environment.name().isBlank()) {
+                                resourceBuilder.put(ENVIRONMENT_NAME_KEY, environment.name());
+                            }
+                        });
         var resource = resourceBuilder.build();
 
         // spans

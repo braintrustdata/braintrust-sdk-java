@@ -3,10 +3,14 @@ package dev.braintrust.config;
 import dev.braintrust.Braintrust;
 import dev.braintrust.api.BraintrustOpenApiClient;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -39,6 +43,8 @@ public final class BraintrustConfig extends BaseConfig {
     private final Duration requestTimeout =
             Duration.ofSeconds(getConfig("BRAINTRUST_REQUEST_TIMEOUT", 30));
     private final Boolean filterAISpans = getConfig("BRAINTRUST_FILTER_AI_SPANS", false);
+    private final Optional<SpanOriginEnvironment> spanOriginEnvironment =
+            Optional.ofNullable(detectSpanOriginEnvironment());
 
     /** compress otel data before exporting to braintrust */
     private final Boolean compressOtelPayload = getConfig("BRAINTRUST_COMPRESS_OTEL_PAYLOAD", true);
@@ -206,6 +212,29 @@ public final class BraintrustConfig extends BaseConfig {
             return this;
         }
 
+        public Builder environment(String type) {
+            return environment(type, null);
+        }
+
+        public Builder environment(String type, String name) {
+            envOverrides.put("BRAINTRUST_ENVIRONMENT_TYPE", type);
+            if (name != null) {
+                envOverrides.put("BRAINTRUST_ENVIRONMENT_NAME", name);
+            } else {
+                envOverrides.put("BRAINTRUST_ENVIRONMENT_NAME", NULL_OVERRIDE);
+            }
+            return this;
+        }
+
+        public Builder spanOriginEnvironment(SpanOriginEnvironment value) {
+            if (value != null) {
+                return environment(value.type(), value.name());
+            }
+            envOverrides.put("BRAINTRUST_ENVIRONMENT_TYPE", NULL_OVERRIDE);
+            envOverrides.put("BRAINTRUST_ENVIRONMENT_NAME", NULL_OVERRIDE);
+            return this;
+        }
+
         public Builder compressOtelPayload(boolean value) {
             envOverrides.put("BRAINTRUST_COMPRESS_OTEL_PAYLOAD", String.valueOf(value));
             return this;
@@ -234,5 +263,111 @@ public final class BraintrustConfig extends BaseConfig {
         public BraintrustConfig build() {
             return new BraintrustConfig(envOverrides, sslContext, x509TrustManager);
         }
+    }
+
+    private SpanOriginEnvironment detectSpanOriginEnvironment() {
+        var environmentType =
+                firstNonBlank(
+                        getEnvValue("BRAINTRUST_ENVIRONMENT_TYPE"),
+                        getBraintrustEnvFileValue("BRAINTRUST_ENVIRONMENT_TYPE"));
+        if (environmentType != null) {
+            return new SpanOriginEnvironment(
+                    environmentType,
+                    firstNonBlank(
+                            getEnvValue("BRAINTRUST_ENVIRONMENT_NAME"),
+                            getBraintrustEnvFileValue("BRAINTRUST_ENVIRONMENT_NAME")));
+        }
+
+        var ciName =
+                detectFirstPresent(
+                        Map.ofEntries(
+                                Map.entry("GITHUB_ACTIONS", "github_actions"),
+                                Map.entry("GITLAB_CI", "gitlab_ci"),
+                                Map.entry("CIRCLECI", "circleci"),
+                                Map.entry("BUILDKITE", "buildkite"),
+                                Map.entry("JENKINS_URL", "jenkins"),
+                                Map.entry("JENKINS_HOME", "jenkins"),
+                                Map.entry("TF_BUILD", "azure_pipelines"),
+                                Map.entry("TEAMCITY_VERSION", "teamcity"),
+                                Map.entry("TRAVIS", "travis"),
+                                Map.entry("BITBUCKET_BUILD_NUMBER", "bitbucket")));
+        if (ciName != null) {
+            return new SpanOriginEnvironment("ci", ciName);
+        }
+        if (isPresent("CI")) {
+            return new SpanOriginEnvironment("ci", "ci");
+        }
+
+        var serverName =
+                detectFirstPresent(
+                        Map.ofEntries(
+                                Map.entry("VERCEL", "vercel"),
+                                Map.entry("NETLIFY", "netlify"),
+                                Map.entry("AWS_LAMBDA_FUNCTION_NAME", "aws_lambda"),
+                                Map.entry("AWS_EXECUTION_ENV", "aws_lambda"),
+                                Map.entry("K_SERVICE", "cloud_run"),
+                                Map.entry("FUNCTION_TARGET", "gcp_functions"),
+                                Map.entry("KUBERNETES_SERVICE_HOST", "kubernetes"),
+                                Map.entry("ECS_CONTAINER_METADATA_URI", "ecs"),
+                                Map.entry("ECS_CONTAINER_METADATA_URI_V4", "ecs"),
+                                Map.entry("DYNO", "heroku"),
+                                Map.entry("FLY_APP_NAME", "fly"),
+                                Map.entry("RAILWAY_ENVIRONMENT", "railway"),
+                                Map.entry("RENDER_SERVICE_NAME", "render")));
+        if (serverName != null) {
+            return new SpanOriginEnvironment("server", serverName);
+        }
+
+        return null;
+    }
+
+    private @Nullable String detectFirstPresent(Map<String, String> vars) {
+        return vars.entrySet().stream()
+                .filter(entry -> isPresent(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isPresent(String key) {
+        return firstNonBlank(getEnvValue(key)) != null;
+    }
+
+    private static @Nullable String firstNonBlank(String... values) {
+        return Arrays.stream(values)
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static @Nullable String getBraintrustEnvFileValue(String key) {
+        for (var dir = Path.of("").toAbsolutePath(); dir != null; dir = dir.getParent()) {
+            var path = dir.resolve(".env.braintrust");
+            if (!Files.isRegularFile(path)) {
+                continue;
+            }
+            try {
+                for (var line : Files.readAllLines(path)) {
+                    var trimmed = line.trim();
+                    if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                        continue;
+                    }
+                    var equals = trimmed.indexOf('=');
+                    if (equals <= 0 || !trimmed.substring(0, equals).trim().equals(key)) {
+                        continue;
+                    }
+                    var value = trimmed.substring(equals + 1).trim();
+                    if ((value.startsWith("\"") && value.endsWith("\""))
+                            || (value.startsWith("'") && value.endsWith("'"))) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+                    return value;
+                }
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 }
