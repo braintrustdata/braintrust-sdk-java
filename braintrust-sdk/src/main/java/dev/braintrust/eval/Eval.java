@@ -120,10 +120,8 @@ public final class Eval<INPUT, OUTPUT> {
                         .setSpanKind(SpanKind.CLIENT)
                         .setAttribute(PARENT, "experiment_id:" + experimentId)
                         .setAttribute("braintrust.span_attributes", toJson(Map.of("type", "eval")))
-                        .setAttribute(
-                                "braintrust.input_json",
-                                toJson(Map.of("input", datasetCase.input())))
-                        .setAttribute("braintrust.expected", toJson(datasetCase.expected()))
+                        .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
+                        .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()))
                         .startSpan();
         if (datasetCase.origin().isPresent()) {
             rootSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
@@ -146,22 +144,21 @@ public final class Eval<INPUT, OUTPUT> {
                                 .setAttribute(
                                         "braintrust.span_attributes",
                                         toJson(Map.of("type", "task")))
+                                .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
+                                .setAttribute(
+                                        "braintrust.expected_json", toJson(datasetCase.expected()))
                                 .startSpan();
                 taskSpanId = taskSpan.getSpanContext().getSpanId();
                 try (var unused =
                         BraintrustContext.ofExperiment(experimentId, taskSpan).makeCurrent()) {
                     taskResult = task.apply(datasetCase, parameters);
-                    rootSpan.setAttribute(
-                            "braintrust.output_json",
-                            toJson(Map.of("output", taskResult.result())));
+                    taskSpan.setAttribute("braintrust.output_json", toJson(taskResult.result()));
+                    rootSpan.setAttribute("braintrust.output_json", toJson(taskResult.result()));
                 } catch (Exception e) {
                     taskSpan.setStatus(StatusCode.ERROR, e.getMessage());
                     taskSpan.recordException(e);
                     taskSpan.end();
                     rootSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                    rootSpan.setAttribute(
-                            "braintrust.output_json",
-                            toJson(Collections.singletonMap("output", null)));
                     log.debug("Task threw exception for input: " + datasetCase.input(), e);
                     // run scoreForTaskException on each scorer
                     for (var scorer : scorers) {

@@ -534,6 +534,10 @@ class DevserverTest {
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.input_json"));
             assertNotNull(inputJson, "Eval span should have input_json");
+            JsonNode input = JSON_MAPPER.readTree(inputJson);
+            assertTrue(
+                    input.isTextual(),
+                    "Eval span input_json should be the raw input value, not a wrapper object");
 
             String expectedJson =
                     evalSpan.getAttributes()
@@ -541,6 +545,10 @@ class DevserverTest {
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.expected_json"));
             assertNotNull(expectedJson, "Eval span should have expected_json");
+            JsonNode expected = JSON_MAPPER.readTree(expectedJson);
+            assertTrue(
+                    expected.isTextual(),
+                    "Eval span expected_json should be the raw expected value");
 
             String outputJson =
                     evalSpan.getAttributes()
@@ -549,7 +557,7 @@ class DevserverTest {
                                             "braintrust.output_json"));
             assertNotNull(outputJson, "Eval span should have output_json");
             JsonNode output = JSON_MAPPER.readTree(outputJson);
-            assertEquals("java-fruit", output.get("output").asText());
+            assertEquals("java-fruit", output.asText());
         }
 
         for (SpanData taskSpan : taskSpans) {
@@ -578,6 +586,21 @@ class DevserverTest {
                                     io.opentelemetry.api.common.AttributeKey.stringKey(
                                             "braintrust.input_json"));
             assertNotNull(inputJson, "Task span should have input_json");
+            JsonNode input = JSON_MAPPER.readTree(inputJson);
+            assertTrue(
+                    input.isTextual(),
+                    "Task span input_json should be the raw input value, not a wrapper object");
+
+            String expectedJson =
+                    taskSpan.getAttributes()
+                            .get(
+                                    io.opentelemetry.api.common.AttributeKey.stringKey(
+                                            "braintrust.expected_json"));
+            assertNotNull(expectedJson, "Task span should have expected_json");
+            JsonNode expected = JSON_MAPPER.readTree(expectedJson);
+            assertTrue(
+                    expected.isTextual(),
+                    "Task span expected_json should be the raw expected value");
 
             String outputJson =
                     taskSpan.getAttributes()
@@ -586,7 +609,7 @@ class DevserverTest {
                                             "braintrust.output_json"));
             assertNotNull(outputJson, "Task span should have output_json");
             JsonNode output = JSON_MAPPER.readTree(outputJson);
-            assertEquals("java-fruit", output.get("output").asText());
+            assertEquals("java-fruit", output.asText());
         }
 
         for (SpanData scoreSpan : scoreSpans) {
@@ -762,8 +785,8 @@ class DevserverTest {
             assertFalse(
                     spanAttrs.has("generation"), "experiment spans should not carry generation");
             assertNotNull(
-                    evalSpan.getAttributes().get(AttributeKey.stringKey("braintrust.expected")),
-                    "standard Eval decorator should set braintrust.expected");
+                    evalSpan.getAttributes()
+                            .get(AttributeKey.stringKey("braintrust.expected_json")));
         }
     }
 
@@ -1039,15 +1062,11 @@ class DevserverTest {
                 erroredEvalSpan.getStatus().getDescription().contains("task failed on bad-input"),
                 "eval span error should contain the exception message");
 
-        // The errored eval span should have output: null
-        @SuppressWarnings("unchecked")
-        Map<String, Object> erroredOutputJson =
-                fromJson(
-                        erroredEvalSpan
-                                .getAttributes()
-                                .get(AttributeKey.stringKey("braintrust.output_json")),
-                        Map.class);
-        assertNull(erroredOutputJson.get("output"), "errored case output should be null");
+        assertNull(
+                erroredEvalSpan
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("braintrust.output_json")),
+                "errored eval span should not have output_json");
 
         // Find the task span for the errored case (should have ERROR status)
         var erroredTaskSpan =
@@ -1105,15 +1124,12 @@ class DevserverTest {
                         .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("expected a successful eval span"));
-        @SuppressWarnings("unchecked")
-        Map<String, Object> successOutputJson =
-                fromJson(
+        JsonNode successOutputJson =
+                JSON_MAPPER.readTree(
                         successEvalSpan
                                 .getAttributes()
-                                .get(AttributeKey.stringKey("braintrust.output_json")),
-                        Map.class);
-        assertEquals(
-                "result", successOutputJson.get("output"), "successful case should have output");
+                                .get(AttributeKey.stringKey("braintrust.output_json")));
+        assertEquals("result", successOutputJson.asText(), "successful case should have output");
     }
 
     @Test

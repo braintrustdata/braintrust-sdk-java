@@ -461,11 +461,6 @@ public class Devserver {
                                                     taskSpan.end();
                                                     evalSpan.setStatus(
                                                             StatusCode.ERROR, e.getMessage());
-                                                    evalSpan.setAttribute(
-                                                            "braintrust.output_json",
-                                                            toJson(
-                                                                    Collections.singletonMap(
-                                                                            "output", null)));
                                                     log.debug(
                                                             "Task threw exception for input: "
                                                                     + datasetCase.input(),
@@ -681,7 +676,7 @@ public class Devserver {
         }
         evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
                 .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
                 .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
 
         if (datasetCase.origin().isPresent()) {
@@ -694,8 +689,7 @@ public class Devserver {
         if (!datasetCase.metadata().isEmpty()) {
             evalSpan.setAttribute("braintrust.metadata", toJson(datasetCase.metadata()));
         }
-        evalSpan.setAttribute(
-                "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
+        evalSpan.setAttribute("braintrust.output_json", toJson(taskResult.result()));
     }
 
     /**
@@ -715,7 +709,7 @@ public class Devserver {
         }
         evalSpan.setAttribute(PARENT, braintrustParent.toParentValue())
                 .setAttribute("braintrust.span_attributes", toJson(spanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
+                .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
                 .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()));
 
         if (datasetCase.origin().isPresent()) {
@@ -745,9 +739,9 @@ public class Devserver {
 
         taskSpan.setAttribute(PARENT, braintrustParent.toParentValue())
                 .setAttribute("braintrust.span_attributes", toJson(taskSpanAttrs))
-                .setAttribute("braintrust.input_json", toJson(Map.of("input", datasetCase.input())))
-                .setAttribute(
-                        "braintrust.output_json", toJson(Map.of("output", taskResult.result())));
+                .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
+                .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()))
+                .setAttribute("braintrust.output_json", toJson(taskResult.result()));
     }
 
     private void setScoreSpanAttributes(
