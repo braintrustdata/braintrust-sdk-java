@@ -116,17 +116,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
             }
         }
 
-        var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
-        span.setAttribute(
-                CONTEXT_JSON,
-                mergedContextJson(span.getAttribute(CONTEXT_JSON), spanOriginEnvironment));
-        if (spanOriginEnvironment != null) {
-            span.setAttribute(ENVIRONMENT_TYPE, spanOriginEnvironment.type());
-            if (spanOriginEnvironment.name() != null && !spanOriginEnvironment.name().isBlank()) {
-                span.setAttribute(ENVIRONMENT_NAME, spanOriginEnvironment.name());
-            }
-        }
-
         delegate.onStart(parentContext, span);
     }
 
@@ -190,18 +179,30 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
         @Nullable String newInputJson = attachmentProcessor.processAndUpload(inputJson);
         @Nullable String newOutputJson = attachmentProcessor.processAndUpload(outputJson);
+        var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
+        var newContextJson =
+                mergedContextJson(
+                        spanData.getAttributes().get(CONTEXT_JSON), spanOriginEnvironment);
 
         if (!Objects.equals(newInputJson, inputJson)
                 || !Objects.equals(newOutputJson, outputJson)) {
-            delegate.onEnd(new TransformedReadableSpan(span, newInputJson, newOutputJson));
+            delegate.onEnd(
+                    new TransformedReadableSpan(
+                            span,
+                            newInputJson,
+                            newOutputJson,
+                            newContextJson,
+                            spanOriginEnvironment));
         } else {
-            delegate.onEnd(span);
+            delegate.onEnd(
+                    new TransformedReadableSpan(
+                            span, inputJson, outputJson, newContextJson, spanOriginEnvironment));
         }
     }
 
     @Override
     public boolean isEndRequired() {
-        return config.autoConvertAIAttachments() || !samplers.isEmpty() || delegate.isEndRequired();
+        return true;
     }
 
     @Override
@@ -262,11 +263,27 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         private final ReadableSpan delegate;
         private final Attributes attributes;
 
-        TransformedReadableSpan(ReadableSpan delegate, String inputJson, String outputJson) {
+        TransformedReadableSpan(
+                ReadableSpan delegate,
+                String inputJson,
+                String outputJson,
+                String contextJson,
+                @Nullable SpanOriginEnvironment environment) {
             this.delegate = delegate;
             var builder = delegate.getAttributes().toBuilder();
-            builder.put(INPUT_JSON, inputJson);
-            builder.put(OUTPUT_JSON, outputJson);
+            if (inputJson != null) {
+                builder.put(INPUT_JSON, inputJson);
+            }
+            if (outputJson != null) {
+                builder.put(OUTPUT_JSON, outputJson);
+            }
+            builder.put(CONTEXT_JSON, contextJson);
+            if (environment != null) {
+                builder.put(ENVIRONMENT_TYPE, environment.type());
+                if (environment.name() != null && !environment.name().isBlank()) {
+                    builder.put(ENVIRONMENT_NAME, environment.name());
+                }
+            }
             attributes = builder.build();
         }
 
@@ -283,6 +300,15 @@ public class BraintrustSpanProcessor implements SpanProcessor {
             }
             if (key.equals(OUTPUT_JSON)) {
                 return (T) attributes.get(OUTPUT_JSON);
+            }
+            if (key.equals(CONTEXT_JSON)) {
+                return (T) attributes.get(CONTEXT_JSON);
+            }
+            if (key.equals(ENVIRONMENT_TYPE)) {
+                return (T) attributes.get(ENVIRONMENT_TYPE);
+            }
+            if (key.equals(ENVIRONMENT_NAME)) {
+                return (T) attributes.get(ENVIRONMENT_NAME);
             }
             return delegate.getAttribute(key);
         }

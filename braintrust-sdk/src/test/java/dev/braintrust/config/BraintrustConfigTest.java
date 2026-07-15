@@ -91,4 +91,38 @@ class BraintrustConfigTest {
         // Should be the system defaults
         assertEquals(SSLContext.getDefault(), config.sslContext());
     }
+
+    @Test
+    void explicitNullSpanOriginEnvironmentDisablesDetection() {
+        var config =
+                BraintrustConfig.of(
+                        "BRAINTRUST_ENVIRONMENT_TYPE",
+                        BaseConfig.NULL_OVERRIDE,
+                        "BRAINTRUST_ENVIRONMENT_NAME",
+                        BaseConfig.NULL_OVERRIDE,
+                        "CI",
+                        "true",
+                        "AWS_EXECUTION_ENV",
+                        "AWS_ECS_FARGATE");
+
+        assertTrue(config.spanOriginEnvironment().isEmpty());
+    }
+
+    @Test
+    void awsExecutionEnvClassifiesEcsBeforeLambda() {
+        var config = BraintrustConfig.of("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE");
+
+        var environment = config.spanOriginEnvironment().orElseThrow();
+        assertEquals("server", environment.type());
+        assertEquals("ecs", environment.name());
+    }
+
+    @Test
+    void awsExecutionEnvClassifiesLambdaWhenLambdaSpecific() {
+        var config = BraintrustConfig.of("AWS_EXECUTION_ENV", "AWS_Lambda_java17");
+
+        var environment = config.spanOriginEnvironment().orElseThrow();
+        assertEquals("server", environment.type());
+        assertEquals("aws_lambda", environment.name());
+    }
 }

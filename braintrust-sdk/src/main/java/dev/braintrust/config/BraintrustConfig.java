@@ -266,16 +266,13 @@ public final class BraintrustConfig extends BaseConfig {
     }
 
     private SpanOriginEnvironment detectSpanOriginEnvironment() {
-        var environmentType =
-                firstNonBlank(
-                        getEnvValue("BRAINTRUST_ENVIRONMENT_TYPE"),
-                        getBraintrustEnvFileValue("BRAINTRUST_ENVIRONMENT_TYPE"));
+        var environmentType = getEnvironmentConfigValue("BRAINTRUST_ENVIRONMENT_TYPE");
         if (environmentType != null) {
             return new SpanOriginEnvironment(
-                    environmentType,
-                    firstNonBlank(
-                            getEnvValue("BRAINTRUST_ENVIRONMENT_NAME"),
-                            getBraintrustEnvFileValue("BRAINTRUST_ENVIRONMENT_NAME")));
+                    environmentType, getEnvironmentConfigValue("BRAINTRUST_ENVIRONMENT_NAME"));
+        }
+        if (envOverrides.containsKey("BRAINTRUST_ENVIRONMENT_TYPE")) {
+            return null;
         }
 
         var ciName =
@@ -298,27 +295,54 @@ public final class BraintrustConfig extends BaseConfig {
             return new SpanOriginEnvironment("ci", "ci");
         }
 
-        var serverName =
-                detectFirstPresent(
-                        Map.ofEntries(
-                                Map.entry("VERCEL", "vercel"),
-                                Map.entry("NETLIFY", "netlify"),
-                                Map.entry("AWS_LAMBDA_FUNCTION_NAME", "aws_lambda"),
-                                Map.entry("AWS_EXECUTION_ENV", "aws_lambda"),
-                                Map.entry("K_SERVICE", "cloud_run"),
-                                Map.entry("FUNCTION_TARGET", "gcp_functions"),
-                                Map.entry("KUBERNETES_SERVICE_HOST", "kubernetes"),
-                                Map.entry("ECS_CONTAINER_METADATA_URI", "ecs"),
-                                Map.entry("ECS_CONTAINER_METADATA_URI_V4", "ecs"),
-                                Map.entry("DYNO", "heroku"),
-                                Map.entry("FLY_APP_NAME", "fly"),
-                                Map.entry("RAILWAY_ENVIRONMENT", "railway"),
-                                Map.entry("RENDER_SERVICE_NAME", "render")));
+        var serverName = detectServerEnvironmentName();
         if (serverName != null) {
             return new SpanOriginEnvironment("server", serverName);
         }
 
         return null;
+    }
+
+    private @Nullable String getEnvironmentConfigValue(String key) {
+        var value = getEnvValue(key);
+        if (envOverrides.containsKey(key)) {
+            return firstNonBlank(value);
+        }
+        return firstNonBlank(value, getBraintrustEnvFileValue(key));
+    }
+
+    private @Nullable String detectServerEnvironmentName() {
+        var serverName =
+                detectFirstPresent(
+                        Map.ofEntries(
+                                Map.entry("VERCEL", "vercel"), Map.entry("NETLIFY", "netlify")));
+        if (serverName != null) {
+            return serverName;
+        }
+        if (isPresent("ECS_CONTAINER_METADATA_URI") || isPresent("ECS_CONTAINER_METADATA_URI_V4")) {
+            return "ecs";
+        }
+        var awsExecutionEnv = firstNonBlank(getEnvValue("AWS_EXECUTION_ENV"));
+        if (awsExecutionEnv != null) {
+            if (awsExecutionEnv.startsWith("AWS_ECS_")) {
+                return "ecs";
+            }
+            if (awsExecutionEnv.startsWith("AWS_Lambda_")) {
+                return "aws_lambda";
+            }
+        }
+        if (isPresent("AWS_LAMBDA_FUNCTION_NAME")) {
+            return "aws_lambda";
+        }
+        return detectFirstPresent(
+                Map.ofEntries(
+                        Map.entry("K_SERVICE", "cloud_run"),
+                        Map.entry("FUNCTION_TARGET", "gcp_functions"),
+                        Map.entry("KUBERNETES_SERVICE_HOST", "kubernetes"),
+                        Map.entry("DYNO", "heroku"),
+                        Map.entry("FLY_APP_NAME", "fly"),
+                        Map.entry("RAILWAY_ENVIRONMENT", "railway"),
+                        Map.entry("RENDER_SERVICE_NAME", "render")));
     }
 
     private @Nullable String detectFirstPresent(Map<String, String> vars) {
