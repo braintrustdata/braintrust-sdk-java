@@ -118,7 +118,8 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
         var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
         span.setAttribute(
-                CONTEXT_JSON, mergedContextJson(span.getAttribute(CONTEXT_JSON), spanOriginEnvironment));
+                CONTEXT_JSON,
+                mergedContextJson(span.getAttribute(CONTEXT_JSON), spanOriginEnvironment));
         if (spanOriginEnvironment != null) {
             span.setAttribute(ENVIRONMENT_TYPE, spanOriginEnvironment.type());
             if (spanOriginEnvironment.name() != null && !spanOriginEnvironment.name().isBlank()) {
@@ -135,7 +136,8 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         Map<String, Object> context = new HashMap<>();
         if (existingContextJson != null && !existingContextJson.isBlank()) {
             try {
-                context.putAll(BraintrustJsonMapper.get().readValue(existingContextJson, Map.class));
+                context.putAll(
+                        BraintrustJsonMapper.get().readValue(existingContextJson, Map.class));
             } catch (Exception ignored) {
                 // Invalid user-provided context should not prevent adding provenance.
             }
