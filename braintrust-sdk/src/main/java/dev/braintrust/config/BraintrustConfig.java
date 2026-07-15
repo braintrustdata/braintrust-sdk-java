@@ -275,6 +275,11 @@ public final class BraintrustConfig extends BaseConfig {
             return null;
         }
 
+        var serverName = detectServerEnvironmentName();
+        if (serverName != null) {
+            return new SpanOriginEnvironment("server", serverName);
+        }
+
         var ciName =
                 detectFirstPresent(
                         Map.ofEntries(
@@ -293,11 +298,6 @@ public final class BraintrustConfig extends BaseConfig {
         }
         if (isPresent("CI")) {
             return new SpanOriginEnvironment("ci", "ci");
-        }
-
-        var serverName = detectServerEnvironmentName();
-        if (serverName != null) {
-            return new SpanOriginEnvironment("server", serverName);
         }
 
         return null;

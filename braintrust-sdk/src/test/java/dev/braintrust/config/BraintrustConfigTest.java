@@ -110,7 +110,9 @@ class BraintrustConfigTest {
 
     @Test
     void awsExecutionEnvClassifiesEcsBeforeLambda() {
-        var config = BraintrustConfig.of("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE");
+        var config =
+                BraintrustConfig.of(
+                        "GITHUB_ACTIONS", "true", "AWS_EXECUTION_ENV", "AWS_ECS_FARGATE");
 
         var environment = config.spanOriginEnvironment().orElseThrow();
         assertEquals("server", environment.type());
@@ -119,7 +121,9 @@ class BraintrustConfigTest {
 
     @Test
     void awsExecutionEnvClassifiesLambdaWhenLambdaSpecific() {
-        var config = BraintrustConfig.of("AWS_EXECUTION_ENV", "AWS_Lambda_java17");
+        var config =
+                BraintrustConfig.of(
+                        "GITHUB_ACTIONS", "true", "AWS_EXECUTION_ENV", "AWS_Lambda_java17");
 
         var environment = config.spanOriginEnvironment().orElseThrow();
         assertEquals("server", environment.type());
