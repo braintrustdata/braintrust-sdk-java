@@ -22,9 +22,7 @@ interface BraintrustSampler {
                 var keyName = key.getKey();
                 // Skip internal attributes injected by the span processor itself
                 if (keyName.equals(BraintrustTracing.PARENT_KEY)
-                        || keyName.equals(BraintrustSpanProcessor.CONTEXT_JSON.getKey())
-                        || keyName.equals(BraintrustSpanProcessor.ENVIRONMENT_TYPE.getKey())
-                        || keyName.equals(BraintrustSpanProcessor.ENVIRONMENT_NAME.getKey())) {
+                        || keyName.equals(BraintrustSpanProcessor.CONTEXT_JSON.getKey())) {
                     continue;
                 }
                 for (var prefix : AI_ATTR_PREFIXES) {

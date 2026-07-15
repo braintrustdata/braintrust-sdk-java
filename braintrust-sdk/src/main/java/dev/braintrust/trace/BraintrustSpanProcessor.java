@@ -39,10 +39,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
     static final AttributeKey<String> CONTEXT_JSON =
             AttributeKey.stringKey("braintrust.context_json");
-    static final AttributeKey<String> ENVIRONMENT_TYPE =
-            AttributeKey.stringKey("braintrust.environment.type");
-    static final AttributeKey<String> ENVIRONMENT_NAME =
-            AttributeKey.stringKey("braintrust.environment.name");
 
     private final BraintrustConfig config;
     private final SpanProcessor delegate;
@@ -278,12 +274,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
                 builder.put(OUTPUT_JSON, outputJson);
             }
             builder.put(CONTEXT_JSON, contextJson);
-            if (environment != null) {
-                builder.put(ENVIRONMENT_TYPE, environment.type());
-                if (environment.name() != null && !environment.name().isBlank()) {
-                    builder.put(ENVIRONMENT_NAME, environment.name());
-                }
-            }
             attributes = builder.build();
         }
 
@@ -303,12 +293,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
             }
             if (key.equals(CONTEXT_JSON)) {
                 return (T) attributes.get(CONTEXT_JSON);
-            }
-            if (key.equals(ENVIRONMENT_TYPE)) {
-                return (T) attributes.get(ENVIRONMENT_TYPE);
-            }
-            if (key.equals(ENVIRONMENT_NAME)) {
-                return (T) attributes.get(ENVIRONMENT_NAME);
             }
             return delegate.getAttribute(key);
         }
