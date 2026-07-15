@@ -267,11 +267,12 @@ public final class BraintrustConfig extends BaseConfig {
 
     private SpanOriginEnvironment detectSpanOriginEnvironment() {
         var environmentType = getEnvironmentConfigValue("BRAINTRUST_ENVIRONMENT_TYPE");
-        if (environmentType != null) {
-            return new SpanOriginEnvironment(
-                    environmentType, getEnvironmentConfigValue("BRAINTRUST_ENVIRONMENT_NAME"));
+        var environmentName = getEnvironmentConfigValue("BRAINTRUST_ENVIRONMENT_NAME");
+        if (environmentType != null || environmentName != null) {
+            return new SpanOriginEnvironment(environmentType, environmentName);
         }
-        if (envOverrides.containsKey("BRAINTRUST_ENVIRONMENT_TYPE")) {
+        if (envOverrides.containsKey("BRAINTRUST_ENVIRONMENT_TYPE")
+                || envOverrides.containsKey("BRAINTRUST_ENVIRONMENT_NAME")) {
             return null;
         }
 

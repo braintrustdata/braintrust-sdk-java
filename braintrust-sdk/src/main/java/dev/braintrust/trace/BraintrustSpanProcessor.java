@@ -139,7 +139,9 @@ public class BraintrustSpanProcessor implements SpanProcessor {
                 "instrumentation", Map.of("name", BraintrustTracing.INSTRUMENTATION_NAME));
         if (!spanOrigin.containsKey("environment") && environment != null) {
             var env = new HashMap<String, Object>();
-            env.put("type", environment.type());
+            if (environment.type() != null && !environment.type().isBlank()) {
+                env.put("type", environment.type());
+            }
             if (environment.name() != null && !environment.name().isBlank()) {
                 env.put("name", environment.name());
             }

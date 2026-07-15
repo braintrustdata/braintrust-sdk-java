@@ -109,6 +109,22 @@ class BraintrustConfigTest {
     }
 
     @Test
+    void explicitEnvironmentNameWithoutTypeIsPreserved() {
+        var config =
+                BraintrustConfig.of(
+                        "BRAINTRUST_ENVIRONMENT_TYPE",
+                        BaseConfig.NULL_OVERRIDE,
+                        "BRAINTRUST_ENVIRONMENT_NAME",
+                        "staging",
+                        "CI",
+                        "true");
+
+        var environment = config.spanOriginEnvironment().orElseThrow();
+        assertNull(environment.type());
+        assertEquals("staging", environment.name());
+    }
+
+    @Test
     void awsExecutionEnvClassifiesEcsBeforeLambda() {
         var config =
                 BraintrustConfig.of(
