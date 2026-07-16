@@ -86,28 +86,45 @@ public class EvalTest {
                     "all eval spans must set the parent to the experiment id");
             if (span.getParentSpanId().equals(SpanId.getInvalid())) {
                 numRootSpans.incrementAndGet();
-                var inputJson =
+                var input =
                         fromJson(
                                 span.getAttributes()
                                         .get(AttributeKey.stringKey("braintrust.input_json")),
-                                Map.class);
-                assertNotNull(inputJson.get("input"), "invlaid input: " + inputJson);
+                                String.class);
+                assertTrue(
+                        input.equals("strawberry") || input.equals("asparagus"),
+                        "invalid input: " + input);
 
                 var expected =
                         fromJson(
                                 span.getAttributes()
-                                        .get(AttributeKey.stringKey("braintrust.expected")),
+                                        .get(AttributeKey.stringKey("braintrust.expected_json")),
                                 String.class);
                 assertTrue(isFruitOrVegetable(expected), "invalid expected: " + expected);
 
-                var outputJson =
+                var output =
                         fromJson(
                                 span.getAttributes()
                                         .get(AttributeKey.stringKey("braintrust.output_json")),
-                                Map.class);
-                var output = outputJson.get("output");
-                assertNotNull(output, "invlaid output: " + outputJson);
-                assertTrue(isFruitOrVegetable(String.valueOf(output)), "invalid output: " + output);
+                                String.class);
+                assertNotNull(output, "invalid output: " + output);
+                assertTrue(isFruitOrVegetable(output), "invalid output: " + output);
+            } else if ("task".equals(span.getName())) {
+                // task span carries its own bare input/output
+                var input =
+                        fromJson(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.input_json")),
+                                String.class);
+                assertTrue(
+                        input.equals("strawberry") || input.equals("asparagus"),
+                        "invalid task input: " + input);
+                var output =
+                        fromJson(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.output_json")),
+                                String.class);
+                assertTrue(isFruitOrVegetable(output), "invalid task output: " + output);
             }
         }
         assertEquals(2, numRootSpans.get(), "each case should make a root span");
@@ -315,8 +332,7 @@ public class EvalTest {
                 var inputJson =
                         span.getAttributes().get(AttributeKey.stringKey("braintrust.input_json"));
                 assertNotNull(inputJson);
-                fromJson(inputJson, Map.class);
-                var input = (String) (fromJson(inputJson, Map.class)).get("input");
+                var input = fromJson(inputJson, String.class);
                 assertNotNull(input);
                 var origin = span.getAttributes().get(AttributeKey.stringKey("braintrust.origin"));
                 switch (input) {
@@ -481,14 +497,11 @@ public class EvalTest {
                 erroredRootSpan.getStatus().getDescription().contains("task failed on bad-input"),
                 "root span error should contain the exception message");
 
-        // The errored root span should have output: null
-        var erroredOutputJson =
-                fromJson(
-                        erroredRootSpan
-                                .getAttributes()
-                                .get(AttributeKey.stringKey("braintrust.output_json")),
-                        Map.class);
-        assertNull(erroredOutputJson.get("output"), "errored case output should be null");
+        assertNull(
+                erroredRootSpan
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("braintrust.output_json")),
+                "errors should not set output json");
 
         // Find the task span for the errored case (child of errored root, type=task, status=ERROR)
         var erroredTaskSpan =
@@ -519,6 +532,11 @@ public class EvalTest {
         assertTrue(
                 erroredTaskSpan.getEvents().stream().anyMatch(e -> e.getName().equals("exception")),
                 "task span should have an exception event");
+        assertNull(
+                erroredTaskSpan
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("braintrust.output_json")),
+                "errors should not set output json");
 
         // The errored case should still have score spans (from scoreForTaskException default = 0.0)
         var erroredScoreSpans =
@@ -560,14 +578,13 @@ public class EvalTest {
                         .filter(s -> s.getStatus().getStatusCode() != StatusCode.ERROR)
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("expected a successful root span"));
-        var successOutputJson =
+        var successOutput =
                 fromJson(
                         successRootSpan
                                 .getAttributes()
                                 .get(AttributeKey.stringKey("braintrust.output_json")),
-                        Map.class);
-        assertEquals(
-                "result", successOutputJson.get("output"), "successful case should have output");
+                        String.class);
+        assertEquals("result", successOutput, "successful case should have output");
     }
 
     @Test
