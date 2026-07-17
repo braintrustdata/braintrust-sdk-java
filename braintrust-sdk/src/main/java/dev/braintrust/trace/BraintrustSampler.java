@@ -21,7 +21,8 @@ interface BraintrustSampler {
             for (var key : span.getAttributes().asMap().keySet()) {
                 var keyName = key.getKey();
                 // Skip internal attributes injected by the span processor itself
-                if (keyName.equals(BraintrustTracing.PARENT_KEY)) {
+                if (keyName.equals(BraintrustTracing.PARENT_KEY)
+                        || keyName.equals(BraintrustSpanProcessor.CONTEXT_JSON.getKey())) {
                     continue;
                 }
                 for (var prefix : AI_ATTR_PREFIXES) {

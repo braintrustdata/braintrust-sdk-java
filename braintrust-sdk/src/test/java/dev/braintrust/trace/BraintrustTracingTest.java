@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.UnitTestSpanExporter;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,6 +112,41 @@ public class BraintrustTracingTest {
 
         assertEquals(1, spans.size(), "Only the AI span should be exported");
         assertEquals("llm-call", spans.get(0).getName());
+    }
+
+    @Test
+    void spanOriginMergesWithContextJsonSetAfterSpanStart() throws Exception {
+        var config =
+                BraintrustConfig.builder()
+                        .apiKey("test-key")
+                        .apiUrl("http://localhost:1234")
+                        .build();
+
+        var spanExporter = new UnitTestSpanExporter();
+        var processor =
+                new BraintrustSpanProcessor(config, SimpleSpanProcessor.create(spanExporter));
+        var tracerProvider = SdkTracerProvider.builder().addSpanProcessor(processor).build();
+        var tracer = tracerProvider.get("test");
+
+        var span = tracer.spanBuilder("late-context").startSpan();
+        span.setAttribute(
+                "braintrust.context_json", "{\"metadata\":{\"source\":\"late-attribute\"}}");
+        span.end();
+
+        tracerProvider.forceFlush().join(5, TimeUnit.SECONDS);
+        var spans = spanExporter.getFinishedSpanItems();
+        assertEquals(1, spans.size());
+
+        var contextJson =
+                spans.get(0).getAttributes().get(AttributeKey.stringKey("braintrust.context_json"));
+        assertNotNull(contextJson);
+        var context = BraintrustJsonMapper.get().readValue(contextJson, Map.class);
+        assertEquals("late-attribute", ((Map<?, ?>) context.get("metadata")).get("source"));
+        var spanOrigin = (Map<?, ?>) context.get("span_origin");
+        assertEquals("braintrust.sdk.java", spanOrigin.get("name"));
+        assertEquals(
+                BraintrustTracing.INSTRUMENTATION_NAME,
+                ((Map<?, ?>) spanOrigin.get("instrumentation")).get("name"));
     }
 
     private void doSimpleOtelTrace(Tracer tracer) {

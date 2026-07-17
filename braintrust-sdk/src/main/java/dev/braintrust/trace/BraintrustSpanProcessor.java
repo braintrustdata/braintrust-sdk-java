@@ -2,6 +2,8 @@ package dev.braintrust.trace;
 
 import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
+import dev.braintrust.config.SpanOriginEnvironment;
+import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.context.Context;
@@ -12,7 +14,9 @@ import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.data.DelegatingSpanData;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +37,8 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
     public static final AttributeKey<String> PARENT =
             AttributeKey.stringKey(BraintrustTracing.PARENT_KEY);
+    static final AttributeKey<String> CONTEXT_JSON =
+            AttributeKey.stringKey("braintrust.context_json");
 
     private final BraintrustConfig config;
     private final SpanProcessor delegate;
@@ -109,6 +115,42 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         delegate.onStart(parentContext, span);
     }
 
+    @SuppressWarnings("unchecked")
+    private static String mergedContextJson(
+            @Nullable String existingContextJson, @Nullable SpanOriginEnvironment environment) {
+        Map<String, Object> context = new HashMap<>();
+        if (existingContextJson != null && !existingContextJson.isBlank()) {
+            try {
+                context.putAll(
+                        BraintrustJsonMapper.get().readValue(existingContextJson, Map.class));
+            } catch (Exception ignored) {
+                // Invalid user-provided context should not prevent adding provenance.
+            }
+        }
+
+        var existingOrigin = context.get("span_origin");
+        Map<String, Object> spanOrigin =
+                existingOrigin instanceof Map<?, ?> map
+                        ? new HashMap<>((Map<String, Object>) map)
+                        : new HashMap<>();
+        spanOrigin.putIfAbsent("name", "braintrust.sdk.java");
+        spanOrigin.putIfAbsent("version", BraintrustTracing.INSTRUMENTATION_VERSION);
+        spanOrigin.putIfAbsent(
+                "instrumentation", Map.of("name", BraintrustTracing.INSTRUMENTATION_NAME));
+        if (!spanOrigin.containsKey("environment") && environment != null) {
+            var env = new HashMap<String, Object>();
+            if (environment.type() != null && !environment.type().isBlank()) {
+                env.put("type", environment.type());
+            }
+            if (environment.name() != null && !environment.name().isBlank()) {
+                env.put("name", environment.name());
+            }
+            spanOrigin.put("environment", env);
+        }
+        context.put("span_origin", spanOrigin);
+        return BraintrustJsonMapper.toJson(context);
+    }
+
     @Override
     public boolean isStartRequired() {
         return true;
@@ -135,18 +177,30 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
         @Nullable String newInputJson = attachmentProcessor.processAndUpload(inputJson);
         @Nullable String newOutputJson = attachmentProcessor.processAndUpload(outputJson);
+        var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
+        var newContextJson =
+                mergedContextJson(
+                        spanData.getAttributes().get(CONTEXT_JSON), spanOriginEnvironment);
 
         if (!Objects.equals(newInputJson, inputJson)
                 || !Objects.equals(newOutputJson, outputJson)) {
-            delegate.onEnd(new TransformedReadableSpan(span, newInputJson, newOutputJson));
+            delegate.onEnd(
+                    new TransformedReadableSpan(
+                            span,
+                            newInputJson,
+                            newOutputJson,
+                            newContextJson,
+                            spanOriginEnvironment));
         } else {
-            delegate.onEnd(span);
+            delegate.onEnd(
+                    new TransformedReadableSpan(
+                            span, inputJson, outputJson, newContextJson, spanOriginEnvironment));
         }
     }
 
     @Override
     public boolean isEndRequired() {
-        return config.autoConvertAIAttachments() || !samplers.isEmpty() || delegate.isEndRequired();
+        return true;
     }
 
     @Override
@@ -207,11 +261,21 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         private final ReadableSpan delegate;
         private final Attributes attributes;
 
-        TransformedReadableSpan(ReadableSpan delegate, String inputJson, String outputJson) {
+        TransformedReadableSpan(
+                ReadableSpan delegate,
+                String inputJson,
+                String outputJson,
+                String contextJson,
+                @Nullable SpanOriginEnvironment environment) {
             this.delegate = delegate;
             var builder = delegate.getAttributes().toBuilder();
-            builder.put(INPUT_JSON, inputJson);
-            builder.put(OUTPUT_JSON, outputJson);
+            if (inputJson != null) {
+                builder.put(INPUT_JSON, inputJson);
+            }
+            if (outputJson != null) {
+                builder.put(OUTPUT_JSON, outputJson);
+            }
+            builder.put(CONTEXT_JSON, contextJson);
             attributes = builder.build();
         }
 
@@ -228,6 +292,9 @@ public class BraintrustSpanProcessor implements SpanProcessor {
             }
             if (key.equals(OUTPUT_JSON)) {
                 return (T) attributes.get(OUTPUT_JSON);
+            }
+            if (key.equals(CONTEXT_JSON)) {
+                return (T) attributes.get(CONTEXT_JSON);
             }
             return delegate.getAttribute(key);
         }
