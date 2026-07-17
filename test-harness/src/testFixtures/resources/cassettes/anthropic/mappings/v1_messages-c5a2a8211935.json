@@ -1,5 +1,5 @@
 {
-  "id" : "7e7426d7-1e1f-32fe-a876-2b1bc615edf2",
+  "id" : "8b734410-0716-34b9-a142-1be22ace494c",
   "name" : "v1_messages",
   "request" : {
     "url" : "/v1/messages",
@@ -10,42 +10,43 @@
       }
     },
     "bodyPatterns" : [ {
-      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"system\":\"You are a helpful assistant.\",\"temperature\":0.0}",
+      "equalToJson" : "{\"max_tokens\":50,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5\",\"temperature\":0.0,\"stream\":true}",
       "ignoreArrayOrder" : true,
       "ignoreExtraElements" : false
     } ]
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "v1_messages-ecd70db36f85.json",
+    "bodyFileName" : "v1_messages-c5a2a8211935.txt",
     "headers" : {
       "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
       "Server" : "cloudflare",
       "vary" : "Accept-Encoding",
       "anthropic-ratelimit-output-tokens-limit" : "2000000",
-      "anthropic-ratelimit-output-tokens-reset" : "2026-07-18T00:01:22Z",
-      "anthropic-ratelimit-input-tokens-reset" : "2026-07-18T00:01:22Z",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-07-16T20:03:57Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-07-16T20:03:57Z",
       "anthropic-ratelimit-tokens-remaining" : "12000000",
       "anthropic-ratelimit-requests-limit" : "20000",
       "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
       "anthropic-ratelimit-input-tokens-remaining" : "10000000",
       "anthropic-ratelimit-requests-remaining" : "19999",
-      "Content-Type" : "application/json",
-      "CF-RAY" : "a1cd3620ac70762e-SEA",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "CF-RAY" : "a1c39cf88b43def5-SEA",
       "anthropic-ratelimit-tokens-limit" : "12000000",
       "cf-cache-status" : "DYNAMIC",
-      "request-id" : "req_011Cd8YKVxMYhjXEScosxLPH",
-      "anthropic-ratelimit-tokens-reset" : "2026-07-18T00:01:22Z",
+      "request-id" : "req_011Cd6LQWnwUHSsrj2p73A3q",
+      "anthropic-ratelimit-tokens-reset" : "2026-07-16T20:03:57Z",
       "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
-      "Date" : "Sat, 18 Jul 2026 00:01:22 GMT",
+      "Date" : "Thu, 16 Jul 2026 20:03:57 GMT",
       "X-Robots-Tag" : "none",
-      "anthropic-ratelimit-requests-reset" : "2026-07-18T00:01:22Z",
+      "anthropic-ratelimit-requests-reset" : "2026-07-16T20:03:57Z",
+      "Cache-Control" : "no-cache",
       "anthropic-ratelimit-input-tokens-limit" : "10000000",
-      "traceresponse" : "00-aaef19a992c73921be91c7e20653634e-6b05467d69b7beb2-01",
+      "traceresponse" : "00-7dd02b4662fbe5c9a881118d38645840-8065e3e8fa61226b-01",
       "anthropic-ratelimit-output-tokens-remaining" : "2000000"
     }
   },
-  "uuid" : "7e7426d7-1e1f-32fe-a876-2b1bc615edf2",
+  "uuid" : "8b734410-0716-34b9-a142-1be22ace494c",
   "persistent" : true,
-  "insertionIndex" : 25
+  "insertionIndex" : 21
 }

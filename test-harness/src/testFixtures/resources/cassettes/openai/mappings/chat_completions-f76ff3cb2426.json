@@ -1,0 +1,49 @@
+{
+  "id" : "d773bef0-e01d-3031-a380-4067d3738030",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the weather like in Paris, France?\",\"role\":\"user\"}],\"model\":\"gpt-4o\",\"max_tokens\":500,\"temperature\":0.0,\"tools\":[{\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather for a location\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The city and state, e.g. San Francisco, CA\"},\"unit\":{\"type\":\"string\",\"enum\":[\"celsius\",\"fahrenheit\"],\"description\":\"The unit of temperature\"}},\"required\":[\"location\"],\"strict\":true}},\"type\":\"function\"}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-f76ff3cb2426.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=r7iyc_jfay.x7SLpzqrWIODSDwzW1J3.5dWrVtnpFdE-1784332881.1628323-1.0.1.1-9c2mH_XoCzF3xqE8q7_3ePgSmQJjafUUKKtXeSqoWb3g3q_4kNgCWeVlHBqBKv5trSKeIZ2UWLBItZaFbicjgCmcxYO5hqw2n0owB6ubFL7rTnC6pN7__fmSI_sRNxhN; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 18 Jul 2026 00:31:21 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_bc824dd35c8e4aebafc2fd771b9ecf90",
+      "x-ratelimit-limit-tokens" : "30000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a1cd361b48ceb9c7-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Sat, 18 Jul 2026 00:01:21 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "529",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "d773bef0-e01d-3031-a380-4067d3738030",
+  "persistent" : true,
+  "insertionIndex" : 33
+}
