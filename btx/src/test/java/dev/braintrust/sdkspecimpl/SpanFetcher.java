@@ -32,7 +32,7 @@ public class SpanFetcher {
     public List<Map<String, Object>> fetch(String rootSpanId, int numExpectedChildSpans)
             throws Exception {
         // Wait for all spans to flush through the in-memory OTel exporter first.
-        // +1 accounts for the root wrapper span created by SpecExecutor.
+        // +1 accounts for the root wrapper span created by SpecClientRegistry.execute().
         List<SpanData> otelSpans =
                 harness.awaitExportedSpans(numExpectedChildSpans + 1).stream()
                         .filter(spanData -> spanData.getTraceId().equals(rootSpanId))

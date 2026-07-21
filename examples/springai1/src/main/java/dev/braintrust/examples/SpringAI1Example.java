@@ -33,15 +33,15 @@ import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 
-/** Spring Boot application demonstrating Braintrust + Spring AI integration */
+/** Spring Boot application demonstrating Braintrust + Spring AI 1.x integration */
 @SpringBootApplication(
         // NOTE: these excludes are specific to the Braintrust examples project to play nice with
         // other examples' classpaths. Excludes are not required for production spring apps
         exclude = {HttpClientAutoConfiguration.class, RestClientAutoConfiguration.class})
-public class SpringAIExample {
+public class SpringAI1Example {
 
     public static void main(String[] args) {
-        var app = new SpringApplication(SpringAIExample.class);
+        var app = new SpringApplication(SpringAI1Example.class);
         app.setWebApplicationType(org.springframework.boot.WebApplicationType.NONE);
         app.run(args);
     }
@@ -49,7 +49,7 @@ public class SpringAIExample {
     @Bean
     public CommandLineRunner run(List<ChatModel> chatModels, Tracer tracer, Braintrust braintrust) {
         return args -> {
-            Span rootSpan = tracer.spanBuilder("spring-ai-example").startSpan();
+            Span rootSpan = tracer.spanBuilder("spring-ai1-example").startSpan();
             try (Scope scope = rootSpan.makeCurrent()) {
                 System.out.println("\n=== Running Spring Boot Example ===\n");
 
@@ -57,11 +57,19 @@ public class SpringAIExample {
 
                 System.out.println("~~~ SPRING AI CHAT RESPONSES:");
                 for (var model : chatModels) {
-                    var response = model.call(prompt);
-                    System.out.println(
-                            model.getClass().getSimpleName()
-                                    + ": "
-                                    + response.getResult().getOutput().getText());
+                    // Catch per-model so one provider failing (e.g. a bad API key) prints a full
+                    // stack trace and lets the remaining models still run — otherwise Spring Boot
+                    // swallows the exception behind its generic startup-failure message.
+                    try {
+                        var response = model.call(prompt);
+                        System.out.println(
+                                model.getClass().getSimpleName()
+                                        + ": "
+                                        + response.getResult().getOutput().getText());
+                    } catch (Exception e) {
+                        System.err.println(model.getClass().getSimpleName() + " call failed:");
+                        e.printStackTrace();
+                    }
                 }
                 System.out.println();
             } finally {
@@ -115,7 +123,7 @@ public class SpringAIExample {
                                                             .build())
                                             .defaultOptions(
                                                     AnthropicChatOptions.builder()
-                                                            .model("claude-3-haiku-20240307")
+                                                            .model("claude-haiku-4-5")
                                                             .temperature(0.0)
                                                             .maxTokens(50)
                                                             .build()))
@@ -128,7 +136,7 @@ public class SpringAIExample {
                             .genAiClient(BraintrustGenAI.wrap(openTelemetry, new Client.Builder()))
                             .defaultOptions(
                                     GoogleGenAiChatOptions.builder()
-                                            .model("gemini-2.0-flash-lite")
+                                            .model("gemini-3.1-flash-lite")
                                             .temperature(0.0)
                                             .maxOutputTokens(50)
                                             .build())

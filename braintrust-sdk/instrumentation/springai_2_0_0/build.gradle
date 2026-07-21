@@ -1,0 +1,94 @@
+def springAiVersion = '2.0.0'
+
+muzzle {
+  // The sibling SDK-level modules (openai_2_15_0, anthropic_2_2_0) are on this project's
+  // classpath for client-wrapping reuse, so their instrumentation modules are discovered by
+  // muzzle too — each pass must ignore the other provider's modules.
+  pass {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-openai'
+    versions = "[${springAiVersion},)"
+    ignoredInstrumentation = [
+      "dev.braintrust.instrumentation.springai.v2_0_0.auto.SpringAIAnthropicInstrumentationModule",
+      "dev.braintrust.instrumentation.anthropic.v2_2_0.auto.AnthropicInstrumentationModule",
+    ]
+  }
+  pass {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-anthropic'
+    versions = "[${springAiVersion},)"
+    ignoredInstrumentation = [
+      "dev.braintrust.instrumentation.springai.v2_0_0.auto.SpringAIOpenAIInstrumentationModule",
+      "dev.braintrust.instrumentation.openai.v2_15_0.auto.OpenAIInstrumentationModule",
+    ]
+  }
+
+  // Spring AI 1.x uses its own RestClient/WebClient HTTP layer — the official SDK classes
+  // (com.openai / com.anthropic) this module's helpers link against aren't on its classpath.
+  // Assert muzzle correctly rejects this module there (springai_1_0_0 covers 1.x). The fail
+  // directives ignore the sibling SDK modules too so the assertion targets this module alone.
+  fail {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-openai'
+    pinVersions '1.1.8'
+    ignoredInstrumentation = [
+      "dev.braintrust.instrumentation.springai.v2_0_0.auto.SpringAIAnthropicInstrumentationModule",
+      "dev.braintrust.instrumentation.anthropic.v2_2_0.auto.AnthropicInstrumentationModule",
+      "dev.braintrust.instrumentation.openai.v2_15_0.auto.OpenAIInstrumentationModule",
+    ]
+  }
+  fail {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-anthropic'
+    pinVersions '1.1.8'
+    ignoredInstrumentation = [
+      "dev.braintrust.instrumentation.springai.v2_0_0.auto.SpringAIOpenAIInstrumentationModule",
+      "dev.braintrust.instrumentation.openai.v2_15_0.auto.OpenAIInstrumentationModule",
+      "dev.braintrust.instrumentation.anthropic.v2_2_0.auto.AnthropicInstrumentationModule",
+    ]
+  }
+}
+
+dependencies {
+  compileOnly project(':braintrust-java-agent:instrumenter')
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation 'com.google.code.findbugs:jsr305:3.0.2'
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+  implementation project(':braintrust-sdk')
+
+  // Spring AI 2.0 delegates all HTTP to the official provider SDKs (openai-java,
+  // anthropic-java), so this module reuses the client wrapping from the SDK-level
+  // instrumentation modules instead of instrumenting Spring's HTTP layer (which no
+  // longer exists in 2.0).
+  implementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
+  implementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
+  // The official SDK client types the wrapped chat models hold — compileOnly because they
+  // arrive transitively via spring-ai on the app classpath at runtime. Versions match the
+  // SDK-level instrumentation modules' baselines.
+  compileOnly 'com.openai:openai-java:2.15.0'
+  compileOnly 'com.anthropic:anthropic-java:2.2.0'
+
+  // ByteBuddy for ElementMatcher types used in instrumentation definitions
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Test dependencies
+  testImplementation(testFixtures(project(":test-harness")))
+  testImplementation project(':braintrust-java-agent:instrumenter')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+  testImplementation "org.springframework.ai:spring-ai-model:${springAiVersion}"
+  testImplementation "org.springframework.ai:spring-ai-openai:${springAiVersion}"
+  testImplementation "org.springframework.ai:spring-ai-anthropic:${springAiVersion}"
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

@@ -13,6 +13,30 @@ repositories {
     mavenLocal()
 }
 
+// ---- Isolated client source sets ---------------------------------------------
+// Spring AI 1.x and 2.x share Maven coordinates and package names, so they cannot
+// coexist on the test classpath. The springai2 source set is compiled against 2.x
+// and executed inside a child-first classloader at test runtime (see
+// SpecClient.isolation() / IsolatedClientDelegate). Its runtime classpath is handed
+// to the test JVM via the btx.springai2.classpath system property below.
+sourceSets {
+    springai2
+}
+
+dependencies {
+    // Shared spec-runner types (SpecClient, LlmSpanSpec, SpecClientContext, ...) resolve
+    // through the parent loader at runtime, so they are compile-only here.
+    springai2CompileOnly sourceSets.test.output
+    springai2CompileOnly(testFixtures(project(':test-harness')))
+
+    springai2Implementation project(':braintrust-sdk:instrumentation:springai_2_0_0')
+    springai2Implementation 'org.springframework.ai:spring-ai-openai:2.0.0'
+    springai2Implementation 'org.springframework.ai:spring-ai-anthropic:2.0.0'
+    springai2Implementation "io.opentelemetry:opentelemetry-api:${rootProject.ext.otelVersion}"
+    springai2Implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    springai2RuntimeOnly 'org.slf4j:slf4j-simple:2.0.17'
+}
+
 dependencies {
     // Braintrust SDK (local project dependencies)
     testImplementation project(':braintrust-sdk')
@@ -69,6 +93,14 @@ dependencies {
 test {
     useJUnitPlatform()
     workingDir = rootProject.projectDir
+
+    // Hand the isolated springai2 client classpath to the test JVM (resolved lazily so
+    // configuration time doesn't force dependency resolution).
+    dependsOn tasks.named('springai2Classes')
+    doFirst {
+        systemProperty 'btx.springai2.classpath',
+            (sourceSets.springai2.output.classesDirs + configurations.springai2RuntimeClasspath).asPath
+    }
     testLogging {
         events "passed", "skipped", "failed"
         showStandardStreams = true

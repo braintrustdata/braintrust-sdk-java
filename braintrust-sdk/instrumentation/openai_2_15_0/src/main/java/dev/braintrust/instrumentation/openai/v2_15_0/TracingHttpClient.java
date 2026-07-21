@@ -13,12 +13,17 @@ import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.annotation.Nullable;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +38,67 @@ class TracingHttpClient implements HttpClient {
         this.underlying = underlying;
     }
 
+    /**
+     * Starts the LLM span. openai-java dispatches async/streaming requests through
+     * CompletableFuture continuations on the common pool (and frameworks like Spring AI 2.x on
+     * their own executors), where the caller's thread-local context is lost — which would orphan
+     * the span. {@link ContextCapturingProxy} captures the caller's context at the service-call
+     * boundary and threads it through as {@code headerContext}; when that is absent we fall back to
+     * whatever context is current on this thread (correct for synchronous calls). We deliberately
+     * do <em>not</em> fall back to the context that was current when the client was instrumented —
+     * a long-lived client wrapped inside some unrelated span would otherwise parent every future
+     * request to that stale span.
+     */
+    private Span startLlmSpan(@Nullable Context headerContext) {
+        Context parent = headerContext != null ? headerContext : Context.current();
+        return tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME)
+                .setParent(parent)
+                .startSpan();
+    }
+
+    /**
+     * Extracts the caller context injected by {@link ContextCapturingProxy} (if any) and strips the
+     * internal header from the outgoing request.
+     */
+    private static ExtractedRequest extractCallerContext(HttpRequest request) {
+        var values = request.headers().values(ContextCapturingProxy.CONTEXT_HEADER);
+        if (values.isEmpty()) {
+            return new ExtractedRequest(request, null);
+        }
+        Context context = contextFromTraceparent(values.get(0));
+        HttpRequest stripped =
+                request.toBuilder()
+                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, java.util.List.of())
+                        .build();
+        return new ExtractedRequest(stripped, context);
+    }
+
+    /** Parses a W3C {@code traceparent} value ({@code 00-<traceId>-<spanId>-<flags>}). */
+    @Nullable
+    private static Context contextFromTraceparent(String traceparent) {
+        try {
+            String[] parts = traceparent.split("-");
+            if (parts.length < 4) {
+                return null;
+            }
+            SpanContext spanContext =
+                    SpanContext.create(
+                            parts[1],
+                            parts[2],
+                            TraceFlags.fromHex(parts[3], 0),
+                            TraceState.getDefault());
+            if (!spanContext.isValid()) {
+                return null;
+            }
+            return Context.root().with(Span.wrap(spanContext));
+        } catch (Exception e) {
+            log.debug("invalid context header value: {}", traceparent, e);
+            return null;
+        }
+    }
+
+    private record ExtractedRequest(HttpRequest request, @Nullable Context callerContext) {}
+
     @Override
     public void close() {
         underlying.close();
@@ -41,12 +107,13 @@ class TracingHttpClient implements HttpClient {
     @Override
     public @NonNull HttpResponse execute(
             @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
-        var span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
+        var extracted = extractCallerContext(httpRequest);
+        var span = startLlmSpan(extracted.callerContext());
         try (var ignored = span.makeCurrent()) {
             // Buffer the request body so we can (a) read its bytes for the span attribute and
             // (b) supply a fresh, repeatable body to the underlying client — avoiding any
             // one-shot stream consumption issue.
-            var bufferedRequest = bufferRequestBody(httpRequest);
+            var bufferedRequest = bufferRequestBody(extracted.request());
 
             String inputJson =
                     bufferedRequest.body() != null
@@ -56,7 +123,7 @@ class TracingHttpClient implements HttpClient {
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                    bufferedRequest.baseUrl(),
+                    bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
                     inputJson);
@@ -74,9 +141,10 @@ class TracingHttpClient implements HttpClient {
     @Override
     public @NonNull CompletableFuture<HttpResponse> executeAsync(
             @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
-        var span = tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME).startSpan();
+        var extracted = extractCallerContext(httpRequest);
+        var span = startLlmSpan(extracted.callerContext());
         try {
-            var bufferedRequest = bufferRequestBody(httpRequest);
+            var bufferedRequest = bufferRequestBody(extracted.request());
             String inputJson =
                     bufferedRequest.body() != null
                             ? readBodyAsString(bufferedRequest.body())
@@ -84,7 +152,7 @@ class TracingHttpClient implements HttpClient {
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                    bufferedRequest.baseUrl(),
+                    bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
                     inputJson);

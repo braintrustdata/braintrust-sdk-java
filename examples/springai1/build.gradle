@@ -1,5 +1,5 @@
 application {
-  mainClass = 'dev.braintrust.examples.SpringAIExample'
+  mainClass = 'dev.braintrust.examples.SpringAI1Example'
 }
 
 dependencies {
@@ -26,7 +26,7 @@ dependencies {
 }
 
 run {
-  description = 'Run the Spring Boot + Spring AI example'
+  description = 'Run the Spring Boot + Spring AI 1.x example'
   debugOptions {
     enabled = true
     port = 5566
