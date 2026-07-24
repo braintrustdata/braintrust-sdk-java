@@ -52,25 +52,6 @@ public class SpecLoader {
             System.getProperty("btx.spec.root", "btx/spec/llm_span");
 
     /**
-     * The clients supported by this Java runner, keyed by provider name. Each entry is the list of
-     * client identifiers that will be tested for that provider. When a provider is not listed here,
-     * it defaults to a single client whose name matches the provider (e.g. {@code "anthropic"}).
-     */
-    static final Map<String, List<String>> CLIENTS_BY_PROVIDER =
-            Map.of(
-                    "openai", List.of("openai", "langchain-openai", "springai-openai"),
-                    "anthropic", List.of("anthropic", "springai-anthropic"),
-                    "bedrock", List.of("bedrock"));
-
-    /**
-     * Returns the clients to test for the given provider. Defaults to {@code [providerName]} if the
-     * provider is not explicitly listed in {@link #CLIENTS_BY_PROVIDER}.
-     */
-    public static List<String> clientsForProvider(String provider) {
-        return CLIENTS_BY_PROVIDER.getOrDefault(provider, List.of(provider));
-    }
-
-    /**
      * Load all LLM span specs, expanded into one {@link LlmSpanSpec} per supported client for the
      * spec's provider.
      */
@@ -94,6 +75,13 @@ public class SpecLoader {
 
     /** Load a YAML file and expand it into one {@link LlmSpanSpec} per supported client. */
     static List<LlmSpanSpec> load(Path path) throws IOException {
+        return load(path, SpecClientRegistry::isKnownUnsupported);
+    }
+
+    /** Overload with an injectable skip predicate so tests can exercise the skip-list branch. */
+    static List<LlmSpanSpec> load(
+            Path path, java.util.function.Predicate<LlmSpanSpec> knownUnsupported)
+            throws IOException {
         Yaml yaml = buildYaml();
         try (InputStream is = Files.newInputStream(path)) {
             @SuppressWarnings("unchecked")
@@ -105,8 +93,25 @@ public class SpecLoader {
                     (Map<String, Object>) raw.getOrDefault("variables", Collections.emptyMap());
             raw.remove("variables");
 
-            String provider = (String) raw.get("provider");
-            return clientsForProvider(provider).stream()
+            // Ask the registry which clients can execute this spec. The prototype carries the
+            // provider/endpoint/name fields that SpecClient.supports() filters on.
+            LlmSpanSpec prototype = LlmSpanSpec.fromMap(raw, path.toString(), null);
+            List<SpecClient> clients = SpecClientRegistry.clientsFor(prototype);
+            if (clients.isEmpty()) {
+                if (knownUnsupported.test(prototype)) {
+                    System.out.println(
+                            "[btx] skipping known-unsupported spec "
+                                    + SpecClientRegistry.specKey(prototype));
+                    return List.of();
+                }
+                // Never drop coverage silently: emit a sentinel spec that the runner turns into
+                // a failing test with an actionable message.
+                return List.of(
+                        LlmSpanSpec.fromMap(
+                                raw, path.toString(), SpecClientRegistry.UNSUPPORTED_CLIENT_ID));
+            }
+            return clients.stream()
+                    .map(SpecClient::id)
                     .map(
                             client -> {
                                 // Deep-copy so each client gets its own substituted tree.

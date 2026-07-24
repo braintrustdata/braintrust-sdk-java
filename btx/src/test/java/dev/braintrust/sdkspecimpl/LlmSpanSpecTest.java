@@ -26,7 +26,7 @@ class LlmSpanSpecTest {
     // Initialized statically so they are available when specs() is called during
     // test discovery (which happens before any @Before* lifecycle methods run).
     private static final TestHarness HARNESS = TestHarness.setup();
-    private static final SpecExecutor EXECUTOR = new SpecExecutor(HARNESS);
+    private static final SpecClientContext CTX = new SpecClientContext(HARNESS);
     private static final SpanFetcher SPAN_FETCHER = new SpanFetcher(HARNESS);
 
     static Stream<Arguments> specs() throws Exception {
@@ -77,9 +77,18 @@ class LlmSpanSpecTest {
                                         toExecute.parallelStream()
                                                 .map(
                                                         spec -> {
+                                                            // Uncovered specs are not executed;
+                                                            // runSpec fails them with an
+                                                            // actionable message instead.
+                                                            if (SpecClientRegistry
+                                                                    .UNSUPPORTED_CLIENT_ID
+                                                                    .equals(spec.client())) {
+                                                                return Arguments.of(spec, "");
+                                                            }
                                                             try {
                                                                 var rootSpanId =
-                                                                        EXECUTOR.execute(spec);
+                                                                        SpecClientRegistry.execute(
+                                                                                spec, CTX);
                                                                 totalExpectedSpans.addAndGet(
                                                                         spec.expectedBrainstoreSpans()
                                                                                         .size()
@@ -99,6 +108,9 @@ class LlmSpanSpecTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("specs")
     void runSpec(LlmSpanSpec spec, String rootSpanId) throws Exception {
+        if (SpecClientRegistry.UNSUPPORTED_CLIENT_ID.equals(spec.client())) {
+            org.junit.jupiter.api.Assertions.fail(SpecClientRegistry.unsupportedSpecMessage(spec));
+        }
         int expectedSpanCount = spec.expectedBrainstoreSpans().size();
         List<Map<String, Object>> brainstoreSpans =
                 SPAN_FETCHER.fetch(rootSpanId, expectedSpanCount);

@@ -49,8 +49,7 @@ public record LlmSpanSpec(
     public String displayName() {
         String[] parts = sourcePath.split("[/\\\\]");
         String base = parts.length >= 2 ? parts[parts.length - 2] + "/" + name : name;
-        List<String> allClients = SpecLoader.clientsForProvider(provider);
-        return allClients.size() > 1 ? base + " [" + client + "]" : base;
+        return SpecClientRegistry.clientsFor(this).size() > 1 ? base + " [" + client + "]" : base;
     }
 
     @SuppressWarnings("unchecked")

@@ -1,0 +1,49 @@
+{
+  "id" : "7e7a159b-863b-3748-b044-3682811962e5",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":50,\"stream_options\":{\"include_obfuscation\":false,\"include_usage\":true},\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-e2aaee62ff13.txt",
+    "headers" : {
+      "x-request-id" : "req_0bab579a54174071877ab57a5f78a4b0",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a1c39cf2cc013208-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999990",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Thu, 16 Jul 2026 20:03:56 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=yLCVoQmQQ3H6QiZfMFE_EbvZ3aOWTtHFZCaHEcuLm8U-1784232235.962727-1.0.1.1-7XlGAbeVgD86_1JqZf5u4Lah4A3XSXlIcqVBi3uTGjYd0E2S1ouP_TIjK41X9aPycjIoa5vzt5dZiVh1kZGIsbQrB1bh8oxoyMXpAqiCtGZVDpwmMdtY3lJN4ROxIgDm; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 16 Jul 2026 20:33:56 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "381",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "7e7a159b-863b-3748-b044-3682811962e5",
+  "persistent" : true,
+  "insertionIndex" : 26
+}

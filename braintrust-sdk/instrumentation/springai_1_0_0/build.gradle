@@ -17,6 +17,21 @@ muzzle {
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
   }
+
+  // Spring AI 2.0 removed the RestClient/WebClient layer this module instruments — assert
+  // muzzle correctly rejects it there (the springai_2_0_0 module covers 2.x).
+  fail {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-openai'
+    pinVersions '2.0.0'
+    ignoredInstrumentation = ["dev.braintrust.instrumentation.springai.v1_0_0.auto.SpringAIAnthropicInstrumentationModule"]
+  }
+  fail {
+    group = 'org.springframework.ai'
+    module = 'spring-ai-anthropic'
+    pinVersions '2.0.0'
+    ignoredInstrumentation = ["dev.braintrust.instrumentation.springai.v1_0_0.auto.SpringAIOpenAIInstrumentationModule"]
+  }
 }
 
 dependencies {

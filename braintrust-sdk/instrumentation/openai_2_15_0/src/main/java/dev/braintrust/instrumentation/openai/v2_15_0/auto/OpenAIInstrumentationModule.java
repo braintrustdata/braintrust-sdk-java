@@ -5,6 +5,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import com.google.auto.service.AutoService;
 import com.openai.client.OpenAIClient;
+import com.openai.client.OpenAIClientAsync;
 import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
 import dev.braintrust.instrumentation.TypeTransformer;
@@ -33,7 +34,9 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$1",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeInputStream",
+                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$ExtractedRequest",
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustOpenAI",
+                MANUAL_INSTRUMENTATION_PACKAGE + "ContextCapturingProxy",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }
@@ -46,7 +49,9 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
 
     @Override
     public List<TypeInstrumentation> typeInstrumentations() {
-        return List.of(new OpenAIOkHttpClientBuilderInstrumentation());
+        return List.of(
+                new OpenAIOkHttpClientBuilderInstrumentation(),
+                new OpenAIOkHttpClientAsyncBuilderInstrumentation());
     }
 
     public static class OpenAIOkHttpClientBuilderInstrumentation implements TypeInstrumentation {
@@ -69,8 +74,36 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
         public static void build(
                 @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
                         Object returnedObject) {
-            OpenAIClient returnedClient = (OpenAIClient) returnedObject;
-            returnedClient = BraintrustOpenAI.wrapOpenAI(GlobalOpenTelemetry.get(), returnedClient);
+            returnedObject =
+                    BraintrustOpenAI.wrapOpenAI(
+                            GlobalOpenTelemetry.get(), (OpenAIClient) returnedObject);
+        }
+    }
+
+    public static class OpenAIOkHttpClientAsyncBuilderInstrumentation
+            implements TypeInstrumentation {
+        @Override
+        public ElementMatcher<TypeDescription> typeMatcher() {
+            return named("com.openai.client.okhttp.OpenAIOkHttpClientAsync$Builder");
+        }
+
+        @Override
+        public void transform(TypeTransformer transformer) {
+            transformer.applyAdviceToMethod(
+                    named("build").and(takesArguments(0)),
+                    OpenAIInstrumentationModule.class.getName()
+                            + "$OpenAIOkHttpClientAsyncBuilderAdvice");
+        }
+    }
+
+    private static class OpenAIOkHttpClientAsyncBuilderAdvice {
+        @Advice.OnMethodExit
+        public static void build(
+                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
+                        Object returnedObject) {
+            returnedObject =
+                    BraintrustOpenAI.wrapOpenAI(
+                            GlobalOpenTelemetry.get(), (OpenAIClientAsync) returnedObject);
         }
     }
 }

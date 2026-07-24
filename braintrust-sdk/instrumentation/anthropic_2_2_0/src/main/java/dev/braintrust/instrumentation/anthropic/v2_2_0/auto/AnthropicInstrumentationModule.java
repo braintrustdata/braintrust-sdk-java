@@ -4,6 +4,7 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.AnthropicClientAsync;
 import com.google.auto.service.AutoService;
 import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
@@ -32,14 +33,18 @@ public class AnthropicInstrumentationModule extends InstrumentationModule {
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$1",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeInputStream",
+                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$ExtractedRequest",
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustAnthropic",
+                MANUAL_INSTRUMENTATION_PACKAGE + "ContextCapturingProxy",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }
 
     @Override
     public List<TypeInstrumentation> typeInstrumentations() {
-        return List.of(new AnthropicOkHttpClientBuilderInstrumentation());
+        return List.of(
+                new AnthropicOkHttpClientBuilderInstrumentation(),
+                new AnthropicOkHttpClientAsyncBuilderInstrumentation());
     }
 
     public static class AnthropicOkHttpClientBuilderInstrumentation implements TypeInstrumentation {
@@ -62,8 +67,36 @@ public class AnthropicInstrumentationModule extends InstrumentationModule {
         public static void build(
                 @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
                         Object returnedObject) {
-            AnthropicClient returnedClient = (AnthropicClient) returnedObject;
-            returnedClient = BraintrustAnthropic.wrap(GlobalOpenTelemetry.get(), returnedClient);
+            returnedObject =
+                    BraintrustAnthropic.wrap(
+                            GlobalOpenTelemetry.get(), (AnthropicClient) returnedObject);
+        }
+    }
+
+    public static class AnthropicOkHttpClientAsyncBuilderInstrumentation
+            implements TypeInstrumentation {
+        @Override
+        public ElementMatcher<TypeDescription> typeMatcher() {
+            return named("com.anthropic.client.okhttp.AnthropicOkHttpClientAsync$Builder");
+        }
+
+        @Override
+        public void transform(TypeTransformer transformer) {
+            transformer.applyAdviceToMethod(
+                    named("build").and(takesArguments(0)),
+                    AnthropicInstrumentationModule.class.getName()
+                            + "$AnthropicOkHttpClientAsyncBuilderAdvice");
+        }
+    }
+
+    private static class AnthropicOkHttpClientAsyncBuilderAdvice {
+        @Advice.OnMethodExit
+        public static void build(
+                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
+                        Object returnedObject) {
+            returnedObject =
+                    BraintrustAnthropic.wrap(
+                            GlobalOpenTelemetry.get(), (AnthropicClientAsync) returnedObject);
         }
     }
 }

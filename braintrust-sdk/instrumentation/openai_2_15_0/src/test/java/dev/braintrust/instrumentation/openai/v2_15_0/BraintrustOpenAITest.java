@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
+import com.openai.client.OpenAIClientAsync;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import com.openai.core.http.StreamResponse;
 import com.openai.helpers.ChatCompletionAccumulator;
 import com.openai.helpers.ResponseAccumulator;
@@ -123,6 +125,59 @@ public class BraintrustOpenAITest {
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         assertValidOpenAISpan(spans.get(0), false);
+    }
+
+    /**
+     * Unlike {@link #testCompletionsAsync()}, which derives the async view from an instrumented
+     * sync client via {@code .async()}, this builds {@link OpenAIOkHttpClientAsync} directly —
+     * exercising the async-builder auto-instrumentation hook.
+     *
+     * <p>Also verifies context linking: the SDK dispatches async requests onto a worker pool, but
+     * the LLM span must still parent to the span that was current when the request was kicked off.
+     */
+    @Test
+    @SneakyThrows
+    void testDirectAsyncClientCompletions() {
+        // Built OUTSIDE any span on purpose: parenting must come from the context at request
+        // time, not from the context at client-construction time.
+        OpenAIClientAsync openAIClient =
+                OpenAIOkHttpClientAsync.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addSystemMessage("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .temperature(0.0)
+                        .build();
+
+        var parentSpan =
+                testHarness.openTelemetry().getTracer("test").spanBuilder("foo").startSpan();
+        try (var ignored = parentSpan.makeCurrent()) {
+            var response =
+                    openAIClient.chat().completions().create(request).get(5, TimeUnit.MINUTES);
+            assertNotNull(response);
+            assertNotNull(response.id());
+        } finally {
+            parentSpan.end();
+        }
+
+        var spans = testHarness.awaitExportedSpans(2);
+        assertEquals(2, spans.size());
+        var llmSpan =
+                spans.stream().filter(s -> !"foo".equals(s.getName())).findFirst().orElseThrow();
+        assertValidOpenAISpan(llmSpan, false);
+        assertEquals(
+                parentSpan.getSpanContext().getTraceId(),
+                llmSpan.getTraceId(),
+                "async LLM span should be in the caller's trace");
+        assertEquals(
+                parentSpan.getSpanContext().getSpanId(),
+                llmSpan.getParentSpanId(),
+                "async LLM span should be a child of the span current at request time");
     }
 
     @Test
@@ -336,6 +391,52 @@ public class BraintrustOpenAITest {
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         assertValidOpenAISpan(spans.get(0), true);
+    }
+
+    /**
+     * When the client's HTTP layer cannot be instrumented (custom implementations, changed SDK
+     * internals), wrapOpenAI must return the client untouched — installing the context-capturing
+     * proxy without a TracingHttpClient underneath would leak internal trace IDs to the provider
+     * via the un-stripped context header.
+     */
+    @Test
+    void testUninstrumentableClientIsLeftUntouched() {
+        OpenAIClient custom =
+                (OpenAIClient)
+                        java.lang.reflect.Proxy.newProxyInstance(
+                                OpenAIClient.class.getClassLoader(),
+                                new Class<?>[] {OpenAIClient.class},
+                                (proxy, method, args) -> {
+                                    throw new UnsupportedOperationException(method.getName());
+                                });
+
+        OpenAIClient wrapped = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), custom);
+
+        assertSame(custom, wrapped, "uninstrumentable client should not get the context proxy");
+    }
+
+    /** The context-capturing proxy must keep Object identity semantics usable (maps/sets). */
+    @Test
+    void testWrappedClientObjectContract() {
+        OpenAIClient client =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+        OpenAIClient wrapped = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), client);
+        OpenAIClient rewrapped = BraintrustOpenAI.wrapOpenAI(testHarness.openTelemetry(), client);
+
+        assertEquals(wrapped, wrapped, "equals must be reflexive");
+        assertEquals(wrapped, rewrapped, "proxies over the same delegate should be equal");
+        assertEquals(rewrapped, wrapped, "equals must be symmetric");
+        assertEquals(wrapped.hashCode(), rewrapped.hashCode(), "hashCode consistent with equals");
+        assertFalse(wrapped.equals(null), "equals(null) must be false");
+        assertTrue(
+                new java.util.HashSet<>(java.util.List.of(wrapped)).contains(wrapped),
+                "wrapped client must work as a set element");
+        assertTrue(
+                wrapped.toString().contains("ContextCapturingProxy"),
+                "toString should identify the proxy, got: " + wrapped);
     }
 
     @SneakyThrows

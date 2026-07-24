@@ -190,6 +190,58 @@ public class BraintrustAnthropicTest {
                 "time_to_first_token should be non-negative");
     }
 
+    /**
+     * Unlike {@link #testWrapAnthropicAsync()}, which derives the async view from an instrumented
+     * sync client via {@code .async()}, this builds {@code AnthropicOkHttpClientAsync} directly —
+     * exercising the async-builder auto-instrumentation hook.
+     *
+     * <p>Also verifies context linking: the SDK dispatches async requests onto a worker pool, but
+     * the LLM span must still parent to the span that was current when the request was kicked off.
+     */
+    @Test
+    @SneakyThrows
+    void testDirectAsyncClientParenting() {
+        // Built OUTSIDE any span on purpose: parenting must come from the context at request
+        // time, not from the context at client-construction time.
+        com.anthropic.client.AnthropicClientAsync anthropicClient =
+                com.anthropic.client.okhttp.AnthropicOkHttpClientAsync.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+
+        var request =
+                MessageCreateParams.builder()
+                        .model(Model.of(TEST_MODEL))
+                        .system("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .maxTokens(50)
+                        .temperature(0.0)
+                        .build();
+
+        var parentSpan =
+                testHarness.openTelemetry().getTracer("test").spanBuilder("foo").startSpan();
+        try (var ignored = parentSpan.makeCurrent()) {
+            var response = anthropicClient.messages().create(request).get();
+            assertNotNull(response);
+            assertNotNull(response.id());
+        } finally {
+            parentSpan.end();
+        }
+
+        var spans = testHarness.awaitExportedSpans(2);
+        assertEquals(2, spans.size());
+        var llmSpan =
+                spans.stream().filter(s -> !"foo".equals(s.getName())).findFirst().orElseThrow();
+        assertEquals(
+                parentSpan.getSpanContext().getTraceId(),
+                llmSpan.getTraceId(),
+                "async LLM span should be in the caller's trace");
+        assertEquals(
+                parentSpan.getSpanContext().getSpanId(),
+                llmSpan.getParentSpanId(),
+                "async LLM span should be a child of the span current at request time");
+    }
+
     @Test
     @SneakyThrows
     void testWrapAnthropicAsync() {
@@ -463,5 +515,51 @@ public class BraintrustAnthropicTest {
         assertTrue(
                 metrics.get("time_to_first_token").asDouble() >= 0.0,
                 "time_to_first_token should be non-negative");
+    }
+
+    /**
+     * When the client's HTTP layer cannot be instrumented (custom implementations, changed SDK
+     * internals), wrap must return the client untouched — installing the context-capturing proxy
+     * without a TracingHttpClient underneath would leak internal trace IDs to the provider via the
+     * un-stripped context header.
+     */
+    @Test
+    void testUninstrumentableClientIsLeftUntouched() {
+        AnthropicClient custom =
+                (AnthropicClient)
+                        java.lang.reflect.Proxy.newProxyInstance(
+                                AnthropicClient.class.getClassLoader(),
+                                new Class<?>[] {AnthropicClient.class},
+                                (proxy, method, args) -> {
+                                    throw new UnsupportedOperationException(method.getName());
+                                });
+
+        AnthropicClient wrapped = BraintrustAnthropic.wrap(testHarness.openTelemetry(), custom);
+
+        assertSame(custom, wrapped, "uninstrumentable client should not get the context proxy");
+    }
+
+    /** The context-capturing proxy must keep Object identity semantics usable (maps/sets). */
+    @Test
+    void testWrappedClientObjectContract() {
+        AnthropicClient client =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+        AnthropicClient wrapped = BraintrustAnthropic.wrap(testHarness.openTelemetry(), client);
+        AnthropicClient rewrapped = BraintrustAnthropic.wrap(testHarness.openTelemetry(), client);
+
+        assertEquals(wrapped, wrapped, "equals must be reflexive");
+        assertEquals(wrapped, rewrapped, "proxies over the same delegate should be equal");
+        assertEquals(rewrapped, wrapped, "equals must be symmetric");
+        assertEquals(wrapped.hashCode(), rewrapped.hashCode(), "hashCode consistent with equals");
+        assertFalse(wrapped.equals(null), "equals(null) must be false");
+        assertTrue(
+                new java.util.HashSet<>(java.util.List.of(wrapped)).contains(wrapped),
+                "wrapped client must work as a set element");
+        assertTrue(
+                wrapped.toString().contains("ContextCapturingProxy"),
+                "toString should identify the proxy, got: " + wrapped);
     }
 }

@@ -27,7 +27,8 @@ import java.util.Map;
  * </ul>
  *
  * <p>Only LLM instrumentation spans (those that have a {@code braintrust.span_attributes}
- * attribute) are converted. The root wrapper span created by {@link SpecExecutor} is excluded.
+ * attribute) are converted. The root wrapper span created by {@link SpecClientRegistry#execute} is
+ * excluded.
  */
 public class SpanConverter {
 

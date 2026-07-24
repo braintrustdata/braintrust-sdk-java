@@ -1,6 +1,7 @@
 package dev.braintrust.instrumentation.openai.v2_15_0;
 
 import com.openai.client.OpenAIClient;
+import com.openai.client.OpenAIClientAsync;
 import com.openai.core.ClientOptions;
 import com.openai.core.ObjectMappers;
 import com.openai.core.http.HttpClient;
@@ -11,9 +12,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import kotlin.Lazy;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,12 +22,44 @@ public class BraintrustOpenAI {
 
     /** Instrument openai client with braintrust traces */
     public static OpenAIClient wrapOpenAI(OpenTelemetry openTelemetry, OpenAIClient openAIClient) {
+        if (!instrument(openTelemetry, openAIClient)) {
+            return openAIClient;
+        }
+        return ContextCapturingProxy.wrap(openAIClient, OpenAIClient.class);
+    }
+
+    /** Instrument an async openai client with braintrust traces */
+    public static OpenAIClientAsync wrapOpenAI(
+            OpenTelemetry openTelemetry, OpenAIClientAsync openAIClient) {
+        if (!instrument(openTelemetry, openAIClient)) {
+            return openAIClient;
+        }
+        return ContextCapturingProxy.wrap(openAIClient, OpenAIClientAsync.class);
+    }
+
+    /**
+     * Swaps the client's {@code ClientOptions.httpClient} for a {@link TracingHttpClient} in place;
+     * wrapping is idempotent.
+     *
+     * @return whether the HTTP layer is instrumented. When false (custom client implementations or
+     *     changed SDK internals), the caller must NOT install {@link ContextCapturingProxy}: the
+     *     proxy's internal context header is only stripped by {@link TracingHttpClient}, so
+     *     installing it without one would leak trace/span IDs to the provider.
+     */
+    private static boolean instrument(OpenTelemetry openTelemetry, Object client) {
+        if (ContextCapturingProxy.isContextCapturingProxy(client)) {
+            // already instrumented
+            return true;
+        }
         try {
-            instrumentHttpClient(openTelemetry, openAIClient);
-            return openAIClient;
+            instrumentHttpClient(openTelemetry, client);
+            return true;
         } catch (Exception e) {
-            log.error("failed to apply openai instrumentation", e);
-            return openAIClient;
+            log.error(
+                    "failed to apply openai instrumentation to {} — leaving client untouched",
+                    client.getClass().getName(),
+                    e);
+            return false;
         }
     }
 
@@ -49,46 +80,32 @@ public class BraintrustOpenAI {
                 .build();
     }
 
-    private static void instrumentHttpClient(
-            OpenTelemetry openTelemetry, OpenAIClient openAIClient) {
+    private static void instrumentHttpClient(OpenTelemetry openTelemetry, Object openAIClient) {
+        int[] instrumented = {0};
         forAllFields(
                 openAIClient,
                 fieldName -> {
                     try {
-                        var field = getField(openAIClient, fieldName);
-                        if (field instanceof ClientOptions clientOptions) {
-                            instrumentClientOptions(
-                                    openTelemetry, clientOptions, "originalHttpClient");
-                            instrumentClientOptions(openTelemetry, clientOptions, "httpClient");
-                        } else {
-                            if (field instanceof Lazy<?> lazyField) {
-                                var resolved = lazyField.getValue();
-                                forAllFieldsOfType(
-                                        resolved,
-                                        ClientOptions.class,
-                                        (clientOptions, subfieldName) ->
-                                                instrumentClientOptions(
-                                                        openTelemetry,
-                                                        clientOptions,
-                                                        subfieldName));
-                            } else {
-                                forAllFieldsOfType(
-                                        field,
-                                        ClientOptions.class,
-                                        (clientOptions, subfieldName) ->
-                                                instrumentClientOptions(
-                                                        openTelemetry,
-                                                        clientOptions,
-                                                        subfieldName));
-                            }
+                        if (getField(openAIClient, fieldName)
+                                instanceof ClientOptions clientOptions) {
+                            instrumentClientOptions(openTelemetry, clientOptions);
+                            instrumented[0]++;
                         }
                     } catch (ReflectiveOperationException e) {
                         throw new RuntimeException(e);
                     }
                 });
+        if (instrumented[0] == 0) {
+            // Finding nothing is as much a failure as a reflection error: the request path
+            // would bypass TracingHttpClient entirely.
+            throw new IllegalStateException(
+                    "no ClientOptions field found on "
+                            + openAIClient.getClass().getName()
+                            + " — unrecognized client shape");
+        }
     }
 
-    private static <T> void forAllFields(Object object, Consumer<String> consumer) {
+    private static void forAllFields(Object object, Consumer<String> consumer) {
         if (object == null || consumer == null) return;
 
         Class<?> clazz = object.getClass();
@@ -103,22 +120,14 @@ public class BraintrustOpenAI {
         }
     }
 
-    private static <T> void forAllFieldsOfType(
-            Object object, Class<T> targetClazz, BiConsumer<T, String> consumer) {
-        forAllFields(
-                object,
-                fieldName -> {
-                    try {
-                        if (targetClazz.isAssignableFrom(object.getClass())) {
-                            consumer.accept(getField(object, fieldName), fieldName);
-                        }
-                    } catch (ReflectiveOperationException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+    /** Swaps both HTTP client fields on a {@link ClientOptions} for tracing wrappers. */
+    private static void instrumentClientOptions(
+            OpenTelemetry openTelemetry, ClientOptions clientOptions) {
+        swapHttpClient(openTelemetry, clientOptions, "originalHttpClient");
+        swapHttpClient(openTelemetry, clientOptions, "httpClient");
     }
 
-    private static void instrumentClientOptions(
+    private static void swapHttpClient(
             OpenTelemetry openTelemetry, ClientOptions clientOptions, String fieldName) {
         try {
             HttpClient httpClient = getField(clientOptions, fieldName);

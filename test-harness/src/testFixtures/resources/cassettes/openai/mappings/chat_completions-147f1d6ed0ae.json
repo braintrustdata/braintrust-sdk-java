@@ -1,0 +1,49 @@
+{
+  "id" : "f41a9001-a38a-3d9b-b546-38d4751ec1ce",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":50,\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-147f1d6ed0ae.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=zlJ1LHGlDBaxOgjRYxKIYDwmLG7.SafA.w1SV.QFkAU-1784232233.1988738-1.0.1.1-LJe_P.URwS7kVGXBQXUdZBbIiIbGS9G2xW3FP9pdn6UdmQ4InsMfUw14rxTCk0LLvgzweBWRlioBmwgZiv_uSj_QWpOA85nQjsLLz1EoMwMeFuR1EwKtlFYtmfMb3dPu; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 16 Jul 2026 20:33:53 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_ffed640ef1ee4b74ad7ca4365f3c7d42",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a1c39ce17c3d7642-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999992",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Thu, 16 Jul 2026 20:03:53 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "535",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "f41a9001-a38a-3d9b-b546-38d4751ec1ce",
+  "persistent" : true,
+  "insertionIndex" : 27
+}

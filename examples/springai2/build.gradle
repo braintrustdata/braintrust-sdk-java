@@ -1,0 +1,38 @@
+application {
+  mainClass = 'dev.braintrust.examples.SpringAI2Example'
+}
+
+dependencies {
+  implementation project(':braintrust-sdk:instrumentation:springai_2_0_0')
+
+  // Google GenAI and Bedrock are instrumented at the underlying SDK-client layer (not via
+  // spring-ai), exactly as in the springai1 example: the wrapped com.google.genai.Client and
+  // BedrockRuntimeClient are injected into the Spring AI model builders. Spring AI 2.x still
+  // exposes genAiClient(...) / bedrockRuntimeClient(...) on those builders, so the approach is
+  // unchanged across spring-ai versions.
+  implementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
+  implementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
+
+  // spring ai 2.x delegates all HTTP to the official provider SDKs (openai-java,
+  // anthropic-java, google-genai, aws bedrockruntime), which arrive transitively with these
+  // modules.
+  implementation 'org.springframework.ai:spring-ai-anthropic:2.0.0'
+  implementation 'org.springframework.ai:spring-ai-bedrock-converse:2.0.0'
+  implementation 'org.springframework.ai:spring-ai-google-genai:2.0.0'
+  implementation 'org.springframework.ai:spring-ai-openai:2.0.0'
+
+  // spring boot (exclude logback, use slf4j-simple like other examples)
+  implementation('org.springframework.boot:spring-boot-starter:3.4.1') {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+  }
+}
+
+run {
+  description = 'Run the Spring Boot + Spring AI 2.x example'
+  debugOptions {
+    enabled = true
+    port = 5567
+    server = true
+    suspend = false
+  }
+}
