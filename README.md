@@ -1,3 +1,5 @@
+[![Braintrust](./braintrust-logo.svg)](https://www.braintrust.dev/)
+
 # Braintrust Java Tracing & Eval SDK
 
 [![javadoc](https://javadoc.io/badge2/dev.braintrust/braintrust-sdk-java/javadoc.svg)](https://javadoc.io/doc/dev.braintrust/braintrust-sdk-java)
