@@ -171,6 +171,13 @@ public class InstrumentationSemConv {
                     metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
                 }
             }
+            // Reasoning tokens (Chat Completions API)
+            if (usage.has("completion_tokens_details")) {
+                JsonNode details = usage.get("completion_tokens_details");
+                if (details.has("reasoning_tokens")) {
+                    metrics.put("completion_reasoning_tokens", details.get("reasoning_tokens"));
+                }
+            }
             // Responses API field names
             if (usage.has("input_tokens")) metrics.put("prompt_tokens", usage.get("input_tokens"));
             if (usage.has("output_tokens"))
