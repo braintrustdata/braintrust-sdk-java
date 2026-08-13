@@ -27,6 +27,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.tool.function.FunctionToolCallback;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BraintrustSpringAITest {
@@ -223,6 +224,141 @@ public class BraintrustSpringAITest {
                 metrics(span).has("time_to_first_token")
                         && metrics(span).get("time_to_first_token").asLong() >= 0,
                 "streaming responses should capture time to first token");
+    }
+
+    /** Tool-call parameter type; its shape drives the generated JSON schema. */
+    record WeatherRequest(String location) {}
+
+    /**
+     * OpenAI-only: a streaming call that provokes a tool call. The OpenAI streaming path routes
+     * through {@code reassembleOpenAISSE} → the shared {@link
+     * dev.braintrust.instrumentation.SseResponseAccumulator}, which merges the streamed tool-call
+     * argument fragments by index. {@code internalToolExecutionEnabled(false)} makes Spring return
+     * the tool call instead of executing it, so there is exactly one llm span to inspect.
+     */
+    @org.junit.jupiter.api.Test
+    @SneakyThrows
+    void testStreamWithTools() {
+        Provider provider =
+                new Provider("openai", "openai", "gpt-4o-mini", TestHarness::openAiBaseUrl, true);
+        ChatModel chatModel = buildChatModel(provider);
+
+        var weatherTool =
+                FunctionToolCallback.builder("get_weather", (WeatherRequest req) -> "unused")
+                        .description("Get the current weather for a location")
+                        .inputType(WeatherRequest.class)
+                        .build();
+
+        var prompt =
+                new Prompt(
+                        "What is the weather in Paris, France?",
+                        OpenAiChatOptions.builder()
+                                .model("gpt-4o-mini")
+                                .temperature(0.0)
+                                .maxTokens(256)
+                                .streamUsage(true)
+                                .toolCallbacks(weatherTool)
+                                .internalToolExecutionEnabled(false)
+                                .build());
+
+        boolean[] streamSurfacedToolCall = {false};
+        chatModel.stream(prompt)
+                .doOnNext(
+                        chunk -> {
+                            var result = chunk.getResult();
+                            if (result != null
+                                    && result.getOutput() != null
+                                    && result.getOutput().hasToolCalls()) {
+                                for (var toolCall : result.getOutput().getToolCalls()) {
+                                    if ("get_weather".equals(toolCall.name())) {
+                                        streamSurfacedToolCall[0] = true;
+                                    }
+                                }
+                            }
+                        })
+                .blockLast();
+        assertTrue(streamSurfacedToolCall[0], "stream should surface a get_weather tool call");
+
+        var spans = testHarness.awaitExportedSpans(1);
+        assertEquals(1, spans.size());
+        SpanData span = spans.get(0);
+        assertCommonSpanAttributes(span, provider);
+
+        // The reconstructed streaming span output must carry the tool call, with its argument
+        // fragments merged into valid JSON — the bug this module previously had dropped them.
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson, "braintrust.output_json should be set");
+        JsonNode toolCalls =
+                JSON_MAPPER.readTree(outputJson).get(0).get("message").get("tool_calls");
+        assertNotNull(toolCalls, "streaming span output should contain tool_calls");
+        assertEquals(1, toolCalls.size(), "expected a single tool call");
+        JsonNode function = toolCalls.get(0).get("function");
+        assertEquals("get_weather", function.get("name").asText(), "tool name should match");
+        assertTrue(
+                JSON_MAPPER.readTree(function.get("arguments").asText()).has("location"),
+                "merged tool arguments should be valid JSON containing 'location'");
+    }
+
+    /**
+     * Anthropic-only: a streaming call that provokes a tool call. The Anthropic streaming path
+     * routes through {@code reassembleAnthropicSSE}, which must preserve the {@code tool_use} block
+     * — accumulating the streamed {@code input_json_delta} fragments into the block's {@code input}
+     * — rather than dropping everything but text. {@code internalToolExecutionEnabled(false)} keeps
+     * it to a single llm span.
+     *
+     * <p>(Extended thinking is not exercised here: Spring AI 1.0.0's own streaming deserializer
+     * only knows the {@code text}/{@code tool_use} content-block types and throws on {@code
+     * thinking} blocks, so a thinking stream can't complete through this client. The reassembly
+     * handles {@code thinking_delta} regardless, for clients/versions that do emit it.)
+     */
+    @org.junit.jupiter.api.Test
+    @SneakyThrows
+    void testAnthropicStreamWithTools() {
+        Provider provider =
+                new Provider(
+                        "anthropic", "anthropic", TEST_MODEL, TestHarness::anthropicBaseUrl, false);
+        ChatModel chatModel = buildChatModel(provider);
+
+        var weatherTool =
+                FunctionToolCallback.builder("get_weather", (WeatherRequest req) -> "unused")
+                        .description("Get the current weather for a location")
+                        .inputType(WeatherRequest.class)
+                        .build();
+
+        var options =
+                AnthropicChatOptions.builder()
+                        .model(TEST_MODEL)
+                        .temperature(0.0)
+                        .maxTokens(1024)
+                        .toolCallbacks(weatherTool)
+                        .internalToolExecutionEnabled(false)
+                        .build();
+
+        chatModel.stream(new Prompt("What is the weather in Paris, France?", options)).blockLast();
+
+        var spans = testHarness.awaitExportedSpans(1);
+        assertEquals(1, spans.size());
+        SpanData span = spans.get(0);
+        assertCommonSpanAttributes(span, provider);
+
+        // The reconstructed streaming output must carry the tool_use block with its input JSON
+        // merged from input_json_delta fragments — previously dropped by the text-only reassembly.
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson, "braintrust.output_json should be set");
+        JsonNode content = JSON_MAPPER.readTree(outputJson).get("content");
+        assertNotNull(content, "anthropic output should have a content array");
+
+        JsonNode toolUse = null;
+        for (JsonNode block : content) {
+            if ("tool_use".equals(block.path("type").asText())) toolUse = block;
+        }
+        assertNotNull(toolUse, "streaming output should preserve the tool_use block");
+        assertEquals("get_weather", toolUse.path("name").asText(), "tool name should match");
+        assertTrue(
+                toolUse.path("input").has("location"),
+                "tool_use input should be reconstructed JSON containing 'location'");
     }
 
     // -------------------------------------------------------------------------

@@ -7,9 +7,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -109,6 +112,9 @@ public class BraintrustLangchainTest {
         assertNotNull(
                 output.get(0).get("message").get("content"),
                 "Output should contain assistant response content");
+
+        // The serialized span output should reflect the full response the client received.
+        assertSpanOutputReflects(response, span);
     }
 
     @Test
@@ -239,6 +245,129 @@ public class BraintrustLangchainTest {
                 choice.get("message").get("content"),
                 "Output should contain the complete streamed response");
         assertNotNull(choice.get("finish_reason"), "Output should have finish_reason");
+
+        // The reconstructed streaming span output should reflect the full response the client
+        // received — the instrumentation must feed every SSE event to the accumulator.
+        assertSpanOutputReflects(response, llmSpan);
+    }
+
+    @Test
+    @SneakyThrows
+    void testStreamingChatCompletionWithTools() {
+        // Auto-instrumentation intercepts OpenAiStreamingChatModel.Builder.build()
+        StreamingChatModel model =
+                OpenAiStreamingChatModel.builder()
+                        .apiKey(testHarness.openAiApiKey())
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .modelName("gpt-4o")
+                        .temperature(0.0)
+                        .build();
+
+        var weatherTool =
+                ToolSpecification.builder()
+                        .name("get_weather")
+                        .description("Get the current weather for a location")
+                        .parameters(
+                                JsonObjectSchema.builder()
+                                        .addStringProperty(
+                                                "location",
+                                                "The city and state, e.g. San" + " Francisco, CA")
+                                        .required("location")
+                                        .build())
+                        .build();
+
+        var chatRequest =
+                ChatRequest.builder()
+                        .messages(UserMessage.from("What is the weather in Paris, France?"))
+                        .toolSpecifications(weatherTool)
+                        .build();
+
+        var future = new CompletableFuture<ChatResponse>();
+        model.chat(
+                chatRequest,
+                new StreamingChatResponseHandler() {
+                    @Override
+                    public void onPartialResponse(String token) {}
+
+                    @Override
+                    public void onCompleteResponse(ChatResponse response) {
+                        future.complete(response);
+                    }
+
+                    @Override
+                    public void onError(Throwable error) {
+                        future.completeExceptionally(error);
+                    }
+                });
+        var response = future.get();
+
+        // The stream must carry tool-call deltas (merged by index) all the way to the span — the
+        // original bug dropped tool_calls entirely from streaming reconstruction.
+        assertTrue(
+                response.aiMessage().hasToolExecutionRequests(),
+                "Model should have requested a tool call");
+
+        var llmSpan =
+                testHarness.awaitExportedSpans(1).stream()
+                        .filter(s -> s.getName().equals("Chat Completion"))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("no 'Chat Completion' llm span"));
+
+        assertSpanOutputReflects(response, llmSpan);
+    }
+
+    /**
+     * Asserts that the llm span's serialized output ({@code braintrust.output_json}) reflects the
+     * full response the langchain client received — comparing the reconstructed assistant message
+     * against the client's parsed {@link ChatResponse} (content, thinking, and tool calls) rather
+     * than hand-asserting individual fields per test. langchain decodes the same stream
+     * independently of our accumulator, so agreement is a meaningful end-to-end check.
+     */
+    @SneakyThrows
+    private void assertSpanOutputReflects(ChatResponse clientResponse, SpanData llmSpan) {
+        String outputJson =
+                llmSpan.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson, "Span should have braintrust.output_json");
+        JsonNode message = JSON_MAPPER.readTree(outputJson).get(0).get("message");
+        assertNotNull(message, "Span output should contain a choice message");
+
+        var aiMessage = clientResponse.aiMessage();
+
+        if (aiMessage.text() != null) {
+            assertEquals(
+                    aiMessage.text(),
+                    message.path("content").asText(),
+                    "Span output content should match the client's assistant text");
+        }
+        if (aiMessage.thinking() != null) {
+            assertEquals(
+                    aiMessage.thinking(),
+                    message.path("reasoning_content").asText(),
+                    "Span output reasoning_content should match the client's thinking");
+        }
+        if (aiMessage.hasToolExecutionRequests()) {
+            JsonNode toolCalls = message.get("tool_calls");
+            assertNotNull(toolCalls, "Span output should contain tool_calls");
+            var requests = aiMessage.toolExecutionRequests();
+            assertEquals(
+                    requests.size(), toolCalls.size(), "tool_calls count should match the client");
+            for (int i = 0; i < requests.size(); i++) {
+                var request = requests.get(i);
+                JsonNode function = toolCalls.get(i).get("function");
+                assertEquals(
+                        request.name(), function.get("name").asText(), "tool name should match");
+                assertEquals(
+                        JSON_MAPPER.readTree(request.arguments()),
+                        JSON_MAPPER.readTree(function.get("arguments").asText()),
+                        "tool arguments should match");
+                if (request.id() != null) {
+                    assertEquals(
+                            request.id(),
+                            toolCalls.get(i).get("id").asText(),
+                            "tool id should match");
+                }
+            }
+        }
     }
 
     @Test

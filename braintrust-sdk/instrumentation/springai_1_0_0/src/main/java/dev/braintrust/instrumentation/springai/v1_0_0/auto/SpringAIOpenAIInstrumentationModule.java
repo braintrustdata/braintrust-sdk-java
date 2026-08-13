@@ -32,6 +32,7 @@ public class SpringAIOpenAIInstrumentationModule extends InstrumentationModule {
                 PACKAGE + "BraintrustSpringAI$BodyCapturingRequest",
                 PACKAGE + "BraintrustSpringAI$BodyCapturingOutputMessage",
                 PACKAGE + "BraintrustSpringAI$StreamContext",
+                "dev.braintrust.instrumentation.SseResponseAccumulator",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }

@@ -1,0 +1,42 @@
+{
+  "id" : "229a99a3-e268-3598-8770-2734af5feb68",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is the weather in Paris, France?\",\"role\":\"user\"}],\"model\":\"gpt-4o\",\"tools\":[{\"name\":\"get_weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The city and state\"}},\"required\":[\"location\"]},\"strict\":false,\"type\":\"function\",\"description\":\"Get the current weather for a location\"}],\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-9a580e94f540.txt",
+    "headers" : {
+      "x-request-id" : "req_3d3be76684d840438a78d39d1d84d46f",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2a5034bedaaed00-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Thu, 13 Aug 2026 04:35:25 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=63SwArwxiYRdhAVqzmJPPxf.qx3GXWGTr6wl7TSDKfU-1786595724.1437151-1.0.1.1-awf4xLyqWuD_Nws.iOBD_85ygIt5LhVDrg7rkK8Gic0S_Oz1TvMHIlmVHVlPCcBhoEJ32QmfCixzDZYVvYsHFtfjTEgBqCdsTfz1VvRMk9sdPJsAC4YP.30qzWXbyHfq; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 13 Aug 2026 05:05:25 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "203",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "229a99a3-e268-3598-8770-2734af5feb68",
+  "persistent" : true,
+  "insertionIndex" : 33
+}

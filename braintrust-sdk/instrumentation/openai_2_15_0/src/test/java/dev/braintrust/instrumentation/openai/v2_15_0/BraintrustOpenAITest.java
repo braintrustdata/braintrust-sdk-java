@@ -8,20 +8,25 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.OpenAIClientAsync;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
+import com.openai.core.JsonValue;
 import com.openai.core.http.StreamResponse;
 import com.openai.helpers.ChatCompletionAccumulator;
 import com.openai.helpers.ResponseAccumulator;
 import com.openai.models.ChatModel;
+import com.openai.models.FunctionDefinition;
+import com.openai.models.FunctionParameters;
 import com.openai.models.Reasoning;
 import com.openai.models.ReasoningEffort;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.openai.models.chat.completions.ChatCompletionStreamOptions;
+import com.openai.models.chat.completions.ChatCompletionTool;
 import com.openai.models.responses.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import net.bytebuddy.agent.ByteBuddyAgent;
@@ -437,6 +442,179 @@ public class BraintrustOpenAITest {
         assertTrue(
                 wrapped.toString().contains("ContextCapturingProxy"),
                 "toString should identify the proxy, got: " + wrapped);
+    }
+
+    @Test
+    @SneakyThrows
+    void testCompletionsStreamingWithTools() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var weatherTool =
+                ChatCompletionTool.builder()
+                        .function(
+                                FunctionDefinition.builder()
+                                        .name("get_weather")
+                                        .description("Get the current weather for a location")
+                                        .parameters(weatherParameters(FunctionParameters.builder()))
+                                        .build())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O)
+                        .addUserMessage("What is the weather in Paris, France?")
+                        .temperature(0.0)
+                        .addTool(weatherTool)
+                        .streamOptions(
+                                ChatCompletionStreamOptions.builder().includeUsage(true).build())
+                        .build();
+
+        var accumulator = ChatCompletionAccumulator.create();
+        try (var stream = openAIClient.chat().completions().createStreaming(request)) {
+            stream.stream().forEach(accumulator::accumulate);
+        }
+        var toolCalls = accumulator.chatCompletion().choices().get(0).message().toolCalls();
+        assertTrue(toolCalls.isPresent() && !toolCalls.get().isEmpty(), "model should call a tool");
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+        assertValidOpenAISpan(span, true);
+
+        // The reconstructed streaming span output must carry the same tool calls the client saw.
+        JsonNode spanToolCalls = spanOutput(span).get(0).get("message").get("tool_calls");
+        assertNotNull(spanToolCalls, "streaming span output should contain tool_calls");
+        assertEquals(toolCalls.get().size(), spanToolCalls.size(), "tool_calls count should match");
+        for (int i = 0; i < toolCalls.get().size(); i++) {
+            var tc = toolCalls.get().get(i);
+            JsonNode spanFn = spanToolCalls.get(i).get("function");
+            assertEquals(
+                    tc.function().name(), spanFn.get("name").asText(), "tool name should match");
+            assertEquals(
+                    JSON_MAPPER.readTree(tc.function().arguments()),
+                    JSON_MAPPER.readTree(spanFn.get("arguments").asText()),
+                    "tool arguments should match");
+            assertEquals(tc.id(), spanToolCalls.get(i).get("id").asText(), "tool id should match");
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    void testResponsesStreamingWithTools() {
+        OpenAIClient client =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var weatherTool =
+                FunctionTool.builder()
+                        .name("get_weather")
+                        .description("Get the current weather for a location")
+                        .parameters(weatherParameters(FunctionTool.Parameters.builder()))
+                        .strict(false)
+                        .build();
+
+        var request =
+                ResponseCreateParams.builder()
+                        .model(ChatModel.GPT_4O)
+                        .inputOfResponse(
+                                List.of(
+                                        ResponseInputItem.ofEasyInputMessage(
+                                                EasyInputMessage.builder()
+                                                        .role(EasyInputMessage.Role.USER)
+                                                        .content(
+                                                                "What is the weather in Paris,"
+                                                                        + " France?")
+                                                        .build())))
+                        .addTool(weatherTool)
+                        .build();
+
+        var accumulator = ResponseAccumulator.create();
+        try (var stream = client.responses().createStreaming(request)) {
+            stream.stream().forEach(accumulator::accumulate);
+        }
+        var functionCalls =
+                accumulator.response().output().stream()
+                        .filter(ResponseOutputItem::isFunctionCall)
+                        .map(ResponseOutputItem::asFunctionCall)
+                        .toList();
+        assertFalse(functionCalls.isEmpty(), "model should call a function tool");
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+        assertValidOpenAISpan(span, true);
+
+        // The Responses API serializes output as an "output" array; the streamed function_call
+        // items must survive reconstruction into the span exactly as the client accumulated them.
+        var spanFunctionCalls = new java.util.ArrayList<JsonNode>();
+        spanOutput(span)
+                .forEach(
+                        item -> {
+                            if ("function_call".equals(item.path("type").asText())) {
+                                spanFunctionCalls.add(item);
+                            }
+                        });
+        assertEquals(
+                functionCalls.size(), spanFunctionCalls.size(), "function_call count should match");
+        for (int i = 0; i < functionCalls.size(); i++) {
+            var fc = functionCalls.get(i);
+            JsonNode spanFc = spanFunctionCalls.get(i);
+            assertEquals(fc.name(), spanFc.get("name").asText(), "function name should match");
+            assertEquals(
+                    JSON_MAPPER.readTree(fc.arguments()),
+                    JSON_MAPPER.readTree(spanFc.get("arguments").asText()),
+                    "function arguments should match");
+            assertEquals(fc.callId(), spanFc.get("call_id").asText(), "call_id should match");
+        }
+    }
+
+    /** A minimal {@code get_weather(location)} JSON-schema, shared by both tool-call tests. */
+    private static FunctionParameters weatherParameters(FunctionParameters.Builder builder) {
+        return builder.putAdditionalProperty("type", JsonValue.from("object"))
+                .putAdditionalProperty(
+                        "properties",
+                        JsonValue.from(
+                                Map.of(
+                                        "location",
+                                        Map.of(
+                                                "type",
+                                                "string",
+                                                "description",
+                                                "The city and state"))))
+                .putAdditionalProperty("required", JsonValue.from(List.of("location")))
+                .build();
+    }
+
+    /** Same {@code get_weather} schema for the Responses API's parameter type. */
+    private static FunctionTool.Parameters weatherParameters(
+            FunctionTool.Parameters.Builder builder) {
+        return builder.putAdditionalProperty("type", JsonValue.from("object"))
+                .putAdditionalProperty(
+                        "properties",
+                        JsonValue.from(
+                                Map.of(
+                                        "location",
+                                        Map.of(
+                                                "type",
+                                                "string",
+                                                "description",
+                                                "The city and state"))))
+                .putAdditionalProperty("required", JsonValue.from(List.of("location")))
+                .build();
+    }
+
+    @SneakyThrows
+    private JsonNode spanOutput(SpanData span) {
+        String outputJson =
+                span.getAttributes().get(AttributeKey.stringKey("braintrust.output_json"));
+        assertNotNull(outputJson, "span braintrust.output_json must be set");
+        return JSON_MAPPER.readTree(outputJson);
     }
 
     @SneakyThrows
