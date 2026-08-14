@@ -1,0 +1,42 @@
+{
+  "id" : "4ecd239c-fa2c-3a94-9038-bb602a460baa",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"content\":\"What is one recent headline about artificial intelligence? Use web search.\",\"role\":\"user\"}],\"model\":\"gpt-4o\",\"tools\":[{\"type\":\"web_search_preview\"}],\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-31d9a6eee624.txt",
+    "headers" : {
+      "x-request-id" : "req_2f1291ac8203453fb7476805c8eb5c01",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2b476dad9132537-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Sat, 15 Aug 2026 01:35:47 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=q6tyEpyrXqDMtWwq2JvbVBjmkxbDf7l2v1_lo5R3X98-1786757743.8158913-1.0.1.1-WFRbjAqwnEOAf4BovtQaPxjU47q0SMcLUlfBkd949mJ48TGnhQ4BTdgbCvT.aHYoHKwo4FBtK.gTmhGWs3Mtaca2Iq2TajrUg.ffrJwJR9cPWwHXRpjj9IVj1f7eEZIA; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 15 Aug 2026 02:05:47 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "198",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "4ecd239c-fa2c-3a94-9038-bb602a460baa",
+  "persistent" : true,
+  "insertionIndex" : 39
+}

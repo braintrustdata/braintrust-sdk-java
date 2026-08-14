@@ -1,0 +1,35 @@
+{
+  "id": "chatcmpl-ECe43NIjWyAmKELxrwXrmNLta5t8z",
+  "object": "chat.completion",
+  "created": 1786682651,
+  "model": "o4-mini-2025-04-16",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Each term is the product of two consecutive positive integers:\n\nTerm 1: 1×2 = 2  \nTerm 2: 2×3 = 6  \nTerm 3: 3×4 = 12  \nTerm 4: 4×5 = 20  \nTerm 5: 5×6 = 30  \n\nIf we call the nth term aₙ (with n starting at 1), then\n\n aₙ = n·(n + 1)\n\nEquivalently,\n\n aₙ = n² + n.",
+        "refusal": null,
+        "annotations": []
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 41,
+    "completion_tokens": 525,
+    "total_tokens": 566,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 384,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": null
+}

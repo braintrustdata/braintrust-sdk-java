@@ -1,0 +1,49 @@
+{
+  "id" : "a17f0a08-90cf-3039-a216-15f16dbeedf0",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\",\"role\":\"user\"}],\"model\":\"o4-mini\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-7c0db28da6b8.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=Wky4DpVpTg7LMCTKr3ZOE9ZrY3w_.7Zx_.tQJ_dwUkI-1786682651.1902754-1.0.1.1-_5dU7Ifp7l3K1Eg1dXMsO63q0vFVHk2LQSqJZkQrbml3gWFkrwA7TGO6kZkUNJJIOq1U0axg3NrBUO3YO3w_ZWDP0Uy.LNbn9TcHHkC0gbI8jpuhRxDt_rJ5aJQRQy2y; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 14 Aug 2026 05:14:18 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_3dc11519d9c8408abd0cb1c195d19d19",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a2ad4d89ee3f1f9a-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999970",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Fri, 14 Aug 2026 04:44:18 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "6333",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "a17f0a08-90cf-3039-a216-15f16dbeedf0",
+  "persistent" : true,
+  "insertionIndex" : 37
+}
