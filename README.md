@@ -129,3 +129,7 @@ The SDK uses a standard slf4j logger and will use the default log level (or not 
 All Braintrust loggers will log into the `dev.braintrust` namespace. To adjust the log level, consult your logger documentation.
 
 For example, to enable debug logging for slf4j-simple you would set the system property `org.slf4j.simpleLogger.log.dev.braintrust=DEBUG`
+
+## See Also
+
+- [Low-level Braintrust API client](./docs/api-client.md) — talk to the Braintrust REST API directly
