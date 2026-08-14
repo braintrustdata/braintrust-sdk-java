@@ -1,10 +1,8 @@
 package dev.braintrust.instrumentation.langchain.v1_8_0;
 
-import static dev.braintrust.json.BraintrustJsonMapper.toJson;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
+import dev.braintrust.instrumentation.SseResponseAccumulator;
 import dev.braintrust.json.BraintrustJsonMapper;
 import dev.langchain4j.exception.HttpException;
 import dev.langchain4j.http.client.HttpClient;
@@ -126,9 +124,8 @@ class WrappedHttpClient implements HttpClient {
         private final String providerName;
         private final long startNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
-        private final StringBuilder contentBuffer = new StringBuilder();
-        private String finishReason = null;
-        private JsonNode usageData = null;
+        private final SseResponseAccumulator accumulator =
+                new SseResponseAccumulator(BraintrustJsonMapper.get());
 
         WrappedServerSentEventListener(
                 ServerSentEventListener delegate, Span span, String providerName) {
@@ -182,52 +179,17 @@ class WrappedHttpClient implements HttpClient {
 
         private void accumulateChunk(String data) {
             if (data == null || data.isEmpty() || "[DONE]".equals(data)) return;
-            try {
-                if (timeToFirstTokenNanos.get() == 0L) {
-                    timeToFirstTokenNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
-                }
-                JsonNode chunk = BraintrustJsonMapper.get().readTree(data);
-                if (chunk.has("choices") && chunk.get("choices").size() > 0) {
-                    JsonNode choice = chunk.get("choices").get(0);
-                    if (choice.has("delta")) {
-                        JsonNode delta = choice.get("delta");
-                        if (delta.has("content")) {
-                            contentBuffer.append(delta.get("content").asText());
-                        }
-                    }
-                    if (choice.has("finish_reason") && !choice.get("finish_reason").isNull()) {
-                        finishReason = choice.get("finish_reason").asText();
-                    }
-                }
-                if (chunk.has("usage") && !chunk.get("usage").isNull()) {
-                    usageData = chunk.get("usage");
-                }
-            } catch (Exception e) {
-                log.debug("Failed to parse SSE chunk: {}", data, e);
+            if (timeToFirstTokenNanos.get() == 0L) {
+                timeToFirstTokenNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
             }
+            accumulator.merge(data);
         }
 
         private void finalizeSpan() {
             try {
-                var root = BraintrustJsonMapper.get().createObjectNode();
-
-                var choicesArray = BraintrustJsonMapper.get().createArrayNode();
-                var choice = BraintrustJsonMapper.get().createObjectNode();
-                choice.put("index", 0);
-                if (finishReason != null) choice.put("finish_reason", finishReason);
-                var message = BraintrustJsonMapper.get().createObjectNode();
-                message.put("role", "assistant");
-                message.put("content", contentBuffer.toString());
-                choice.set("message", message);
-                choicesArray.add(choice);
-                root.set("choices", choicesArray);
-
-                if (usageData != null) {
-                    root.set("usage", usageData);
-                }
-
                 Long ttft = timeToFirstTokenNanos.get();
-                InstrumentationSemConv.tagLLMSpanResponse(span, providerName, toJson(root), ttft);
+                InstrumentationSemConv.tagLLMSpanResponse(
+                        span, providerName, accumulator.build(), ttft);
             } catch (Exception e) {
                 log.debug("Failed to finalize streaming span", e);
             }

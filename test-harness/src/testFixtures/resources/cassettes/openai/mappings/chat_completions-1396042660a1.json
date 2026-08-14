@@ -1,0 +1,49 @@
+{
+  "id" : "53345a74-6b35-38d0-a840-77a7ee136e13",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the weather in Paris, France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":256,\"stream\":true,\"stream_options\":{\"include_usage\":true},\"temperature\":0.0,\"tools\":[{\"type\":\"function\",\"function\":{\"description\":\"Get the current weather for a location\",\"name\":\"get_weather\",\"parameters\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]}}}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-1396042660a1.txt",
+    "headers" : {
+      "x-request-id" : "req_db5e36cdfe8843f88bb7cdfefac85571",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2a514a898693295-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Thu, 13 Aug 2026 04:47:16 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=T6xnzzsEEIsgU4dO39AMuSME3vsE4DxJdP2FpWMPz88-1786596435.2965999-1.0.1.1-ruWJF7ZKD1_jsgt72ebauZR9RTzTOSM6XPzwRP6AOFwzBS2DCLrpVdb3nh1ehixaAAUiRcmfQiFq8mU8QCbvjF5X5V4YtRpV_yKlAktbpyFvctNs51wzXG77GCi.oQTu; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 13 Aug 2026 05:17:16 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "482",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "53345a74-6b35-38d0-a840-77a7ee136e13",
+  "persistent" : true,
+  "insertionIndex" : 35
+}

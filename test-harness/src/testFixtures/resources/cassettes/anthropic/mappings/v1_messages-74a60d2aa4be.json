@@ -1,0 +1,53 @@
+{
+  "id" : "2c7344ba-cce7-35f0-9067-9cf5f984f5f2",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"model\":\"claude-haiku-4-5\",\"messages\":[{\"content\":[{\"type\":\"text\",\"text\":\"What is the weather in Paris, France?\"}],\"role\":\"user\"}],\"system\":\"\",\"max_tokens\":1024,\"stream\":true,\"temperature\":0.0,\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get the current weather for a location\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"],\"additionalProperties\":false}}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-74a60d2aa4be.txt",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "2000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-08-13T19:06:42Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-08-13T19:06:42Z",
+      "anthropic-ratelimit-tokens-remaining" : "12000000",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "10000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "CF-RAY" : "a2a9ffa02882fcac-SEA",
+      "anthropic-ratelimit-tokens-limit" : "12000000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011Ce1Ggzn7i9DPduqfs8VAq",
+      "anthropic-ratelimit-tokens-reset" : "2026-08-13T19:06:42Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Thu, 13 Aug 2026 19:06:43 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-08-13T19:06:42Z",
+      "Cache-Control" : "no-cache",
+      "anthropic-ratelimit-input-tokens-limit" : "10000000",
+      "traceresponse" : "00-fd09b9dfb45db31fcdbcdc495ad7eae1-b20fd450b01eebf8-01",
+      "anthropic-ratelimit-output-tokens-remaining" : "2000000"
+    }
+  },
+  "uuid" : "2c7344ba-cce7-35f0-9067-9cf5f984f5f2",
+  "persistent" : true,
+  "insertionIndex" : 25
+}

@@ -1,5 +1,7 @@
 package dev.braintrust.instrumentation.springai.v1_0_0;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -12,6 +14,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -553,82 +556,24 @@ public class BraintrustSpringAI {
     @SneakyThrows
     private static String reassembleOpenAISSE(String rawSSE, Span span, StreamContext streamCtx) {
         var mapper = dev.braintrust.json.BraintrustJsonMapper.get();
-        var choices = mapper.createObjectNode();
-        var usage = mapper.createObjectNode();
-        String model = null;
-
+        // Generically merge chunks so every streamed field (content, reasoning, tool calls, ...) is
+        // reconstructed — the shared accumulator merges tool-call deltas by index, which a naive
+        // append-per-fragment loop cannot do.
+        var accumulator = new dev.braintrust.instrumentation.SseResponseAccumulator(mapper);
         for (String line : rawSSE.split("\n")) {
-            if (!line.startsWith("data: ") || line.equals("data: [DONE]")) {
+            if (!line.startsWith("data: ")) {
                 continue;
             }
-            String json = line.substring("data: ".length()).trim();
-            var chunk = mapper.readTree(json);
-
-            if (model == null && chunk.has("model") && !chunk.get("model").isNull()) {
-                model = chunk.get("model").asText();
-            }
-
-            if (chunk.has("choices")) {
-                for (var choiceChunk : chunk.get("choices")) {
-                    int index = choiceChunk.has("index") ? choiceChunk.get("index").asInt() : 0;
-                    String indexKey = String.valueOf(index);
-
-                    if (!choices.has(indexKey)) {
-                        var choice = mapper.createObjectNode();
-                        var message = mapper.createObjectNode();
-                        message.put("role", "assistant");
-                        message.put("content", "");
-                        choice.set("message", message);
-                        choice.put("index", index);
-                        choices.set(indexKey, choice);
-                    }
-
-                    var choice = choices.get(indexKey);
-                    if (choiceChunk.has("delta")) {
-                        var delta = choiceChunk.get("delta");
-                        if (delta.has("content") && !delta.get("content").isNull()) {
-                            String existing = choice.get("message").get("content").asText();
-                            ((com.fasterxml.jackson.databind.node.ObjectNode) choice.get("message"))
-                                    .put("content", existing + delta.get("content").asText());
-                        }
-                        if (delta.has("tool_calls")) {
-                            if (!choice.get("message").has("tool_calls")) {
-                                ((com.fasterxml.jackson.databind.node.ObjectNode)
-                                                choice.get("message"))
-                                        .set("tool_calls", mapper.createArrayNode());
-                            }
-                            for (var tc : delta.get("tool_calls")) {
-                                ((com.fasterxml.jackson.databind.node.ArrayNode)
-                                                choice.get("message").get("tool_calls"))
-                                        .add(tc);
-                            }
-                        }
-                    }
-                    if (choiceChunk.has("finish_reason")
-                            && !choiceChunk.get("finish_reason").isNull()) {
-                        ((com.fasterxml.jackson.databind.node.ObjectNode) choice)
-                                .put("finish_reason", choiceChunk.get("finish_reason").asText());
-                    }
-                }
-            }
-
-            if (chunk.has("usage") && !chunk.get("usage").isNull()) {
-                var u = chunk.get("usage");
-                u.fields().forEachRemaining(entry -> usage.set(entry.getKey(), entry.getValue()));
-            }
+            // merge() ignores the "[DONE]" sentinel and blank/non-JSON payloads.
+            accumulator.merge(line.substring("data: ".length()));
         }
 
+        String result = accumulator.build();
+        var resultNode = mapper.readTree(result);
+        String model = resultNode.has("model") ? resultNode.get("model").asText() : null;
         backfillModelMetadata(span, streamCtx, model);
 
-        var choicesArray = mapper.createArrayNode();
-        choices.fields().forEachRemaining(entry -> choicesArray.add(entry.getValue()));
-
-        var result = mapper.createObjectNode();
-        result.set("choices", choicesArray);
-        if (usage.size() > 0) {
-            result.set("usage", usage);
-        }
-        return dev.braintrust.json.BraintrustJsonMapper.toJson(result);
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -636,73 +581,89 @@ public class BraintrustSpringAI {
     // -------------------------------------------------------------------------
 
     /**
-     * Reassembles an Anthropic-format SSE stream into the Anthropic non-streaming response format:
-     * {@code {"role":"assistant","content":[{"type":"text","text":"..."}],"usage":{...}}}
+     * Reassembles an Anthropic-format SSE stream into the Anthropic non-streaming response shape:
+     * {@code {"role":"assistant","content":[<blocks>],"usage":{...}}}.
      *
      * <p>Anthropic SSE events use types like {@code message_start}, {@code content_block_start},
-     * {@code content_block_delta}, {@code message_delta}, and {@code message_stop}.
+     * {@code content_block_delta}, {@code message_delta}, and {@code message_stop}. Each content
+     * block is reconstructed by index, preserving its real type — {@code text}, {@code tool_use},
+     * {@code thinking}, etc. — rather than collapsing everything to text: {@code text_delta}
+     * appends to a text block, {@code thinking_delta}/{@code signature_delta} to a thinking block,
+     * and {@code input_json_delta} fragments accumulate into a tool_use block's {@code input}.
      */
     @SneakyThrows
     private static String reassembleAnthropicSSE(
             String rawSSE, Span span, StreamContext streamCtx) {
         var mapper = dev.braintrust.json.BraintrustJsonMapper.get();
-        var contentBlocks = mapper.createArrayNode();
         var usage = mapper.createObjectNode();
         String model = null;
+        String stopReason = null;
 
-        // Track content blocks by index for delta merging
-        Map<Integer, StringBuilder> textByIndex = new HashMap<>();
+        // Reconstruct each content block by index, preserving order and type.
+        Map<Integer, ObjectNode> blocksByIndex = new LinkedHashMap<>();
+        // tool_use "input" streams as concatenated partial_json fragments; buffer per index and
+        // parse into an object at the end.
+        Map<Integer, StringBuilder> toolJsonByIndex = new HashMap<>();
 
         for (String line : rawSSE.split("\n")) {
-            if (!line.startsWith("data: ") || line.equals("data: [DONE]")) {
+            if (!line.startsWith("data: ")) {
                 continue;
             }
             String json = line.substring("data: ".length()).trim();
+            if (json.isEmpty() || json.equals("[DONE]")) {
+                continue;
+            }
             var event = mapper.readTree(json);
             String type = event.has("type") ? event.get("type").asText() : "";
 
             switch (type) {
                 case "message_start" -> {
-                    if (event.has("message")) {
-                        var message = event.get("message");
-                        if (model == null
-                                && message.has("model")
-                                && !message.get("model").isNull()) {
+                    var message = event.get("message");
+                    if (message != null && message.isObject()) {
+                        if (model == null && message.hasNonNull("model")) {
                             model = message.get("model").asText();
                         }
-                        if (message.has("usage") && !message.get("usage").isNull()) {
-                            message.get("usage")
-                                    .fields()
-                                    .forEachRemaining(
-                                            entry -> usage.set(entry.getKey(), entry.getValue()));
-                        }
+                        copyFields(message.get("usage"), usage);
                     }
                 }
                 case "content_block_start" -> {
                     int index = event.has("index") ? event.get("index").asInt() : 0;
-                    textByIndex.putIfAbsent(index, new StringBuilder());
-                    // If the content block has initial text, capture it
-                    if (event.has("content_block")
-                            && event.get("content_block").has("text")
-                            && !event.get("content_block").get("text").asText().isEmpty()) {
-                        textByIndex
-                                .get(index)
-                                .append(event.get("content_block").get("text").asText());
-                    }
+                    // Seed the block from the start event so type/id/name are preserved.
+                    ObjectNode block =
+                            event.has("content_block") && event.get("content_block").isObject()
+                                    ? (ObjectNode) event.get("content_block").deepCopy()
+                                    : mapper.createObjectNode();
+                    blocksByIndex.put(index, block);
                 }
                 case "content_block_delta" -> {
                     int index = event.has("index") ? event.get("index").asInt() : 0;
-                    textByIndex.putIfAbsent(index, new StringBuilder());
-                    if (event.has("delta") && event.get("delta").has("text")) {
-                        textByIndex.get(index).append(event.get("delta").get("text").asText());
+                    ObjectNode block =
+                            blocksByIndex.computeIfAbsent(index, i -> mapper.createObjectNode());
+                    var delta = event.get("delta");
+                    String deltaType =
+                            delta != null && delta.has("type") ? delta.get("type").asText() : "";
+                    switch (deltaType) {
+                        case "text_delta" -> appendText(block, "text", delta.get("text"));
+                        case "thinking_delta" ->
+                                appendText(block, "thinking", delta.get("thinking"));
+                        case "signature_delta" ->
+                                appendText(block, "signature", delta.get("signature"));
+                        case "input_json_delta" -> {
+                            if (delta.hasNonNull("partial_json")) {
+                                toolJsonByIndex
+                                        .computeIfAbsent(index, i -> new StringBuilder())
+                                        .append(delta.get("partial_json").asText());
+                            }
+                        }
+                        default -> {
+                            // unknown delta type — nothing to accumulate
+                        }
                     }
                 }
                 case "message_delta" -> {
-                    if (event.has("usage") && !event.get("usage").isNull()) {
-                        event.get("usage")
-                                .fields()
-                                .forEachRemaining(
-                                        entry -> usage.set(entry.getKey(), entry.getValue()));
+                    copyFields(event.get("usage"), usage);
+                    if (event.has("delta") && event.get("delta").hasNonNull("stop_reason")) {
+                        stopReason = event.get("delta").get("stop_reason").asText();
                     }
                 }
                 default -> {
@@ -713,24 +674,52 @@ public class BraintrustSpringAI {
 
         backfillModelMetadata(span, streamCtx, model);
 
-        // Build content blocks array
-        textByIndex.entrySet().stream()
+        // Finalize tool_use inputs: parse the accumulated partial_json into the block's "input".
+        for (var entry : toolJsonByIndex.entrySet()) {
+            ObjectNode block = blocksByIndex.get(entry.getKey());
+            if (block == null) {
+                continue;
+            }
+            String jsonStr = entry.getValue().toString();
+            block.set(
+                    "input",
+                    jsonStr.isEmpty() ? mapper.createObjectNode() : mapper.readTree(jsonStr));
+        }
+
+        var contentBlocks = mapper.createArrayNode();
+        blocksByIndex.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(
-                        entry -> {
-                            var block = mapper.createObjectNode();
-                            block.put("type", "text");
-                            block.put("text", entry.getValue().toString());
-                            contentBlocks.add(block);
-                        });
+                .forEach(entry -> contentBlocks.add(entry.getValue()));
 
         var result = mapper.createObjectNode();
         result.put("role", "assistant");
         result.set("content", contentBlocks);
+        if (stopReason != null) {
+            result.put("stop_reason", stopReason);
+        }
         if (usage.size() > 0) {
             result.set("usage", usage);
         }
         return dev.braintrust.json.BraintrustJsonMapper.toJson(result);
+    }
+
+    /** Appends a streamed textual delta onto {@code field}, seeding from empty if absent. */
+    private static void appendText(ObjectNode block, String field, JsonNode value) {
+        if (value == null || value.isNull()) {
+            return;
+        }
+        String existing = block.has(field) ? block.get(field).asText() : "";
+        block.put(field, existing + value.asText());
+    }
+
+    /**
+     * Copies all fields of {@code source} (an object, e.g. Anthropic usage) into {@code target}.
+     */
+    private static void copyFields(JsonNode source, ObjectNode target) {
+        if (source == null || !source.isObject()) {
+            return;
+        }
+        source.fields().forEachRemaining(entry -> target.set(entry.getKey(), entry.getValue()));
     }
 
     // -------------------------------------------------------------------------

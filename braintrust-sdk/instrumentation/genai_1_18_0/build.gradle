@@ -5,7 +5,8 @@ muzzle {
   pass {
     group = 'com.google.genai'
     module = 'google-genai'
-    versions = '[1.18.0,)'
+    // TODO: autoinstrumentation muzzle fails in 1.65.0 because slf4j api is no longer a transitive dep
+    versions = '[1.18.0,1.65.0)'
   }
 }
 
