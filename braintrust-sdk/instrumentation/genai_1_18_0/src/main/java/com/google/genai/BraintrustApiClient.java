@@ -55,7 +55,7 @@ class BraintrustApiClient extends ApiClient {
             @Nullable String responseBody) {
         try {
             Map<String, Object> metadata = new java.util.HashMap<>();
-            metadata.put("provider", "gemini");
+            metadata.put("provider", "google");
 
             // Parse request
             if (requestBody != null) {

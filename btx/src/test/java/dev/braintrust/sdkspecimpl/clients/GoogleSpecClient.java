@@ -17,6 +17,23 @@ import java.util.Map;
 /** Google Gemini (google-genai) client: generateContent (sync + streaming). */
 public final class GoogleSpecClient implements SpecClient {
 
+    /**
+     * {@code :generateContent} specs that require Google features not yet implemented in the genai
+     * instrumentation / this client (thinking, grounding tools, response modalities, and
+     * per-modality prompt-token extraction for attachments). They are additionally listed in {@link
+     * dev.braintrust.sdkspecimpl.SpecClientRegistry#KNOWN_UNSUPPORTED_SPECS} so they load to a
+     * deliberate skip instead of a failing "unsupported" sentinel. Remove an entry here once the
+     * corresponding feature lands.
+     */
+    private static final java.util.Set<String> UNSUPPORTED_SPECS =
+            java.util.Set.of(
+                    "thinking",
+                    "grounding",
+                    "streaming",
+                    "generated_audio_usage",
+                    "generated_image_usage",
+                    "attachments");
+
     private volatile Client geminiClient;
 
     @Override
@@ -31,7 +48,8 @@ public final class GoogleSpecClient implements SpecClient {
 
     @Override
     public boolean supports(LlmSpanSpec spec) {
-        return spec.endpoint().contains(":generateContent");
+        return spec.endpoint().contains(":generateContent")
+                && !UNSUPPORTED_SPECS.contains(spec.name());
     }
 
     @Override

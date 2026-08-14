@@ -32,7 +32,22 @@ public final class SpecClientRegistry {
      * nothing instead of producing a failing "unsupported" test. Prefer registering a client; reach
      * for this only when no Java client can express the spec at all.
      */
-    private static final Set<String> KNOWN_UNSUPPORTED_SPECS = Set.of();
+    private static final Set<String> KNOWN_UNSUPPORTED_SPECS =
+            Set.of(
+                    // Brand-new Google features added in braintrust-spec v0.0.10. The genai
+                    // instrumentation / GoogleSpecClient don't implement them yet (thinking,
+                    // grounding tools, response modalities, per-modality prompt-token extraction),
+                    // so they're marked unsupported rather than half-implemented. GoogleSpecClient
+                    // also filters these out of supports(); see its UNSUPPORTED_SPECS.
+                    "google/thinking",
+                    "google/grounding",
+                    "google/streaming",
+                    "google/generated_audio_usage",
+                    "google/generated_image_usage",
+                    "google/attachments",
+                    // Google Interactions API (/v1/interactions) — no Java client exists.
+                    "google/interactions",
+                    "google/interactions_streaming");
 
     private static final List<SpecClient> CLIENTS =
             Stream.of(

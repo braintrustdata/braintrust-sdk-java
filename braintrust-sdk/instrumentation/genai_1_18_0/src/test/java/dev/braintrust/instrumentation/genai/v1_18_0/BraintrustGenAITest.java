@@ -67,7 +67,7 @@ public class BraintrustGenAITest {
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
         assertNotNull(metadataJson, "braintrust.metadata should be set");
         var metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("gemini", metadata.get("provider").asText());
+        assertEquals("google", metadata.get("provider").asText());
         assertEquals(MODEL_ID, metadata.get("model").asText());
         assertEquals(0.0, metadata.get("temperature").asDouble());
         assertEquals(50, metadata.get("maxOutputTokens").asInt());
@@ -145,7 +145,7 @@ public class BraintrustGenAITest {
                 span.getAttributes().get(AttributeKey.stringKey("braintrust.metadata"));
         assertNotNull(metadataJson, "braintrust.metadata should be set");
         var metadata = JSON_MAPPER.readTree(metadataJson);
-        assertEquals("gemini", metadata.get("provider").asText());
+        assertEquals("google", metadata.get("provider").asText());
         assertEquals(MODEL_ID, metadata.get("model").asText());
         assertEquals(0.0, metadata.get("temperature").asDouble());
         assertEquals(50, metadata.get("maxOutputTokens").asInt());
