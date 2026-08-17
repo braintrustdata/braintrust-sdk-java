@@ -18,6 +18,9 @@ import java.util.Map;
  *   <li>{@code span_attributes} — type, name
  *   <li>{@code input} — input messages
  *   <li>{@code output} — output choices / content
+ *   <li>{@code child_spans} — a nested list of child-span assertions, validated recursively against
+ *       the span's actual children (built by {@link SpanFetcher#buildSpanTree}). Handled by the
+ *       generic recursion below; a span that omits it asserts nothing about its children.
  * </ul>
  *
  * <p>Spans arrive here already in brainstore format, produced either by {@link SpanConverter}

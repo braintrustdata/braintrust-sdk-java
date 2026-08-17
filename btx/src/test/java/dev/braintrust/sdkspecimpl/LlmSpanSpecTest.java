@@ -90,8 +90,9 @@ class LlmSpanSpecTest {
                                                                         SpecClientRegistry.execute(
                                                                                 spec, CTX);
                                                                 totalExpectedSpans.addAndGet(
-                                                                        spec.expectedBrainstoreSpans()
-                                                                                        .size()
+                                                                        countExpectedSpans(
+                                                                                        spec
+                                                                                                .expectedBrainstoreSpans())
                                                                                 + 1);
                                                                 return Arguments.of(
                                                                         spec, rootSpanId);
@@ -111,9 +112,27 @@ class LlmSpanSpecTest {
         if (SpecClientRegistry.UNSUPPORTED_CLIENT_ID.equals(spec.client())) {
             org.junit.jupiter.api.Assertions.fail(SpecClientRegistry.unsupportedSpecMessage(spec));
         }
-        int expectedSpanCount = spec.expectedBrainstoreSpans().size();
+        int expectedSpanCount = countExpectedSpans(spec.expectedBrainstoreSpans());
         List<Map<String, Object>> brainstoreSpans =
                 SPAN_FETCHER.fetch(rootSpanId, expectedSpanCount);
         SpanValidator.validate(brainstoreSpans, spec.expectedBrainstoreSpans(), spec.displayName());
+    }
+
+    /**
+     * Total number of spans a spec expects, counting nested {@code child_spans} recursively. Used
+     * to size the {@code awaitExportedSpans} gate so it doesn't return before child (e.g. tool)
+     * spans have flushed.
+     */
+    @SuppressWarnings("unchecked")
+    private static int countExpectedSpans(List<Map<String, Object>> spans) {
+        int total = 0;
+        for (Map<String, Object> span : spans) {
+            total += 1;
+            Object children = span.get("child_spans");
+            if (children instanceof List<?> l) {
+                total += countExpectedSpans((List<Map<String, Object>>) l);
+            }
+        }
+        return total;
     }
 }

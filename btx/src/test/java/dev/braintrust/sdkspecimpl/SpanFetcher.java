@@ -41,7 +41,7 @@ public class SpanFetcher {
 
         if (isReplayMode()) {
             // Fast path: convert the in-memory OTel spans to brainstore format locally.
-            return convertedOtelSpans;
+            return buildSpanTree(convertedOtelSpans);
         }
 
         // Live path: spans were actually sent to Braintrust — fetch them back via BTQL.
@@ -86,7 +86,45 @@ public class SpanFetcher {
 
         // Cross-check that our local OTel→brainstore conversion matches the real thing.
         assertConverterMatchesBrainstore(convertedOtelSpans, brainstoreSpans, rootSpanId);
-        return brainstoreSpans;
+        return buildSpanTree(brainstoreSpans);
+    }
+
+    /**
+     * Reshape a flat list of brainstore spans into a forest: each span gets a nested {@code
+     * child_spans} list, and only top-level spans (those whose parent is not among the fetched
+     * spans — i.e. children of the already-excluded root wrapper) are returned. Sibling order is
+     * preserved from the input list. This lets specs assert nested tool spans (e.g. a {@code
+     * web_search_call} child of an LLM span) via a recursive {@code child_spans:} structure.
+     */
+    @SuppressWarnings("unchecked")
+    static List<Map<String, Object>> buildSpanTree(List<Map<String, Object>> flatSpans) {
+        // Work on mutable copies so we can attach child_spans without mutating the inputs.
+        List<Map<String, Object>> spans = new java.util.ArrayList<>();
+        Map<String, Map<String, Object>> byId = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> span : flatSpans) {
+            Map<String, Object> copy = new java.util.LinkedHashMap<>(span);
+            copy.put("child_spans", new java.util.ArrayList<Map<String, Object>>());
+            spans.add(copy);
+            Object id = span.get("span_id");
+            if (id instanceof String s) {
+                byId.put(s, copy);
+            }
+        }
+
+        List<Map<String, Object>> topLevel = new java.util.ArrayList<>();
+        for (Map<String, Object> span : spans) {
+            Map<String, Object> parent = null;
+            Object parents = span.get("span_parents");
+            if (parents instanceof List<?> l && !l.isEmpty() && l.get(0) instanceof String pid) {
+                parent = byId.get(pid);
+            }
+            if (parent != null) {
+                ((List<Map<String, Object>>) parent.get("child_spans")).add(span);
+            } else {
+                topLevel.add(span);
+            }
+        }
+        return topLevel;
     }
 
     /**
@@ -131,6 +169,9 @@ public class SpanFetcher {
             Map<String, Object> convWithoutName = new java.util.LinkedHashMap<>(conv);
             convWithoutName.remove("name");
             convWithoutName.remove("metrics");
+            // span_id / span_parents are structural (used only for tree-building), not content.
+            convWithoutName.remove("span_id");
+            convWithoutName.remove("span_parents");
             assertIsSubset(convWithoutName, realSpan, ctx);
             assertMetricsKeysPresent(conv, realSpan, ctx);
         }
