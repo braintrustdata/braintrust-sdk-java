@@ -25,9 +25,20 @@ public final class SpringAi1AnthropicSpecClient implements SpecClient {
         return "anthropic";
     }
 
+    /**
+     * Specs this client cannot express, keyed by spec {@code name}. The limitation is in the Spring
+     * AI framework, not our instrumentation: Spring AI 1.x's Anthropic response model ({@code
+     * AnthropicApi.ContentBlock.Type}) has no {@code web_search_tool_result} value, so the
+     * framework throws {@code HttpMessageNotReadableException} deserializing a web-search response
+     * — after our HTTP-layer instrumentation has already captured the spans correctly. (Spring AI
+     * 2.x fails differently: it silently drops the native tool from the request entirely.) Web
+     * search is therefore only exercised through the raw {@code anthropic} client.
+     */
+    private static final java.util.Set<String> UNSUPPORTED_SPECS = java.util.Set.of("web_search");
+
     @Override
     public boolean supports(LlmSpanSpec spec) {
-        return "/v1/messages".equals(spec.endpoint());
+        return "/v1/messages".equals(spec.endpoint()) && !UNSUPPORTED_SPECS.contains(spec.name());
     }
 
     @Override

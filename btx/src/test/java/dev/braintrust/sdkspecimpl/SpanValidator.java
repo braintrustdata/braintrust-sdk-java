@@ -19,8 +19,9 @@ import java.util.Map;
  *   <li>{@code input} — input messages
  *   <li>{@code output} — output choices / content
  *   <li>{@code child_spans} — a nested list of child-span assertions, validated recursively against
- *       the span's actual children (built by {@link SpanFetcher#buildSpanTree}). Handled by the
- *       generic recursion below; a span that omits it asserts nothing about its children.
+ *       the span's actual children (built by {@link SpanFetcher#buildSpanTree}) by {@link
+ *       #validateChildSpans}, so every level honors the same per-span rules as the top level. A
+ *       span that omits it asserts nothing about its children.
  * </ul>
  *
  * <p>Spans arrive here already in brainstore format, produced either by {@link SpanConverter}
@@ -72,7 +73,57 @@ public class SpanValidator {
             }
             Object expectedValue = entry.getValue();
             Object actualValue = actual.get(field);
+            if (CHILD_SPANS_FIELD.equals(field)) {
+                validateChildSpans(actualValue, expectedValue, context + "." + field);
+                continue;
+            }
             validateValue(actualValue, expectedValue, context + "." + field);
+        }
+    }
+
+    /** The nested child-span assertion list a spec may attach to any span. */
+    private static final String CHILD_SPANS_FIELD = "child_spans";
+
+    /**
+     * Validate nested child-span assertions against the span's actual children (built by {@link
+     * SpanFetcher#buildSpanTree}). Each child is routed back through {@link #validateSpan} rather
+     * than the generic map recursion so that every level of the tree honors {@link #SKIPPED_FIELDS}
+     * — a {@code context:} block on a child span must be skipped just like one on a top-level span,
+     * otherwise the child assertion fails on a field the Java SDK does not emit yet. As with the
+     * top-level list, extra actual children are allowed; order is significant.
+     */
+    @SuppressWarnings("unchecked")
+    private static void validateChildSpans(Object actual, Object expected, String context) {
+        if (!(expected instanceof List)) {
+            fail(context + ": spec must supply a list of child-span assertions, got " + expected);
+        }
+        List<Object> expList = (List<Object>) expected;
+        if (!(actual instanceof List)) {
+            fail(
+                    String.format(
+                            "%s: expected a List but got %s (value: %s)",
+                            context,
+                            actual == null ? "null" : actual.getClass().getSimpleName(),
+                            actual));
+        }
+        List<Object> actualList = (List<Object>) actual;
+        if (actualList.size() < expList.size()) {
+            fail(
+                    String.format(
+                            "%s: expected at least %d child spans but got %d. actual=%s",
+                            context, expList.size(), actualList.size(), actualList));
+        }
+        for (int i = 0; i < expList.size(); i++) {
+            String childCtx = context + "[" + i + "]";
+            Object actualChild = actualList.get(i);
+            Object expectedChild = expList.get(i);
+            if (!(actualChild instanceof Map) || !(expectedChild instanceof Map)) {
+                fail(childCtx + ": child spans must be maps, got " + actualChild);
+            }
+            validateSpan(
+                    (Map<String, Object>) actualChild,
+                    (Map<String, Object>) expectedChild,
+                    childCtx);
         }
     }
 

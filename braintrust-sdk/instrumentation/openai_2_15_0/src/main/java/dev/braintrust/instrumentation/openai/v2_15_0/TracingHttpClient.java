@@ -130,7 +130,7 @@ class TracingHttpClient implements HttpClient {
             var response = underlying.execute(bufferedRequest, requestOptions);
             // Always tee the response body. onStreamClosed() detects whether the collected
             // bytes are SSE or plain JSON and tags the span accordingly.
-            return new TeeingStreamHttpResponse(response, span);
+            return new TeeingStreamHttpResponse(response, span, tracer);
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
             span.end();
@@ -159,7 +159,9 @@ class TracingHttpClient implements HttpClient {
             return underlying
                     .executeAsync(bufferedRequest, requestOptions)
                     .thenApply(
-                            response -> (HttpResponse) new TeeingStreamHttpResponse(response, span))
+                            response ->
+                                    (HttpResponse)
+                                            new TeeingStreamHttpResponse(response, span, tracer))
                     .whenComplete(
                             (response, t) -> {
                                 if (t != null) {
@@ -239,18 +241,18 @@ class TracingHttpClient implements HttpClient {
      * the bytes are an SSE stream (first non-empty line starts with {@code "data: "}) or a plain
      * JSON response, and parses accordingly.
      */
-    private static void tagSpanFromBuffer(Span span, byte[] bytes, Long timeToFirstTokenNanos) {
+    private static void tagSpanFromBuffer(
+            Tracer tracer, Span span, byte[] bytes, Long timeToFirstTokenNanos) {
         if (bytes.length == 0) return;
         try {
             String firstLine = firstNonEmptyLine(bytes);
             if (firstLine != null
                     && (firstLine.startsWith("data:") || firstLine.startsWith("event:"))) {
-                tagSpanFromSseBytes(span, bytes, timeToFirstTokenNanos);
+                tagSpanFromSseBytes(tracer, span, bytes, timeToFirstTokenNanos);
             } else {
+                String responseJson = new String(bytes, StandardCharsets.UTF_8);
                 InstrumentationSemConv.tagLLMSpanResponse(
-                        span,
-                        InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                        new String(bytes, StandardCharsets.UTF_8));
+                        tracer, span, InstrumentationSemConv.PROVIDER_NAME_OPENAI, responseJson);
             }
         } catch (Exception e) {
             log.error("Could not tag span from response buffer", e);
@@ -274,7 +276,7 @@ class TracingHttpClient implements HttpClient {
      * ChatCompletionAccumulator}, then tags the span with the reassembled output JSON.
      */
     private static void tagSpanFromSseBytes(
-            Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
+            Tracer tracer, Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
         try {
             var reader =
                     new BufferedReader(
@@ -325,6 +327,7 @@ class TracingHttpClient implements HttpClient {
             }
             if (null != responseJson) {
                 InstrumentationSemConv.tagLLMSpanResponse(
+                        tracer,
                         span,
                         InstrumentationSemConv.PROVIDER_NAME_OPENAI,
                         responseJson,
@@ -343,14 +346,16 @@ class TracingHttpClient implements HttpClient {
     private static final class TeeingStreamHttpResponse implements HttpResponse {
         private final HttpResponse delegate;
         private final Span span;
+        private final Tracer tracer;
         private final long spanStartNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
         private final InputStream teeStream;
 
-        TeeingStreamHttpResponse(HttpResponse delegate, Span span) {
+        TeeingStreamHttpResponse(HttpResponse delegate, Span span, Tracer tracer) {
             this.delegate = delegate;
             this.span = span;
+            this.tracer = tracer;
             this.teeStream =
                     new TeeInputStream(
                             delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
@@ -369,7 +374,10 @@ class TracingHttpClient implements HttpClient {
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
-                tagSpanFromBuffer(span, bytes, timeToFirstTokenNanos.get());
+                // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
+                // search, etc.) nested under the LLM span while it is still live. No-op for Chat
+                // Completions responses (no `output` array).
+                tagSpanFromBuffer(tracer, span, bytes, timeToFirstTokenNanos.get());
             } finally {
                 span.end();
             }

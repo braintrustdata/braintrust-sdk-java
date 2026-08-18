@@ -146,7 +146,10 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
                 try {
                     String responseBodyStr = new String(bytes, StandardCharsets.UTF_8);
                     InstrumentationSemConv.tagLLMSpanResponse(
-                            span, InstrumentationSemConv.PROVIDER_NAME_BEDROCK, responseBodyStr);
+                            tracer,
+                            span,
+                            InstrumentationSemConv.PROVIDER_NAME_BEDROCK,
+                            responseBodyStr);
                 } catch (Exception e) {
                     log.debug("Failed to capture response body", e);
                 }
@@ -182,7 +185,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
 
         Publisher<ByteBuffer> original = publisherOpt.get();
         Publisher<ByteBuffer> teed =
-                subscriber -> original.subscribe(new TeeingSubscriber(subscriber, span));
+                subscriber -> original.subscribe(new TeeingSubscriber(subscriber, span, tracer));
         return Optional.of(teed);
     }
 
@@ -238,6 +241,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
     private static class TeeingSubscriber implements Subscriber<ByteBuffer> {
         private final Subscriber<? super ByteBuffer> downstream;
         private final Span span;
+        private final Tracer tracer;
         private final MessageDecoder decoder = new MessageDecoder();
 
         // Accumulated incrementally in onNext — no message list retained.
@@ -248,9 +252,10 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
         private long startNanos;
         private Long timeToFirstTokenNanos = null;
 
-        TeeingSubscriber(Subscriber<? super ByteBuffer> downstream, Span span) {
+        TeeingSubscriber(Subscriber<? super ByteBuffer> downstream, Span span, Tracer tracer) {
             this.downstream = downstream;
             this.span = span;
+            this.tracer = tracer;
         }
 
         @Override
@@ -304,6 +309,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
         public void onComplete() {
             try {
                 InstrumentationSemConv.tagLLMSpanResponse(
+                        tracer,
                         span,
                         InstrumentationSemConv.PROVIDER_NAME_BEDROCK,
                         buildConverseJson(text.toString(), stopReason, inputTokens, outputTokens),

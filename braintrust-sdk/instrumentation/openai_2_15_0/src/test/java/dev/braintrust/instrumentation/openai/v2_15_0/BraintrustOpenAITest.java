@@ -545,6 +545,8 @@ public class BraintrustOpenAITest {
                         .toList();
         assertFalse(functionCalls.isEmpty(), "model should call a function tool");
 
+        // function_call is a client-side tool call — it stays in the LLM span output and does NOT
+        // produce a child span (only server-side tool calls do). So we expect exactly one span.
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         var span = spans.get(0);

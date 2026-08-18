@@ -198,7 +198,7 @@ public class BraintrustSpringAI {
                 byte[] responseBytes = response.getBody().readAllBytes();
                 String responseBody = new String(responseBytes, StandardCharsets.UTF_8);
 
-                InstrumentationSemConv.tagLLMSpanResponse(span, providerName, responseBody);
+                InstrumentationSemConv.tagLLMSpanResponse(tracer, span, providerName, responseBody);
 
                 span.end();
                 return new BufferedClientHttpResponse(response, responseBytes);
@@ -358,7 +358,11 @@ public class BraintrustSpringAI {
                                                     assembled.toString(), span, streamCtx);
                                     Long ttft = ttftNanos[0] >= 0 ? ttftNanos[0] : null;
                                     InstrumentationSemConv.tagLLMSpanResponse(
-                                            span, streamCtx.providerName(), responseBody, ttft);
+                                            tracer,
+                                            span,
+                                            streamCtx.providerName(),
+                                            responseBody,
+                                            ttft);
                                 } catch (Exception e) {
                                     log.debug("failed to tag streaming response", e);
                                 }

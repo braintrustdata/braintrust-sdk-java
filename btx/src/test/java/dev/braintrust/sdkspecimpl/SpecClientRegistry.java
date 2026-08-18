@@ -73,10 +73,17 @@ public final class SpecClientRegistry {
                                     "springai2-anthropic",
                                     "anthropic",
                                     Set.of("/v1/messages"),
-                                    // Spec-level cache_control block placement isn't expressible
-                                    // via ChatModel messages (Spring AI 2.0 models caching through
-                                    // AnthropicCacheOptions instead).
-                                    Set.of("prompt_caching_5m", "prompt_caching_1h"),
+                                    // prompt_caching: cache_control block placement isn't
+                                    // expressible via ChatModel messages (Spring AI 2.0 models
+                                    // caching through AnthropicCacheOptions instead).
+                                    // web_search: the Spring AI framework (not our SDK) silently
+                                    // drops the native web_search_20250305 server tool when
+                                    // serializing the request (verified: it sends tools=null), so
+                                    // no
+                                    // search ever runs. Our instrumentation is correct — there is
+                                    // simply no server tool use to surface. Only the raw anthropic
+                                    // client exercises this spec.
+                                    Set.of("prompt_caching_5m", "prompt_caching_1h", "web_search"),
                                     new SpecClient.Isolation(
                                             "btx.springai2.classpath",
                                             "dev.braintrust.sdkspecimpl.springai2.SpringAi2AnthropicSpecClient")))

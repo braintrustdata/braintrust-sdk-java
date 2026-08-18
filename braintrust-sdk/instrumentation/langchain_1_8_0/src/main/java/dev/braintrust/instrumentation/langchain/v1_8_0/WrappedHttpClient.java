@@ -49,7 +49,7 @@ class WrappedHttpClient implements HttpClient {
             tagRequest(span, request);
             var response = underlying.execute(request);
             InstrumentationSemConv.tagLLMSpanResponse(
-                    span, options.providerName(), response.body());
+                    tracer, span, options.providerName(), response.body());
             return response;
         } catch (Throwable t) {
             InstrumentationSemConv.tagLLMSpanResponse(span, t);
@@ -73,7 +73,8 @@ class WrappedHttpClient implements HttpClient {
             tagRequest(span, request);
             underlying.execute(
                     request,
-                    new WrappedServerSentEventListener(listener, span, options.providerName()));
+                    new WrappedServerSentEventListener(
+                            listener, span, options.providerName(), tracer));
         } catch (Throwable t) {
             InstrumentationSemConv.tagLLMSpanResponse(span, t);
             span.end();
@@ -97,7 +98,8 @@ class WrappedHttpClient implements HttpClient {
             underlying.execute(
                     request,
                     parser,
-                    new WrappedServerSentEventListener(listener, span, options.providerName()));
+                    new WrappedServerSentEventListener(
+                            listener, span, options.providerName(), tracer));
         } catch (Throwable t) {
             InstrumentationSemConv.tagLLMSpanResponse(span, t);
             span.end();
@@ -122,16 +124,18 @@ class WrappedHttpClient implements HttpClient {
         private final ServerSentEventListener delegate;
         private final Span span;
         private final String providerName;
+        private final Tracer tracer;
         private final long startNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final SseResponseAccumulator accumulator =
                 new SseResponseAccumulator(BraintrustJsonMapper.get());
 
         WrappedServerSentEventListener(
-                ServerSentEventListener delegate, Span span, String providerName) {
+                ServerSentEventListener delegate, Span span, String providerName, Tracer tracer) {
             this.delegate = delegate;
             this.span = span;
             this.providerName = providerName;
+            this.tracer = tracer;
         }
 
         @Override
@@ -188,8 +192,9 @@ class WrappedHttpClient implements HttpClient {
         private void finalizeSpan() {
             try {
                 Long ttft = timeToFirstTokenNanos.get();
+                String responseBody = accumulator.build();
                 InstrumentationSemConv.tagLLMSpanResponse(
-                        span, providerName, accumulator.build(), ttft);
+                        tracer, span, providerName, responseBody, ttft);
             } catch (Exception e) {
                 log.debug("Failed to finalize streaming span", e);
             }
