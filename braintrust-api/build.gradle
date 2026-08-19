@@ -251,3 +251,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.ext.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.ext.junitVersion}"
 }
+
+test {
+    useJUnitPlatform()
+}
