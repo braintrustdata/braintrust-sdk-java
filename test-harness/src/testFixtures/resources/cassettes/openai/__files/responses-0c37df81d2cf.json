@@ -1,0 +1,127 @@
+{
+  "id": "resp_050cff5ce90128c7006a7fc279ddc487d08d20eb4e7cbf2ae6",
+  "object": "response",
+  "created_at": 1786757753,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1786757760,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-4o-2024-08-06",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_050cff5ce90128c7006a7fc27d7c8c87d0919a4bacb3b2679e",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "recent news about artificial intelligence"
+        ],
+        "query": "recent news about artificial intelligence"
+      }
+    },
+    {
+      "id": "msg_050cff5ce90128c7006a7fc27f26a887d0ae49e55d9edeb9f2",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 493,
+              "start_index": 392,
+              "title": "2025 in artificial intelligence",
+              "url": "https://en.wikipedia.org/wiki/2025_in_artificial_intelligence?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "As of August 2026, a notable development in artificial intelligence is the release of OpenAI's GPT-5 on August 8, 2025. According to OpenAI CEO Sam Altman, GPT-5 is designed to provide PhD-level expertise. However, it has faced challenges with basic tasks such as spelling and geography, and it cannot continuously learn. Additionally, GPT-5 scores lower than Grok-4 on Humanity's Last Exam. ([en.wikipedia.org](https://en.wikipedia.org/wiki/2025_in_artificial_intelligence?utm_source=openai)) "
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": null,
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "medium",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 314,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 134,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 448
+  },
+  "user": null,
+  "metadata": {}
+}

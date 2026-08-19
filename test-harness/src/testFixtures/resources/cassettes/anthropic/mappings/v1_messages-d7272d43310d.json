@@ -1,0 +1,52 @@
+{
+  "id" : "8474ba87-903a-3635-9126-e84b6c20e0b9",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":1024,\"messages\":[{\"content\":\"Search the web for a recent AI news headline and answer in one sentence.\",\"role\":\"user\"}],\"model\":\"claude-sonnet-4-5-20250929\",\"tools\":[{\"name\":\"web_search\",\"type\":\"web_search_20250305\"}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-d7272d43310d.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "2000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-08-18T05:25:19Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-08-18T05:25:18Z",
+      "anthropic-ratelimit-tokens-remaining" : "11994000",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "9994000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "a2ce7f26b80bba52-SEA",
+      "anthropic-ratelimit-tokens-limit" : "12000000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011Ce9f6GB4PWSdDnpWhdxbT",
+      "anthropic-ratelimit-tokens-reset" : "2026-08-18T05:25:18Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Tue, 18 Aug 2026 05:25:19 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-08-18T05:25:14Z",
+      "anthropic-ratelimit-input-tokens-limit" : "10000000",
+      "traceresponse" : "00-f711a485285ab38714b55ee1fe88aa68-b8ad80fc286ded83-01",
+      "anthropic-ratelimit-output-tokens-remaining" : "2000000"
+    }
+  },
+  "uuid" : "8474ba87-903a-3635-9126-e84b6c20e0b9",
+  "persistent" : true,
+  "insertionIndex" : 28
+}

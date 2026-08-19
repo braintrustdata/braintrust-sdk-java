@@ -1,0 +1,46 @@
+{
+  "id" : "f0072d8f-573d-334e-96c0-8961d0da4543",
+  "name" : "btql",
+  "request" : {
+    "url" : "/btql",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"query\":\"SELECT * FROM project_logs('946b2c8d-f5d4-4690-9491-d79e2857c995') WHERE root_span_id = '3dc06fd1dbdf5809ad38fa34d7c94014' ORDER BY created ASC LIMIT 1000\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "btql-bce8572f7d22.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "x-amz-apigw-id" : "CSGDTGdWIAMEITQ=",
+      "vary" : "Origin",
+      "X-Amz-Cf-Pop" : [ "SEA900-P1", "SEA900-P10" ],
+      "x-bt-brainstore-duration-ms" : "42",
+      "X-Amzn-Trace-Id" : "Root=1-6a83ea14-636657db7bdbbc8a2eecf080;Parent=5aff695cacddc0eb;Sampled=0;Lineage=1:24be3d11:0",
+      "x-bt-api-duration-ms" : "112",
+      "Date" : "Tue, 18 Aug 2026 05:13:56 GMT",
+      "Via" : "1.1 db84db36e16ca0c80b0992006d731900.cloudfront.net (CloudFront), 1.1 d525041695bdb6325f78ebba5c11b8a2.cloudfront.net (CloudFront)",
+      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "access-control-allow-credentials" : "true",
+      "x-bt-internal-trace-id" : "6a83ea140000000043065e2f97357f3f",
+      "x-amzn-RequestId" : "e59b1ae0-2914-40cc-9a1b-bca90eb93d86",
+      "X-Amz-Cf-Id" : "mBhcxejtDaJ9dAe7xbuNsDClEWssbkJv6TvC2q7fY5k234ajirfvDA==",
+      "cache-control" : "private, no-cache",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "f0072d8f-573d-334e-96c0-8961d0da4543",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-btql",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-1-btql-2",
+  "insertionIndex" : 185
+}

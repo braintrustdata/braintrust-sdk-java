@@ -128,7 +128,7 @@ public class TracingHttpClient implements HttpClient {
                     inputJson);
 
             var response = underlying.execute(bufferedRequest, requestOptions);
-            return new TeeingStreamHttpResponse(response, span);
+            return new TeeingStreamHttpResponse(response, span, tracer);
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
             span.end();
@@ -157,7 +157,9 @@ public class TracingHttpClient implements HttpClient {
             return underlying
                     .executeAsync(bufferedRequest, requestOptions)
                     .thenApply(
-                            response -> (HttpResponse) new TeeingStreamHttpResponse(response, span))
+                            response ->
+                                    (HttpResponse)
+                                            new TeeingStreamHttpResponse(response, span, tracer))
                     .whenComplete(
                             (response, t) -> {
                                 if (t != null) {
@@ -237,14 +239,16 @@ public class TracingHttpClient implements HttpClient {
     private static final class TeeingStreamHttpResponse implements HttpResponse {
         private final HttpResponse delegate;
         private final Span span;
+        private final Tracer tracer;
         private final long spanStartNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
         private final InputStream teeStream;
 
-        TeeingStreamHttpResponse(HttpResponse delegate, Span span) {
+        TeeingStreamHttpResponse(HttpResponse delegate, Span span, Tracer tracer) {
             this.delegate = delegate;
             this.span = span;
+            this.tracer = tracer;
             this.teeStream =
                     new TeeInputStream(
                             delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
@@ -260,7 +264,9 @@ public class TracingHttpClient implements HttpClient {
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
-                tagSpanFromBuffer(span, bytes, timeToFirstTokenNanos.get());
+                // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
+                // search, etc.) nested under the LLM span while it is still live.
+                tagSpanFromBuffer(tracer, span, bytes, timeToFirstTokenNanos.get());
             } finally {
                 span.end();
             }
@@ -354,7 +360,8 @@ public class TracingHttpClient implements HttpClient {
     // Span tagging from buffered bytes
     // -------------------------------------------------------------------------
 
-    private static void tagSpanFromBuffer(Span span, byte[] bytes, Long timeToFirstTokenNanos) {
+    private static void tagSpanFromBuffer(
+            Tracer tracer, Span span, byte[] bytes, Long timeToFirstTokenNanos) {
         if (bytes.length == 0) return;
         try {
             String firstLine = firstNonEmptyLine(bytes);
@@ -364,13 +371,15 @@ public class TracingHttpClient implements HttpClient {
                     firstLine != null
                             && (firstLine.startsWith("data:") || firstLine.startsWith("event:"));
             if (isSse) {
-                tagSpanFromSseBytes(span, bytes, timeToFirstTokenNanos);
+                tagSpanFromSseBytes(tracer, span, bytes, timeToFirstTokenNanos);
             } else {
                 // Non-streaming: plain Message JSON — pass it whole, no time_to_first_token
+                String responseJson = new String(bytes, StandardCharsets.UTF_8);
                 InstrumentationSemConv.tagLLMSpanResponse(
+                        tracer,
                         span,
                         InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
-                        new String(bytes, StandardCharsets.UTF_8),
+                        responseJson,
                         null);
             }
         } catch (Exception e) {
@@ -406,7 +415,7 @@ public class TracingHttpClient implements HttpClient {
      * assembled {@link com.anthropic.models.messages.Message} for the span.
      */
     private static void tagSpanFromSseBytes(
-            Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
+            Tracer tracer, Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
         try {
             var mapper = BraintrustJsonMapper.get();
             var reader =
@@ -427,6 +436,7 @@ public class TracingHttpClient implements HttpClient {
             }
             String assembledMessageJson = BraintrustJsonMapper.toJson(accumulator.message());
             InstrumentationSemConv.tagLLMSpanResponse(
+                    tracer,
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
                     assembledMessageJson,

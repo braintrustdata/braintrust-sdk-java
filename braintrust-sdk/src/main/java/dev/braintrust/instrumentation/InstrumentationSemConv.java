@@ -4,12 +4,18 @@ import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.SneakyThrows;
@@ -77,30 +83,80 @@ public class InstrumentationSemConv {
     }
 
     public static void tagLLMSpanResponse(
-            Span span, @Nonnull String providerName, @Nonnull String responseBody) {
-        tagLLMSpanResponse(span, providerName, responseBody, null);
+            @Nonnull Tracer tracer,
+            Span span,
+            @Nonnull String providerName,
+            @Nonnull String responseBody) {
+        tagLLMSpanResponse(tracer, span, providerName, responseBody, null);
     }
 
+    /**
+     * Tag a span with the LLM response and emit child spans for any server-side tool calls the
+     * provider reported inline. The response body is parsed once here and the parsed tree is reused
+     * for both, so callers should route all response tagging through this method rather than
+     * parsing themselves.
+     */
     @SneakyThrows
     public static void tagLLMSpanResponse(
+            @Nonnull Tracer tracer,
             Span span,
             @Nonnull String providerName,
             @Nonnull String responseBody,
             @Nullable Long timeToFirstTokenNanoseconds) {
+        JsonNode responseJson = BraintrustJsonMapper.get().readTree(responseBody);
         switch (providerName) {
             case PROVIDER_NAME_OPENAI ->
-                    tagOpenAIResponse(span, responseBody, timeToFirstTokenNanoseconds);
+                    tagOpenAIResponse(span, responseJson, timeToFirstTokenNanoseconds);
             case PROVIDER_NAME_ANTHROPIC ->
-                    tagAnthropicResponse(span, responseBody, timeToFirstTokenNanoseconds);
+                    tagAnthropicResponse(
+                            span, responseBody, responseJson, timeToFirstTokenNanoseconds);
             case PROVIDER_NAME_BEDROCK ->
-                    tagBedrockResponse(span, responseBody, timeToFirstTokenNanoseconds);
-            default -> tagOpenAIResponse(span, responseBody, timeToFirstTokenNanoseconds);
+                    tagBedrockResponse(span, responseJson, timeToFirstTokenNanoseconds);
+            default -> tagOpenAIResponse(span, responseJson, timeToFirstTokenNanoseconds);
         }
+        addServerSideChildSpans(tracer, span, providerName, responseJson);
     }
 
     public static void tagLLMSpanResponse(Span span, @Nonnull Throwable responseError) {
         span.setStatus(StatusCode.ERROR, responseError.getMessage());
         span.recordException(responseError);
+    }
+
+    /**
+     * Emit child {@code type:"tool"} spans for built-in tool calls the vendor executed <em>server
+     * side</em> (web search, file search, code interpreter, image generation, remote MCP) that the
+     * provider reports inline with the LLM response. These are otherwise invisible on the trace —
+     * unlike client-side tool calls (a plain {@code function_call}/{@code computer_call}), which
+     * the caller executes and which get instrumented where they run — so they are surfaced as
+     * children of the LLM span.
+     *
+     * <p>Providers don't report per-tool timing, so each child will start some time within the llm
+     * span with a duration of zero
+     *
+     * <p>Safe to call for any response — non-matching payloads simply yield no spans.
+     *
+     * <p>Package-private: callers reach this via {@link #tagLLMSpanResponse}, which parses the
+     * response body once and passes the tree here. Kept accessible for same-package unit tests.
+     *
+     * @param tracer used to create the child spans; cannot be derived from {@code llmSpan}
+     * @param llmSpan the parent LLM span the children are nested under
+     */
+    static void addServerSideChildSpans(
+            @Nonnull Tracer tracer,
+            @Nonnull Span llmSpan,
+            @Nonnull String providerName,
+            @Nonnull JsonNode responseJson) {
+        Context parentContext = Context.current().with(llmSpan);
+        switch (providerName) {
+            case PROVIDER_NAME_OPENAI ->
+                    addOpenAIServerSideChildSpans(tracer, parentContext, responseJson);
+            case PROVIDER_NAME_ANTHROPIC ->
+                    addAnthropicServerSideChildSpans(tracer, parentContext, responseJson);
+            default -> {
+                // Unknown provider: no server-side tool schema to parse, so emit nothing rather
+                // than guessing at a response shape.
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -142,9 +198,7 @@ public class InstrumentationSemConv {
 
     @SneakyThrows
     private static void tagOpenAIResponse(
-            Span span, String responseBody, @Nullable Long timeToFirstTokenNanoseconds) {
-        JsonNode responseJson = BraintrustJsonMapper.get().readTree(responseBody);
-
+            Span span, JsonNode responseJson, @Nullable Long timeToFirstTokenNanoseconds) {
         // Output — chat completions API uses "choices"; Responses API uses "output"
         if (responseJson.has("choices")) {
             span.setAttribute("braintrust.output_json", toJson(responseJson.get("choices")));
@@ -207,6 +261,159 @@ public class InstrumentationSemConv {
         }
     }
 
+    private static final String TYPE_TOOL_JSON = "{\"type\":\"tool\"}";
+
+    /**
+     * OpenAI Responses {@code output} item types the vendor executes <em>server side</em>, mapped
+     * to the item fields that make up the tool span's input. Client-side calls ({@code
+     * function_call}, {@code computer_call}) are intentionally excluded — they run in the caller
+     * and are instrumented there. {@code image_generation_call} is also excluded: its result
+     * carries a large base64 image blob that would flow unredacted into the span output, and it has
+     * no useful input fields to surface.
+     */
+    private static final Map<String, List<String>> OPENAI_SERVER_SIDE_ITEM_INPUT_KEYS =
+            Map.of(
+                    "web_search_call", List.of("action"),
+                    "file_search_call", List.of("queries"),
+                    "code_interpreter_call", List.of("code", "container_id"),
+                    "mcp_call", List.of("arguments"));
+
+    private static void addOpenAIServerSideChildSpans(
+            Tracer tracer, Context parentContext, JsonNode responseJson) {
+        try {
+            JsonNode output = responseJson.get("output");
+            if (output == null || !output.isArray()) {
+                return;
+            }
+            for (JsonNode item : output) {
+                if (!item.isObject()) {
+                    continue;
+                }
+                String type = item.path("type").asText(null);
+                if (type == null || !OPENAI_SERVER_SIDE_ITEM_INPUT_KEYS.containsKey(type)) {
+                    continue;
+                }
+                emitOpenAIServerSideToolSpan(tracer, parentContext, item, type);
+            }
+        } catch (Exception e) {
+            log.debug("Could not emit OpenAI server-side child spans", e);
+        }
+    }
+
+    private static void emitOpenAIServerSideToolSpan(
+            Tracer tracer, Context parentContext, JsonNode item, String type) {
+        // Zero-duration marker: stamp start and end at the same instant.
+        Instant now = Instant.now();
+        Span span =
+                tracer.spanBuilder(openAIToolSpanName(item, type))
+                        .setParent(parentContext)
+                        .setStartTimestamp(now)
+                        .startSpan();
+        try {
+            span.setAttribute("braintrust.span_attributes", TYPE_TOOL_JSON);
+
+            JsonNode input = openAIToolSpanInput(item, type);
+            if (input != null && !input.isNull()) {
+                span.setAttribute("braintrust.input_json", toJson(input));
+            }
+            String metadata = openAIToolSpanMetadata(item, type);
+            if (metadata != null) {
+                span.setAttribute("braintrust.metadata", metadata);
+            }
+
+            // When the tool call errored, record the error and skip output.
+            JsonNode error = openAIToolSpanError(item);
+            if (error != null) {
+                span.setStatus(
+                        StatusCode.ERROR, error.isValueNode() ? error.asText() : error.toString());
+                return;
+            }
+            JsonNode output = openAIToolSpanOutput(item, type);
+            if (output != null) {
+                span.setAttribute("braintrust.output_json", toJson(output));
+            }
+        } catch (Exception e) {
+            log.debug("Could not tag OpenAI server-side tool span", e);
+        } finally {
+            span.end(now);
+        }
+    }
+
+    private static String openAIToolSpanName(JsonNode item, String type) {
+        String serverLabel = nonEmptyText(item, "server_label");
+        String name = nonEmptyText(item, "name");
+        if (serverLabel != null && name != null) {
+            return serverLabel + "." + name;
+        }
+        if (name != null) {
+            return name;
+        }
+        return type;
+    }
+
+    private static JsonNode openAIToolSpanInput(JsonNode item, String type) {
+        List<String> inputKeys = OPENAI_SERVER_SIDE_ITEM_INPUT_KEYS.get(type);
+        if (inputKeys.isEmpty()) {
+            return null;
+        }
+        ObjectNode inputData = BraintrustJsonMapper.get().createObjectNode();
+        for (String key : inputKeys) {
+            JsonNode value = item.get(key);
+            if (value != null && !value.isNull()) {
+                inputData.set(key, maybeParseJsonString(value));
+            }
+        }
+        if (inputData.isEmpty()) {
+            return null;
+        }
+        // MCP calls carry a single `arguments` blob — unwrap it to the bare value.
+        if (inputKeys.size() == 1 && "arguments".equals(inputKeys.get(0))) {
+            return inputData.get("arguments");
+        }
+        return inputData;
+    }
+
+    private static JsonNode openAIToolSpanOutput(JsonNode item, String type) {
+        Set<String> excluded =
+                new HashSet<>(Set.of("id", "type", "name", "call_id", "server_label", "error"));
+        excluded.addAll(OPENAI_SERVER_SIDE_ITEM_INPUT_KEYS.get(type));
+
+        ObjectNode output = BraintrustJsonMapper.get().createObjectNode();
+        var fields = item.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            String key = entry.getKey();
+            JsonNode value = entry.getValue();
+            if (excluded.contains(key) || value == null || value.isNull()) {
+                continue;
+            }
+            if ("output".equals(key)) {
+                output.set(key, maybeParseJsonString(value));
+            } else {
+                output.set(key, value);
+            }
+        }
+        return output.isEmpty() ? null : output;
+    }
+
+    private static JsonNode openAIToolSpanError(JsonNode item) {
+        JsonNode error = item.get("error");
+        if (error == null || error.isNull()) {
+            return null;
+        }
+        return maybeParseJsonString(error);
+    }
+
+    private static String openAIToolSpanMetadata(JsonNode item, String type) {
+        ObjectNode md = BraintrustJsonMapper.get().createObjectNode();
+        md.put("tool_type", type);
+        putIfPresent(md, "tool_id", item.get("id"));
+        putIfPresent(md, "call_id", item.get("call_id"));
+        putIfPresent(md, "status", item.get("status"));
+        putIfPresent(md, "server_label", item.get("server_label"));
+        return md.isEmpty() ? null : toJson(md);
+    }
+
     // -------------------------------------------------------------------------
     // Anthropic provider implementation
     // -------------------------------------------------------------------------
@@ -263,9 +470,10 @@ public class InstrumentationSemConv {
 
     @SneakyThrows
     private static void tagAnthropicResponse(
-            Span span, String responseBody, @Nullable Long timeToFirstTokenNanoseconds) {
-        JsonNode responseJson = BraintrustJsonMapper.get().readTree(responseBody);
-
+            Span span,
+            String responseBody,
+            JsonNode responseJson,
+            @Nullable Long timeToFirstTokenNanoseconds) {
         // Anthropic response is the full Message object — output it whole
         span.setAttribute("braintrust.output_json", responseBody);
 
@@ -298,6 +506,19 @@ public class InstrumentationSemConv {
                 boolean emittedPerTtl = addPerTtlCacheMetrics(metrics, usage);
                 if (!emittedPerTtl) {
                     metrics.put("prompt_cache_creation_tokens", cacheCreationTokens);
+                }
+            }
+
+            // Server-side tool usage counts (e.g. web_search_requests, web_fetch_requests).
+            // Each numeric field becomes a server_tool_use_<key> metric the backend prices —
+            // this is how web search cost is attributed.
+            if (usage.has("server_tool_use") && usage.get("server_tool_use").isObject()) {
+                var fields = usage.get("server_tool_use").fields();
+                while (fields.hasNext()) {
+                    var entry = fields.next();
+                    if (entry.getValue().isNumber()) {
+                        metrics.put("server_tool_use_" + entry.getKey(), entry.getValue());
+                    }
                 }
             }
         }
@@ -337,6 +558,266 @@ public class InstrumentationSemConv {
             }
         }
         return emitted;
+    }
+
+    private static final String ANTHROPIC_SERVER_TOOL_USE_TYPE = "server_tool_use";
+    private static final String ANTHROPIC_TOOL_RESULT_SUFFIX = "_tool_result";
+
+    /**
+     * Emit child tool spans for Anthropic server-side tool use. In the Message {@code content}
+     * array these appear as a {@code server_tool_use} block (the call) and a matching {@code
+     * *_tool_result} block (e.g. {@code web_search_tool_result}), linked by {@code id} /{@code
+     * tool_use_id}. Calls and results are paired (buffering results that arrive before their call);
+     * unmatched calls and results each still get a span. Mirrors the Python SDK's {@code
+     * _log_server_tool_spans}.
+     */
+    private static void addAnthropicServerSideChildSpans(
+            Tracer tracer, Context parentContext, JsonNode responseJson) {
+        try {
+            JsonNode content = responseJson.get("content");
+            if (content == null || !content.isArray()) {
+                return;
+            }
+            Map<String, JsonNode> callsById = new java.util.LinkedHashMap<>();
+            Map<String, List<JsonNode>> pendingResultsById = new java.util.LinkedHashMap<>();
+            Set<String> matchedCallIds = new HashSet<>();
+            List<JsonNode[]> pairs = new java.util.ArrayList<>(); // {call, result}, either nullable
+
+            for (JsonNode item : content) {
+                if (!item.isObject()) {
+                    continue;
+                }
+                String itemType = item.path("type").asText(null);
+                if (ANTHROPIC_SERVER_TOOL_USE_TYPE.equals(itemType)) {
+                    JsonNode id = item.get("id");
+                    if (id != null && id.isTextual()) {
+                        callsById.put(id.asText(), item);
+                        List<JsonNode> pending = pendingResultsById.remove(id.asText());
+                        if (pending != null) {
+                            for (JsonNode result : pending) {
+                                pairs.add(new JsonNode[] {item, result});
+                                matchedCallIds.add(id.asText());
+                            }
+                        }
+                    } else {
+                        pairs.add(new JsonNode[] {item, null});
+                    }
+                } else if (isAnthropicToolResultType(itemType)) {
+                    JsonNode toolUseId = item.get("tool_use_id");
+                    if (toolUseId != null && toolUseId.isTextual()) {
+                        if (callsById.containsKey(toolUseId.asText())) {
+                            pairs.add(new JsonNode[] {callsById.get(toolUseId.asText()), item});
+                            matchedCallIds.add(toolUseId.asText());
+                        } else {
+                            pendingResultsById
+                                    .computeIfAbsent(
+                                            toolUseId.asText(), k -> new java.util.ArrayList<>())
+                                    .add(item);
+                        }
+                    } else {
+                        pairs.add(new JsonNode[] {null, item});
+                    }
+                }
+            }
+
+            for (JsonNode[] pair : pairs) {
+                emitAnthropicServerToolSpan(tracer, parentContext, pair[0], pair[1]);
+            }
+            for (Map.Entry<String, JsonNode> entry : callsById.entrySet()) {
+                if (!matchedCallIds.contains(entry.getKey())) {
+                    emitAnthropicServerToolSpan(tracer, parentContext, entry.getValue(), null);
+                }
+            }
+            for (List<JsonNode> pending : pendingResultsById.values()) {
+                for (JsonNode result : pending) {
+                    emitAnthropicServerToolSpan(tracer, parentContext, null, result);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not emit Anthropic server-side child spans", e);
+        }
+    }
+
+    private static boolean isAnthropicToolResultType(@Nullable String type) {
+        return type != null
+                && type.endsWith(ANTHROPIC_TOOL_RESULT_SUFFIX)
+                && !type.equals("tool_result");
+    }
+
+    private static void emitAnthropicServerToolSpan(
+            Tracer tracer,
+            Context parentContext,
+            @Nullable JsonNode call,
+            @Nullable JsonNode result) {
+        // Zero-duration marker: stamp start and end at the same instant.
+        Instant now = Instant.now();
+        Span span =
+                tracer.spanBuilder(anthropicToolSpanName(call, result))
+                        .setParent(parentContext)
+                        .setStartTimestamp(now)
+                        .startSpan();
+        try {
+            span.setAttribute("braintrust.span_attributes", TYPE_TOOL_JSON);
+
+            JsonNode input = anthropicToolSpanInput(call);
+            if (input != null && !input.isNull()) {
+                span.setAttribute("braintrust.input_json", toJson(input));
+            }
+            String metadata = anthropicToolSpanMetadata(call, result);
+            if (metadata != null) {
+                span.setAttribute("braintrust.metadata", metadata);
+            }
+
+            JsonNode output = anthropicToolSpanOutput(result);
+            if (output == null || output.isNull()) {
+                return; // no result content — input + metadata only (matches Python)
+            }
+            String error = anthropicToolSpanError(result);
+            if (error != null) {
+                span.setStatus(StatusCode.ERROR, error);
+            }
+            span.setAttribute("braintrust.output_json", toJson(output));
+        } catch (Exception e) {
+            log.debug("Could not tag Anthropic server-side tool span", e);
+        } finally {
+            span.end(now);
+        }
+    }
+
+    private static String anthropicToolSpanName(
+            @Nullable JsonNode call, @Nullable JsonNode result) {
+        if (call != null) {
+            JsonNode name = call.get("name");
+            if (name != null && name.isTextual()) {
+                return name.asText();
+            }
+        }
+        if (result != null) {
+            JsonNode type = result.get("type");
+            if (type != null
+                    && type.isTextual()
+                    && type.asText().endsWith(ANTHROPIC_TOOL_RESULT_SUFFIX)) {
+                String t = type.asText();
+                return t.substring(0, t.length() - ANTHROPIC_TOOL_RESULT_SUFFIX.length());
+            }
+        }
+        return "server_tool";
+    }
+
+    private static final Set<String> ANTHROPIC_CALL_INPUT_EXCLUDED =
+            Set.of("id", "type", "name", "caller");
+
+    private static JsonNode anthropicToolSpanInput(@Nullable JsonNode call) {
+        if (call == null) {
+            return null;
+        }
+        JsonNode input = call.get("input");
+        if (input != null && !input.isNull()) {
+            return input;
+        }
+        ObjectNode obj = BraintrustJsonMapper.get().createObjectNode();
+        var fields = call.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            if (!ANTHROPIC_CALL_INPUT_EXCLUDED.contains(entry.getKey())) {
+                obj.set(entry.getKey(), entry.getValue());
+            }
+        }
+        return obj.isEmpty() ? null : obj;
+    }
+
+    private static final Set<String> ANTHROPIC_RESULT_OUTPUT_EXCLUDED =
+            Set.of("tool_use_id", "type", "caller");
+
+    private static JsonNode anthropicToolSpanOutput(@Nullable JsonNode result) {
+        if (result == null) {
+            return null;
+        }
+        if (result.has("content")) {
+            return redactServerToolOutput(result.get("content"));
+        }
+        ObjectNode obj = BraintrustJsonMapper.get().createObjectNode();
+        var fields = result.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            if (!ANTHROPIC_RESULT_OUTPUT_EXCLUDED.contains(entry.getKey())) {
+                obj.set(entry.getKey(), redactServerToolOutput(entry.getValue()));
+            }
+        }
+        return obj.isEmpty() ? null : obj;
+    }
+
+    /** Recursively replace {@code encrypted_content} values (opaque, large) with a placeholder. */
+    private static JsonNode redactServerToolOutput(JsonNode value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.isArray()) {
+            ArrayNode arr = BraintrustJsonMapper.get().createArrayNode();
+            for (JsonNode item : value) {
+                arr.add(redactServerToolOutput(item));
+            }
+            return arr;
+        }
+        if (value.isObject()) {
+            ObjectNode obj = BraintrustJsonMapper.get().createObjectNode();
+            var fields = value.fields();
+            while (fields.hasNext()) {
+                var entry = fields.next();
+                if ("encrypted_content".equals(entry.getKey())) {
+                    obj.put(entry.getKey(), "<redacted>");
+                } else {
+                    obj.set(entry.getKey(), redactServerToolOutput(entry.getValue()));
+                }
+            }
+            return obj;
+        }
+        return value;
+    }
+
+    private static String anthropicToolSpanError(@Nullable JsonNode result) {
+        if (result == null) {
+            return null;
+        }
+        JsonNode content = result.get("content");
+        if (content == null || !content.isObject()) {
+            return null;
+        }
+        JsonNode type = content.get("type");
+        if (type == null || !type.isTextual() || !type.asText().endsWith("_error")) {
+            return null;
+        }
+        JsonNode message = content.get("error_message");
+        if (message != null && message.isTextual() && !message.asText().isEmpty()) {
+            return message.asText();
+        }
+        JsonNode code = content.get("error_code");
+        if (code != null && code.isTextual() && !code.asText().isEmpty()) {
+            return code.asText();
+        }
+        return type.asText();
+    }
+
+    private static String anthropicToolSpanMetadata(
+            @Nullable JsonNode call, @Nullable JsonNode result) {
+        ObjectNode md = BraintrustJsonMapper.get().createObjectNode();
+        JsonNode toolUseId = call != null ? call.get("id") : null;
+        if (toolUseId == null || toolUseId.isNull()) {
+            toolUseId = result != null ? result.get("tool_use_id") : null;
+        }
+        putIfPresent(md, "tool_use_id", toolUseId);
+        if (call != null) {
+            putIfPresent(md, "tool_call_type", call.get("type"));
+        }
+        if (result != null) {
+            putIfPresent(md, "tool_result_type", result.get("type"));
+        }
+        JsonNode caller = call != null ? call.get("caller") : null;
+        if (caller == null || caller.isNull()) {
+            caller = result != null ? result.get("caller") : null;
+        }
+        putIfPresent(md, "caller", caller);
+        return md.isEmpty() ? null : toJson(md);
     }
 
     // -------------------------------------------------------------------------
@@ -404,9 +885,7 @@ public class InstrumentationSemConv {
 
     @SneakyThrows
     private static void tagBedrockResponse(
-            Span span, String responseBody, @Nullable Long timeToFirstTokenNanoseconds) {
-        JsonNode responseJson = BraintrustJsonMapper.get().readTree(responseBody);
-
+            Span span, JsonNode responseJson, @Nullable Long timeToFirstTokenNanoseconds) {
         // Bedrock output lives at output.message. Normalize to a single-element array matching the
         // same [{role, content: [...]}] shape as input so the UI can render the LLM thread view.
         if (responseJson.has("output") && responseJson.get("output").has("message")) {
@@ -438,6 +917,42 @@ public class InstrumentationSemConv {
     // -------------------------------------------------------------------------
     // Shared helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * If {@code value} is a string that looks like JSON (starts with {@code [} or {@code {}), parse
+     * and return it as a tree; otherwise return it unchanged.
+     */
+    private static JsonNode maybeParseJsonString(JsonNode value) {
+        if (value == null || !value.isTextual()) {
+            return value;
+        }
+        String stripped = value.asText().strip();
+        if (stripped.isEmpty() || (stripped.charAt(0) != '[' && stripped.charAt(0) != '{')) {
+            return value;
+        }
+        try {
+            return BraintrustJsonMapper.get().readTree(stripped);
+        } catch (Exception e) {
+            return value;
+        }
+    }
+
+    private static void putIfPresent(ObjectNode target, String key, JsonNode value) {
+        if (value != null && !value.isNull()) {
+            target.set(key, value);
+        }
+    }
+
+    private static String nonEmptyText(JsonNode item, String field) {
+        JsonNode node = item.get(field);
+        if (node != null && node.isValueNode()) {
+            String text = node.asText();
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+        return null;
+    }
 
     /**
      * Simplifies an Anthropic message node by converting single-text content block arrays (e.g.

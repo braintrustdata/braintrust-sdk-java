@@ -32,7 +32,22 @@ public final class SpecClientRegistry {
      * nothing instead of producing a failing "unsupported" test. Prefer registering a client; reach
      * for this only when no Java client can express the spec at all.
      */
-    private static final Set<String> KNOWN_UNSUPPORTED_SPECS = Set.of();
+    private static final Set<String> KNOWN_UNSUPPORTED_SPECS =
+            Set.of(
+                    // Brand-new Google features added in braintrust-spec v0.0.10. The genai
+                    // instrumentation / GoogleSpecClient don't implement them yet (thinking,
+                    // grounding tools, response modalities, per-modality prompt-token extraction),
+                    // so they're marked unsupported rather than half-implemented. GoogleSpecClient
+                    // also filters these out of supports(); see its UNSUPPORTED_SPECS.
+                    "google/thinking",
+                    "google/grounding",
+                    "google/streaming",
+                    "google/generated_audio_usage",
+                    "google/generated_image_usage",
+                    "google/attachments",
+                    // Google Interactions API (/v1/interactions) — no Java client exists.
+                    "google/interactions",
+                    "google/interactions_streaming");
 
     private static final List<SpecClient> CLIENTS =
             Stream.of(
@@ -58,10 +73,17 @@ public final class SpecClientRegistry {
                                     "springai2-anthropic",
                                     "anthropic",
                                     Set.of("/v1/messages"),
-                                    // Spec-level cache_control block placement isn't expressible
-                                    // via ChatModel messages (Spring AI 2.0 models caching through
-                                    // AnthropicCacheOptions instead).
-                                    Set.of("prompt_caching_5m", "prompt_caching_1h"),
+                                    // prompt_caching: cache_control block placement isn't
+                                    // expressible via ChatModel messages (Spring AI 2.0 models
+                                    // caching through AnthropicCacheOptions instead).
+                                    // web_search: the Spring AI framework (not our SDK) silently
+                                    // drops the native web_search_20250305 server tool when
+                                    // serializing the request (verified: it sends tools=null), so
+                                    // no
+                                    // search ever runs. Our instrumentation is correct — there is
+                                    // simply no server tool use to surface. Only the raw anthropic
+                                    // client exercises this spec.
+                                    Set.of("prompt_caching_5m", "prompt_caching_1h", "web_search"),
                                     new SpecClient.Isolation(
                                             "btx.springai2.classpath",
                                             "dev.braintrust.sdkspecimpl.springai2.SpringAi2AnthropicSpecClient")))

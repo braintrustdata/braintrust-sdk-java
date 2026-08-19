@@ -1,0 +1,42 @@
+{
+  "id" : "dde6da21-001f-3f62-a4e7-39705cf9371a",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Search the web for a recent AI news headline and answer in one sentence.\"}],\"model\":\"gpt-4o\",\"tool_choice\":{\"type\":\"web_search_preview\"},\"tools\":[{\"type\":\"web_search_preview\",\"search_context_size\":\"low\"}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-d93cfca55488.json",
+    "headers" : {
+      "x-request-id" : "req_a0817c80ef1844f4b77229d486899cb5",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2cb775ae8a975ca-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Mon, 17 Aug 2026 20:35:39 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=33AYcaWB.a8ohqFcwrCgFS2TtFNhkYwBy4_P18.Oces-1786998936.7849169-1.0.1.1-oEAPKODxPG.LP_o_x5lDnW7s2f8Amuhl75lBSXL0ZVyhijgnvbhfyO_.Lt9NCLeVmx8H25cjFRPLMWcz9yqaQwrIaDeHhANJqhjol3kRJxKCs62jj2A7UcwH2eeNZl.T; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 17 Aug 2026 21:05:39 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "2398",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "dde6da21-001f-3f62-a4e7-39705cf9371a",
+  "persistent" : true,
+  "insertionIndex" : 40
+}

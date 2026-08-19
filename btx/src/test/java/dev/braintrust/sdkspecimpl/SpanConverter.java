@@ -57,6 +57,14 @@ public class SpanConverter {
     private static Map<String, Object> toSingleBrainstoreSpan(SpanData span) {
         Map<String, Object> result = new LinkedHashMap<>();
 
+        // span_id / span_parents mirror the brainstore fields so the fetch layer can rebuild the
+        // parent→child tree in REPLAY mode (live BTQL spans already carry these).
+        result.put("span_id", span.getSpanContext().getSpanId());
+        var parentContext = span.getParentSpanContext();
+        result.put(
+                "span_parents",
+                parentContext.isValid() ? List.of(parentContext.getSpanId()) : null);
+
         result.put("name", span.getName());
         result.put("metrics", parseJsonMap(span, "braintrust.metrics"));
         result.put("metadata", parseJsonMap(span, "braintrust.metadata"));
