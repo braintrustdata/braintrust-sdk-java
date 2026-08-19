@@ -46,15 +46,42 @@ Renamed typed getter methods from `getanyOf0Instance()` / `getanyOf1Instance()` 
 the same identifier as the `SchemaType` enum constant (e.g. `getSystemInstance()`,
 `getWeightedInstance()`), keeping the instance accessor API consistent with the enum.
 
+### Note — `toUrlQueryString` is intentionally left unimplemented for anyOf models
+The `toUrlQueryString(String prefix)` body iterates `{{#composedSchemas.oneOf}}`, which is always
+empty in an *anyOf* model, so the method falls through to `return null`. This looks like a one-line
+fix (swap the tag to `composedSchemas.anyOf`) but is not:
+
+- anyOf variants have no `baseName`, so the generator emits synthetic `any_of_0` / `any_of_1`
+  literals — the output would be `any_of_0=<uuid>` rather than `ids=<uuid>`.
+- Container variants render as `getActualInstance() instanceof List<UUID>`, which is not legal
+  Java (the same generics problem Patch 1 above fixes in the deserializer).
+
+Query parameters are serialized in `api.mustache` instead (see its Patch 1), so nothing calls this
+method from the api layer. Leaving it returning `null` is preferable to emitting either garbage
+parameter names or code that does not compile.
+
 ---
 
 ## api.mustache
 
 **Upstream:** `Java/libraries/native/api.mustache` @ v7.14.0
 
-### Patch 1 — Null-guard for anyOf model query parameters
-The upstream template calls `{{paramName}}.toUrlQueryString()` unconditionally for
-`isModel` params in the `isExplode/!hasVars` branch. When the parameter is `null`
-(e.g. the `ids` parameter on list endpoints), this throws a `NullPointerException`.
-Fixed by wrapping the call in `if ({{paramName}} != null)` and checking the result is
-non-blank before adding it to the query string joiner.
+### Patch 1 — anyOf/oneOf model query parameters are serialized via `parameterToPairs`
+In the `isExplode`/`!hasVars`/`isModel` branch, the upstream template serializes the parameter
+with `{{paramName}}.toUrlQueryString()`. Two problems:
+
+1. It calls the method unconditionally, so a `null` parameter (e.g. `ids` on any list endpoint)
+   throws a `NullPointerException`.
+2. More seriously, `toUrlQueryString()` takes no argument, so the wrapper has no way to know the
+   parameter is named `ids` — and for anyOf models the method returns `null` outright (see the
+   note under `anyof_model.mustache` below). The generated code then skipped the blank result and
+   sent the request **unfiltered**, so callers got a successful response over the wrong result
+   set rather than an error.
+
+Fixed by null-guarding, unwrapping the matched variant with `getActualInstance()`, and handing it
+to the existing `ApiClient.parameterToPairs` helpers — `("multi", name, collection)` for list
+variants (repeated `ids=a&ids=b`, which is what the spec documents) and `(name, value)` for
+scalars. This reuses the same pair machinery as every other query parameter instead of the
+composed-model serialization path.
+
+Covered by `QueryParameterSerializationTest`, which asserts against the built request URI.

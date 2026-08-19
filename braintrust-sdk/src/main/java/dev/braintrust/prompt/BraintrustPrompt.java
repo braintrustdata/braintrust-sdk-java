@@ -47,11 +47,15 @@ public class BraintrustPrompt {
         List<Map<String, Object>> renderedMessages = new ArrayList<>();
         for (ChatCompletionMessageParam param : chat.getMessages()) {
             final String role;
+            // Optional on most roles, but required on function-role messages -- dropping it there
+            // renders a message the OpenAI API rejects.
+            String name = null;
             final String content =
                     switch (param.getVariantType()) {
                         case System -> {
                             var sys = param.getSystemInstance();
                             role = "system";
+                            name = sys.getName();
                             yield sys.getContent() != null
                                     ? extractStringContent(sys.getContent().getActualInstance())
                                     : null;
@@ -59,6 +63,7 @@ public class BraintrustPrompt {
                         case ChatMessageUser -> {
                             var user = param.getChatMessageUserInstance();
                             role = "user";
+                            name = user.getName();
                             yield user.getContent() != null
                                     ? extractStringContent(user.getContent().getActualInstance())
                                     : null;
@@ -66,6 +71,7 @@ public class BraintrustPrompt {
                         case Assistant -> {
                             var asst = param.getAssistantInstance();
                             role = "assistant";
+                            name = asst.getName();
                             yield asst.getContent() != null
                                     ? extractStringContent(asst.getContent().getActualInstance())
                                     : null;
@@ -77,15 +83,18 @@ public class BraintrustPrompt {
                                     ? extractStringContent(tool.getContent().getActualInstance())
                                     : null;
                         }
-                        case InlineFunctionRef -> {
-                            // function-role messages have an index reference, not text content
-                            var fn = param.getInlineFunctionRefInstance();
+                        case ChatCompletionMessageParamAnyOf -> {
+                            // function-role message; its content is a plain string rather than the
+                            // anyOf wrapper the other roles use
+                            var fn = param.getChatCompletionMessageParamAnyOfInstance();
                             role = "function";
-                            yield null;
+                            name = fn.getName();
+                            yield fn.getContent();
                         }
                         case Developer -> {
                             var dev = param.getDeveloperInstance();
                             role = "developer";
+                            name = dev.getName();
                             yield dev.getContent() != null
                                     ? extractStringContent(dev.getContent().getActualInstance())
                                     : null;
@@ -99,6 +108,9 @@ public class BraintrustPrompt {
 
             Map<String, Object> rendered = new HashMap<>();
             rendered.put("role", role);
+            if (name != null) {
+                rendered.put("name", name);
+            }
             if (content != null) {
                 rendered.put("content", renderTemplate(content, parameters));
             }
