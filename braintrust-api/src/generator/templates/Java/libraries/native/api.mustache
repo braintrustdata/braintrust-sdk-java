@@ -419,10 +419,15 @@ public class {{classname}} {
                 {{/hasVars}}
                 {{^hasVars}}
                 {{#isModel}}
+    // anyOf/oneOf-typed parameter: unwrap the matched variant and serialize it as a normal
+    // form-style parameter. Calling toUrlQueryString() here instead drops the parameter, since
+    // that method has no way to know the parameter is named "{{baseName}}".
     if ({{paramName}} != null) {
-      String queryString = {{paramName}}.toUrlQueryString();
-      if (queryString != null && !queryString.isBlank()) {
-        localVarQueryStringJoiner.add(queryString);
+      Object {{paramName}}QueryValue = {{paramName}}.getActualInstance();
+      if ({{paramName}}QueryValue instanceof java.util.Collection<?> {{paramName}}QueryValues) {
+        localVarQueryParams.addAll(ApiClient.parameterToPairs("multi", "{{baseName}}", {{paramName}}QueryValues));
+      } else {
+        localVarQueryParams.addAll(ApiClient.parameterToPairs("{{baseName}}", {{paramName}}QueryValue));
       }
     }
                 {{/isModel}}

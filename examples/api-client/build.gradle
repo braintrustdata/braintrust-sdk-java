@@ -3,13 +3,10 @@ application {
 }
 
 dependencies {
-  // The OpenAPI-generated client (dev.braintrust.openapi.*) is bundled into the published
-  // braintrust-sdk jar, so real consumers get it transitively. This example uses a Gradle
-  // project() dependency, which doesn't expose the embedded classes, so depend on the
-  // generated client subproject directly for compilation.
   implementation project(':braintrust-api')
+  implementation "com.fasterxml.jackson.core:jackson-databind:${rootProject.ext.jacksonVersion}"
 }
 
 run {
-  description = 'Read projects, experiments, prompts, and datasets via the low-level API client'
+  description = 'Read various api resources via the low-level API client. This also includes example for Create/Update/Delete, but these mutating operations are intentionally not invoked by default.'
 }

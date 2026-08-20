@@ -118,6 +118,58 @@ public class BraintrustPromptTest {
     }
 
     @Test
+    void testRenderFunctionMessagePreservesRequiredName() {
+        Map<String, Object> prompt =
+                Map.of(
+                        "type",
+                        "chat",
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "function",
+                                        "name",
+                                        "lookup_weather",
+                                        "content",
+                                        "Forecast for {{city}}")));
+
+        BraintrustPrompt braintrustPrompt =
+                new BraintrustPrompt(promptData(prompt, Map.of("model", "gpt-4o-mini")));
+
+        assertEquals(
+                Map.of(
+                        "role",
+                        "function",
+                        "name",
+                        "lookup_weather",
+                        "content",
+                        "Forecast for Boise"),
+                braintrustPrompt.renderMessages(Map.of("city", "Boise")).get(0));
+    }
+
+    @Test
+    void testRenderMessagePreservesOptionalName() {
+        Map<String, Object> prompt =
+                Map.of(
+                        "type",
+                        "chat",
+                        "messages",
+                        List.of(
+                                Map.of(
+                                        "role",
+                                        "user",
+                                        "name",
+                                        "example_user",
+                                        "content",
+                                        "Hello")));
+
+        BraintrustPrompt braintrustPrompt =
+                new BraintrustPrompt(promptData(prompt, Map.of("model", "gpt-4o-mini")));
+
+        assertEquals("example_user", braintrustPrompt.renderMessages(Map.of()).get(0).get("name"));
+    }
+
+    @Test
     void testRenderMessagesWithList() {
         Map<String, Object> prompt =
                 Map.of(

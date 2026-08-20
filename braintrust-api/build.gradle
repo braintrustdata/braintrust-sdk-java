@@ -60,6 +60,7 @@ tasks.register('fetchOpenApiSpec', Exec) {
 // ── Code generation ──────────────────────────────────────────────────────────
 
 def generatedSourcesDir = layout.buildDirectory.dir('generated/openapi')
+def normalizedSpecFile = openApiSpecDir.map { it.file('spec-normalized.yaml') }
 
 
 openApiGenerate {
@@ -71,7 +72,7 @@ openApiGenerate {
     // at code-generation time). See src/generator/templates for the diffs from upstream.
     templateDir = "${projectDir}/src/generator/templates/Java"
 
-    inputSpec = openApiSpecFile.map { it.asFile.absolutePath }
+    inputSpec = normalizedSpecFile.map { it.asFile.absolutePath }
 
     outputDir = generatedSourcesDir.map { it.asFile.absolutePath }
 
@@ -104,10 +105,6 @@ openApiGenerate {
         'code'        : 'FunctionDataCode',
         'remote_eval' : 'FunctionDataRemoteEval',
         'parameters'  : 'FunctionDataParameters',
-        'function'    : 'InlineFunctionRef',
-        'function_1'  : 'InlineFunction1',
-        'function_2'  : 'InlineFunction2',
-        'function_3'  : 'InlineFunction3',
         'experiment'  : 'CodeBundleLocationExperiment',
         'user'        : 'ChatMessageUser',
     ]
@@ -125,6 +122,182 @@ openApiGenerate {
 
 }
 
+// ── Spec normalization ───────────────────────────────────────────────────────
+//
+// The spec repeatedly expresses "a SavedFunctionId, narrowed" as
+//
+//   allOf:
+//     - $ref: "#/components/schemas/SavedFunctionId"
+//     - anyOf: [ {title: function, ...}, {title: global, ...} ]
+//
+// The referenced schema already declares those same branches (plus null), so the inline
+// anyOf is redundant. The generator can't represent allOf-over-a-composition, so it flattens
+// both sides into one POJO, merging the branches: the surviving `type` enum keeps only the
+// last branch's values and the other branch's properties are dropped. The result is a class
+// that cannot deserialize real payloads -- e.g. TopicMapFunctionAutomationFunction loses both
+// "function" from its type enum and the `id` property, so a topic automation fails to parse.
+// Because ProjectAutomationConfig is a oneOf, that single failure throws for the whole
+// response, breaking any listing page containing a topic automation.
+//
+// This collapses the construct back to the plain $ref, which generates the proper anyOf
+// wrapper class. It only fires when every inline branch title is already declared by the
+// referenced schema, so a genuinely-narrowing allOf is left alone.
+
+tasks.register('normalizeOpenApiSpec') {
+    description = 'Collapses redundant allOf-over-$ref-plus-composition nodes before generation.'
+    group = 'Build'
+
+    def rawSpec = openApiSpecFile
+    def outSpec = normalizedSpecFile
+    inputs.file(rawSpec)
+    outputs.file(outSpec)
+
+    doLast {
+        def yaml = new org.yaml.snakeyaml.Yaml()
+        def spec = yaml.load(rawSpec.get().asFile.text)
+
+        // The branches of a component schema's own anyOf/oneOf, or null if it isn't a composition.
+        def declaredBranches = { String refName ->
+            def target = spec?.components?.schemas?.get(refName)
+            return (target?.anyOf ?: target?.oneOf)
+        }
+
+        // A branch that only widens nullability, e.g. the bare `type: null` arm of
+        // SavedFunctionId. Collapsing past one of these is acceptable; collapsing past a
+        // substantive branch is not, because it would silently broaden the accepted shapes.
+        def isNullishBranch = { branch ->
+            branch instanceof Map && branch.get('type') == 'null' &&
+                !branch.containsKey('properties') && !branch.containsKey('$ref')
+        }
+
+        def collapsed = []
+        def untitled = []
+
+        // Component schemas that are plain POJOs — the ones an inline title can clobber.
+        def componentPojoNames = (spec?.components?.schemas?.findAll { name, schema ->
+            schema?.containsKey('properties')
+        }?.keySet() ?: []) as Set
+
+        def toPascalCase = { String s ->
+            s.split('[_\\-\\s]+').collect { it.capitalize() }.join('')
+        }
+
+        // Collect the distinct shapes behind each inline title. A title backing one shape can be
+        // redirected with an inlineSchemaNameMappings entry, even if it appears several times --
+        // collapsing identical shapes onto one class is harmless. A title backing several
+        // different shapes cannot: mappings are keyed by title, so a single entry collapses them
+        // all and every shape but one comes out wrong.
+        def shapesByTitle = [:].withDefault { [] as Set }
+        def collectShapes
+        collectShapes = { node, path ->
+            if (node instanceof Map) {
+                def title = node.get('title')
+                def isTopLevelComponent = path ==~ /components\.schemas\.[^.]+/
+                if (title instanceof String && !title.isEmpty() && !isTopLevelComponent) {
+                    def props = node.get('properties')
+                    def shape = props instanceof Map
+                        ? (props.keySet() as List).sort().join(',')
+                        : "type:${node.get('type')}"
+                    shapesByTitle[title] = shapesByTitle[title] + shape
+                }
+                node.each { k, v -> collectShapes(v, path ? "${path}.${k}" : k as String) }
+            } else if (node instanceof List) {
+                node.eachWithIndex { v, i -> collectShapes(v, "${path}[${i}]") }
+            }
+        }
+        collectShapes(spec, '')
+
+        def visit
+        visit = { node, path ->
+            if (node instanceof Map) {
+                def allOf = node.get('allOf')
+                if (allOf instanceof List && allOf.size() == 2) {
+                    def refPart = allOf.find { it instanceof Map && it.containsKey('$ref') }
+                    def compositionPart = allOf.find {
+                        it instanceof Map && (it.containsKey('anyOf') || it.containsKey('oneOf'))
+                    }
+                    if (refPart != null && compositionPart != null) {
+                        def refName = (refPart['$ref'] as String).split('/').last()
+                        def branches = declaredBranches(refName)
+                        def declared = (branches ?: [])
+                            .collect { it instanceof Map ? it.title : null }
+                            .findAll { it != null } as Set
+                        def inline = (compositionPart.anyOf ?: compositionPart.oneOf)
+                            .collect { it instanceof Map ? it.title : null }
+                            .findAll { it != null } as Set
+
+                        // Collapse only when the referenced schema covers every inline branch and
+                        // adds nothing substantive of its own. Requiring the two branch sets to
+                        // match exactly would be wrong: the referenced schema legitimately carries
+                        // an extra `type: null` arm, so an exact-match rule would never fire and
+                        // the flattening bug this task exists to fix would come back.
+                        def extraBranches = (branches ?: []).findAll { branch ->
+                            !(branch instanceof Map && branch.title != null
+                                && inline.contains(branch.title))
+                        }
+                        if (branches != null && !inline.isEmpty() && declared.containsAll(inline)
+                                && extraBranches.every { isNullishBranch(it) }) {
+                            node.remove('allOf')
+                            node.put('$ref', refPart['$ref'])
+                            collapsed << "${path} -> ${refName}"
+                        }
+                    }
+                }
+                node.each { k, v -> visit(v, path ? "${path}.${k}" : k as String) }
+            } else if (node instanceof List) {
+                node.eachWithIndex { v, i -> visit(v, "${path}[${i}]") }
+            }
+        }
+        visit(spec, '')
+
+        // Second pass, deliberately after the allOf collapse above: that comparison reads the
+        // branch titles of the referenced schema, so stripping titles first would silently
+        // disable it.
+        //
+        // Drop ambiguous inline titles that would clobber a component POJO. Titles become class
+        // names, so an inline schema titled `function` overwrites the real `Function` component.
+        // A name mapping cannot fix it when the title is reused: mappings are keyed by title, so
+        // one entry collapses every schema sharing it onto a single class and all but one end up
+        // with the wrong shape. Removing the title lets the generator name each schema from its
+        // path, which is unique by construction, leaving the component POJO intact.
+        def stripAmbiguousTitles
+        stripAmbiguousTitles = { node, path ->
+            if (node instanceof Map) {
+                def title = node.get('title')
+                def isTopLevelComponent = path ==~ /components\.schemas\.[^.]+/
+                if (title instanceof String && !title.isEmpty() && !isTopLevelComponent
+                        && shapesByTitle[title].size() > 1
+                        && componentPojoNames.contains(toPascalCase(title))) {
+                    node.remove('title')
+                    untitled << "${path} (was '${title}')"
+                }
+                node.each { k, v -> stripAmbiguousTitles(v, path ? "${path}.${k}" : k as String) }
+            } else if (node instanceof List) {
+                node.eachWithIndex { v, i -> stripAmbiguousTitles(v, "${path}[${i}]") }
+            }
+        }
+        stripAmbiguousTitles(spec, '')
+
+        def dumperOptions = new org.yaml.snakeyaml.DumperOptions()
+        dumperOptions.defaultFlowStyle = org.yaml.snakeyaml.DumperOptions.FlowStyle.BLOCK
+        dumperOptions.splitLines = false
+        def out = outSpec.get().asFile
+        out.parentFile.mkdirs()
+        out.text = new org.yaml.snakeyaml.Yaml(dumperOptions).dump(spec)
+
+        if (collapsed.isEmpty()) {
+            logger.lifecycle('normalizeOpenApiSpec: no redundant allOf nodes found')
+        } else {
+            logger.lifecycle("normalizeOpenApiSpec: collapsed ${collapsed.size()} redundant allOf node(s)")
+            collapsed.each { logger.info("  ${it}") }
+        }
+        if (!untitled.isEmpty()) {
+            logger.lifecycle("normalizeOpenApiSpec: dropped ${untitled.size()} ambiguous inline title(s)")
+            untitled.each { logger.info("  ${it}") }
+        }
+    }
+}
+
 // ── Clobber detection ────────────────────────────────────────────────────────
 //
 // The generator names inline anyOf/oneOf variant classes after their `title`
@@ -138,7 +311,8 @@ tasks.register('checkClobberedSchemas') {
     description = 'Fails if any inline schema title would clobber a component schema name.'
     group = 'Verification'
 
-    def specFile = openApiSpecFile
+    // Check the normalized spec, since that's what generation consumes.
+    def specFile = normalizedSpecFile
     // Capture the current mappings at configuration time so they're available at execution time.
     // inlineSchemaNameMappings is a Gradle MapProperty so .get() is needed to resolve it.
     def mappedTitles = openApiGenerate.inlineSchemaNameMappings.get().keySet() as Set
@@ -214,11 +388,16 @@ tasks.register('checkClobberedSchemas') {
 // checkClobberedSchemas runs after fetch (needs the spec) but before generation
 // so it fails fast without wasting time on codegen.
 tasks.named('checkClobberedSchemas') {
+    dependsOn tasks.named('normalizeOpenApiSpec')
+}
+
+tasks.named('normalizeOpenApiSpec') {
     dependsOn tasks.named('fetchOpenApiSpec')
 }
 
 tasks.named('openApiGenerate') {
     dependsOn tasks.named('checkClobberedSchemas')
+    dependsOn tasks.named('normalizeOpenApiSpec')
 }
 
 tasks.named('compileJava') {
@@ -250,4 +429,8 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${rootProject.ext.junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${rootProject.ext.junitVersion}"
+}
+
+test {
+    useJUnitPlatform()
 }
