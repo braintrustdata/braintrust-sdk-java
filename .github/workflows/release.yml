@@ -15,6 +15,7 @@
 #   6. Publish to Maven Central via Sonatype, signed with the project
 #      GPG key.
 #   7. Poll Maven Central until the new version is visible.
+#   8. Ask javadoc.io to ingest the new Javadocs.
 #
 # Re-publishing a failed release: re-run this workflow with the same
 # version. If the tag already exists, the tag-creation step is skipped
@@ -156,6 +157,7 @@ jobs:
           # braintrust-otel-extension artifact (fat jar, no sources/javadoc)
           OTL_EXT_JAR=$(find braintrust-otel-extension/build/libs -name "braintrust-otel-extension-${VERSION}.jar" | head -1)
 
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "sdk-main-jar=$SDK_MAIN_JAR" >> $GITHUB_OUTPUT
           echo "sdk-sources-jar=$SDK_SOURCES_JAR" >> $GITHUB_OUTPUT
           echo "sdk-javadoc-jar=$SDK_JAVADOC_JAR" >> $GITHUB_OUTPUT
@@ -231,3 +233,8 @@ jobs:
           VERSION="${TAG#v}"
           echo "Waiting for version $VERSION to sync to Maven Central. THIS CAN TAKE MANY HOURS! Godspeed"
           ./scripts/wait-for-maven.sh "$VERSION"
+
+      # javadoc.io is no longer auto-ingesting doc jars, so we'll poke it to trigger an update
+      - name: Trigger javadoc.io ingestion
+        continue-on-error: true
+        run: ./scripts/trigger-javadoc-io.sh "${{ steps.find-artifacts.outputs.version }}"

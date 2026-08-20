@@ -22,7 +22,7 @@ MAX_DURATION_SECONDS=18000  # 5 hours
 SLEEP_DURATION=300  # 5 minutes
 
 # Convert group ID to path format (dev.braintrust -> dev/braintrust)
-GROUP_PATH="${GROUP_ID//./\/}"
+GROUP_PATH="$(echo "$GROUP_ID" | tr '.' '/')"
 
 # Maven Central artifact URL
 MAVEN_CENTRAL_URL="https://repo1.maven.org/maven2/${GROUP_PATH}/${ARTIFACT_ID}/${VERSION}/${ARTIFACT_ID}-${VERSION}.pom"
@@ -64,15 +64,11 @@ while true; do
         echo "✓ Success! Artifact is available on Maven Central"
         echo ""
 
-        # Trigger javadoc.io to update
+        # Note: javadoc.io ingestion is handled separately by
+        # scripts/trigger-javadoc-io.sh; simply fetching the doc URL does
+        # not make javadoc.io pick up a new version.
         JAVADOC_URL="https://javadoc.io/doc/${GROUP_ID}/${ARTIFACT_ID}/${VERSION}"
-        echo "Triggering javadoc.io update..."
-        echo "URL: ${JAVADOC_URL}"
 
-        # Fire and forget - we don't wait for javadoc.io
-        curl -s -o /dev/null "${JAVADOC_URL}" || true
-
-        echo ""
         echo "================================================"
         echo " Maven Central Sync Complete!"
         echo "================================================"
