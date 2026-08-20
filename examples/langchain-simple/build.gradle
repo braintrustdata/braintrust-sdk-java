@@ -3,9 +3,9 @@ application {
 }
 
 dependencies {
-  implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
-  implementation 'dev.langchain4j:langchain4j:1.9.1'
-  implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
+  implementation project(':braintrust-sdk:instrumentation:langchain_1_14_0')
+  implementation 'dev.langchain4j:langchain4j:1.19.0'
+  implementation 'dev.langchain4j:langchain4j-open-ai:1.19.0'
 }
 
 run {

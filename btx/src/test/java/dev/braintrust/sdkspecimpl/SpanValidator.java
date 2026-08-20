@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Validates a list of brainstore spans against the {@code expected_brainstore_spans} structure from
@@ -181,7 +182,14 @@ public class SpanValidator {
         } else {
             // scalar: null expected means "don't care"
             if (expected == null) return;
-            if (!valuesEqual(actual, expected)) {
+            // A message's text content is legitimately represented either as a plain string or,
+            // in the OpenAI Responses API, as a single text content part
+            // ([{type: input_text|output_text, text: "..."}]). When the spec asserts the string
+            // form but an SDK (e.g. langchain4j's OpenAiResponsesChatModel) emits the content-part
+            // form, collapse it so the two representations compare equal.
+            Object normalizedActual =
+                    expected instanceof String ? collapseTextContentParts(actual) : actual;
+            if (!valuesEqual(normalizedActual, expected)) {
                 fail(
                         String.format(
                                 "%s: expected %s (%s) but got %s (%s)",
@@ -192,6 +200,36 @@ public class SpanValidator {
                                 actual == null ? "null" : actual.getClass().getSimpleName()));
             }
         }
+    }
+
+    /**
+     * The OpenAI Responses API text content-part types. Deliberately excludes the bare {@code text}
+     * type used by Anthropic/Bedrock content blocks (and by Chat Completions parts): collapsing
+     * those would silently weaken any spec that asserts a provider's block-shaped content against a
+     * plain string.
+     */
+    private static final Set<String> RESPONSES_TEXT_PART_TYPES =
+            Set.of("input_text", "output_text");
+
+    /**
+     * Collapses an OpenAI Responses text content-part list ({@code [{type: input_text|output_text,
+     * text: "..."}]}) into its concatenated text. Returns the input unchanged if it is not such a
+     * list.
+     */
+    private static Object collapseTextContentParts(Object actual) {
+        if (!(actual instanceof List<?> parts) || parts.isEmpty()) {
+            return actual;
+        }
+        StringBuilder text = new StringBuilder();
+        for (Object part : parts) {
+            if (!(part instanceof Map<?, ?> map)
+                    || !(map.get("text") instanceof String partText)
+                    || !RESPONSES_TEXT_PART_TYPES.contains(map.get("type"))) {
+                return actual;
+            }
+            text.append(partText);
+        }
+        return text.toString();
     }
 
     private static void assertMatcher(Object actual, SpecMatcher matcher, String context) {

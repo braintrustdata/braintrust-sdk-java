@@ -14,13 +14,21 @@ repositories {
 }
 
 // ---- Isolated client source sets ---------------------------------------------
-// Spring AI 1.x and 2.x share Maven coordinates and package names, so they cannot
-// coexist on the test classpath. The springai2 source set is compiled against 2.x
-// and executed inside a child-first classloader at test runtime (see
-// SpecClient.isolation() / IsolatedClientDelegate). Its runtime classpath is handed
-// to the test JVM via the btx.springai2.classpath system property below.
+// Some client libraries cannot share the test classpath: different major/minor versions
+// of the same library reuse Maven coordinates and package names. Those clients get their
+// own source set, compiled against the conflicting version and executed inside a
+// child-first classloader at test runtime (see SpecClient.isolation() /
+// IsolatedClientDelegate). Each source set's runtime classpath is handed to the test JVM
+// via a btx.<name>.classpath system property below.
+//
+//   springai2   - Spring AI 2.x (main test classpath has 1.x)
+//   langchain18 - langchain4j < 1.14.0, driving the langchain_1_8_0 instrumentation module
+//                 (main test classpath has 1.19.0 + langchain_1_14_0). Keeps the older
+//                 module under btx spec coverage even though the two langchain4j lines
+//                 cannot coexist.
 sourceSets {
     springai2
+    langchain18
 }
 
 dependencies {
@@ -35,6 +43,20 @@ dependencies {
     springai2Implementation "io.opentelemetry:opentelemetry-api:${rootProject.ext.otelVersion}"
     springai2Implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
     springai2RuntimeOnly 'org.slf4j:slf4j-simple:2.0.17'
+
+    // langchain4j < 1.14.0 (pre-Responses-API) against the langchain_1_8_0 module. Pinned to
+    // 1.9.1, the version btx exercised before langchain_1_14_0 existed; must stay < 1.14.0 or
+    // the module's classLoaderMatcher gate (and this source set's whole purpose) is moot.
+    langchain18CompileOnly sourceSets.test.output
+    langchain18CompileOnly(testFixtures(project(':test-harness')))
+
+    langchain18Implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
+    langchain18Implementation 'dev.langchain4j:langchain4j:1.9.1'
+    langchain18Implementation 'dev.langchain4j:langchain4j-http-client:1.9.1'
+    langchain18Implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
+    langchain18Implementation "io.opentelemetry:opentelemetry-api:${rootProject.ext.otelVersion}"
+    langchain18Implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    langchain18RuntimeOnly 'org.slf4j:slf4j-simple:2.0.17'
 }
 
 dependencies {
@@ -43,7 +65,7 @@ dependencies {
     testImplementation project(':braintrust-sdk:instrumentation:openai_2_15_0')
     testImplementation project(':braintrust-sdk:instrumentation:anthropic_2_2_0')
     testImplementation project(':braintrust-sdk:instrumentation:genai_1_18_0')
-    testImplementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
+    testImplementation project(':braintrust-sdk:instrumentation:langchain_1_14_0')
     testImplementation project(':braintrust-sdk:instrumentation:springai_1_0_0')
     testImplementation project(':braintrust-sdk:instrumentation:aws_bedrock_2_30_0')
 
@@ -70,10 +92,11 @@ dependencies {
     testRuntimeOnly 'io.projectreactor.netty:reactor-netty-http:1.2.3'
     testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
 
-    // LangChain4j
-    testImplementation 'dev.langchain4j:langchain4j:1.9.1'
-    testImplementation 'dev.langchain4j:langchain4j-http-client:1.9.1'
-    testImplementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
+    // LangChain4j — 1.14.0+ ships the OpenAI Responses API (OpenAiResponsesChatModel), which the
+    // langchain_1_14_0 module instruments. Pinned to a recent 1.x for the responses spec coverage.
+    testImplementation 'dev.langchain4j:langchain4j:1.19.0'
+    testImplementation 'dev.langchain4j:langchain4j-http-client:1.19.0'
+    testImplementation 'dev.langchain4j:langchain4j-open-ai:1.19.0'
 
     // OpenTelemetry
     testImplementation 'io.opentelemetry:opentelemetry-api:1.54.1'
@@ -94,12 +117,14 @@ test {
     useJUnitPlatform()
     workingDir = rootProject.projectDir
 
-    // Hand the isolated springai2 client classpath to the test JVM (resolved lazily so
-    // configuration time doesn't force dependency resolution).
-    dependsOn tasks.named('springai2Classes')
+    // Hand the isolated client classpaths to the test JVM (resolved lazily so configuration
+    // time doesn't force dependency resolution).
+    dependsOn tasks.named('springai2Classes'), tasks.named('langchain18Classes')
     doFirst {
         systemProperty 'btx.springai2.classpath',
             (sourceSets.springai2.output.classesDirs + configurations.springai2RuntimeClasspath).asPath
+        systemProperty 'btx.langchain18.classpath',
+            (sourceSets.langchain18.output.classesDirs + configurations.langchain18RuntimeClasspath).asPath
     }
     testLogging {
         events "passed", "skipped", "failed"

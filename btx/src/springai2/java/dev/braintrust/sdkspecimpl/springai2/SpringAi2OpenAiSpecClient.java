@@ -7,8 +7,10 @@ import dev.braintrust.sdkspecimpl.SpecClient;
 import dev.braintrust.sdkspecimpl.SpecClientContext;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -58,12 +60,6 @@ public final class SpringAi2OpenAiSpecClient implements SpecClient {
         options.apiKey(ctx.openAiApiKey());
         options.baseUrl(ctx.openAiBaseUrl());
         options.model((String) request.get("model"));
-        if (request.get("temperature") instanceof Number temperature) {
-            options.temperature(temperature.doubleValue());
-        }
-        if (request.get("max_tokens") instanceof Number maxTokens) {
-            options.maxTokens(maxTokens.intValue());
-        }
         if (stream) {
             // Ask for the final usage chunk so token metrics are captured for streaming.
             options.streamUsage(true);
@@ -71,6 +67,8 @@ public final class SpringAi2OpenAiSpecClient implements SpecClient {
         if (request.get("tools") instanceof List<?> tools) {
             options.toolCallbacks(mapTools(tools));
         }
+        // Everything else the spec sets rides through as-is; see STRUCTURAL_REQUEST_KEYS.
+        options.extraBody(passthroughBody(request));
 
         var model = OpenAiChatModel.builder().options(options.build()).build();
         BraintrustSpringAI.wrap(ctx.otel(), model);
@@ -81,6 +79,45 @@ public final class SpringAi2OpenAiSpecClient implements SpecClient {
         } else {
             model.call(prompt);
         }
+    }
+
+    /**
+     * Spec request keys this client must express through Spring AI's own typed API rather than pass
+     * through as raw body properties, because the framework needs to understand them: {@code model}
+     * and {@code messages} drive the call itself, {@code stream} selects {@code stream()} vs {@code
+     * call()}, {@code stream_options} is owned by {@code streamUsage(true)}, and {@code tools} must
+     * become typed {@link ToolCallback}s for Spring AI to parse tool calls out of the response.
+     */
+    private static final Set<String> STRUCTURAL_REQUEST_KEYS =
+            Set.of("model", "messages", "stream", "stream_options", "tools");
+
+    /**
+     * Every other spec request field, forwarded verbatim as OpenAI request body properties.
+     *
+     * <p>Spring AI 1.x and the raw-SDK clients deserialize the spec's JSON straight into a request
+     * DTO ({@code OpenAiApi.ChatCompletionRequest}, {@code ChatCompletionCreateParams.Body}, ...),
+     * so a spec field they don't know about still reaches the wire. Spring AI 2.0 removed {@code
+     * OpenAiApi} entirely — it wraps the official {@code openai-java} client and assembles the
+     * request internally from {@link OpenAiChatOptions} — so there is no DTO to deserialize into
+     * and no seam to hand a raw request through.
+     *
+     * <p>Mapping fields one at a time is what made this client silently drop {@code n} (caught by
+     * {@code streaming_multiple_choices}) and {@code reasoning_effort} (not caught: o4-mini emits
+     * reasoning tokens either way, so the spec passed while the request was wrong). {@code
+     * extraBody} reaches openai-java's {@code additionalBodyProperties}, which is the closest thing
+     * to the passthrough the other clients get for free — so new spec fields now flow without a
+     * code change, and the maintenance burden is the small, stable exclusion list above rather than
+     * an open-ended inclusion list.
+     */
+    private static Map<String, Object> passthroughBody(Map<String, Object> request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        request.forEach(
+                (key, value) -> {
+                    if (!STRUCTURAL_REQUEST_KEYS.contains(key) && value != null) {
+                        body.put(key, value);
+                    }
+                });
+        return body;
     }
 
     /**

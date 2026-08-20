@@ -1,4 +1,4 @@
-package dev.braintrust.instrumentation.langchain.v1_8_0;
+package dev.braintrust.instrumentation.langchain.v1_14_0;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;

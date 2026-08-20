@@ -1,4 +1,4 @@
-package dev.braintrust.instrumentation.langchain.v1_8_0.auto;
+package dev.braintrust.instrumentation.langchain.v1_14_0.auto;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -6,9 +6,11 @@ import com.google.auto.service.AutoService;
 import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
 import dev.braintrust.instrumentation.TypeTransformer;
-import dev.braintrust.instrumentation.langchain.v1_8_0.BraintrustLangchain;
+import dev.braintrust.instrumentation.langchain.v1_14_0.BraintrustLangchain;
 import dev.braintrust.instrumentation.muzzle.ClassLoaderMatchers;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiResponsesChatModel;
+import dev.langchain4j.model.openai.OpenAiResponsesStreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import io.opentelemetry.api.GlobalOpenTelemetry;
@@ -20,24 +22,23 @@ import net.bytebuddy.matcher.ElementMatcher;
 
 @AutoService(InstrumentationModule.class)
 public class LangchainInstrumentationModule extends InstrumentationModule {
-    private static final String MANUAL_PACKAGE = "dev.braintrust.instrumentation.langchain.v1_8_0.";
+    private static final String MANUAL_PACKAGE =
+            "dev.braintrust.instrumentation.langchain.v1_14_0.";
 
     public LangchainInstrumentationModule() {
-        super("langchain_1_8_0");
+        super("langchain_1_14_0");
     }
 
     /**
-     * Gates this module to langchain4j < 1.14.0. The Responses API classes ({@code
-     * OpenAiResponsesChatModel} et al.) first appeared in 1.14.0; from there on the {@code
-     * langchain_1_14_0} module takes over (chat completions + responses). Excluding classloaders
-     * that already have the responses classes keeps the two modules from both instrumenting {@code
-     * OpenAiChatModel} on 1.14.0+.
+     * Gates this module to langchain4j >= 1.14.0, where the OpenAI Responses API classes ({@code
+     * OpenAiResponsesChatModel} et al.) first appeared. Earlier releases are covered by the {@code
+     * langchain_1_8_0} module, whose matcher excludes 1.14.0+ — so exactly one module applies for
+     * any given langchain4j version and the two never overlap.
      */
     @Override
     public ElementMatcher<ClassLoader> classLoaderMatcher() {
-        return not(
-                ClassLoaderMatchers.hasClassNamed(
-                        "dev.langchain4j.model.openai.OpenAiResponsesChatModel"));
+        return ClassLoaderMatchers.hasClassNamed(
+                "dev.langchain4j.model.openai.OpenAiResponsesChatModel");
     }
 
     @Override
@@ -51,6 +52,7 @@ public class LangchainInstrumentationModule extends InstrumentationModule {
                 MANUAL_PACKAGE + "TracingProxy",
                 MANUAL_PACKAGE + "TracingToolExecutor",
                 MANUAL_PACKAGE + "OtelContextPassingExecutor",
+                "dev.braintrust.instrumentation.SseStreamAccumulator",
                 "dev.braintrust.instrumentation.SseResponseAccumulator",
                 "dev.braintrust.instrumentation.InstrumentationSemConv",
                 "dev.braintrust.json.BraintrustJsonMapper");
@@ -61,6 +63,8 @@ public class LangchainInstrumentationModule extends InstrumentationModule {
         return List.of(
                 new OpenAiChatModelBuilderInstrumentation(),
                 new OpenAiStreamingChatModelBuilderInstrumentation(),
+                new OpenAiResponsesChatModelBuilderInstrumentation(),
+                new OpenAiResponsesStreamingChatModelBuilderInstrumentation(),
                 new AiServicesInstrumentation());
     }
 
@@ -123,6 +127,69 @@ public class LangchainInstrumentationModule extends InstrumentationModule {
             returnedModel =
                     BraintrustLangchain.wrap(
                             GlobalOpenTelemetry.get(), (OpenAiStreamingChatModel) returnedModel);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Intercept OpenAiResponsesChatModel.Builder.build() to wrap the HTTP client
+    // -------------------------------------------------------------------------
+
+    public static class OpenAiResponsesChatModelBuilderInstrumentation
+            implements TypeInstrumentation {
+        @Override
+        public ElementMatcher<TypeDescription> typeMatcher() {
+            return named("dev.langchain4j.model.openai.OpenAiResponsesChatModel$Builder");
+        }
+
+        @Override
+        public void transform(TypeTransformer transformer) {
+            transformer.applyAdviceToMethod(
+                    named("build").and(takesArguments(0)),
+                    LangchainInstrumentationModule.class.getName()
+                            + "$OpenAiResponsesChatModelBuilderAdvice");
+        }
+    }
+
+    private static class OpenAiResponsesChatModelBuilderAdvice {
+        @Advice.OnMethodExit
+        public static void build(
+                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
+                        Object returnedModel) {
+            returnedModel =
+                    BraintrustLangchain.wrap(
+                            GlobalOpenTelemetry.get(), (OpenAiResponsesChatModel) returnedModel);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Intercept OpenAiResponsesStreamingChatModel.Builder.build() to wrap the HTTP client
+    // -------------------------------------------------------------------------
+
+    public static class OpenAiResponsesStreamingChatModelBuilderInstrumentation
+            implements TypeInstrumentation {
+        @Override
+        public ElementMatcher<TypeDescription> typeMatcher() {
+            return named("dev.langchain4j.model.openai.OpenAiResponsesStreamingChatModel$Builder");
+        }
+
+        @Override
+        public void transform(TypeTransformer transformer) {
+            transformer.applyAdviceToMethod(
+                    named("build").and(takesArguments(0)),
+                    LangchainInstrumentationModule.class.getName()
+                            + "$OpenAiResponsesStreamingChatModelBuilderAdvice");
+        }
+    }
+
+    private static class OpenAiResponsesStreamingChatModelBuilderAdvice {
+        @Advice.OnMethodExit
+        public static void build(
+                @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC)
+                        Object returnedModel) {
+            returnedModel =
+                    BraintrustLangchain.wrap(
+                            GlobalOpenTelemetry.get(),
+                            (OpenAiResponsesStreamingChatModel) returnedModel);
         }
     }
 
