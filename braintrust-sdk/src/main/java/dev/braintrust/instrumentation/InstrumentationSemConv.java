@@ -1022,9 +1022,18 @@ public class InstrumentationSemConv {
      * captured as the span's input, so copying it into metadata would duplicate a potentially large
      * payload. {@code instructions} (the Responses API's system prompt) belongs in the span input
      * too — tracked separately — so it is withheld here rather than landing in metadata.
+     *
+     * <p>The list spans every endpoint reachable through a wrapped client, not just chat: {@code
+     * prompt} carries the user's text on legacy OpenAI completions, Anthropic's legacy {@code
+     * /v1/complete}, and image generation, while {@code requests} nests entire per-request message
+     * payloads on the Message Batches API.
+     *
+     * <p>{@code prompt} additionally must never be copied through: {@code metadata.prompt} is
+     * reserved for Braintrust prompt provenance ({@code id}/{@code project_id}/{@code version}/
+     * {@code variables}), which user-supplied data must not overwrite.
      */
     private static final Set<String> CONTENT_REQUEST_FIELDS =
-            Set.of("messages", "input", "system", "instructions");
+            Set.of("messages", "input", "system", "instructions", "prompt", "requests");
 
     /**
      * Copies a request's generation parameters — {@code temperature}, {@code max_tokens}, {@code

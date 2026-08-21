@@ -825,4 +825,63 @@ class InstrumentationSemConvTest {
         assertTrue(metadata.path("temperature").isMissingNode());
         assertEquals(10, metadata.path("max_tokens").asInt());
     }
+
+    /**
+     * Legacy completions and image generation carry user content in {@code prompt}, and Message
+     * Batches nest whole request payloads under {@code requests}. Neither may be copied into
+     * metadata — and {@code metadata.prompt} is reserved for Braintrust prompt provenance, so a
+     * request field must never be able to occupy it.
+     */
+    @Test
+    void promptAndBatchRequestsAreTreatedAsContentNotParameters() {
+        String legacyCompletion =
+                """
+                {"model": "gpt-3.5-turbo-instruct", "prompt": "secret user text",
+                 "max_tokens": 64, "temperature": 0.3}
+                """;
+        JsonNode completions =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "completions",
+                                legacyCompletion));
+        assertTrue(
+                completions.path("prompt").isMissingNode(),
+                "prompt is user content and shadows reserved provenance metadata");
+        assertEquals(64, completions.path("max_tokens").asInt(), "params still captured");
+        assertEquals(0.3, completions.path("temperature").asDouble());
+
+        exporter.reset();
+
+        String imageGeneration =
+                """
+                {"model": "gpt-image-1", "prompt": "a cat wearing a hat", "size": "1024x1024"}
+                """;
+        JsonNode images =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "images/generations",
+                                imageGeneration));
+        assertTrue(images.path("prompt").isMissingNode());
+        assertEquals("1024x1024", images.path("size").asText());
+
+        exporter.reset();
+
+        String batch =
+                """
+                {"requests": [{"custom_id": "a",
+                  "params": {"model": "claude-sonnet-4-5", "max_tokens": 8,
+                             "messages": [{"role": "user", "content": "secret"}]}}]}
+                """;
+        JsonNode batches =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                                "messages/batches",
+                                batch));
+        assertTrue(
+                batches.path("requests").isMissingNode(),
+                "batch requests nest full message payloads");
+    }
 }
