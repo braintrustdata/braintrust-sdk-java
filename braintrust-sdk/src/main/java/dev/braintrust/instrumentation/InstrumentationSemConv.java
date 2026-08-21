@@ -174,7 +174,7 @@ public class InstrumentationSemConv {
         span.updateName(getSpanName(providerName, pathSegments));
         span.setAttribute("braintrust.span_attributes", toJson(Map.of("type", "llm")));
 
-        Map<String, String> metadata = new HashMap<>();
+        Map<String, Object> metadata = new HashMap<>();
         metadata.put("provider", providerName);
         metadata.put("request_path", String.join("/", pathSegments));
         metadata.put("request_base_uri", baseUrl);
@@ -185,6 +185,7 @@ public class InstrumentationSemConv {
             if (requestJson.has("model")) {
                 metadata.put("model", requestJson.get("model").asText());
             }
+            putGenerationParameters(metadata, requestJson);
             // Chat completions API uses "messages"; Responses API uses "input"
             if (requestJson.has("messages")) {
                 span.setAttribute("braintrust.input_json", toJson(requestJson.get("messages")));
@@ -432,7 +433,7 @@ public class InstrumentationSemConv {
         span.updateName(getSpanName(providerName, pathSegments));
         span.setAttribute("braintrust.span_attributes", toJson(Map.of("type", "llm")));
 
-        Map<String, String> metadata = new HashMap<>();
+        Map<String, Object> metadata = new HashMap<>();
         metadata.put("provider", providerName);
         metadata.put("request_path", String.join("/", pathSegments));
         metadata.put("request_base_uri", baseUrl);
@@ -448,6 +449,7 @@ public class InstrumentationSemConv {
             if (requestJson.has("model")) {
                 metadata.put("model", requestJson.get("model").asText());
             }
+            putGenerationParameters(metadata, requestJson);
             // Build input array: messages + system (as a synthetic system-role entry)
             if (requestJson.has("messages")) {
                 ArrayNode inputArray = BraintrustJsonMapper.get().createArrayNode();
@@ -876,6 +878,19 @@ public class InstrumentationSemConv {
                 if (cfg.has("stopSequences"))
                     metadata.put("stop_sequences", cfg.get("stopSequences"));
             }
+            // Tool definitions and tool-choice policy. Flattened out of toolConfig and renamed to
+            // the cross-provider keys (as inferenceConfig is above), so a Bedrock span's tools read
+            // the same as an OpenAI or Anthropic one. Entries keep their Bedrock
+            // {"toolSpec": {...}} shape — this is what the caller actually sent.
+            if (requestJson.has("toolConfig")) {
+                JsonNode toolConfig = requestJson.get("toolConfig");
+                if (toolConfig.has("tools")) {
+                    metadata.put("tools", toolConfig.get("tools"));
+                }
+                if (toolConfig.has("toolChoice")) {
+                    metadata.put("tool_choice", toolConfig.get("toolChoice"));
+                }
+            }
             // Bedrock Converse uses "messages" with typed content block arrays like
             // [{"text":"..."}]
             if (requestJson.has("messages")) {
@@ -924,6 +939,20 @@ public class InstrumentationSemConv {
             if (usage.has("outputTokens"))
                 metrics.put("completion_tokens", usage.get("outputTokens"));
             if (usage.has("totalTokens")) metrics.put("tokens", usage.get("totalTokens"));
+
+            // Prompt caching, named to match the Anthropic and OpenAI cache metrics above so
+            // hit-rate and cost analysis works across providers.
+            //
+            // usage.cacheDetails (per-checkpoint {inputTokens, ttl} entries) is deliberately not
+            // mapped: a metric has to be a single number, and AWS does not document whether those
+            // entries describe reads or writes — so there is no TTL-suffixed metric it can be
+            // placed under without guessing. The two aggregates below are unambiguous.
+            if (usage.has("cacheReadInputTokens")) {
+                metrics.put("prompt_cached_tokens", usage.get("cacheReadInputTokens"));
+            }
+            if (usage.has("cacheWriteInputTokens")) {
+                metrics.put("prompt_cache_creation_tokens", usage.get("cacheWriteInputTokens"));
+            }
         }
 
         if (!metrics.isEmpty()) {
@@ -951,6 +980,43 @@ public class InstrumentationSemConv {
             return BraintrustJsonMapper.get().readTree(stripped);
         } catch (Exception e) {
             return value;
+        }
+    }
+
+    /**
+     * Request fields that are conversation content, not generation parameters. Each is already
+     * captured as the span's input, so copying it into metadata would duplicate a potentially large
+     * payload. {@code instructions} (the Responses API's system prompt) belongs in the span input
+     * too — tracked separately — so it is withheld here rather than landing in metadata.
+     */
+    private static final Set<String> CONTENT_REQUEST_FIELDS =
+            Set.of("messages", "input", "system", "instructions");
+
+    /**
+     * Copies a request's generation parameters — {@code temperature}, {@code max_tokens}, {@code
+     * tools}, {@code response_format}, Anthropic's {@code thinking}, and so on — into span
+     * metadata.
+     *
+     * <p>Deliberately a denylist rather than an allowlist: OpenAI and Anthropic already name these
+     * fields in snake_case, so nothing needs renaming, and a parameter added by a future API
+     * version shows up in traces without a change here. Only {@link #CONTENT_REQUEST_FIELDS} are
+     * withheld.
+     *
+     * <p>Uses {@code putIfAbsent} so the keys the caller already set — {@code provider}, {@code
+     * model}, and the {@code request_*} routing fields — always win over a same-named body field.
+     */
+    private static void putGenerationParameters(
+            Map<String, Object> metadata, JsonNode requestJson) {
+        if (!requestJson.isObject()) {
+            return;
+        }
+        var fields = requestJson.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            if (CONTENT_REQUEST_FIELDS.contains(entry.getKey()) || entry.getValue().isNull()) {
+                continue;
+            }
+            metadata.putIfAbsent(entry.getKey(), entry.getValue());
         }
     }
 
