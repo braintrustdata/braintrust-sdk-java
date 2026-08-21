@@ -1,0 +1,35 @@
+{
+  "id": "chatcmpl-EFMzddChBy4Hjq1tS7aMS9E9mP0MA",
+  "object": "chat.completion",
+  "created": 1787332013,
+  "model": "o4-mini-2025-04-16",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Each term is the product of two consecutive integers (sometimes called a “pronic” or “oblong” number).  Equivalently you get the sequence by starting at 2 and adding successive even numbers 4, 6, 8, 10,…\n\nIn closed form, for n=1,2,3,…:  \naₙ = n·(n+1) = n² + n\n\nCheck:  \nn=1 → 1·2 = 2  \nn=2 → 2·3 = 6  \nn=3 → 3·4 = 12  \nn=4 → 4·5 = 20  \nn=5 → 5·6 = 30 …",
+        "refusal": null,
+        "annotations": []
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 41,
+    "completion_tokens": 423,
+    "total_tokens": 464,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 256,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": null
+}

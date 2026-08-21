@@ -1,0 +1,127 @@
+{
+  "id": "resp_01d05b55cbe8c4a5016a8885f1433087d0b6ca64613756b6f1",
+  "object": "response",
+  "created_at": 1787332081,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1787332083,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-4o-2024-08-06",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_01d05b55cbe8c4a5016a8885f1ca6487d0b1785ad0fc537caa",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "recent AI news"
+        ],
+        "query": "recent AI news"
+      }
+    },
+    {
+      "id": "msg_01d05b55cbe8c4a5016a8885f2a49887d0a403dbd3456a0c73",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 333,
+              "start_index": 278,
+              "title": "Blab AI | Artificial Intelligence News, Tools & Research",
+              "url": "https://ai.blab.com/?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "On August 12, 2026, Health Secretary Robert F. Kennedy Jr. and CMS Administrator Dr. Mehmet Oz informed a Senate panel that artificial intelligence is being utilized to address healthcare disparities in rural areas, though evidence supporting its effectiveness remains limited. ([ai.blab.com](https://ai.blab.com/?utm_source=openai)) "
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": null,
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "low",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 316,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 84,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 400
+  },
+  "user": null,
+  "metadata": {}
+}

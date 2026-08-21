@@ -1,0 +1,49 @@
+{
+  "id" : "50c9943b-632e-3dff-8453-f59bd1273f29",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a concise assistant\",\"role\":\"system\"},{\"content\":\"Say hello in one word.\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"max_tokens\":100,\"n\":2,\"stream\":true,\"stream_options\":{\"include_usage\":true},\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-114a3fe592b5.txt",
+    "headers" : {
+      "x-request-id" : "req_7cf68331fedd433ab9b6010d37ca06fd",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2eb3c5b0d31a33a-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Fri, 21 Aug 2026 17:07:44 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=rxe5UIgls0f5Y3f5kWAxcZP7xXWDpHQJn7Feekg2ToI-1787332064.4858804-1.0.1.1-A8.eiqur4vBmUSbdyfPh9pUtcQRLJGphzQKSMQJrKGZvXB3JNCAX1sbjP4PlLziGk4dn_4_jggQJmPdeymR1hsmkq2vJEkyAmsespHSAUE97GlPxvciI8XsIyzjBcWkm; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 21 Aug 2026 17:37:44 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "247",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "50c9943b-632e-3dff-8453-f59bd1273f29",
+  "persistent" : true,
+  "insertionIndex" : 56
+}

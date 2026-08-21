@@ -1,0 +1,48 @@
+{
+  "id" : "91f1b96e-0ad5-3ea0-b353-0594e11384ca",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Do a web search for news about Moderna. What are they up to lately?\"\n    } ]\n  } ],\n  \"stream\" : false,\n  \"store\" : false,\n  \"temperature\" : 0.0,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"name\" : \"getWeather\",\n    \"description\" : \"Get current weather for a location\",\n    \"parameters\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"arg0\" : {\n          \"type\" : \"string\"\n        }\n      },\n      \"required\" : [ \"arg0\" ]\n    }\n  }, {\n    \"type\" : \"function\",\n    \"name\" : \"getForecast\",\n    \"description\" : \"Get weather forecast for next N days\",\n    \"parameters\" : {\n      \"type\" : \"object\",\n      \"properties\" : {\n        \"arg0\" : {\n          \"type\" : \"string\"\n        },\n        \"arg1\" : {\n          \"type\" : \"integer\"\n        }\n      },\n      \"required\" : [ \"arg0\", \"arg1\" ]\n    }\n  }, {\n    \"type\" : \"web_search_preview\"\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-2348ab6c9b2a.json",
+    "headers" : {
+      "x-request-id" : "req_1620703f102c4aa38b3d98365a09355f",
+      "x-ratelimit-limit-tokens" : "30000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2eb3d47ec8c57bc-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29998938",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Fri, 21 Aug 2026 17:08:28 GMT",
+      "x-ratelimit-reset-tokens" : "2ms",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=2vmsJeWAJSr8AD7KaFCpNgG4_peHcGM8nqHZGTQb79U-1787332102.3905027-1.0.1.1-5H4umw73.SZszIcaxWBYMGHZ0zIdDMS_ToL8wl.REA8hlTg4czEEVliuAqLgBEm_SCzNTprC_zDpg6yC0DUSOhCORlMBgYw.SsRqWDUGlfeMmZeKZVcOVfbg1.appijX; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 21 Aug 2026 17:38:28 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "6093",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "91f1b96e-0ad5-3ea0-b353-0594e11384ca",
+  "persistent" : true,
+  "insertionIndex" : 57
+}

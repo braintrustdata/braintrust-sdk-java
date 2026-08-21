@@ -1,0 +1,42 @@
+{
+  "id" : "c2474bf5-50bc-3bbb-8eb0-7ce0526dc342",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"What is the capital of France?\"\n    } ]\n  } ],\n  \"stream\" : true,\n  \"store\" : false,\n  \"temperature\" : 0.0\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-c1b40cd66fd7.txt",
+    "headers" : {
+      "x-request-id" : "req_e2731e417197412cad96fb0d8bda980f",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2eb794dc812a3c2-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Fri, 21 Aug 2026 17:49:21 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=i11f1Ogoz2tN0wZuIdzr6h9_ArHFIcwAZbjWQXXE0pw-1787334560.9299479-1.0.1.1-9JtmG_DDSejlvn37UEnOB.aVJXsRdL.9BmhDnCQ8O_w5ILYGg50VKUj48xqG3fRWw8.keh1Pw9XkEKnxiPCtdaGrElLG53XESpJefLa5kS44PHAf9_Q_Lhx.OJUNVnVy; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 21 Aug 2026 18:19:21 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "119",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "c2474bf5-50bc-3bbb-8eb0-7ce0526dc342",
+  "persistent" : true,
+  "insertionIndex" : 62
+}
