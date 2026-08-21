@@ -382,4 +382,96 @@ class InstrumentationSemConvTest {
                 """;
         assertTrue(emitAnthropic(body).isEmpty());
     }
+
+    /**
+     * Tags a request span for {@code provider} and returns the resulting {@code
+     * braintrust.input_json} attribute (null when none was set).
+     */
+    private String inputJsonForRequest(String provider, String requestBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        InstrumentationSemConv.tagLLMSpanRequest(
+                span,
+                provider,
+                "https://api.anthropic.com",
+                List.of("v1", "messages"),
+                "POST",
+                requestBody);
+        span.end();
+        return exporter.getFinishedSpanItems().get(0).getAttributes().get(INPUT_JSON);
+    }
+
+    @Test
+    void anthropicStringSystemPromptBecomesSystemRoleEntry() {
+        String body =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "system": "be terse",
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode input =
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body));
+        assertEquals(2, input.size());
+        assertEquals("system", input.get(1).path("role").asText());
+        assertEquals("be terse", input.get(1).path("content").asText());
+    }
+
+    /**
+     * Array-form {@code system} — the shape required to attach {@code cache_control} — must survive
+     * intact. It previously tripped an {@code asText().isEmpty()} guard (containers stringify to
+     * {@code ""}) and was dropped from the span input entirely.
+     */
+    @Test
+    void anthropicArraySystemPromptIsPreservedWithCacheControl() {
+        String body =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "system": [
+                    {"type": "text", "text": "you are a helpful assistant"},
+                    {"type": "text", "text": "<corpus>", "cache_control": {"type": "ephemeral"}}
+                  ],
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode input =
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body));
+        assertEquals(2, input.size());
+        JsonNode system = input.get(1);
+        assertEquals("system", system.path("role").asText());
+        JsonNode content = system.path("content");
+        assertTrue(content.isArray(), "array-form system prompt should stay an array");
+        assertEquals(2, content.size());
+        assertEquals("you are a helpful assistant", content.get(0).path("text").asText());
+        assertEquals("ephemeral", content.get(1).path("cache_control").path("type").asText());
+    }
+
+    @Test
+    void anthropicAbsentOrEmptySystemPromptAddsNoEntry() {
+        String noSystem =
+                """
+                {"model": "claude-sonnet-4-5", "messages": [{"role": "user", "content": "hi"}]}
+                """;
+        assertEquals(
+                1,
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, noSystem))
+                        .size());
+
+        // An empty string, empty array, or explicit null carries no prompt.
+        for (String system : List.of("\"\"", "[]", "null")) {
+            String body =
+                    "{\"model\": \"claude-sonnet-4-5\", \"system\": "
+                            + system
+                            + ", \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}]}";
+            exporter.reset();
+            assertEquals(
+                    1,
+                    json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body))
+                            .size(),
+                    "system=" + system + " should not add an entry");
+        }
+    }
 }

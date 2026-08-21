@@ -455,13 +455,12 @@ public class InstrumentationSemConv {
                 for (JsonNode msg : requestJson.get("messages")) {
                     inputArray.add(simplifyAnthropicMessage(msg));
                 }
-                // Append system prompt as a {role:"system", content:"..."} entry if present
-                if (requestJson.has("system")
-                        && !requestJson.get("system").isNull()
-                        && !requestJson.get("system").asText().isEmpty()) {
+                // Append system prompt as a {role:"system", content:...} entry if present
+                JsonNode system = requestJson.get("system");
+                if (hasAnthropicSystemPrompt(system)) {
                     var systemNode = BraintrustJsonMapper.get().createObjectNode();
                     systemNode.put("role", "system");
-                    systemNode.set("content", requestJson.get("system"));
+                    systemNode.set("content", system);
                     inputArray.add(systemNode);
                 }
                 span.setAttribute("braintrust.input_json", toJson(inputArray));
@@ -469,6 +468,21 @@ public class InstrumentationSemConv {
         }
 
         span.setAttribute("braintrust.metadata", toJson(metadata));
+    }
+
+    /**
+     * Whether an Anthropic request's {@code system} field actually carries a prompt.
+     *
+     * <p>{@code system} takes two shapes: a plain string, or an array of content blocks (the form
+     * required to attach {@code cache_control} for prompt caching). Emptiness has to be tested per
+     * shape — {@link JsonNode#asText()} returns {@code ""} for any container node, so a bare {@code
+     * asText().isEmpty()} check reads every array-form system prompt as absent and drops it.
+     */
+    private static boolean hasAnthropicSystemPrompt(@Nullable JsonNode system) {
+        if (system == null || system.isNull()) {
+            return false;
+        }
+        return system.isContainerNode() ? !system.isEmpty() : !system.asText().isEmpty();
     }
 
     @SneakyThrows
