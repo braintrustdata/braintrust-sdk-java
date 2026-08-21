@@ -503,29 +503,34 @@ public class InstrumentationSemConv {
 
         if (responseJson.has("usage")) {
             JsonNode usage = responseJson.get("usage");
-            if (usage.has("input_tokens")) metrics.put("prompt_tokens", usage.get("input_tokens"));
-            if (usage.has("output_tokens"))
-                metrics.put("completion_tokens", usage.get("output_tokens"));
-            if (usage.has("input_tokens") && usage.has("output_tokens")) {
-                metrics.put(
-                        "tokens",
-                        usage.get("input_tokens").asLong() + usage.get("output_tokens").asLong());
-            }
 
-            // Prompt caching metrics
+            // Prompt caching. These are emitted first because prompt_tokens depends on them:
+            // Anthropic reports input_tokens *exclusive* of cache reads and writes, whereas
+            // Braintrust's prompt_tokens is the inclusive total that the cost pipeline prices and
+            // from which prompt_uncached_tokens is derived.
             if (usage.has("cache_read_input_tokens")) {
                 metrics.put("prompt_cached_tokens", usage.get("cache_read_input_tokens"));
             }
-            if (usage.has("cache_creation_input_tokens")) {
-                long cacheCreationTokens = usage.get("cache_creation_input_tokens").asLong();
+            long cacheReadTokens =
+                    usage.has("cache_read_input_tokens")
+                            ? usage.get("cache_read_input_tokens").asLong()
+                            : 0L;
+            long cacheCreationTokens = addCacheCreationMetrics(metrics, usage);
 
-                // Per-TTL breakdown from usage.cache_creation (e.g.
-                // ephemeral_5m_input_tokens, ephemeral_1h_input_tokens).
-                // When per-TTL metrics are emitted, the aggregate metric is omitted.
-                boolean emittedPerTtl = addPerTtlCacheMetrics(metrics, usage);
-                if (!emittedPerTtl) {
-                    metrics.put("prompt_cache_creation_tokens", cacheCreationTokens);
+            // Roll the cache counts back into the canonical totals. Without this a cached call
+            // reports only the uncached remainder as prompt_tokens — e.g. 12 instead of 1377 —
+            // which both understates cost and makes the cache metrics larger than the total they
+            // are meant to be a subset of.
+            if (usage.has("input_tokens")) {
+                long promptTokens =
+                        usage.get("input_tokens").asLong() + cacheReadTokens + cacheCreationTokens;
+                metrics.put("prompt_tokens", promptTokens);
+                if (usage.has("output_tokens")) {
+                    metrics.put("tokens", promptTokens + usage.get("output_tokens").asLong());
                 }
+            }
+            if (usage.has("output_tokens")) {
+                metrics.put("completion_tokens", usage.get("output_tokens"));
             }
 
             // Server-side tool usage counts (e.g. web_search_requests, web_fetch_requests).
@@ -557,26 +562,41 @@ public class InstrumentationSemConv {
                     "ephemeral_1h_input_tokens", "prompt_cache_creation_1h_tokens");
 
     /**
-     * Extract per-TTL cache creation metrics from the Anthropic {@code usage.cache_creation}
-     * response object. Fields like {@code ephemeral_5m_input_tokens} are mapped to {@code
-     * prompt_cache_creation_5m_tokens}.
+     * Emits the Anthropic cache-creation metrics and returns the number of tokens they describe.
      *
-     * @return {@code true} if at least one per-TTL metric was emitted
+     * <p>Anthropic reports the same cache-creation tokens two ways: the flat {@code
+     * cache_creation_input_tokens} aggregate, and — on SDKs tracking the 2024-10-22 Messages API
+     * revision or newer — a per-TTL breakdown under {@code usage.cache_creation}. They are
+     * alternative representations of one number rather than separate token classes, so exactly one
+     * is emitted (Anthropic spans must carry a single representation), preferring the breakdown
+     * when it is available. The returned count is that number either way, so callers can fold it
+     * into {@code prompt_tokens} without double-counting.
+     *
+     * @return the cache-creation token count, or 0 when the response reports none
      */
-    private static boolean addPerTtlCacheMetrics(Map<String, Object> metrics, JsonNode usage) {
-        if (!usage.has("cache_creation")) {
-            return false;
-        }
+    private static long addCacheCreationMetrics(Map<String, Object> metrics, JsonNode usage) {
         JsonNode cacheCreation = usage.get("cache_creation");
-        boolean emitted = false;
-        for (Map.Entry<String, String> entry : CACHE_CREATION_FIELD_TO_METRIC.entrySet()) {
-            if (cacheCreation.has(entry.getKey())) {
-                long tokens = cacheCreation.get(entry.getKey()).asLong();
-                metrics.put(entry.getValue(), tokens);
-                emitted = true;
+        if (cacheCreation != null && cacheCreation.isObject()) {
+            long perTtlSum = 0;
+            boolean emittedPerTtl = false;
+            for (Map.Entry<String, String> entry : CACHE_CREATION_FIELD_TO_METRIC.entrySet()) {
+                if (cacheCreation.has(entry.getKey())) {
+                    long tokens = cacheCreation.get(entry.getKey()).asLong();
+                    metrics.put(entry.getValue(), tokens);
+                    perTtlSum += tokens;
+                    emittedPerTtl = true;
+                }
+            }
+            if (emittedPerTtl) {
+                return perTtlSum;
             }
         }
-        return emitted;
+        if (usage.has("cache_creation_input_tokens")) {
+            long aggregate = usage.get("cache_creation_input_tokens").asLong();
+            metrics.put("prompt_cache_creation_tokens", aggregate);
+            return aggregate;
+        }
+        return 0L;
     }
 
     private static final String ANTHROPIC_SERVER_TOOL_USE_TYPE = "server_tool_use";
@@ -935,13 +955,10 @@ public class InstrumentationSemConv {
         // Bedrock usage uses camelCase: inputTokens, outputTokens, totalTokens
         if (responseJson.has("usage")) {
             JsonNode usage = responseJson.get("usage");
-            if (usage.has("inputTokens")) metrics.put("prompt_tokens", usage.get("inputTokens"));
-            if (usage.has("outputTokens"))
-                metrics.put("completion_tokens", usage.get("outputTokens"));
-            if (usage.has("totalTokens")) metrics.put("tokens", usage.get("totalTokens"));
 
             // Prompt caching, named to match the Anthropic and OpenAI cache metrics above so
-            // hit-rate and cost analysis works across providers.
+            // hit-rate and cost analysis works across providers. Emitted before the totals
+            // because prompt_tokens is derived from them.
             //
             // usage.cacheDetails (per-checkpoint {inputTokens, ttl} entries) is deliberately not
             // mapped: a metric has to be a single number, and AWS does not document whether those
@@ -953,6 +970,23 @@ public class InstrumentationSemConv {
             if (usage.has("cacheWriteInputTokens")) {
                 metrics.put("prompt_cache_creation_tokens", usage.get("cacheWriteInputTokens"));
             }
+            long cacheReadTokens = longOrZero(usage, "cacheReadInputTokens");
+            long cacheWriteTokens = longOrZero(usage, "cacheWriteInputTokens");
+
+            // Bedrock reports inputTokens *exclusive* of cache reads and writes while folding both
+            // into totalTokens, so the cache counts have to be rolled back into prompt_tokens.
+            // Verified against a recorded cachePoint call: inputTokens(12) + cacheWrite(1175) +
+            // outputTokens(5) == totalTokens(1192), and the same held for the cache-read turn.
+            // Because totalTokens already accounts for them, it is preserved as-is rather than
+            // recomputed — which also makes the provider's own total a cross-check on this sum.
+            if (usage.has("inputTokens")) {
+                metrics.put(
+                        "prompt_tokens",
+                        usage.get("inputTokens").asLong() + cacheReadTokens + cacheWriteTokens);
+            }
+            if (usage.has("outputTokens"))
+                metrics.put("completion_tokens", usage.get("outputTokens"));
+            if (usage.has("totalTokens")) metrics.put("tokens", usage.get("totalTokens"));
         }
 
         if (!metrics.isEmpty()) {
@@ -1018,6 +1052,12 @@ public class InstrumentationSemConv {
             }
             metadata.putIfAbsent(entry.getKey(), entry.getValue());
         }
+    }
+
+    /** Returns {@code node[field]} as a long, or 0 when absent or not numeric. */
+    private static long longOrZero(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value != null && value.isNumber() ? value.asLong() : 0L;
     }
 
     private static void putIfPresent(ObjectNode target, String key, JsonNode value) {

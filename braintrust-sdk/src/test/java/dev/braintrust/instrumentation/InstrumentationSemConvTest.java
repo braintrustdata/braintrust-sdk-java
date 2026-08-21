@@ -557,6 +557,8 @@ class InstrumentationSemConvTest {
      */
     @Test
     void bedrockCacheTokensMapToCrossProviderMetricNames() {
+        // Shaped after a real recorded Converse response: inputTokens excludes the cache
+        // counts, while totalTokens includes them (1200 + 800 + 400 + 350 = 2750).
         String body =
                 """
                 {
@@ -564,7 +566,7 @@ class InstrumentationSemConvTest {
                   "usage": {
                     "inputTokens": 1200,
                     "outputTokens": 350,
-                    "totalTokens": 1550,
+                    "totalTokens": 2750,
                     "cacheReadInputTokens": 800,
                     "cacheWriteInputTokens": 400,
                     "cacheDetails": [{"inputTokens": 800, "ttl": "5m"}]
@@ -573,13 +575,36 @@ class InstrumentationSemConvTest {
                 """;
 
         JsonNode metrics = json(bedrockResponseMetrics(body));
-        assertEquals(1200, metrics.path("prompt_tokens").asInt());
+        // prompt_tokens rolls the cache counts back in; tokens preserves the provider total.
+        assertEquals(2400, metrics.path("prompt_tokens").asInt());
         assertEquals(350, metrics.path("completion_tokens").asInt());
-        assertEquals(1550, metrics.path("tokens").asInt());
+        assertEquals(2750, metrics.path("tokens").asInt());
         assertEquals(800, metrics.path("prompt_cached_tokens").asInt());
         assertEquals(400, metrics.path("prompt_cache_creation_tokens").asInt());
         // cacheDetails is an array — never emitted as a metric.
         assertTrue(metrics.path("cacheDetails").isMissingNode());
+        // The provider's own total cross-checks the roll-in.
+        assertEquals(
+                metrics.path("tokens").asInt(),
+                metrics.path("prompt_tokens").asInt() + metrics.path("completion_tokens").asInt(),
+                "tokens must equal prompt + completion once cache tokens are rolled in");
+    }
+
+    /** Without caching, prompt_tokens is just inputTokens — the roll-in adds nothing. */
+    @Test
+    void bedrockPromptTokensUnchangedWhenNoCacheUsage() {
+        String body =
+                """
+                {
+                  "output": {"message": {"role": "assistant", "content": [{"text": "hi"}]}},
+                  "usage": {"inputTokens": 68, "outputTokens": 202, "totalTokens": 270}
+                }
+                """;
+
+        JsonNode metrics = json(bedrockResponseMetrics(body));
+        assertEquals(68, metrics.path("prompt_tokens").asInt());
+        assertEquals(202, metrics.path("completion_tokens").asInt());
+        assertEquals(270, metrics.path("tokens").asInt());
     }
 
     /** A cold cache reports zeros, which must still be emitted rather than skipped. */
