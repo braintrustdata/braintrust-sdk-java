@@ -230,4 +230,76 @@ class SseStreamAccumulatorTest {
                     "server-side tool calls in the streamed output should emit child tool spans");
         }
     }
+
+    // ---------------------------------------------------------------------
+    // carriesGeneratedOutput — drives time-to-first-token
+    // ---------------------------------------------------------------------
+
+    private static boolean isOutput(String chunk) {
+        return SseStreamAccumulator.carriesGeneratedOutput(JSON, chunk);
+    }
+
+    /**
+     * A Responses stream opens with lifecycle events before the model produces anything. Timing
+     * TTFT from these measures response setup, which for a reasoning model can precede the first
+     * real token by seconds.
+     */
+    @Test
+    void responsesLifecycleEventsAreNotGeneratedOutput() {
+        assertFalse(isOutput("{\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}"));
+        assertFalse(isOutput("{\"type\":\"response.in_progress\",\"response\":{\"id\":\"r1\"}}"));
+        assertFalse(isOutput("{\"type\":\"response.queued\",\"response\":{\"id\":\"r1\"}}"));
+    }
+
+    @Test
+    void responsesOutputEventsAreGeneratedOutput() {
+        assertTrue(isOutput("{\"type\":\"response.output_text.delta\",\"delta\":\"Par\"}"));
+        assertTrue(
+                isOutput("{\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{\"}"));
+        assertTrue(
+                isOutput("{\"type\":\"response.reasoning_summary_text.delta\",\"delta\":\"h\"}"));
+        assertTrue(
+                isOutput(
+                        "{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{}}"));
+        assertTrue(
+                isOutput(
+                        "{\"type\":\"response.content_part.added\",\"output_index\":0,\"part\":{}}"));
+    }
+
+    /** The opening chat-completions chunk carries only the assistant role, not a token yet. */
+    @Test
+    void chatCompletionsRoleOnlyChunkIsNotGeneratedOutput() {
+        assertFalse(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}"));
+    }
+
+    @Test
+    void chatCompletionsContentAndToolCallChunksAreGeneratedOutput() {
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"content\":\"Paris\"}}]}"));
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"t\"}]}}]}"));
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"reasoning_content\":\"hmm\"}}]}"));
+    }
+
+    /** Sentinels, blanks, and malformed payloads must not be mistaken for output. */
+    @Test
+    void nonOutputPayloadsAreRejected() {
+        assertFalse(isOutput(null));
+        assertFalse(isOutput(""));
+        assertFalse(isOutput("   "));
+        assertFalse(isOutput("[DONE]"));
+        assertFalse(isOutput("not json"));
+        assertFalse(isOutput("[1,2,3]"));
+        assertFalse(isOutput("{\"object\":\"chat.completion.chunk\",\"choices\":[]}"));
+    }
 }

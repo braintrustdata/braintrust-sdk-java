@@ -133,7 +133,12 @@ class WrappedHttpClient implements HttpClient {
         private final String providerName;
         private final Tracer tracer;
         private final long startNanos = System.nanoTime();
-        private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
+        // Time-to-first-token is measured from the first payload that carries generated output,
+        // not the first payload of any kind — a Responses stream opens with response.created
+        // before the model has produced anything. firstPayloadNanos is kept only as a fallback so
+        // an unrecognized stream shape still reports a (slightly early) TTFT rather than none.
+        private final AtomicLong firstOutputNanos = new AtomicLong();
+        private final AtomicLong firstPayloadNanos = new AtomicLong();
         // Handles both endpoints this module instruments: chat-completions chunk streams and
         // Responses API (`/v1/responses`) event streams.
         private final SseStreamAccumulator accumulator =
@@ -192,15 +197,35 @@ class WrappedHttpClient implements HttpClient {
 
         private void accumulateChunk(String data) {
             if (data == null || data.isEmpty() || "[DONE]".equals(data)) return;
-            if (timeToFirstTokenNanos.get() == 0L) {
-                timeToFirstTokenNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
+            firstPayloadNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
+            // Only parse for output detection until the first one is found; afterwards this is a
+            // single volatile read per chunk.
+            if (firstOutputNanos.get() == 0L
+                    && SseStreamAccumulator.carriesGeneratedOutput(
+                            BraintrustJsonMapper.get(), data)) {
+                firstOutputNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
             }
             accumulator.merge(data);
         }
 
+        /**
+         * Seconds-precision source for {@code time_to_first_token}: the first generated output if
+         * one was recognized, else the first payload seen, else absent — a stream that produced
+         * nothing reports no TTFT rather than a fabricated zero.
+         */
+        @javax.annotation.Nullable
+        private Long timeToFirstTokenNanos() {
+            long output = firstOutputNanos.get();
+            if (output != 0L) {
+                return output;
+            }
+            long payload = firstPayloadNanos.get();
+            return payload != 0L ? payload : null;
+        }
+
         private void finalizeSpan() {
             try {
-                Long ttft = timeToFirstTokenNanos.get();
+                Long ttft = timeToFirstTokenNanos();
                 String responseBody = accumulator.build();
                 InstrumentationSemConv.tagLLMSpanResponse(
                         tracer, span, providerName, responseBody, ttft);

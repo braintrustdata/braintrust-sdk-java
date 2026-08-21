@@ -100,6 +100,66 @@ public final class SseStreamAccumulator {
         return jsonMapper.writeValueAsString(root);
     }
 
+    /**
+     * Whether an SSE {@code data:} payload carries generated model output, as opposed to stream
+     * lifecycle metadata.
+     *
+     * <p>Callers use this to time first-token latency. A Responses stream opens with {@code
+     * response.created} and {@code response.in_progress} before the model has produced anything, so
+     * timing the first payload of any kind measures time-to-response-metadata instead — badly
+     * understated for a reasoning model, where generation can begin seconds after the stream opens.
+     * A chat-completions stream similarly opens with a chunk whose delta carries only the assistant
+     * role and an empty content string.
+     *
+     * <p>Errs toward {@code false}: callers are expected to keep a first-payload fallback so a
+     * shape this does not recognize degrades to a slightly early measurement rather than none.
+     */
+    public static boolean carriesGeneratedOutput(ObjectMapper jsonMapper, String jsonChunk) {
+        if (jsonChunk == null) {
+            return false;
+        }
+        String data = jsonChunk.strip();
+        if (data.isEmpty() || "[DONE]".equals(data)) {
+            return false;
+        }
+        JsonNode chunk;
+        try {
+            chunk = jsonMapper.readTree(data);
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+        if (chunk == null || !chunk.isObject()) {
+            return false;
+        }
+
+        JsonNode type = chunk.get("type");
+        if (type != null && type.isTextual()) {
+            // Responses API. Deltas carry generated text, tool arguments, or reasoning; the item
+            // and content-part ".added" events mark the moment an output item starts being
+            // produced. Everything else on the stream is lifecycle or terminal bookkeeping.
+            String eventType = type.asText();
+            return eventType.endsWith(".delta") || eventType.endsWith(".added");
+        }
+
+        // Chat completions. Require a field that actually holds generated content: the opening
+        // chunk's delta is {"role":"assistant","content":""}, which is not yet a token.
+        for (JsonNode choice : chunk.path("choices")) {
+            JsonNode delta = choice.path("delta");
+            JsonNode content = delta.get("content");
+            if (content != null && content.isTextual() && !content.asText().isEmpty()) {
+                return true;
+            }
+            if (delta.hasNonNull("tool_calls")
+                    || delta.hasNonNull("function_call")
+                    || delta.hasNonNull("refusal")
+                    || delta.hasNonNull("reasoning_content")
+                    || delta.hasNonNull("reasoning")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isResponsesEvent(JsonNode chunk) {
         JsonNode type = chunk.get("type");
         return type != null && type.isTextual() && type.asText().startsWith(RESPONSES_EVENT_PREFIX);
