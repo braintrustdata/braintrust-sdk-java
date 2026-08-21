@@ -1025,6 +1025,13 @@ public class InstrumentationSemConv {
                 } else if (block.has("image")) {
                     normalized.put("type", "image");
                     changed = true;
+                } else if (block.has("reasoningContent")) {
+                    // Extended thinking (Claude 3.7+ / Nova reasoning models). Mapped to
+                    // Anthropic's block-type name for the same reason toolUse maps to "tool_use":
+                    // the schemas the UI validates against are OpenAI's and Anthropic's, so a
+                    // Bedrock-native name like "reasoning_content" would satisfy neither.
+                    normalized.put("type", "thinking");
+                    changed = true;
                 }
                 normalizedContent.add(normalized);
             } else {

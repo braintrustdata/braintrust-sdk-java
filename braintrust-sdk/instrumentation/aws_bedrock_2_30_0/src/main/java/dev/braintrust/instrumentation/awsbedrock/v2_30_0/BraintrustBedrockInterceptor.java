@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.awsbedrock.v2_30_0;
 
+import dev.braintrust.instrumentation.ConverseStreamAccumulator;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -8,7 +9,6 @@ import io.opentelemetry.context.Context;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -30,9 +30,6 @@ import software.amazon.awssdk.core.interceptor.SdkExecutionAttribute;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamRequest;
-import software.amazon.awssdk.thirdparty.jackson.core.JsonFactory;
-import software.amazon.awssdk.thirdparty.jackson.core.JsonParser;
-import software.amazon.awssdk.thirdparty.jackson.core.JsonToken;
 import software.amazon.eventstream.Message;
 import software.amazon.eventstream.MessageDecoder;
 
@@ -48,8 +45,6 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
             new ExecutionAttribute<>("braintrust.span");
     private static final ExecutionAttribute<String> MODEL_ID_ATTRIBUTE =
             new ExecutionAttribute<>("braintrust.modelId");
-
-    private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
     private final Tracer tracer;
 
@@ -234,21 +229,18 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
     }
 
     /**
-     * Tees the reactive byte stream into a {@link MessageDecoder}. On completion, decodes each
-     * event-stream frame using the AWS SDK's shaded Jackson streaming parser, accumulates the
-     * response content, and hands a synthetic Converse-shaped JSON string to semconv.
+     * Tees the reactive byte stream into a {@link MessageDecoder}, forwarding each decoded
+     * event-stream frame to a {@link ConverseStreamAccumulator}. On completion the accumulator's
+     * reconstructed Converse-shaped body is handed to semconv, so a streaming span carries the same
+     * content-block shapes — text, tool use, reasoning — as a synchronous one.
      */
     private static class TeeingSubscriber implements Subscriber<ByteBuffer> {
         private final Subscriber<? super ByteBuffer> downstream;
         private final Span span;
         private final Tracer tracer;
         private final MessageDecoder decoder = new MessageDecoder();
+        private final ConverseStreamAccumulator accumulator = new ConverseStreamAccumulator();
 
-        // Accumulated incrementally in onNext — no message list retained.
-        private final StringBuilder text = new StringBuilder();
-        private String stopReason = null;
-        private int inputTokens = 0;
-        private int outputTokens = 0;
         private long startNanos;
         private Long timeToFirstTokenNanos = null;
 
@@ -271,28 +263,18 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
             try {
                 decoder.feed(copy);
                 for (Message msg : decoder.getDecodedMessages()) {
-                    var h = msg.getHeaders().get(":event-type");
-                    if (h == null) continue;
-                    String eventType = h.getString();
-                    byte[] payload = msg.getPayload();
-                    switch (eventType) {
-                        case "contentBlockDelta" -> {
-                            String t = parseDeltaText(payload);
-                            if (t != null) {
-                                text.append(t);
-                                if (timeToFirstTokenNanos == null) {
-                                    timeToFirstTokenNanos = System.nanoTime() - startNanos;
-                                }
-                            }
-                        }
-                        case "messageStop" -> stopReason = parseStopReason(payload);
-                        case "metadata" -> {
-                            int[] tokens = parseTokenUsage(payload);
-                            inputTokens = tokens[0];
-                            outputTokens = tokens[1];
-                        }
-                        default -> {}
+                    var header = msg.getHeaders().get(":event-type");
+                    if (header == null) continue;
+                    String eventType = header.getString();
+                    // First content frame marks time-to-first-token, whether the model opened with
+                    // text, a tool call, or a reasoning block.
+                    if (timeToFirstTokenNanos == null
+                            && ("contentBlockDelta".equals(eventType)
+                                    || "contentBlockStart".equals(eventType))) {
+                        timeToFirstTokenNanos = System.nanoTime() - startNanos;
                     }
+                    accumulator.accept(
+                            eventType, new String(msg.getPayload(), StandardCharsets.UTF_8));
                 }
             } catch (Exception e) {
                 log.debug("Failed to feed event-stream decoder", e);
@@ -312,107 +294,13 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
                         tracer,
                         span,
                         InstrumentationSemConv.PROVIDER_NAME_BEDROCK,
-                        buildConverseJson(text.toString(), stopReason, inputTokens, outputTokens),
+                        accumulator.build(),
                         timeToFirstTokenNanos);
             } catch (Exception e) {
                 log.debug("Failed to tag span from streaming response", e);
             } finally {
                 downstream.onComplete();
             }
-        }
-
-        /**
-         * Parses {@code delta.text} from a {@code contentBlockDelta} payload: {@code
-         * {"contentBlockIndex":0,"delta":{"text":"...","type":"text_delta"}}}
-         */
-        private static String parseDeltaText(byte[] payload) throws Exception {
-            try (JsonParser p = JSON_FACTORY.createParser(payload)) {
-                boolean inDelta = false;
-                while (p.nextToken() != null) {
-                    if (p.currentToken() == JsonToken.FIELD_NAME) {
-                        if ("delta".equals(p.currentName())) {
-                            inDelta = true;
-                        } else if (inDelta && "text".equals(p.currentName())) {
-                            p.nextToken();
-                            return p.getText();
-                        }
-                    } else if (p.currentToken() == JsonToken.END_OBJECT) {
-                        inDelta = false;
-                    }
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Parses {@code stopReason} from a {@code messageStop} payload: {@code
-         * {"stopReason":"end_turn"}}
-         */
-        private static String parseStopReason(byte[] payload) throws Exception {
-            try (JsonParser p = JSON_FACTORY.createParser(payload)) {
-                while (p.nextToken() != null) {
-                    if (p.currentToken() == JsonToken.FIELD_NAME
-                            && "stopReason".equals(p.currentName())) {
-                        p.nextToken();
-                        return p.getText();
-                    }
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Parses {@code [inputTokens, outputTokens]} from a {@code metadata} payload: {@code
-         * {"usage":{"inputTokens":N,"outputTokens":M},"metrics":{...}}}
-         */
-        private static int[] parseTokenUsage(byte[] payload) throws Exception {
-            int inputTokens = 0;
-            int outputTokens = 0;
-            try (JsonParser p = JSON_FACTORY.createParser(payload)) {
-                while (p.nextToken() != null) {
-                    if (p.currentToken() == JsonToken.FIELD_NAME) {
-                        if ("inputTokens".equals(p.currentName())) {
-                            p.nextToken();
-                            inputTokens = p.getIntValue();
-                        } else if ("outputTokens".equals(p.currentName())) {
-                            p.nextToken();
-                            outputTokens = p.getIntValue();
-                        }
-                    }
-                }
-            }
-            return new int[] {inputTokens, outputTokens};
-        }
-
-        /**
-         * Builds a synthetic Converse-shaped JSON string matching what {@code tagBedrockResponse}
-         * expects, using the shaded Jackson generator for correct escaping.
-         */
-        private static String buildConverseJson(
-                String text, String stopReason, int inputTokens, int outputTokens)
-                throws Exception {
-            StringWriter sw = new StringWriter();
-            try (var gen = JSON_FACTORY.createGenerator(sw)) {
-                gen.writeStartObject();
-                gen.writeObjectFieldStart("output");
-                gen.writeObjectFieldStart("message");
-                gen.writeStringField("role", "assistant");
-                gen.writeArrayFieldStart("content");
-                gen.writeStartObject();
-                gen.writeStringField("text", text);
-                gen.writeEndObject();
-                gen.writeEndArray();
-                gen.writeEndObject(); // message
-                gen.writeEndObject(); // output
-                gen.writeStringField("stopReason", stopReason != null ? stopReason : "end_turn");
-                gen.writeObjectFieldStart("usage");
-                gen.writeNumberField("inputTokens", inputTokens);
-                gen.writeNumberField("outputTokens", outputTokens);
-                gen.writeNumberField("totalTokens", inputTokens + outputTokens);
-                gen.writeEndObject(); // usage
-                gen.writeEndObject();
-            }
-            return sw.toString();
         }
     }
 }
