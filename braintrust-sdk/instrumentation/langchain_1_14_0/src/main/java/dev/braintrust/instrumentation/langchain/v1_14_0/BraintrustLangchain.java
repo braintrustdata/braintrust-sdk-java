@@ -64,16 +64,27 @@ public final class BraintrustLangchain {
 
             if (context.toolService != null) {
                 // ////// CREATE A SPAN FOR EACH TOOL CALL
+                // toolExecutors() hands back the live map on the AiServiceContext, and that
+                // context outlives build() and is shared with every service already built from
+                // this builder. Wrapping unconditionally would therefore nest a second tracing
+                // executor on the next build — duplicating every tool span, for the earlier
+                // services too — so already-wrapped entries are left alone. Same reasoning as the
+                // `instanceof WrappedHttpClient` guards on the model paths below.
                 for (Map.Entry<String, ToolExecutor> entry :
                         context.toolService.toolExecutors().entrySet()) {
                     String toolName = entry.getKey();
                     ToolExecutor original = entry.getValue();
+                    if (original instanceof TracingToolExecutor) {
+                        log.debug("tool already instrumented. skipping: {}", toolName);
+                        continue;
+                    }
                     entry.setValue(new TracingToolExecutor(original, toolName, tracer));
                 }
 
                 // ////// LINK SPANS ACROSS CONCURRENT TOOL CALLS
                 var underlyingExecutor = context.toolService.executor();
-                if (underlyingExecutor != null) {
+                if (underlyingExecutor != null
+                        && !(underlyingExecutor instanceof OtelContextPassingExecutor)) {
                     aiServices.executeToolsConcurrently(
                             new OtelContextPassingExecutor(underlyingExecutor));
                 }
