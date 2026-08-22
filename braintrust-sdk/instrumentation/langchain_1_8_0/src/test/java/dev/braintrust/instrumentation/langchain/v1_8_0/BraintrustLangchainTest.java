@@ -9,6 +9,7 @@ import dev.braintrust.instrumentation.Instrumenter;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.http.client.sse.ServerSentEvent;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -20,8 +21,10 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
@@ -426,6 +429,131 @@ public class BraintrustLangchainTest {
         assertEquals(1, numServiceMethodSpans, "should be exactly one service call");
         assertTrue(numLLMSpans >= 2, "should be at least two llm spans");
         assertTrue(numToolCallSpans >= 2, "should be at least two tool call spans");
+    }
+
+    /**
+     * A builder's tool-executor map lives on the AiServiceContext and outlives build(), and is
+     * shared with every service already built from that builder. Re-wrapping entries that are
+     * already wrapped would nest a second TracingToolExecutor on each build, so one tool invocation
+     * would emit duplicate — and monotonically increasing — tool spans, including through the
+     * service returned by the first build.
+     */
+    @Test
+    @SneakyThrows
+    void repeatedBuildsDoNotNestToolTracing() {
+        var builder =
+                AiServices.builder(Assistant.class)
+                        .chatModel(
+                                OpenAiChatModel.builder()
+                                        .apiKey(testHarness.openAiApiKey())
+                                        .baseUrl(testHarness.openAiBaseUrl())
+                                        .modelName("gpt-4o-mini")
+                                        .build())
+                        .tools(new WeatherTools())
+                        .executeToolsConcurrently();
+
+        // Auto-instrumentation wraps on every build(); no request is issued by building.
+        builder.build();
+        builder.build();
+        builder.build();
+
+        Object toolService = walkField(walkField(builder, "context"), "toolService");
+        @SuppressWarnings("unchecked")
+        var executors =
+                (Map<String, ?>)
+                        toolService.getClass().getMethod("toolExecutors").invoke(toolService);
+        assertFalse(executors.isEmpty(), "precondition: tools should be registered");
+        executors.forEach(
+                (name, executor) -> {
+                    assertInstanceOf(
+                            TracingToolExecutor.class, executor, name + " should be instrumented");
+                    assertFalse(
+                            walkField(executor, "delegate") instanceof TracingToolExecutor,
+                            name + " should be wrapped once, not once per build()");
+                });
+
+        Object executor = toolService.getClass().getMethod("executor").invoke(toolService);
+        assertInstanceOf(
+                OtelContextPassingExecutor.class, executor, "executor should pass otel context");
+        assertFalse(
+                walkField(executor, "underlying") instanceof OtelContextPassingExecutor,
+                "concurrent-tool executor should be wrapped once, not once per build()");
+    }
+
+    /** Reads a private field declared anywhere in the object's class hierarchy. */
+    @SneakyThrows
+    private static Object walkField(Object obj, String name) {
+        for (Class<?> c = obj.getClass(); c != null; c = c.getSuperclass()) {
+            try {
+                var field = c.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(obj);
+            } catch (NoSuchFieldException searchSuperclass) {
+                // declared further up the hierarchy
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    /**
+     * A chat-completions stream signals an in-stream failure with an SSE frame named {@code error}.
+     * LangChain4j hands that to the caller's own error handler and lets the transport finish
+     * normally, so this listener's onError is never reached — without retaining the in-band failure
+     * the span would be finalized as a success.
+     */
+    @Test
+    @SneakyThrows
+    void inBandStreamFailureMarksTheSpanAsAnError() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("Chat Completion").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"object\":\"chat.completion.chunk\",\"model\":\"gpt-4o-mini\","
+                                + "\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\","
+                                + "\"content\":\"\"}}]}"));
+        listener.onEvent(
+                new ServerSentEvent(
+                        "error",
+                        "{\"error\":{\"message\":\"The server is overloaded.\","
+                                + "\"type\":\"server_error\"}}"));
+        // langchain4j closes the stream normally after delivering the failure.
+        listener.onClose();
+
+        var exported = testHarness.awaitExportedSpans(1).get(0);
+        assertEquals(
+                StatusCode.ERROR,
+                exported.getStatus().getStatusCode(),
+                "a failed generation must not be recorded as a successful span");
+        assertEquals("The server is overloaded.", exported.getStatus().getDescription());
+    }
+
+    /** The mirror case: a stream that completes normally leaves the span status alone. */
+    @Test
+    @SneakyThrows
+    void healthyStreamLeavesTheSpanStatusUnset() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("Chat Completion").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"object\":\"chat.completion.chunk\",\"model\":\"gpt-4o-mini\","
+                                + "\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Paris\"},"
+                                + "\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5,"
+                                + "\"completion_tokens\":1,\"total_tokens\":6}}"));
+        listener.onEvent(new ServerSentEvent(null, "[DONE]"));
+        listener.onClose();
+
+        var exported = testHarness.awaitExportedSpans(1).get(0);
+        assertEquals(StatusCode.UNSET, exported.getStatus().getStatusCode());
     }
 
     /** AI Service interface for the assistant */

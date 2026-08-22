@@ -9,6 +9,7 @@ import dev.braintrust.instrumentation.Instrumenter;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.http.client.sse.ServerSentEvent;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -22,6 +23,7 @@ import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.Map;
@@ -851,6 +853,210 @@ public class BraintrustLangchainTest {
         var field = obj.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(obj);
+    }
+
+    /**
+     * A builder's tool-executor map lives on the AiServiceContext and outlives build(), and is
+     * shared with every service already built from that builder. Re-wrapping entries that are
+     * already wrapped would nest a second TracingToolExecutor on each build, so one tool invocation
+     * would emit duplicate — and monotonically increasing — tool spans, including through the
+     * service returned by the first build.
+     */
+    @Test
+    @SneakyThrows
+    void repeatedBuildsDoNotNestToolTracing() {
+        var builder =
+                AiServices.builder(Assistant.class)
+                        .chatModel(
+                                OpenAiChatModel.builder()
+                                        .apiKey(testHarness.openAiApiKey())
+                                        .baseUrl(testHarness.openAiBaseUrl())
+                                        .modelName("gpt-4o-mini")
+                                        .build())
+                        .tools(new WeatherTools())
+                        .executeToolsConcurrently();
+
+        // Auto-instrumentation wraps on every build(); no request is issued by building.
+        builder.build();
+        builder.build();
+        builder.build();
+
+        Object toolService = walkField(walkField(builder, "context"), "toolService");
+        @SuppressWarnings("unchecked")
+        var executors =
+                (Map<String, ?>)
+                        toolService.getClass().getMethod("toolExecutors").invoke(toolService);
+        assertFalse(executors.isEmpty(), "precondition: tools should be registered");
+        executors.forEach(
+                (name, executor) -> {
+                    assertInstanceOf(
+                            TracingToolExecutor.class, executor, name + " should be instrumented");
+                    assertFalse(
+                            walkField(executor, "delegate") instanceof TracingToolExecutor,
+                            name + " should be wrapped once, not once per build()");
+                });
+
+        Object executor = toolService.getClass().getMethod("executor").invoke(toolService);
+        assertInstanceOf(
+                OtelContextPassingExecutor.class, executor, "executor should pass otel context");
+        assertFalse(
+                walkField(executor, "underlying") instanceof OtelContextPassingExecutor,
+                "concurrent-tool executor should be wrapped once, not once per build()");
+    }
+
+    /** Reads a private field declared anywhere in the object's class hierarchy. */
+    @SneakyThrows
+    private static Object walkField(Object obj, String name) {
+        for (Class<?> c = obj.getClass(); c != null; c = c.getSuperclass()) {
+            try {
+                var field = c.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(obj);
+            } catch (NoSuchFieldException searchSuperclass) {
+                // declared further up the hierarchy
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    /**
+     * OpenAI reports a failed generation as an ordinary event on a stream that then closes cleanly.
+     * LangChain4j hands that event to the caller's own response handler and lets the transport
+     * finish normally, so this listener's onError is never reached — without retaining the in-band
+     * failure the span would be finalized as a success.
+     */
+    @Test
+    @SneakyThrows
+    void inBandStreamFailureMarksTheSpanAsAnError() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("responses").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\","
+                                + "\"model\":\"gpt-4o-mini\",\"status\":\"in_progress\"}}"));
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.failed\",\"response\":{\"id\":\"resp_1\","
+                                + "\"model\":\"gpt-4o-mini\",\"status\":\"failed\","
+                                + "\"error\":{\"code\":\"server_error\",\"message\":\"The server"
+                                + " had an error while processing your request.\"}}}"));
+        // langchain4j closes the stream normally after delivering the failure.
+        listener.onClose();
+
+        var exported = testHarness.awaitExportedSpans(1).get(0);
+        assertEquals(
+                StatusCode.ERROR,
+                exported.getStatus().getStatusCode(),
+                "a failed generation must not be recorded as a successful span");
+        assertEquals(
+                "The server had an error while processing your request.",
+                exported.getStatus().getDescription());
+    }
+
+    /** The mirror case: a stream that completes normally leaves the span status alone. */
+    @Test
+    @SneakyThrows
+    void healthyStreamLeavesTheSpanStatusUnset() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("responses").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.output_text.delta\",\"item_id\":\"msg_1\","
+                                + "\"output_index\":0,\"delta\":\"Paris\"}"));
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.completed\",\"response\":{\"id\":\"resp_1\","
+                                + "\"model\":\"gpt-4o-mini\",\"status\":\"completed\","
+                                + "\"output\":[{\"id\":\"msg_1\",\"type\":\"message\","
+                                + "\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\","
+                                + "\"text\":\"Paris\"}]}],\"usage\":{\"input_tokens\":5,"
+                                + "\"output_tokens\":1,\"total_tokens\":6}}}"));
+        listener.onClose();
+
+        var exported = testHarness.awaitExportedSpans(1).get(0);
+        assertEquals(StatusCode.UNSET, exported.getStatus().getStatusCode());
+    }
+
+    /**
+     * A Responses stream that fails before generating anything still emits lifecycle events, so a
+     * first-payload fallback would publish time-to-response-metadata as a token latency. There was
+     * no first token, so there must be no metric.
+     */
+    @Test
+    @SneakyThrows
+    void streamThatProducesNoOutputReportsNoTimeToFirstToken() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("responses").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.created\",\"response\":{\"id\":\"resp_1\","
+                                + "\"model\":\"gpt-4o-mini\",\"status\":\"in_progress\"}}"));
+        listener.onEvent(
+                new ServerSentEvent(
+                        null,
+                        "{\"type\":\"response.failed\",\"response\":{\"id\":\"resp_1\","
+                                + "\"model\":\"gpt-4o-mini\",\"status\":\"failed\","
+                                + "\"error\":{\"message\":\"boom\"}}}"));
+        listener.onClose();
+
+        var metricsJson =
+                testHarness
+                        .awaitExportedSpans(1)
+                        .get(0)
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("braintrust.metrics"));
+        // Asserted unconditionally: absent metrics and present-but-without-TTFT are both correct,
+        // but an `if (metricsJson != null)` guard would let the case pass without asserting.
+        boolean reportedTtft =
+                metricsJson != null && JSON_MAPPER.readTree(metricsJson).has("time_to_first_token");
+        assertFalse(
+                reportedTtft, "a stream that generated nothing must not report a token latency");
+    }
+
+    /**
+     * The fallback the recognition gate must not break: for a stream shape the accumulator does not
+     * understand, approximating TTFT from the first payload beats dropping a metric the spec
+     * requires on streaming spans.
+     */
+    @Test
+    @SneakyThrows
+    void unrecognizedStreamShapeStillReportsTimeToFirstToken() {
+        var tracer = testHarness.openTelemetry().getTracer("test-tracer");
+        var span = tracer.spanBuilder("responses").startSpan();
+        var listener =
+                new WrappedHttpClient.WrappedServerSentEventListener(
+                        throwable -> {}, span, "openai", tracer);
+
+        listener.onEvent(new ServerSentEvent(null, "{\"some_future_wire_shape\":\"hello\"}"));
+        listener.onClose();
+
+        var metricsJson =
+                testHarness
+                        .awaitExportedSpans(1)
+                        .get(0)
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("braintrust.metrics"));
+        assertNotNull(metricsJson, "an unrecognized stream should still be timed");
+        assertTrue(
+                JSON_MAPPER.readTree(metricsJson).get("time_to_first_token").asDouble() >= 0.0,
+                "unrecognized shapes fall back to the first payload timestamp");
     }
 
     /** AI Service interface for the assistant */
