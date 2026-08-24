@@ -199,11 +199,14 @@ public class InstrumentationSemConv {
     @SneakyThrows
     private static void tagOpenAIResponse(
             Span span, JsonNode responseJson, @Nullable Long timeToFirstTokenNanoseconds) {
-        // Output — chat completions API uses "choices"; Responses API uses "output"
+        // Output — chat completions API uses "choices"; Responses API uses "output"; audio
+        // transcriptions and translations return a text-keyed object.
         if (responseJson.has("choices")) {
             span.setAttribute("braintrust.output_json", toJson(responseJson.get("choices")));
         } else if (responseJson.has("output")) {
             span.setAttribute("braintrust.output_json", toJson(responseJson.get("output")));
+        } else if (responseJson.has("text")) {
+            span.setAttribute("braintrust.output_json", toJson(responseJson));
         }
 
         Map<String, Object> metrics = new HashMap<>();
