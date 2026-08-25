@@ -3,7 +3,7 @@ package dev.braintrust.sdkspecimpl;
 import dev.braintrust.sdkspecimpl.clients.AnthropicSpecClient;
 import dev.braintrust.sdkspecimpl.clients.BedrockSpecClient;
 import dev.braintrust.sdkspecimpl.clients.GoogleSpecClient;
-import dev.braintrust.sdkspecimpl.clients.LangChainOpenAiSpecClient;
+import dev.braintrust.sdkspecimpl.clients.LangChain114OpenAiSpecClient;
 import dev.braintrust.sdkspecimpl.clients.OpenAiSpecClient;
 import dev.braintrust.sdkspecimpl.clients.SpringAi1AnthropicSpecClient;
 import dev.braintrust.sdkspecimpl.clients.SpringAi1OpenAiSpecClient;
@@ -52,12 +52,23 @@ public final class SpecClientRegistry {
     private static final List<SpecClient> CLIENTS =
             Stream.of(
                             (SpecClient) new OpenAiSpecClient(),
-                            new LangChainOpenAiSpecClient(),
+                            new LangChain114OpenAiSpecClient(),
                             new SpringAi1OpenAiSpecClient(),
                             new AnthropicSpecClient(),
                             new SpringAi1AnthropicSpecClient(),
                             new BedrockSpecClient(),
                             new GoogleSpecClient(),
+                            new IsolatedClientStub(
+                                    "langchain1.8-openai",
+                                    "openai",
+                                    // langchain_1_8_0 predates the OpenAI Responses API, so this
+                                    // client is chat-completions only; langchain1.14-openai covers
+                                    // /v1/responses.
+                                    Set.of("/v1/chat/completions"),
+                                    Set.of(),
+                                    new SpecClient.Isolation(
+                                            "btx.langchain18.classpath",
+                                            "dev.braintrust.sdkspecimpl.langchain18.LangChain18OpenAiSpecClient")),
                             new IsolatedClientStub(
                                     "springai2-openai",
                                     "openai",

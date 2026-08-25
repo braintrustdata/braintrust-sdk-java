@@ -1,0 +1,42 @@
+{
+  "id" : "1976c326-bdcd-31e2-950f-6eb1f62a39e8",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Do a web search for news about Moderna. What are they up to lately?\"\n    } ]\n  } ],\n  \"stream\" : true,\n  \"store\" : false,\n  \"temperature\" : 0.0,\n  \"tools\" : [ {\n    \"type\" : \"web_search_preview\"\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-1967c8c76482.txt",
+    "headers" : {
+      "x-request-id" : "req_d184a4289ecd4b57b7046cbb3b18d606",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a2eb7954095a1e0b-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "Date" : "Fri, 21 Aug 2026 17:49:22 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=CvIt0i5vFgNjaxNzeUOwBOyP1JlK0EpMl2zGBOpSJI4-1787334561.9305537-1.0.1.1-RHAypL0fW_Kn7t3IyddwQNW8gJovnNW2K4O4Z0B4sy_Ys1I58dp5R4gPk.LBUFO5Fqg00nuInuUwGNGugK03mpTa1M_YeTkbG144XWgNPOaFn3RG..KNkWTO.UZOPq6x; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 21 Aug 2026 18:19:22 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "130",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "1976c326-bdcd-31e2-950f-6eb1f62a39e8",
+  "persistent" : true,
+  "insertionIndex" : 61
+}

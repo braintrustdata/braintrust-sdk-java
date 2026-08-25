@@ -1,7 +1,7 @@
 package dev.braintrust.examples;
 
 import dev.braintrust.Braintrust;
-import dev.braintrust.instrumentation.langchain.BraintrustLangchain;
+import dev.braintrust.instrumentation.langchain.v1_14_0.BraintrustLangchain;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;

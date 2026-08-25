@@ -1,7 +1,7 @@
-package dev.braintrust.sdkspecimpl.clients;
+package dev.braintrust.sdkspecimpl.langchain18;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.braintrust.instrumentation.langchain.BraintrustLangchain;
+import dev.braintrust.instrumentation.langchain.v1_8_0.BraintrustLangchain;
 import dev.braintrust.sdkspecimpl.LlmSpanSpec;
 import dev.braintrust.sdkspecimpl.SpecClient;
 import dev.braintrust.sdkspecimpl.SpecClientContext;
@@ -11,27 +11,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-/** LangChain4j OpenAI client: chat completions (sync + streaming). */
-public final class LangChainOpenAiSpecClient implements SpecClient {
+/**
+ * LangChain4j OpenAI client for langchain4j 1.8.0–1.13.x, exercising the {@code langchain_1_8_0}
+ * instrumentation module: chat completions (sync + streaming) only.
+ *
+ * <p>That module predates the OpenAI Responses API, so there is no {@code /v1/responses} coverage
+ * here — {@code LangChain114OpenAiSpecClient} owns that. Runs inside the isolated {@code
+ * langchain18} classloader (see {@code SpecClient.isolation()}) because langchain4j &lt; 1.14.0 and
+ * >= 1.14.0 share Maven coordinates and package names and so cannot coexist on one classpath. Spec
+ * filtering lives on the registry-side {@code IsolatedClientStub}, not here.
+ */
+public final class LangChain18OpenAiSpecClient implements SpecClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String id() {
-        return "langchain-openai";
+        return "langchain1.8-openai";
     }
 
     @Override
     public String provider() {
         return "openai";
-    }
-
-    @Override
-    public boolean supports(LlmSpanSpec spec) {
-        // Chat completions only: langchain4j-open-ai 1.9.x has no OpenAI Responses API
-        // (/v1/responses); its internal OpenAiClient exposes only chat/completion/embedding/
-        // moderation/image. Responses specs are covered by the raw OpenAiSpecClient.
-        return "/v1/chat/completions".equals(spec.endpoint());
     }
 
     @Override

@@ -403,7 +403,7 @@ public class BraintrustLangchainTest {
             String spanName = span.getName();
             var attributes = span.getAttributes();
 
-            if (spanName.equals("chat")) {
+            if (spanName.equals("Assistant.chat")) {
                 numServiceMethodSpans++;
             } else if (spanName.equals("Chat Completion")) {
                 numLLMSpans++;

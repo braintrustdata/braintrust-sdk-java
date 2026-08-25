@@ -1,0 +1,137 @@
+{
+  "id": "resp_09c031fc6e4a4e14016a8886039cdc87d0bbc2d0ca8c59d1eb",
+  "object": "response",
+  "created_at": 1787332099,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1787332101,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-4o-mini-2024-07-18",
+  "moderation": null,
+  "output": [
+    {
+      "id": "fc_09c031fc6e4a4e14016a88860516cc87d0950dfd08dbbc162e",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"arg0\":\"Paris\"}",
+      "call_id": "call_bSgzx73lJpOic45Tz17TF5Zo",
+      "name": "getWeather"
+    },
+    {
+      "id": "fc_09c031fc6e4a4e14016a88860516e487d09299471312720fc5",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"arg0\":\"New York\"}",
+      "call_id": "call_IESRKUeQQSqSxxh2op9jKdrL",
+      "name": "getWeather"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": null,
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [
+    {
+      "type": "function",
+      "description": "Get current weather for a location",
+      "name": "getWeather",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "arg0"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    },
+    {
+      "type": "function",
+      "description": "Get weather forecast for next N days",
+      "name": "getForecast",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          },
+          "arg1": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "arg0",
+          "arg1"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 78,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 48,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 126
+  },
+  "user": null,
+  "metadata": {}
+}

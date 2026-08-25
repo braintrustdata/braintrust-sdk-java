@@ -3,13 +3,13 @@ application {
 }
 
 dependencies {
-  implementation project(':braintrust-sdk:instrumentation:langchain_1_8_0')
-  implementation 'dev.langchain4j:langchain4j:1.9.1'
-  implementation 'dev.langchain4j:langchain4j-open-ai:1.9.1'
+  implementation project(':braintrust-sdk:instrumentation:langchain_1_14_0')
+  implementation 'dev.langchain4j:langchain4j:1.19.0'
+  implementation 'dev.langchain4j:langchain4j-open-ai:1.19.0'
 }
 
 run {
-  description = 'Run the LangChain4j AI Services example. NOTE: this requires OPENAI_API_KEY to be exported and will make a small call to openai, using your tokens'
+  description = 'Run the LangChain4j AI Services example: one agent on chat completions, one on the responses API. NOTE: this requires OPENAI_API_KEY to be exported and will make a few small calls to openai, using your tokens'
   debugOptions {
     enabled = true
     port = 5566

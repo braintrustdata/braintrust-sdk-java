@@ -1,0 +1,69 @@
+// Java plugin, toolchain (Java 17 / Adoptium), options.release, and repositories
+// are inherited from the parent's subprojects {} block.
+
+// Minimum langchain4j version that ships the OpenAI Responses API
+// (OpenAiResponsesChatModel / OpenAiResponsesStreamingChatModel, first released in 1.14.0).
+def langchainVersion = '1.14.0'
+// Test against a recent release to exercise forward compatibility (and match the version
+// used to record btx cassettes).
+def langchainTestVersion = '1.19.0'
+
+muzzle {
+  pass {
+    group = 'dev.langchain4j'
+    module = 'langchain4j'
+    versions = "[${langchainVersion},)"
+    extraDependency 'dev.langchain4j:langchain4j-http-client'
+    extraDependency 'dev.langchain4j:langchain4j-open-ai'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+  }
+  // The Responses API classes this module targets did not exist before 1.14.0, so it must
+  // not apply to older releases (langchain_1_8_0 covers [1.8.0,1.14.0)).
+  fail {
+    group = 'dev.langchain4j'
+    module = 'langchain4j'
+    pinVersions '1.13.0'
+    extraDependency 'dev.langchain4j:langchain4j-http-client'
+    extraDependency 'dev.langchain4j:langchain4j-open-ai'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+  }
+}
+
+dependencies {
+  compileOnly project(':braintrust-java-agent:instrumenter')
+  implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  implementation 'com.google.code.findbugs:jsr305:3.0.2' // for @Nullable annotations
+  implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+  implementation project(':braintrust-sdk')
+
+  // ByteBuddy for ElementMatcher types used in instrumentation definitions
+  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+
+  // Target libraries — compileOnly because they will be on the app classpath at runtime
+  compileOnly "dev.langchain4j:langchain4j:${langchainVersion}"
+  compileOnly "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
+  compileOnly "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
+
+  // Test dependencies
+  testImplementation(testFixtures(project(":test-harness")))
+  testImplementation project(':braintrust-java-agent:instrumenter')
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+  testImplementation "dev.langchain4j:langchain4j:${langchainTestVersion}"
+  testImplementation "dev.langchain4j:langchain4j-http-client:${langchainTestVersion}"
+  testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainTestVersion}"
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+    exceptionFormat "full"
+  }
+}

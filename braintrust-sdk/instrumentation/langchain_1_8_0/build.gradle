@@ -4,10 +4,23 @@
 def langchainVersion = '1.8.0'
 
 muzzle {
+  // Upper-bounded below 1.14.0: from 1.14.0 on the OpenAI Responses API exists and the
+  // langchain_1_14_0 module takes over (it also covers chat completions).
   pass {
     group = 'dev.langchain4j'
     module = 'langchain4j'
-    versions = '[1.8.0,)'
+    versions = '[1.8.0,1.14.0)'
+    extraDependency 'dev.langchain4j:langchain4j-http-client'
+    extraDependency 'dev.langchain4j:langchain4j-open-ai'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+  }
+  // Assert the classLoaderMatcher rejects 1.14.0+ so the two langchain modules never both
+  // instrument OpenAiChatModel on the same classloader.
+  fail {
+    group = 'dev.langchain4j'
+    module = 'langchain4j'
+    pinVersions '1.14.0'
     extraDependency 'dev.langchain4j:langchain4j-http-client'
     extraDependency 'dev.langchain4j:langchain4j-open-ai'
     extraDependency 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'

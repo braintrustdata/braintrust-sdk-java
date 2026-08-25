@@ -1,0 +1,204 @@
+{
+  "id": "resp_0c3ea78a41204e80016a888606758487d08aefcf49c7f9c6b3",
+  "object": "response",
+  "created_at": 1787332102,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1787332108,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-4o-2024-08-06",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_0c3ea78a41204e80016a888607544c87d09a067faaef412ce5",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "Moderna latest news October 2023"
+        ],
+        "query": "Moderna latest news October 2023"
+      }
+    },
+    {
+      "id": "msg_0c3ea78a41204e80016a88860859e487d0b30f080a7beea399",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 643,
+              "start_index": 550,
+              "title": "Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test",
+              "url": "https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 1135,
+              "start_index": 1042,
+              "title": "New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine",
+              "url": "https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 1650,
+              "start_index": 1446,
+              "title": "Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth \u2014 TradingView News",
+              "url": "https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2047,
+              "start_index": 1875,
+              "title": "Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test",
+              "url": "https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2253,
+              "start_index": 2085,
+              "title": "FDA approves first mRNA vaccine for seasonal flu",
+              "url": "https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2454,
+              "start_index": 2290,
+              "title": "New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine",
+              "url": "https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "Moderna has recently achieved significant milestones in its mRNA-based therapies:\n\n**1. mRNA-Based Cancer Vaccine Success**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA cancer vaccine, intismeran. Tested alongside Merck's immunotherapy drug Keytruda in over 1,100 melanoma patients, the combination therapy significantly reduced the recurrence and spread of high-risk skin cancer post-surgery. This breakthrough led to a substantial increase in Moderna's stock value. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**2. FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This marks the first mRNA flu vaccine to receive FDA approval, offering a more adaptable response to flu virus mutations. The approval followed a unanimous advisory committee vote, despite initial regulatory challenges. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**3. Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. The company reiterated plans to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": null,
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "function",
+      "description": "Get current weather for a location",
+      "name": "getWeather",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "arg0"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    },
+    {
+      "type": "function",
+      "description": "Get weather forecast for next N days",
+      "name": "getForecast",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          },
+          "arg1": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "arg0",
+          "arg1"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    },
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "medium",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 378,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 630,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 1008
+  },
+  "user": null,
+  "metadata": {}
+}

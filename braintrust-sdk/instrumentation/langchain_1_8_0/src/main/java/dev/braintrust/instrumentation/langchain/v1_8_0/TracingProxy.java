@@ -11,7 +11,8 @@ class TracingProxy {
     /**
      * Use a java {@link Proxy} to wrap a service interface methods with spans.
      *
-     * <p>Each interface method will create a span with the same name as the method.
+     * <p>Each interface method will create a span named {@code <interface>.<method>} (e.g. {@code
+     * Assistant.chat}), so agents sharing a method name stay distinguishable on a trace.
      */
     @SuppressWarnings("unchecked")
     public static <T> T create(Class<T> serviceInterface, T service, Tracer tracer) {
@@ -25,7 +26,9 @@ class TracingProxy {
                                 return method.invoke(service, args);
                             }
 
-                            Span span = tracer.spanBuilder(method.getName()).startSpan();
+                            String spanName =
+                                    serviceInterface.getSimpleName() + "." + method.getName();
+                            Span span = tracer.spanBuilder(spanName).startSpan();
                             try (Scope ignored = span.makeCurrent()) {
                                 method.setAccessible(true);
                                 return method.invoke(service, args);

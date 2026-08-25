@@ -1,0 +1,1128 @@
+event: response.created
+data: {"type":"response.created","response":{"id":"resp_04fa46b17a39180a016a888fa20f2c87d0a86633063307bf6a","object":"response","created_at":1787334562,"status":"in_progress","background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-2024-08-06","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"in_memory","reasoning":{"context":null,"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":0.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"web_search_preview","search_content_types":["text"],"search_context_size":"medium","user_location":{"type":"approximate","city":null,"country":"US","region":null,"timezone":null}}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":0}
+
+event: response.in_progress
+data: {"type":"response.in_progress","response":{"id":"resp_04fa46b17a39180a016a888fa20f2c87d0a86633063307bf6a","object":"response","created_at":1787334562,"status":"in_progress","background":false,"completed_at":null,"error":null,"frequency_penalty":0.0,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-2024-08-06","moderation":null,"output":[],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"in_memory","reasoning":{"context":null,"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":false,"temperature":0.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":0}},"tools":[{"type":"web_search_preview","search_content_types":["text"],"search_context_size":"medium","user_location":{"type":"approximate","city":null,"country":"US","region":null,"timezone":null}}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}},"sequence_number":1}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","item":{"id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","type":"web_search_call","status":"in_progress","action":{"type":"search"}},"output_index":0,"sequence_number":2}
+
+event: response.web_search_call.in_progress
+data: {"type":"response.web_search_call.in_progress","item_id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","output_index":0,"sequence_number":3}
+
+event: response.web_search_call.searching
+data: {"type":"response.web_search_call.searching","item_id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","output_index":0,"sequence_number":4}
+
+event: response.web_search_call.completed
+data: {"type":"response.web_search_call.completed","item_id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","output_index":0,"sequence_number":5}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","item":{"id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","type":"web_search_call","status":"completed","action":{"type":"search","queries":["Moderna news October 2023"],"query":"Moderna news October 2023"}},"output_index":0,"sequence_number":6}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","item":{"id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","type":"message","status":"in_progress","content":[],"role":"assistant"},"output_index":1,"sequence_number":7}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""},"sequence_number":8}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Mod","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Dc3pf1MOJnzLS","output_index":1,"sequence_number":9}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"erna","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zY8GyaogrFC0","output_index":1,"sequence_number":10}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" has","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"fcg7ET10k7K7","output_index":1,"sequence_number":11}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" recently","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LuLgVF5","output_index":1,"sequence_number":12}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" achieved","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"wPLKSIa","output_index":1,"sequence_number":13}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" significant","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"DcJD","output_index":1,"sequence_number":14}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" milestones","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"nBUNW","output_index":1,"sequence_number":15}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"c9bPDKJqoxViK","output_index":1,"sequence_number":16}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" both","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ZLKnLBkUA1r","output_index":1,"sequence_number":17}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" oncology","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"judqKXA","output_index":1,"sequence_number":18}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"3vrXbTXj15T1","output_index":1,"sequence_number":19}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" infectious","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5yoBs","output_index":1,"sequence_number":20}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" disease","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"FgUz1cdn","output_index":1,"sequence_number":21}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" prevention","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Ea60q","output_index":1,"sequence_number":22}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":":","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"RRtMRAJJ1my52oi","output_index":1,"sequence_number":23}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"daGLt9kQE0wfSrQ","output_index":1,"sequence_number":24}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n**","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ugr1tVvCs36rr","output_index":1,"sequence_number":25}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Break","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"PA1xaxoehXn","output_index":1,"sequence_number":26}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"through","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"DiQf2PwL0","output_index":1,"sequence_number":27}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"PxIAPIDS72mZ0","output_index":1,"sequence_number":28}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"KtzUOSPSphhoNC","output_index":1,"sequence_number":29}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"FRJMc4Vpcuhsn","output_index":1,"sequence_number":30}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-Based","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"waxNzRiNsM","output_index":1,"sequence_number":31}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Cancer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"s0VPL7eWQ","output_index":1,"sequence_number":32}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Treatment","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"tHQXso","output_index":1,"sequence_number":33}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"**\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8nBR7Vx18PdOi","output_index":1,"sequence_number":34}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"W1vH3mLXMqeLX9D","output_index":1,"sequence_number":35}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Mod","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7gyQHOcbGvJah","output_index":1,"sequence_number":36}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"erna","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"IJaYRkkkt48l","output_index":1,"sequence_number":37}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Mylj3PrIiMu6tWe","output_index":1,"sequence_number":38}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6HH4yAiIrAAJc","output_index":1,"sequence_number":39}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" collaboration","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Lm","output_index":1,"sequence_number":40}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" with","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"INjiVurJ6p2","output_index":1,"sequence_number":41}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Mer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"49ZcfbzIe6Ld","output_index":1,"sequence_number":42}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"ck","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kH62csueNpbmeT","output_index":1,"sequence_number":43}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jVRFyypj7jHbdtc","output_index":1,"sequence_number":44}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" announced","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"V5QAs5","output_index":1,"sequence_number":45}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" promising","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"gPG0mF","output_index":1,"sequence_number":46}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" results","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"HSqGvF1w","output_index":1,"sequence_number":47}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" from","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"uaqOJzdajvO","output_index":1,"sequence_number":48}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"rUpzXnOw4foojj","output_index":1,"sequence_number":49}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" late","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"cSjQpJ262ur","output_index":1,"sequence_number":50}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-stage","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ePZGVQLYm7","output_index":1,"sequence_number":51}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" clinical","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GlhnV0h","output_index":1,"sequence_number":52}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" trial","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"n7m9sF7lEx","output_index":1,"sequence_number":53}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"u8REquAn1QKd7","output_index":1,"sequence_number":54}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" their","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"yg4A9D8F8U","output_index":1,"sequence_number":55}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" personalized","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"F5g","output_index":1,"sequence_number":56}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Tg3iewTMrxDf4Z","output_index":1,"sequence_number":57}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"pZcRHtch4qIKm","output_index":1,"sequence_number":58}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-based","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"57XyA2dgkC","output_index":1,"sequence_number":59}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" cancer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GJsmIi8c4","output_index":1,"sequence_number":60}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"L1MoVXqn","output_index":1,"sequence_number":61}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jn5GM0xWmEWNFf3","output_index":1,"sequence_number":62}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" int","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"w1jxKdR8Dthd","output_index":1,"sequence_number":63}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"is","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"hpkoRvz6MBypuC","output_index":1,"sequence_number":64}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"mer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"lu6PpgeNYe5f6","output_index":1,"sequence_number":65}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"an","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"uSFv5mJHdkNAF0","output_index":1,"sequence_number":66}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9OGeoPHgd71Fu2Q","output_index":1,"sequence_number":67}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"s6cu3jSjqRKaIAe","output_index":1,"sequence_number":68}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"This","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GJPbyyZAMLBW","output_index":1,"sequence_number":69}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"C7xXY4ex","output_index":1,"sequence_number":70}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6pSvdPh3GGMs0Tx","output_index":1,"sequence_number":71}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" tailored","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GMeIxhd","output_index":1,"sequence_number":72}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"2QDVOF7zyFtZg","output_index":1,"sequence_number":73}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" individual","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"pfCju","output_index":1,"sequence_number":74}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" patients","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Qd121DK","output_index":1,"sequence_number":75}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" based","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ZarQ1fbyr6","output_index":1,"sequence_number":76}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" on","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kY87a5vR3AdvB","output_index":1,"sequence_number":77}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" specific","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"3ZNILhp","output_index":1,"sequence_number":78}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" tumor","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"V8SsAvWObI","output_index":1,"sequence_number":79}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" mutations","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"rN64Po","output_index":1,"sequence_number":80}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"F9aswXPEgR9J9MV","output_index":1,"sequence_number":81}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" was","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"acvAZp0jwfo0","output_index":1,"sequence_number":82}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" tested","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"82ZHpbyCO","output_index":1,"sequence_number":83}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" alongside","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7ECqKM","output_index":1,"sequence_number":84}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Mer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"m7535TMaC2ue","output_index":1,"sequence_number":85}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"ck","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zzjOtJaZsVw61N","output_index":1,"sequence_number":86}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"'s","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"EeMXuOmDUNvYoB","output_index":1,"sequence_number":87}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" immun","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"UzimI0CtWC","output_index":1,"sequence_number":88}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"otherapy","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"UAr1JP3v","output_index":1,"sequence_number":89}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" drug","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"PdAh2vbVkgu","output_index":1,"sequence_number":90}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"iQSoeOW1T2RIQ0o","output_index":1,"sequence_number":91}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Key","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sRbgCh6Ks377","output_index":1,"sequence_number":92}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"tr","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"tyanbizDfdmfIq","output_index":1,"sequence_number":93}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"uda","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"wJJr1fk7vfNm3","output_index":1,"sequence_number":94}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"fpt5SH26R4pgo0T","output_index":1,"sequence_number":95}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"RnZODU7iq1nWM","output_index":1,"sequence_number":96}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" over","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"SQLMnWciWCT","output_index":1,"sequence_number":97}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"nmdaca9CHxKzYPo","output_index":1,"sequence_number":98}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"1","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"eHhAWE8vxZye4Lu","output_index":1,"sequence_number":99}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"bdjSYKZ6ouKi7L9","output_index":1,"sequence_number":100}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"100","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"s2oge40kgvDfk","output_index":1,"sequence_number":101}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" high","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"S7UPsaeU8d5","output_index":1,"sequence_number":102}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-risk","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"xamea6fVJ3J","output_index":1,"sequence_number":103}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" melanoma","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"IYZAAZf","output_index":1,"sequence_number":104}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" patients","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"eLGf1Rh","output_index":1,"sequence_number":105}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"msrMjXxjmgB1kqO","output_index":1,"sequence_number":106}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"pWikIAhc9plfsN7","output_index":1,"sequence_number":107}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"The","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"BEQ6767YG4Fyo","output_index":1,"sequence_number":108}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" combination","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"QhB8","output_index":1,"sequence_number":109}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" therapy","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Sexd3jru","output_index":1,"sequence_number":110}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" demonstrated","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"on7","output_index":1,"sequence_number":111}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"FuTgJ7Qt9o9MH0","output_index":1,"sequence_number":112}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" statistically","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Z1","output_index":1,"sequence_number":113}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" significant","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"mAuU","output_index":1,"sequence_number":114}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" reduction","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"azE9Km","output_index":1,"sequence_number":115}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6oVtHy4TcRPQH","output_index":1,"sequence_number":116}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" cancer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"OKLW5k8ja","output_index":1,"sequence_number":117}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" recurrence","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"XTwKq","output_index":1,"sequence_number":118}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"BsLZ51xKj42h","output_index":1,"sequence_number":119}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" metast","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LfZuPeelq","output_index":1,"sequence_number":120}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"asis","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7wCHvdQ5Nean","output_index":1,"sequence_number":121}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" compared","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"0ctiADT","output_index":1,"sequence_number":122}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"YrmSA6Kfs6tPV","output_index":1,"sequence_number":123}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Key","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LSov9CSgH7Ec","output_index":1,"sequence_number":124}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"tr","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"cYQDRLNP3n2WRJ","output_index":1,"sequence_number":125}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"uda","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9PthSVU229N6x","output_index":1,"sequence_number":126}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" alone","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"0Bpp9zIes6","output_index":1,"sequence_number":127}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"PEyN1GdWHV93T87","output_index":1,"sequence_number":128}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8KFYOuzuq1PDrlN","output_index":1,"sequence_number":129}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"These","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"uO4ykwvVUxK","output_index":1,"sequence_number":130}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" findings","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"l71eGJS","output_index":1,"sequence_number":131}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" mark","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"pOuLlA6pUve","output_index":1,"sequence_number":132}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"oJ01zZfIwzd56Q","output_index":1,"sequence_number":133}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" significant","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Atk7","output_index":1,"sequence_number":134}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" advancement","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"JLVk","output_index":1,"sequence_number":135}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Nnse6NY3rLmnN","output_index":1,"sequence_number":136}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" personalized","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Rpp","output_index":1,"sequence_number":137}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" cancer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"OzOapAevZ","output_index":1,"sequence_number":138}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" therapy","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"iPuEuW2q","output_index":1,"sequence_number":139}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ajP4W8xtK3R4rPI","output_index":1,"sequence_number":140}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"oth4LLmXHdV2QgR","output_index":1,"sequence_number":141}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"HNc","output_index":1,"sequence_number":142}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":808,"start_index":715,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},"annotation_index":0,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":143}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VVtJMrukJEyEKwR","output_index":1,"sequence_number":144}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n**","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7ZyETMy5pnz7T","output_index":1,"sequence_number":145}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"FDA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"mYtXoYLr20r2P","output_index":1,"sequence_number":146}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Approval","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"xWR1d2Q","output_index":1,"sequence_number":147}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Lpkof6txumNwg","output_index":1,"sequence_number":148}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"cgNqREO7iVYHrp","output_index":1,"sequence_number":149}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"t8RYVroHQzRAv","output_index":1,"sequence_number":150}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Flu","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9WmBY3iVJ6Od","output_index":1,"sequence_number":151}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"cWVhi07s","output_index":1,"sequence_number":152}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"**\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"HScv8QilU6Y4I","output_index":1,"sequence_number":153}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5KY9zDUsD2x9Osw","output_index":1,"sequence_number":154}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"The","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LbHNZ0vIQOdKk","output_index":1,"sequence_number":155}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" U","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"d05b2ZKJ62vTiP","output_index":1,"sequence_number":156}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".S","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"21zerp3Uur6G4P","output_index":1,"sequence_number":157}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"fZtNSrgc935ZeWh","output_index":1,"sequence_number":158}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Food","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"WcyJLVuM7PN","output_index":1,"sequence_number":159}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ofeV7g9oeGWO","output_index":1,"sequence_number":160}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Drug","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"lcAbS7w4bm4","output_index":1,"sequence_number":161}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Administration","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8","output_index":1,"sequence_number":162}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" (","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ocfH1zkOCVOoEL","output_index":1,"sequence_number":163}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"FDA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"IYLmcNslKQEcy","output_index":1,"sequence_number":164}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":")","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ss483HqGpCvpFAT","output_index":1,"sequence_number":165}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" approved","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kK4ehZ3","output_index":1,"sequence_number":166}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Moderna","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"FksUpX3u","output_index":1,"sequence_number":167}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"'s","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"NpixtyWD4k0xfI","output_index":1,"sequence_number":168}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"TWuCrFrjmbnPLt","output_index":1,"sequence_number":169}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"rjULAfhTX23f0","output_index":1,"sequence_number":170}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-based","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"tm9UJE7rVp","output_index":1,"sequence_number":171}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" seasonal","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kLuZuli","output_index":1,"sequence_number":172}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" flu","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8ENhef7wmYc2","output_index":1,"sequence_number":173}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kjoEkqej","output_index":1,"sequence_number":174}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"xdT80UiCFiaI7CT","output_index":1,"sequence_number":175}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"vaX1qRIILOE8yV","output_index":1,"sequence_number":176}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Fl","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"TdhMfHcCIJro9u","output_index":1,"sequence_number":177}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"us","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GVTNt1SErYrt7F","output_index":1,"sequence_number":178}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"iva","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"klJYYDjl8AeYy","output_index":1,"sequence_number":179}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"beKy5XhvOlI9L1u","output_index":1,"sequence_number":180}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" for","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"x50Iyva6mR03","output_index":1,"sequence_number":181}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" adults","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"wg4WUVd4C","output_index":1,"sequence_number":182}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" aged","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"RW8myBFr8J1","output_index":1,"sequence_number":183}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7SKZJep9B3B5hE7","output_index":1,"sequence_number":184}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"50","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"aj0kC76PT29Srs","output_index":1,"sequence_number":185}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"eS3Ezl7psZ0Q","output_index":1,"sequence_number":186}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" older","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"vLm4KSd5Ah","output_index":1,"sequence_number":187}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"rBNSQ3kMT0RTp64","output_index":1,"sequence_number":188}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ny11aY8746QpnK0","output_index":1,"sequence_number":189}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"This","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"D74Rl9pNPPlA","output_index":1,"sequence_number":190}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" approval","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"NZS3QHv","output_index":1,"sequence_number":191}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" follows","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ESkaw8CW","output_index":1,"sequence_number":192}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ICgTm8FEU7MRdZ","output_index":1,"sequence_number":193}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" previous","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"567oibs","output_index":1,"sequence_number":194}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" refusal","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"teU9iWAR","output_index":1,"sequence_number":195}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" by","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"CnxmZ2zITPKb4","output_index":1,"sequence_number":196}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ZPd3z6OP5Xe8","output_index":1,"sequence_number":197}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" FDA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Y4FWTz68G8Ts","output_index":1,"sequence_number":198}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" due","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"UcMCcrvRzfUT","output_index":1,"sequence_number":199}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zeWA3LGlXGCW6","output_index":1,"sequence_number":200}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" concerns","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Xk4Sh5Q","output_index":1,"sequence_number":201}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" over","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"E0DOIfTtE3P","output_index":1,"sequence_number":202}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" clinical","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LMrbdrP","output_index":1,"sequence_number":203}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" trial","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Su9E6gAeNY","output_index":1,"sequence_number":204}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" methodologies","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"eC","output_index":1,"sequence_number":205}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"aIotS9UaPcgYN3c","output_index":1,"sequence_number":206}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GgLsLB2OzgQmwOm","output_index":1,"sequence_number":207}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"The","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"p3j4hHgeklcfL","output_index":1,"sequence_number":208}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VeKjCFV5","output_index":1,"sequence_number":209}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" demonstrated","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6oL","output_index":1,"sequence_number":210}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"bg3kzKnR23drBG","output_index":1,"sequence_number":211}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"4d1vwaOVQMDyQ6J","output_index":1,"sequence_number":212}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"27","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"OTBwVX2bDm7bOn","output_index":1,"sequence_number":213}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"%","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zb5goCjmPET8gGx","output_index":1,"sequence_number":214}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" reduction","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VfWYUy","output_index":1,"sequence_number":215}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ST3Tmjear5IFr","output_index":1,"sequence_number":216}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" flu","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jLSVmwxu7xnv","output_index":1,"sequence_number":217}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" cases","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"bfY3kBKAw3","output_index":1,"sequence_number":218}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" compared","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"AWP3tQ8","output_index":1,"sequence_number":219}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"BmVR5qGwznASj","output_index":1,"sequence_number":220}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" standard","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"CopsqgU","output_index":1,"sequence_number":221}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccines","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"r3YBEGk","output_index":1,"sequence_number":222}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"dIMvtK243RyME","output_index":1,"sequence_number":223}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"yijvlLlOIh8pEZ","output_index":1,"sequence_number":224}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" study","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"pqI8aWUq3T","output_index":1,"sequence_number":225}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" involving","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"gmTB9W","output_index":1,"sequence_number":226}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"IQ3wE3DggFUWykG","output_index":1,"sequence_number":227}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"40","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zYSv8TrudgBDc8","output_index":1,"sequence_number":228}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"YuqPT6chfirwj0L","output_index":1,"sequence_number":229}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"000","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"UfOkESdfcTRr8","output_index":1,"sequence_number":230}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" participants","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"lsr","output_index":1,"sequence_number":231}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5PWgMeR3PjCqc2Z","output_index":1,"sequence_number":232}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"A3FeoJ00LzdR5Zy","output_index":1,"sequence_number":233}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"This","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8EFFNwSh3Icf","output_index":1,"sequence_number":234}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" approval","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"QAYNxBd","output_index":1,"sequence_number":235}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" signifies","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"B0iSPj","output_index":1,"sequence_number":236}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"97k3rxFER52FyR","output_index":1,"sequence_number":237}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" notable","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Tv1sbfGm","output_index":1,"sequence_number":238}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" development","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9tz2","output_index":1,"sequence_number":239}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" in","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"y5r59O5S4k45A","output_index":1,"sequence_number":240}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" influenza","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"zbVOtt","output_index":1,"sequence_number":241}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" prevention","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6bVxd","output_index":1,"sequence_number":242}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"mlWDaqgqrxYk","output_index":1,"sequence_number":243}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"D8Uo6o1VrwXR","output_index":1,"sequence_number":244}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" broader","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Trz0Endz","output_index":1,"sequence_number":245}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" application","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"oI2o","output_index":1,"sequence_number":246}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"AWYr6FQRZcSvb","output_index":1,"sequence_number":247}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"7xReKwPgPdEjv4","output_index":1,"sequence_number":248}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sxll75JN0cXlJ","output_index":1,"sequence_number":249}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccine","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"JOduKZub","output_index":1,"sequence_number":250}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" technology","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"YeNHU","output_index":1,"sequence_number":251}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"W2jkyyDEWYpHZlB","output_index":1,"sequence_number":252}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"RisZnhzmVTYTR1n","output_index":1,"sequence_number":253}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"aDJ","output_index":1,"sequence_number":254}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":1432,"start_index":1339,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"},"annotation_index":1,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":255}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jj3yOw1WdvXxvXu","output_index":1,"sequence_number":256}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n**","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5fXYNgY2sVc3V","output_index":1,"sequence_number":257}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Financial","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"2XkDa23","output_index":1,"sequence_number":258}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Performance","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"b9R9","output_index":1,"sequence_number":259}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"**\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"0noM3hwfJ0ba8","output_index":1,"sequence_number":260}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"d6zVsXtSxj8SzuK","output_index":1,"sequence_number":261}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"In","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"NlM0bcEYssKrth","output_index":1,"sequence_number":262}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"UR5V6Iha5jxh","output_index":1,"sequence_number":263}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" second","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"4o7B7X6Ws","output_index":1,"sequence_number":264}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" quarter","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"AW37SgQV","output_index":1,"sequence_number":265}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"AyagtqBJxYKOO","output_index":1,"sequence_number":266}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8EUj2bRZ6NkMP4Y","output_index":1,"sequence_number":267}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"202","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sND1nfGV1JmrL","output_index":1,"sequence_number":268}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"6","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"PoyyqBAwfrrlYGc","output_index":1,"sequence_number":269}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"iebLtjHxZw6lCI3","output_index":1,"sequence_number":270}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Moderna","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"LhCJ973B","output_index":1,"sequence_number":271}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" reported","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6JKhT9x","output_index":1,"sequence_number":272}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" total","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"DScddC91NB","output_index":1,"sequence_number":273}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" revenue","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"K58wWqJA","output_index":1,"sequence_number":274}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VaD3moacLBfgE","output_index":1,"sequence_number":275}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" $","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"BC8Hy1SaqeoBCS","output_index":1,"sequence_number":276}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"145","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"z4pzNBjW6R6fu","output_index":1,"sequence_number":277}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" million","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"l1SFpzlq","output_index":1,"sequence_number":278}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"xt7q7pvEJFa7","output_index":1,"sequence_number":279}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" a","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"C9AW9YfWQtA7Mb","output_index":1,"sequence_number":280}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" GA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"XPoQV9MkMMGpH","output_index":1,"sequence_number":281}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"AP","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Zw7R3OPG8LV21l","output_index":1,"sequence_number":282}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" net","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"L0NMDOOyKQgr","output_index":1,"sequence_number":283}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" loss","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"htUK7p399IP","output_index":1,"sequence_number":284}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"dxRxFm34hpP2Z","output_index":1,"sequence_number":285}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" $","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ORMO70A85HGehn","output_index":1,"sequence_number":286}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"782","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"EGnPc8JA0diLA","output_index":1,"sequence_number":287}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" million","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"yB1C4TLM","output_index":1,"sequence_number":288}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"1mJOAa8eso2PgCq","output_index":1,"sequence_number":289}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"2FOKmwraHYcEqa7","output_index":1,"sequence_number":290}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"Despite","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sUSKR6XI1","output_index":1,"sequence_number":291}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" these","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jBjCgpwYLn","output_index":1,"sequence_number":292}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" figures","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"HRSVozOV","output_index":1,"sequence_number":293}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"L9Wl5BI8L8xoel2","output_index":1,"sequence_number":294}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"QmnyoV1ITGnh","output_index":1,"sequence_number":295}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" company","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"vGDgLxhy","output_index":1,"sequence_number":296}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" reiterated","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"x4N8m","output_index":1,"sequence_number":297}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" its","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Z36CdE1AnrHU","output_index":1,"sequence_number":298}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" plan","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5L91sJp2P4o","output_index":1,"sequence_number":299}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jn32Hj3CzeqoU","output_index":1,"sequence_number":300}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" achieve","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"kLdkzp1R","output_index":1,"sequence_number":301}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" up","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"gU7A7gOdiGhCc","output_index":1,"sequence_number":302}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"KN8ha6FVTCgyr","output_index":1,"sequence_number":303}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"NXbeXo5KZ1XZEUN","output_index":1,"sequence_number":304}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"10","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"be40WzbyGiGzr1","output_index":1,"sequence_number":305}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"%","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"XZLV6RIijwPwuIH","output_index":1,"sequence_number":306}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" revenue","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"DL35RI1I","output_index":1,"sequence_number":307}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" growth","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9XaPJCYgX","output_index":1,"sequence_number":308}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" for","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"donHZ7Z2vpRD","output_index":1,"sequence_number":309}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"5VYTfGK61Wiw","output_index":1,"sequence_number":310}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" year","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"6sc9Ngubwix","output_index":1,"sequence_number":311}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"eigkQqQW1bHq4Y5","output_index":1,"sequence_number":312}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" highlighting","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GoR","output_index":1,"sequence_number":313}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" upcoming","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9YztB5l","output_index":1,"sequence_number":314}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" regulatory","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"YtIMM","output_index":1,"sequence_number":315}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" milestones","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Wu5hR","output_index":1,"sequence_number":316}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"0OShA4XW5DHj","output_index":1,"sequence_number":317}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ongoing","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"vMs61JIA","output_index":1,"sequence_number":318}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" late","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"RAKNPf0fMvE","output_index":1,"sequence_number":319}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-stage","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"tVJfJGdQOW","output_index":1,"sequence_number":320}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" program","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"9jJbUG1M","output_index":1,"sequence_number":321}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" read","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"jdhDUdyMgHC","output_index":1,"sequence_number":322}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"outs","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"hp8wbKyc5HOu","output_index":1,"sequence_number":323}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"G7vswEOTal0xsan","output_index":1,"sequence_number":324}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"v2ou2pcw4ps405W","output_index":1,"sequence_number":325}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"nn2f","output_index":1,"sequence_number":326}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":1970,"start_index":1766,"title":"Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth — TradingView News","url":"https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"},"annotation_index":2,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":327}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ou2yFlABAJLE7hB","output_index":1,"sequence_number":328}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"WsfsYMr8vhmJt47","output_index":1,"sequence_number":329}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"These","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"72fbkSBxAQX","output_index":1,"sequence_number":330}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" developments","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"BQt","output_index":1,"sequence_number":331}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" underscore","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"O37jh","output_index":1,"sequence_number":332}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" Moderna","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"dQOqxCPz","output_index":1,"sequence_number":333}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"'s","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"yDtVAnfjHQwwmS","output_index":1,"sequence_number":334}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ongoing","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Z5oXwBYU","output_index":1,"sequence_number":335}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" efforts","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Z3vvzLgx","output_index":1,"sequence_number":336}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" to","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VBm2UblBDsfLL","output_index":1,"sequence_number":337}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" expand","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"qmr7D9th6","output_index":1,"sequence_number":338}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"rD15g4qmPZrA","output_index":1,"sequence_number":339}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" applications","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"xwB","output_index":1,"sequence_number":340}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" of","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"vcsYtEyHTJzE0","output_index":1,"sequence_number":341}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" its","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"nrpt8GjSjtUa","output_index":1,"sequence_number":342}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" m","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"Ft8EcuUOJAy4HI","output_index":1,"sequence_number":343}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"RNA","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"IPV529XWpPEYT","output_index":1,"sequence_number":344}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" technology","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"J4XXj","output_index":1,"sequence_number":345}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" beyond","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sLzdeTRQE","output_index":1,"sequence_number":346}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" COVID","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"05XyAdgHoz","output_index":1,"sequence_number":347}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"-","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"VFd0deV4v3RhGW4","output_index":1,"sequence_number":348}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"19","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"1NrCtUg84NFStE","output_index":1,"sequence_number":349}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" vaccines","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"GLh8WwM","output_index":1,"sequence_number":350}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":",","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8jFmklDcp0wPXWJ","output_index":1,"sequence_number":351}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" focusing","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"ciOW4ni","output_index":1,"sequence_number":352}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" on","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"h2YKiDsEx5uT3","output_index":1,"sequence_number":353}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" personalized","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"SqR","output_index":1,"sequence_number":354}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" cancer","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"uPdH9Wtk6","output_index":1,"sequence_number":355}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" treatments","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"TjuZa","output_index":1,"sequence_number":356}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" and","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"W5urPNpmCQtO","output_index":1,"sequence_number":357}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" seasonal","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"G1MsQTM","output_index":1,"sequence_number":358}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" flu","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"wWC0ss0oO48k","output_index":1,"sequence_number":359}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" prevention","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"mikIh","output_index":1,"sequence_number":360}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":".","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"OA1F96kUj69wMNu","output_index":1,"sequence_number":361}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"o9PzckeLWNuWd4P","output_index":1,"sequence_number":362}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"N6Eox2PGzt5YR2M","output_index":1,"sequence_number":363}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n## Highlights:\n","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"","output_index":1,"sequence_number":364}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"sL3W9ZSCAJEWlap","output_index":1,"sequence_number":365}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":2367,"start_index":2195,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},"annotation_index":3,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":366}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"bRJ","output_index":1,"sequence_number":367}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":2573,"start_index":2405,"title":"FDA approves first mRNA vaccine for seasonal flu","url":"https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"},"annotation_index":4,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":368}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":"\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"yGM0zKJ","output_index":1,"sequence_number":369}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","end_index":2774,"start_index":2610,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"},"annotation_index":5,"content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"sequence_number":370}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","content_index":0,"delta":" ","item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"obfuscation":"8nw6wLvSqVLK3Sq","output_index":1,"sequence_number":371}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","logprobs":[],"output_index":1,"sequence_number":372,"text":"Moderna has recently achieved significant milestones in both oncology and infectious disease prevention:\n\n**Breakthrough in mRNA-Based Cancer Treatment**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA-based cancer vaccine, intismeran. This vaccine, tailored to individual patients based on specific tumor mutations, was tested alongside Merck's immunotherapy drug, Keytruda, in over 1,100 high-risk melanoma patients. The combination therapy demonstrated a statistically significant reduction in cancer recurrence and metastasis compared to Keytruda alone. These findings mark a significant advancement in personalized cancer therapy. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This approval follows a previous refusal by the FDA due to concerns over clinical trial methodologies. The vaccine demonstrated a 27% reduction in flu cases compared to standard vaccines in a study involving 40,000 participants. This approval signifies a notable development in influenza prevention and the broader application of mRNA vaccine technology. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. Despite these figures, the company reiterated its plan to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","content_index":0,"item_id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","output_index":1,"part":{"type":"output_text","annotations":[{"type":"url_citation","end_index":808,"start_index":715,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":1432,"start_index":1339,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"},{"type":"url_citation","end_index":1970,"start_index":1766,"title":"Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth — TradingView News","url":"https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"},{"type":"url_citation","end_index":2367,"start_index":2195,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":2573,"start_index":2405,"title":"FDA approves first mRNA vaccine for seasonal flu","url":"https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"},{"type":"url_citation","end_index":2774,"start_index":2610,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"}],"logprobs":[],"text":"Moderna has recently achieved significant milestones in both oncology and infectious disease prevention:\n\n**Breakthrough in mRNA-Based Cancer Treatment**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA-based cancer vaccine, intismeran. This vaccine, tailored to individual patients based on specific tumor mutations, was tested alongside Merck's immunotherapy drug, Keytruda, in over 1,100 high-risk melanoma patients. The combination therapy demonstrated a statistically significant reduction in cancer recurrence and metastasis compared to Keytruda alone. These findings mark a significant advancement in personalized cancer therapy. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This approval follows a previous refusal by the FDA due to concerns over clinical trial methodologies. The vaccine demonstrated a 27% reduction in flu cases compared to standard vaccines in a study involving 40,000 participants. This approval signifies a notable development in influenza prevention and the broader application of mRNA vaccine technology. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. Despite these figures, the company reiterated its plan to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "},"sequence_number":373}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","item":{"id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","type":"message","status":"completed","content":[{"type":"output_text","annotations":[{"type":"url_citation","end_index":808,"start_index":715,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":1432,"start_index":1339,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"},{"type":"url_citation","end_index":1970,"start_index":1766,"title":"Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth — TradingView News","url":"https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"},{"type":"url_citation","end_index":2367,"start_index":2195,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":2573,"start_index":2405,"title":"FDA approves first mRNA vaccine for seasonal flu","url":"https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"},{"type":"url_citation","end_index":2774,"start_index":2610,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"}],"logprobs":[],"text":"Moderna has recently achieved significant milestones in both oncology and infectious disease prevention:\n\n**Breakthrough in mRNA-Based Cancer Treatment**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA-based cancer vaccine, intismeran. This vaccine, tailored to individual patients based on specific tumor mutations, was tested alongside Merck's immunotherapy drug, Keytruda, in over 1,100 high-risk melanoma patients. The combination therapy demonstrated a statistically significant reduction in cancer recurrence and metastasis compared to Keytruda alone. These findings mark a significant advancement in personalized cancer therapy. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This approval follows a previous refusal by the FDA due to concerns over clinical trial methodologies. The vaccine demonstrated a 27% reduction in flu cases compared to standard vaccines in a study involving 40,000 participants. This approval signifies a notable development in influenza prevention and the broader application of mRNA vaccine technology. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. Despite these figures, the company reiterated its plan to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "}],"role":"assistant"},"output_index":1,"sequence_number":374}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp_04fa46b17a39180a016a888fa20f2c87d0a86633063307bf6a","object":"response","created_at":1787334562,"status":"completed","background":false,"completed_at":1787334566,"error":null,"frequency_penalty":0.0,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-2024-08-06","moderation":null,"output":[{"id":"ws_04fa46b17a39180a016a888fa2a81087d0a961c6a9b9866bb8","type":"web_search_call","status":"completed","action":{"type":"search","queries":["Moderna news October 2023"],"query":"Moderna news October 2023"}},{"id":"msg_04fa46b17a39180a016a888fa40b6887d0bd53ceea9c4cde95","type":"message","status":"completed","content":[{"type":"output_text","annotations":[{"type":"url_citation","end_index":808,"start_index":715,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":1432,"start_index":1339,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"},{"type":"url_citation","end_index":1970,"start_index":1766,"title":"Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth — TradingView News","url":"https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"},{"type":"url_citation","end_index":2367,"start_index":2195,"title":"Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test","url":"https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"},{"type":"url_citation","end_index":2573,"start_index":2405,"title":"FDA approves first mRNA vaccine for seasonal flu","url":"https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"},{"type":"url_citation","end_index":2774,"start_index":2610,"title":"New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine","url":"https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"}],"logprobs":[],"text":"Moderna has recently achieved significant milestones in both oncology and infectious disease prevention:\n\n**Breakthrough in mRNA-Based Cancer Treatment**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA-based cancer vaccine, intismeran. This vaccine, tailored to individual patients based on specific tumor mutations, was tested alongside Merck's immunotherapy drug, Keytruda, in over 1,100 high-risk melanoma patients. The combination therapy demonstrated a statistically significant reduction in cancer recurrence and metastasis compared to Keytruda alone. These findings mark a significant advancement in personalized cancer therapy. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This approval follows a previous refusal by the FDA due to concerns over clinical trial methodologies. The vaccine demonstrated a 27% reduction in flu cases compared to standard vaccines in a study involving 40,000 participants. This approval signifies a notable development in influenza prevention and the broader application of mRNA vaccine technology. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. Despite these figures, the company reiterated its plan to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "}],"role":"assistant"}],"parallel_tool_calls":true,"presence_penalty":0.0,"previous_response_id":null,"prompt_cache_key":null,"prompt_cache_retention":"in_memory","reasoning":{"context":null,"effort":null,"summary":null},"safety_identifier":null,"service_tier":"default","store":false,"temperature":0.0,"text":{"format":{"type":"text"},"verbosity":"medium"},"tool_choice":"auto","tool_usage":{"image_gen":{"input_tokens":0,"input_tokens_details":{"image_tokens":0,"text_tokens":0},"output_tokens":0,"output_tokens_details":{"image_tokens":0,"text_tokens":0},"total_tokens":0},"web_search":{"num_requests":1}},"tools":[{"type":"web_search_preview","search_content_types":["text"],"search_context_size":"medium","user_location":{"type":"approximate","city":null,"country":"US","region":null,"timezone":null}}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":{"input_tokens":317,"input_tokens_details":{"cache_write_tokens":0,"cached_tokens":0},"output_tokens":676,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":993},"user":null,"metadata":{}},"sequence_number":375}
+

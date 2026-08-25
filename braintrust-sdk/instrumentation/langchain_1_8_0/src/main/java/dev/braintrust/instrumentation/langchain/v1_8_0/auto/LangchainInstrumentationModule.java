@@ -7,6 +7,7 @@ import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
 import dev.braintrust.instrumentation.TypeTransformer;
 import dev.braintrust.instrumentation.langchain.v1_8_0.BraintrustLangchain;
+import dev.braintrust.instrumentation.muzzle.ClassLoaderMatchers;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
@@ -23,6 +24,20 @@ public class LangchainInstrumentationModule extends InstrumentationModule {
 
     public LangchainInstrumentationModule() {
         super("langchain_1_8_0");
+    }
+
+    /**
+     * Gates this module to langchain4j < 1.14.0. The Responses API classes ({@code
+     * OpenAiResponsesChatModel} et al.) first appeared in 1.14.0; from there on the {@code
+     * langchain_1_14_0} module takes over (chat completions + responses). Excluding classloaders
+     * that already have the responses classes keeps the two modules from both instrumenting {@code
+     * OpenAiChatModel} on 1.14.0+.
+     */
+    @Override
+    public ElementMatcher<ClassLoader> classLoaderMatcher() {
+        return not(
+                ClassLoaderMatchers.hasClassNamed(
+                        "dev.langchain4j.model.openai.OpenAiResponsesChatModel"));
     }
 
     @Override
