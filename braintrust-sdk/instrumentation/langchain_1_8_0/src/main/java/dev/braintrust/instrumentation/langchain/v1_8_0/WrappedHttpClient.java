@@ -3,6 +3,7 @@ package dev.braintrust.instrumentation.langchain.v1_8_0;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.instrumentation.SseResponseAccumulator;
+import dev.braintrust.instrumentation.SseStreamAccumulator;
 import dev.braintrust.json.BraintrustJsonMapper;
 import dev.langchain4j.exception.HttpException;
 import dev.langchain4j.http.client.HttpClient;
@@ -15,6 +16,7 @@ import dev.langchain4j.http.client.sse.ServerSentEventParser;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import java.net.URI;
@@ -129,6 +131,11 @@ class WrappedHttpClient implements HttpClient {
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final SseResponseAccumulator accumulator =
                 new SseResponseAccumulator(BraintrustJsonMapper.get());
+        // A stream can report a failed generation in band, after the HTTP request itself has
+        // succeeded. LangChain4j delivers those failures to the caller's own response handler and
+        // then closes the transport normally, so onError below is never reached — retaining the
+        // failure here is what stops onClose from finalizing a failed call as a successful span.
+        @javax.annotation.Nullable private volatile String streamFailure;
 
         WrappedServerSentEventListener(
                 ServerSentEventListener delegate, Span span, String providerName, Tracer tracer) {
@@ -148,7 +155,7 @@ class WrappedHttpClient implements HttpClient {
         @Override
         public void onEvent(ServerSentEvent event, ServerSentEventContext context) {
             try (Scope ignored = span.makeCurrent()) {
-                accumulateChunk(event.data());
+                accumulateEvent(event);
                 delegate.onEvent(event, context);
             }
         }
@@ -156,7 +163,7 @@ class WrappedHttpClient implements HttpClient {
         @Override
         public void onEvent(ServerSentEvent event) {
             try (Scope ignored = span.makeCurrent()) {
-                accumulateChunk(event.data());
+                accumulateEvent(event);
                 delegate.onEvent(event);
             }
         }
@@ -181,7 +188,13 @@ class WrappedHttpClient implements HttpClient {
             }
         }
 
-        private void accumulateChunk(String data) {
+        private void accumulateEvent(ServerSentEvent event) {
+            String data = event.data();
+            if (streamFailure == null) {
+                streamFailure =
+                        SseStreamAccumulator.streamFailure(
+                                BraintrustJsonMapper.get(), event.event(), data);
+            }
             if (data == null || data.isEmpty() || "[DONE]".equals(data)) return;
             if (timeToFirstTokenNanos.get() == 0L) {
                 timeToFirstTokenNanos.compareAndExchange(0L, System.nanoTime() - startNanos);
@@ -190,8 +203,17 @@ class WrappedHttpClient implements HttpClient {
         }
 
         private void finalizeSpan() {
+            String failure = streamFailure;
+            if (failure != null) {
+                // Recorded before tagging: a failed stream's body is often partial, and losing the
+                // error status to a tagging problem is worse than losing the partial output.
+                span.setStatus(StatusCode.ERROR, failure);
+            }
             try {
-                Long ttft = timeToFirstTokenNanos.get();
+                // Absent rather than zero: a stream that never delivered a payload has no first
+                // token to time, and 0.0 would land in latency aggregates as a real measurement.
+                long elapsed = timeToFirstTokenNanos.get();
+                Long ttft = elapsed != 0L ? elapsed : null;
                 String responseBody = accumulator.build();
                 InstrumentationSemConv.tagLLMSpanResponse(
                         tracer, span, providerName, responseBody, ttft);

@@ -31,6 +31,8 @@ class InstrumentationSemConvTest {
             AttributeKey.stringKey("braintrust.output_json");
     private static final AttributeKey<String> METADATA =
             AttributeKey.stringKey("braintrust.metadata");
+    private static final AttributeKey<String> METRICS =
+            AttributeKey.stringKey("braintrust.metrics");
 
     private InMemorySpanExporter exporter;
     private SdkTracerProvider tracerProvider;
@@ -381,5 +383,505 @@ class InstrumentationSemConvTest {
                 }
                 """;
         assertTrue(emitAnthropic(body).isEmpty());
+    }
+
+    /**
+     * Tags a request span for {@code provider} and returns the resulting {@code
+     * braintrust.input_json} attribute (null when none was set).
+     */
+    private String inputJsonForRequest(String provider, String requestBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        InstrumentationSemConv.tagLLMSpanRequest(
+                span,
+                provider,
+                "https://api.anthropic.com",
+                List.of("v1", "messages"),
+                "POST",
+                requestBody);
+        span.end();
+        return exporter.getFinishedSpanItems().get(0).getAttributes().get(INPUT_JSON);
+    }
+
+    @Test
+    void anthropicStringSystemPromptBecomesSystemRoleEntry() {
+        String body =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "system": "be terse",
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode input =
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body));
+        assertEquals(2, input.size());
+        assertEquals("system", input.get(1).path("role").asText());
+        assertEquals("be terse", input.get(1).path("content").asText());
+    }
+
+    /**
+     * Array-form {@code system} — the shape required to attach {@code cache_control} — must survive
+     * intact. It previously tripped an {@code asText().isEmpty()} guard (containers stringify to
+     * {@code ""}) and was dropped from the span input entirely.
+     */
+    @Test
+    void anthropicArraySystemPromptIsPreservedWithCacheControl() {
+        String body =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "system": [
+                    {"type": "text", "text": "you are a helpful assistant"},
+                    {"type": "text", "text": "<corpus>", "cache_control": {"type": "ephemeral"}}
+                  ],
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode input =
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body));
+        assertEquals(2, input.size());
+        JsonNode system = input.get(1);
+        assertEquals("system", system.path("role").asText());
+        JsonNode content = system.path("content");
+        assertTrue(content.isArray(), "array-form system prompt should stay an array");
+        assertEquals(2, content.size());
+        assertEquals("you are a helpful assistant", content.get(0).path("text").asText());
+        assertEquals("ephemeral", content.get(1).path("cache_control").path("type").asText());
+    }
+
+    @Test
+    void anthropicAbsentOrEmptySystemPromptAddsNoEntry() {
+        String noSystem =
+                """
+                {"model": "claude-sonnet-4-5", "messages": [{"role": "user", "content": "hi"}]}
+                """;
+        assertEquals(
+                1,
+                json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, noSystem))
+                        .size());
+
+        // An empty string, empty array, or explicit null carries no prompt.
+        for (String system : List.of("\"\"", "[]", "null")) {
+            String body =
+                    "{\"model\": \"claude-sonnet-4-5\", \"system\": "
+                            + system
+                            + ", \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}]}";
+            exporter.reset();
+            assertEquals(
+                    1,
+                    json(inputJsonForRequest(InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, body))
+                            .size(),
+                    "system=" + system + " should not add an entry");
+        }
+    }
+
+    /**
+     * Tags a Bedrock request span and returns its {@code braintrust.metadata} attribute. Bedrock
+     * passes the model explicitly (it lives in the URL, not the body).
+     */
+    private String bedrockRequestMetadata(String requestBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        InstrumentationSemConv.tagLLMSpanRequest(
+                span,
+                InstrumentationSemConv.PROVIDER_NAME_BEDROCK,
+                "https://bedrock-runtime.us-east-1.amazonaws.com",
+                List.of("model", "us.anthropic.claude-haiku-4-5-20251001-v1:0", "converse"),
+                "POST",
+                requestBody,
+                "us.anthropic.claude-haiku-4-5-20251001-v1:0");
+        span.end();
+        return exporter.getFinishedSpanItems().get(0).getAttributes().get(METADATA);
+    }
+
+    /** Tags a Bedrock response span and returns its {@code braintrust.metrics} attribute. */
+    private String bedrockResponseMetrics(String responseBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        InstrumentationSemConv.tagLLMSpanResponse(
+                tracer, span, InstrumentationSemConv.PROVIDER_NAME_BEDROCK, responseBody, null);
+        span.end();
+        return exporter.getFinishedSpanItems().get(0).getAttributes().get(METRICS);
+    }
+
+    /**
+     * toolConfig carries the tools offered to the model and the tool-choice policy; both are
+     * flattened onto metadata under the cross-provider key names.
+     */
+    @Test
+    void bedrockToolConfigIsFlattenedIntoMetadata() {
+        String body =
+                """
+                {
+                  "inferenceConfig": {"maxTokens": 500},
+                  "toolConfig": {
+                    "tools": [
+                      {"toolSpec": {
+                         "name": "get_weather",
+                         "description": "Current weather",
+                         "inputSchema": {"json": {"type": "object"}}
+                      }}
+                    ],
+                    "toolChoice": {"auto": {}}
+                  },
+                  "messages": [{"role": "user", "content": [{"text": "weather in Paris?"}]}]
+                }
+                """;
+
+        JsonNode metadata = json(bedrockRequestMetadata(body));
+        assertEquals(500, metadata.path("max_tokens").asInt(), "existing fields still captured");
+        JsonNode tools = metadata.path("tools");
+        assertTrue(tools.isArray(), "tools should be captured as an array");
+        assertEquals(1, tools.size());
+        // Bedrock's own toolSpec shape is preserved rather than rewritten.
+        assertEquals("get_weather", tools.get(0).path("toolSpec").path("name").asText());
+        assertTrue(metadata.path("tool_choice").has("auto"));
+    }
+
+    @Test
+    void bedrockRequestWithoutToolConfigOmitsToolKeys() {
+        String body =
+                """
+                {"messages": [{"role": "user", "content": [{"text": "hi"}]}]}
+                """;
+
+        JsonNode metadata = json(bedrockRequestMetadata(body));
+        assertTrue(metadata.path("tools").isMissingNode());
+        assertTrue(metadata.path("tool_choice").isMissingNode());
+        assertEquals("bedrock", metadata.path("provider").asText());
+    }
+
+    /**
+     * Bedrock reports cache usage as cacheReadInputTokens / cacheWriteInputTokens; these must land
+     * on the same metric names the other providers use.
+     */
+    @Test
+    void bedrockCacheTokensMapToCrossProviderMetricNames() {
+        // Shaped after a real recorded Converse response: inputTokens excludes the cache
+        // counts, while totalTokens includes them (1200 + 800 + 400 + 350 = 2750).
+        String body =
+                """
+                {
+                  "output": {"message": {"role": "assistant", "content": [{"text": "hi"}]}},
+                  "usage": {
+                    "inputTokens": 1200,
+                    "outputTokens": 350,
+                    "totalTokens": 2750,
+                    "cacheReadInputTokens": 800,
+                    "cacheWriteInputTokens": 400,
+                    "cacheDetails": [{"inputTokens": 800, "ttl": "5m"}]
+                  }
+                }
+                """;
+
+        JsonNode metrics = json(bedrockResponseMetrics(body));
+        // prompt_tokens rolls the cache counts back in; tokens preserves the provider total.
+        assertEquals(2400, metrics.path("prompt_tokens").asInt());
+        assertEquals(350, metrics.path("completion_tokens").asInt());
+        assertEquals(2750, metrics.path("tokens").asInt());
+        assertEquals(800, metrics.path("prompt_cached_tokens").asInt());
+        assertEquals(400, metrics.path("prompt_cache_creation_tokens").asInt());
+        // cacheDetails is an array — never emitted as a metric.
+        assertTrue(metrics.path("cacheDetails").isMissingNode());
+        // The provider's own total cross-checks the roll-in.
+        assertEquals(
+                metrics.path("tokens").asInt(),
+                metrics.path("prompt_tokens").asInt() + metrics.path("completion_tokens").asInt(),
+                "tokens must equal prompt + completion once cache tokens are rolled in");
+    }
+
+    /** Without caching, prompt_tokens is just inputTokens — the roll-in adds nothing. */
+    @Test
+    void bedrockPromptTokensUnchangedWhenNoCacheUsage() {
+        String body =
+                """
+                {
+                  "output": {"message": {"role": "assistant", "content": [{"text": "hi"}]}},
+                  "usage": {"inputTokens": 68, "outputTokens": 202, "totalTokens": 270}
+                }
+                """;
+
+        JsonNode metrics = json(bedrockResponseMetrics(body));
+        assertEquals(68, metrics.path("prompt_tokens").asInt());
+        assertEquals(202, metrics.path("completion_tokens").asInt());
+        assertEquals(270, metrics.path("tokens").asInt());
+    }
+
+    /** A cold cache reports zeros, which must still be emitted rather than skipped. */
+    @Test
+    void bedrockZeroCacheTokensAreStillEmitted() {
+        String body =
+                """
+                {
+                  "output": {"message": {"role": "assistant", "content": [{"text": "hi"}]}},
+                  "usage": {"inputTokens": 10, "outputTokens": 2, "totalTokens": 12,
+                            "cacheReadInputTokens": 0, "cacheWriteInputTokens": 0}
+                }
+                """;
+
+        JsonNode metrics = json(bedrockResponseMetrics(body));
+        // Assert presence explicitly: path(...).asInt() is 0 for a missing node too, so an
+        // equals-zero check alone would pass even if the metric were dropped.
+        assertTrue(metrics.has("prompt_cached_tokens"), "cold-cache read count should be emitted");
+        assertTrue(
+                metrics.has("prompt_cache_creation_tokens"),
+                "cold-cache write count should be emitted");
+        assertEquals(0, metrics.get("prompt_cached_tokens").asInt());
+        assertEquals(0, metrics.get("prompt_cache_creation_tokens").asInt());
+    }
+
+    /** Without prompt caching the cache metrics are absent, not zero-filled. */
+    @Test
+    void bedrockResponseWithoutCacheUsageOmitsCacheMetrics() {
+        String body =
+                """
+                {
+                  "output": {"message": {"role": "assistant", "content": [{"text": "hi"}]}},
+                  "usage": {"inputTokens": 10, "outputTokens": 2, "totalTokens": 12}
+                }
+                """;
+
+        JsonNode metrics = json(bedrockResponseMetrics(body));
+        assertEquals(10, metrics.path("prompt_tokens").asInt());
+        assertTrue(metrics.path("prompt_cached_tokens").isMissingNode());
+        assertTrue(metrics.path("prompt_cache_creation_tokens").isMissingNode());
+    }
+
+    /** Tags a request span for {@code provider} and returns its {@code braintrust.metadata}. */
+    private String requestMetadata(String provider, String endpoint, String requestBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        InstrumentationSemConv.tagLLMSpanRequest(
+                span,
+                provider,
+                "https://api.example.com",
+                List.of("v1", endpoint),
+                "POST",
+                requestBody);
+        span.end();
+        return exporter.getFinishedSpanItems().get(0).getAttributes().get(METADATA);
+    }
+
+    @Test
+    void openAiGenerationParametersLandInMetadata() {
+        String body =
+                """
+                {
+                  "model": "gpt-4o",
+                  "temperature": 0.7,
+                  "max_tokens": 500,
+                  "top_p": 0.95,
+                  "frequency_penalty": 0.1,
+                  "presence_penalty": 0.2,
+                  "stop": ["\\n\\n"],
+                  "reasoning_effort": "high",
+                  "response_format": {"type": "json_object"},
+                  "tools": [{"type": "function", "function": {"name": "get_weather"}}],
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode metadata =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "chat/completions",
+                                body));
+
+        assertEquals("gpt-4o", metadata.path("model").asText());
+        assertEquals(0.7, metadata.path("temperature").asDouble());
+        assertEquals(500, metadata.path("max_tokens").asInt());
+        assertEquals(0.95, metadata.path("top_p").asDouble());
+        assertEquals(0.1, metadata.path("frequency_penalty").asDouble());
+        assertEquals(0.2, metadata.path("presence_penalty").asDouble());
+        assertEquals("high", metadata.path("reasoning_effort").asText());
+        assertEquals("json_object", metadata.path("response_format").path("type").asText());
+        assertEquals(
+                "get_weather",
+                metadata.path("tools").get(0).path("function").path("name").asText());
+        assertTrue(metadata.path("stop").isArray());
+    }
+
+    /** Anthropic's {@code thinking} config is the parameter most worth not losing. */
+    @Test
+    void anthropicGenerationParametersIncludingThinkingLandInMetadata() {
+        String body =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "max_tokens": 4096,
+                  "temperature": 1.0,
+                  "top_k": 40,
+                  "stop_sequences": ["END"],
+                  "thinking": {"type": "enabled", "budget_tokens": 2048},
+                  "metadata": {"user_id": "u_1"},
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode metadata =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC, "messages", body));
+
+        assertEquals(4096, metadata.path("max_tokens").asInt());
+        assertEquals(1.0, metadata.path("temperature").asDouble());
+        assertEquals(40, metadata.path("top_k").asInt());
+        assertEquals("enabled", metadata.path("thinking").path("type").asText());
+        assertEquals(2048, metadata.path("thinking").path("budget_tokens").asInt());
+        assertEquals("u_1", metadata.path("metadata").path("user_id").asText());
+        assertTrue(metadata.path("stop_sequences").isArray());
+    }
+
+    /**
+     * Conversation content must not be duplicated into metadata — it is already the span input, and
+     * copying it would double a potentially large payload.
+     */
+    @Test
+    void contentFieldsAreNotCopiedIntoMetadata() {
+        String openAiBody =
+                """
+                {
+                  "model": "gpt-4o",
+                  "instructions": "be terse",
+                  "input": [{"role": "user", "content": "hi"}],
+                  "temperature": 0.5
+                }
+                """;
+        JsonNode openAi =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "responses",
+                                openAiBody));
+        assertTrue(openAi.path("input").isMissingNode(), "input is content, not a parameter");
+        assertTrue(
+                openAi.path("instructions").isMissingNode(),
+                "instructions belongs in span input, not metadata");
+        assertEquals(0.5, openAi.path("temperature").asDouble(), "params still captured");
+
+        exporter.reset();
+
+        String anthropicBody =
+                """
+                {
+                  "model": "claude-sonnet-4-5",
+                  "system": [{"type": "text", "text": "be terse"}],
+                  "messages": [{"role": "user", "content": "hi"}],
+                  "max_tokens": 16
+                }
+                """;
+        JsonNode anthropic =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                                "messages",
+                                anthropicBody));
+        assertTrue(anthropic.path("messages").isMissingNode());
+        assertTrue(anthropic.path("system").isMissingNode());
+        assertEquals(16, anthropic.path("max_tokens").asInt());
+    }
+
+    /** A body field cannot overwrite the routing metadata the tagger sets itself. */
+    @Test
+    void bodyFieldsCannotClobberReservedMetadataKeys() {
+        String body =
+                """
+                {
+                  "model": "gpt-4o",
+                  "provider": "not-openai",
+                  "request_method": "TRACE",
+                  "request_path": "/evil",
+                  "messages": [{"role": "user", "content": "hi"}]
+                }
+                """;
+
+        JsonNode metadata =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "chat/completions",
+                                body));
+
+        assertEquals("openai", metadata.path("provider").asText());
+        assertEquals("POST", metadata.path("request_method").asText());
+        assertEquals("v1/chat/completions", metadata.path("request_path").asText());
+    }
+
+    /** Explicit nulls carry no information and are skipped rather than emitted as JSON null. */
+    @Test
+    void nullValuedParametersAreSkipped() {
+        String body =
+                """
+                {"model": "gpt-4o", "temperature": null, "max_tokens": 10,
+                 "messages": [{"role": "user", "content": "hi"}]}
+                """;
+
+        JsonNode metadata =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "chat/completions",
+                                body));
+        assertTrue(metadata.path("temperature").isMissingNode());
+        assertEquals(10, metadata.path("max_tokens").asInt());
+    }
+
+    /**
+     * Legacy completions and image generation carry user content in {@code prompt}, and Message
+     * Batches nest whole request payloads under {@code requests}. Neither may be copied into
+     * metadata — and {@code metadata.prompt} is reserved for Braintrust prompt provenance, so a
+     * request field must never be able to occupy it.
+     */
+    @Test
+    void promptAndBatchRequestsAreTreatedAsContentNotParameters() {
+        String legacyCompletion =
+                """
+                {"model": "gpt-3.5-turbo-instruct", "prompt": "secret user text",
+                 "max_tokens": 64, "temperature": 0.3}
+                """;
+        JsonNode completions =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "completions",
+                                legacyCompletion));
+        assertTrue(
+                completions.path("prompt").isMissingNode(),
+                "prompt is user content and shadows reserved provenance metadata");
+        assertEquals(64, completions.path("max_tokens").asInt(), "params still captured");
+        assertEquals(0.3, completions.path("temperature").asDouble());
+
+        exporter.reset();
+
+        String imageGeneration =
+                """
+                {"model": "gpt-image-1", "prompt": "a cat wearing a hat", "size": "1024x1024"}
+                """;
+        JsonNode images =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                "images/generations",
+                                imageGeneration));
+        assertTrue(images.path("prompt").isMissingNode());
+        assertEquals("1024x1024", images.path("size").asText());
+
+        exporter.reset();
+
+        String batch =
+                """
+                {"requests": [{"custom_id": "a",
+                  "params": {"model": "claude-sonnet-4-5", "max_tokens": 8,
+                             "messages": [{"role": "user", "content": "secret"}]}}]}
+                """;
+        JsonNode batches =
+                json(
+                        requestMetadata(
+                                InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                                "messages/batches",
+                                batch));
+        assertTrue(
+                batches.path("requests").isMissingNode(),
+                "batch requests nest full message payloads");
     }
 }

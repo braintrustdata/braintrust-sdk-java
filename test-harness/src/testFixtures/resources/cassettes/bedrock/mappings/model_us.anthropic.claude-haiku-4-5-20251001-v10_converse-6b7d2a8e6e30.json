@@ -1,0 +1,30 @@
+{
+  "id" : "945a82a7-f1a8-31e8-b2fd-f7c89c936d08",
+  "name" : "model_us.anthropic.claude-haiku-4-5-20251001-v10_converse",
+  "request" : {
+    "url" : "/model/us.anthropic.claude-haiku-4-5-20251001-v1%3A0/converse",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"role\":\"user\",\"content\":[{\"text\":\"A farmer has 17 sheep and all but 9 run away. How many sheep are left? Reason it through, then give the number.\"}]}],\"inferenceConfig\":{\"maxTokens\":2048},\"additionalModelRequestFields\":{\"reasoning_config\":{\"type\":\"enabled\",\"budget_tokens\":1024}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "model_us.anthropic.claude-haiku-4-5-20251001-v10_converse-6b7d2a8e6e30.json",
+    "headers" : {
+      "x-amzn-RequestId" : "e81539eb-665d-4cfb-a39d-dd865e2accd4",
+      "Date" : "Fri, 21 Aug 2026 20:25:29 GMT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "945a82a7-f1a8-31e8-b2fd-f7c89c936d08",
+  "persistent" : true,
+  "insertionIndex" : 7
+}

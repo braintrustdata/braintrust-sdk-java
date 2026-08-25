@@ -53,6 +53,7 @@ public class LangchainInstrumentationModule extends InstrumentationModule {
                 MANUAL_PACKAGE + "TracingToolExecutor",
                 MANUAL_PACKAGE + "OtelContextPassingExecutor",
                 "dev.braintrust.instrumentation.SseStreamAccumulator",
+                "dev.braintrust.instrumentation.SseStreamAccumulator$PayloadKind",
                 "dev.braintrust.instrumentation.SseResponseAccumulator",
                 "dev.braintrust.instrumentation.InstrumentationSemConv",
                 "dev.braintrust.json.BraintrustJsonMapper");

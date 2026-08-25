@@ -116,6 +116,10 @@ class LlmSpanSpecTest {
         List<Map<String, Object>> brainstoreSpans =
                 SPAN_FETCHER.fetch(rootSpanId, expectedSpanCount);
         SpanValidator.validate(brainstoreSpans, spec.expectedBrainstoreSpans(), spec.displayName());
+        // Provider-independent token invariants, applied to every LLM span this spec produced.
+        // These relate metrics to each other, which per-field YAML assertions cannot express, so
+        // running them here gives every spec in the suite token-accounting coverage for free.
+        TokenAccountingSpec.assertSpanTree(brainstoreSpans, spec.displayName());
     }
 
     /**

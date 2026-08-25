@@ -230,4 +230,206 @@ class SseStreamAccumulatorTest {
                     "server-side tool calls in the streamed output should emit child tool spans");
         }
     }
+
+    // ---------------------------------------------------------------------
+    // classify — drives time-to-first-token
+    // ---------------------------------------------------------------------
+
+    private static boolean isOutput(String chunk) {
+        return SseStreamAccumulator.classify(JSON, chunk)
+                == SseStreamAccumulator.PayloadKind.OUTPUT;
+    }
+
+    private static SseStreamAccumulator.PayloadKind kind(String chunk) {
+        return SseStreamAccumulator.classify(JSON, chunk);
+    }
+
+    /**
+     * A Responses stream opens with lifecycle events before the model produces anything. Timing
+     * TTFT from these measures response setup, which for a reasoning model can precede the first
+     * real token by seconds.
+     */
+    @Test
+    void responsesLifecycleEventsAreNotGeneratedOutput() {
+        assertFalse(isOutput("{\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}"));
+        assertFalse(isOutput("{\"type\":\"response.in_progress\",\"response\":{\"id\":\"r1\"}}"));
+        assertFalse(isOutput("{\"type\":\"response.queued\",\"response\":{\"id\":\"r1\"}}"));
+    }
+
+    @Test
+    void responsesOutputEventsAreGeneratedOutput() {
+        assertTrue(isOutput("{\"type\":\"response.output_text.delta\",\"delta\":\"Par\"}"));
+        assertTrue(
+                isOutput("{\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{\"}"));
+        assertTrue(
+                isOutput("{\"type\":\"response.reasoning_summary_text.delta\",\"delta\":\"h\"}"));
+        assertTrue(
+                isOutput(
+                        "{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{}}"));
+        assertTrue(
+                isOutput(
+                        "{\"type\":\"response.content_part.added\",\"output_index\":0,\"part\":{}}"));
+    }
+
+    /** The opening chat-completions chunk carries only the assistant role, not a token yet. */
+    @Test
+    void chatCompletionsRoleOnlyChunkIsNotGeneratedOutput() {
+        assertFalse(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}"));
+    }
+
+    @Test
+    void chatCompletionsContentAndToolCallChunksAreGeneratedOutput() {
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"content\":\"Paris\"}}]}"));
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"t\"}]}}]}"));
+        assertTrue(
+                isOutput(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"reasoning_content\":\"hmm\"}}]}"));
+    }
+
+    private static String failure(String eventName, String data) {
+        return SseStreamAccumulator.streamFailure(JSON, eventName, data);
+    }
+
+    /**
+     * The Responses API reports a failed generation with an ordinary event on an otherwise healthy
+     * stream. LangChain4j hands it to the caller's own handler and lets the transport close
+     * normally, so this is the only signal a span has that the call did not succeed.
+     */
+    @Test
+    void responsesFailureEventsReportTheProviderMessage() {
+        assertEquals(
+                "The server had an error while processing your request.",
+                failure(
+                        null,
+                        "{\"type\":\"response.failed\",\"response\":{\"id\":\"r1\","
+                                + "\"status\":\"failed\",\"error\":{\"code\":\"server_error\","
+                                + "\"message\":\"The server had an error while processing your"
+                                + " request.\"}}}"));
+        // The bare `error` event carries its message at the top level, not under "error".
+        assertEquals(
+                "Rate limit reached",
+                failure(
+                        null,
+                        "{\"type\":\"error\",\"code\":\"rate_limit_exceeded\","
+                                + "\"message\":\"Rate limit reached\",\"sequence_number\":7}"));
+        assertEquals(
+                "boom",
+                failure(null, "{\"type\":\"response.error\",\"error\":{\"message\":\"boom\"}}"));
+    }
+
+    /** Chat Completions signals an in-stream failure with the SSE event name, not the payload. */
+    @Test
+    void chatCompletionsErrorFrameIsAFailure() {
+        assertEquals(
+                "model overloaded",
+                failure(
+                        "error",
+                        "{\"error\":{\"message\":\"model"
+                                + " overloaded\",\"type\":\"server_error\"}}"));
+        // An error payload with no event name and no event type is still a failure.
+        assertEquals(
+                "model overloaded",
+                failure(
+                        null,
+                        "{\"error\":{\"message\":\"model"
+                                + " overloaded\",\"type\":\"server_error\"}}"));
+    }
+
+    /** A named error event is a failure even when its payload is unusable. */
+    @Test
+    void namedErrorEventWithoutAParseableMessageStillFails() {
+        assertEquals("upstream connect error", failure("error", "upstream connect error"));
+        assertEquals("stream reported an error with no detail", failure("error", ""));
+        assertEquals("stream reported an error with no detail", failure("error", null));
+        assertEquals("stream reported an error with no detail", failure("error", "[DONE]"));
+        // Present but empty message: fall back to the error object rather than an empty status.
+        assertEquals(
+                "{\"code\":\"server_error\"}",
+                failure(null, "{\"type\":\"error\",\"error\":{\"code\":\"server_error\"}}"));
+    }
+
+    /**
+     * {@code response.incomplete} reports a response truncated by a token limit or content filter.
+     * It still carries usable output, and langchain4j treats it as a completion, so it must not
+     * turn the span red.
+     */
+    @Test
+    void healthyAndIncompleteEventsAreNotFailures() {
+        assertNull(
+                failure(
+                        null,
+                        "{\"type\":\"response.incomplete\",\"response\":{\"id\":\"r1\","
+                            + "\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}}"));
+        assertNull(failure(null, "{\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}"));
+        assertNull(failure(null, "{\"type\":\"response.output_text.delta\",\"delta\":\"hi\"}"));
+        // A terminal snapshot whose "error" is explicitly null is a success, not a failure.
+        assertNull(
+                failure(
+                        null,
+                        "{\"type\":\"response.completed\",\"response\":{\"id\":\"r1\","
+                                + "\"status\":\"completed\",\"error\":null}}"));
+        assertNull(
+                failure(
+                        null,
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"content\":\"Paris\"}}]}"));
+        assertNull(failure(null, "[DONE]"));
+        assertNull(failure(null, null));
+        assertNull(failure(null, "not json"));
+    }
+
+    /**
+     * The distinction the TTFT fallback turns on. "Not output" and "shape I don't understand" must
+     * not collapse into one answer: a recognized stream that produced nothing has no first token to
+     * report, whereas an unrecognized shape is the only case where approximating from the first
+     * payload beats reporting nothing.
+     */
+    @Test
+    void recognizedNonOutputIsDistinguishedFromAnUnrecognizedShape() {
+        // Recognized: Responses lifecycle, and a chat-completions role-only opening chunk.
+        assertEquals(
+                SseStreamAccumulator.PayloadKind.NO_OUTPUT,
+                kind("{\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}"));
+        assertEquals(
+                SseStreamAccumulator.PayloadKind.NO_OUTPUT,
+                kind(
+                        "{\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,"
+                                + "\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}"));
+        assertEquals(
+                SseStreamAccumulator.PayloadKind.NO_OUTPUT,
+                kind("{\"object\":\"chat.completion.chunk\",\"choices\":[]}"));
+
+        // Unrecognized: neither wire shape.
+        assertEquals(SseStreamAccumulator.PayloadKind.UNRECOGNIZED, kind("{\"foo\":\"bar\"}"));
+        assertEquals(SseStreamAccumulator.PayloadKind.UNRECOGNIZED, kind("not json"));
+        assertEquals(SseStreamAccumulator.PayloadKind.UNRECOGNIZED, kind("[1,2,3]"));
+        assertEquals(SseStreamAccumulator.PayloadKind.UNRECOGNIZED, kind("[DONE]"));
+        assertEquals(SseStreamAccumulator.PayloadKind.UNRECOGNIZED, kind(null));
+
+        assertEquals(
+                SseStreamAccumulator.PayloadKind.OUTPUT,
+                kind("{\"type\":\"response.output_text.delta\",\"delta\":\"Par\"}"));
+    }
+
+    /** Sentinels, blanks, and malformed payloads must not be mistaken for output. */
+    @Test
+    void nonOutputPayloadsAreRejected() {
+        assertFalse(isOutput(null));
+        assertFalse(isOutput(""));
+        assertFalse(isOutput("   "));
+        assertFalse(isOutput("[DONE]"));
+        assertFalse(isOutput("not json"));
+        assertFalse(isOutput("[1,2,3]"));
+        assertFalse(isOutput("{\"object\":\"chat.completion.chunk\",\"choices\":[]}"));
+    }
 }
