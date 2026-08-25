@@ -20,11 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * Covers {@link InstrumentationSemConv#addServerSideChildSpans}: only vendor-executed (server-side)
- * tool calls in an OpenAI Responses body become child spans nested under the LLM span. Client-side
- * calls ({@code function_call}, {@code computer_call}) are excluded.
- */
+/** Covers provider response tagging and {@link InstrumentationSemConv#addServerSideChildSpans}. */
 class InstrumentationSemConvTest {
 
     private static final AttributeKey<String> SPAN_ATTRIBUTES =
@@ -79,6 +75,44 @@ class InstrumentationSemConvTest {
 
     private static JsonNode json(String s) {
         return BraintrustJsonMapper.fromJson(s, JsonNode.class);
+    }
+
+    private SpanData tagOpenAIResponse(String responseBody) {
+        Span span = tracer.spanBuilder("llm").startSpan();
+        try {
+            InstrumentationSemConv.tagLLMSpanResponse(
+                    tracer, span, InstrumentationSemConv.PROVIDER_NAME_OPENAI, responseBody);
+        } finally {
+            span.end();
+        }
+        return byName(exporter.getFinishedSpanItems(), "llm");
+    }
+
+    @Test
+    void tagsOpenAIAudioTranscriptionOutput() {
+        SpanData span = tagOpenAIResponse("{\"text\":\"Hello from the recording.\"}");
+
+        assertEquals(
+                json("{\"text\":\"Hello from the recording.\"}"),
+                json(span.getAttributes().get(OUTPUT_JSON)));
+    }
+
+    @Test
+    void tagsOpenAIVerboseAudioTranscriptionOutput() {
+        String body =
+                """
+                {
+                  "text": "Hello from the recording.",
+                  "language": "english",
+                  "duration": 1.25,
+                  "segments": [{"id": 0, "text": "Hello from the recording."}],
+                  "words": [{"word": "Hello", "start": 0.0, "end": 0.4}]
+                }
+                """;
+
+        SpanData span = tagOpenAIResponse(body);
+
+        assertEquals(json(body), json(span.getAttributes().get(OUTPUT_JSON)));
     }
 
     @Test
