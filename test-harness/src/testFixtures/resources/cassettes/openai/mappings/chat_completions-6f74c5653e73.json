@@ -1,0 +1,40 @@
+{
+  "id" : "8644d738-98a1-3e0d-a6a1-a4be31ef694b",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini-nonexistent-model\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 404,
+    "bodyFileName" : "chat_completions-6f74c5653e73.json",
+    "headers" : {
+      "x-request-id" : "req_0b1561af84e7450b9cd1d6ef27b7d390",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a30f1ec42fb7cc88-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-openai-proxy-wasm" : "v0.1",
+      "Date" : "Wed, 26 Aug 2026 01:39:01 GMT",
+      "set-cookie" : "__cf_bm=mHSfCIGgGG8_gp599rnyPmGl0VaCpsimYqNgbF_d9ag-1787708339.8657904-1.0.1.1-iF3F7PUuAiv8CJm_Yz75CJx8Op47zSr3OLJjs8nmGQHQkgE7ntZg9tOhLcCOVpvr01ltGLo3ka01qoycRLso4skn.L6rCAvhAVxxiV2TB.U6H1wkOhLgKmKKsFx.bX2P; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 26 Aug 2026 02:09:01 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "Vary" : "Origin",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "8644d738-98a1-3e0d-a6a1-a4be31ef694b",
+  "persistent" : true,
+  "insertionIndex" : 63
+}
