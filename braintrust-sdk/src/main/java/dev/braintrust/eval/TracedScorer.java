@@ -2,6 +2,7 @@ package dev.braintrust.eval;
 
 import dev.braintrust.trace.BrainstoreTrace;
 import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A scorer that receives access to the full distributed trace of the task that was evaluated.
@@ -10,9 +11,12 @@ import java.util.List;
  * invocations, or other spans produced during task execution — not just the final {@code
  * TaskResult}.
  *
+ * <p>Implementations must be thread safe.
+ *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
  */
+@ThreadSafe
 public interface TracedScorer<INPUT, OUTPUT> extends Scorer<INPUT, OUTPUT> {
 
     /**

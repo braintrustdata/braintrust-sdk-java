@@ -477,6 +477,11 @@ public class EvalTest {
         // eval should complete without throwing, even though one case errors
         var result = eval.run();
         assertNotNull(result.getExperimentUrl());
+        assertEquals(
+                2,
+                result.getCasesExecuted(),
+                "a task exception is contained, so both cases count as executed");
+        assertEquals(EvalResult.Status.COMPLETE, result.getStatus());
 
         var spans = testHarness.awaitExportedSpans();
 

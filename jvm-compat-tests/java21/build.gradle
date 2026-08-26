@@ -1,0 +1,51 @@
+// Isolated JVM-compatibility test project pinned to Java 21.
+//
+// The rest of the build compiles and tests on Java 17. This project exists to run
+// SDK code on a *different* JVM so we catch things that only show up at runtime on
+// a newer release (class-file version, JDK internals access, agent attach rules,
+// stdlib behavior changes, ...).
+//
+// It is deliberately its own subproject rather than an extra test task so each JVM
+// under test can pin its own toolchain and dependency versions independently.
+// To cover another JVM, copy this directory to jvm-compat-tests/java<N> and bump
+// the languageVersion below.
+//
+// Run with: ./gradlew :jvm-compat-tests:java21:test
+plugins {
+  id 'java'
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+    vendor = JvmVendorSpec.ADOPTIUM
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+ext {
+  junitVersion = rootProject.ext.junitVersion
+  slf4jVersion = rootProject.ext.slf4jVersion
+}
+
+dependencies {
+  // Depend on the SDK the same way an end user would: as a published jar built
+  // for Java 17, loaded here by a Java 21 runtime.
+  testImplementation project(":braintrust-sdk")
+
+  testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+test {
+  useJUnitPlatform()
+
+  testLogging {
+    events 'passed', 'skipped', 'failed'
+    showStandardStreams = true
+  }
+}
