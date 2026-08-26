@@ -380,6 +380,33 @@ public class BraintrustSpringAITest {
                 provider.expectedBaseUrl().apply(testHarness),
                 metadata(span).get("request_base_uri").asText(),
                 "request_base_uri should match the configured base URL");
+
+        assertCorrelationIdsCaptured(span, provider);
+    }
+
+    /**
+     * Both correlation IDs, over whichever transport the calling test exercised — the blocking
+     * RestClient interceptor and the reactive WebClient filter reach these from different places.
+     * The header name is vendor-specific: OpenAI sends {@code x-request-id}, Anthropic {@code
+     * request-id} with no prefix. Presence only for the header, since its value is opaque.
+     */
+    private static void assertCorrelationIdsCaptured(SpanData span, Provider provider) {
+        boolean isAnthropic = "anthropic".equals(provider.expectedProvider());
+        String idHeader = isAnthropic ? "request-id" : "x-request-id";
+
+        String requestId = span.getAttributes().get(AttributeKey.stringKey(idHeader));
+        assertNotNull(requestId, idHeader + " header must be captured");
+        assertFalse(requestId.isBlank(), idHeader + " must not be blank");
+
+        String responseId = span.getAttributes().get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        if (isAnthropic) {
+            assertTrue(responseId.startsWith("msg_"), "unexpected response_id: " + responseId);
+        } else {
+            assertTrue(
+                    responseId.startsWith("chatcmpl-") || responseId.startsWith("resp_"),
+                    "unexpected response_id: " + responseId);
+        }
     }
 
     @SneakyThrows

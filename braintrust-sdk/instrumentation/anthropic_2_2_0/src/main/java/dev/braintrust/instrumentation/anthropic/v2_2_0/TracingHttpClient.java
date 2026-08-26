@@ -5,11 +5,8 @@ import com.anthropic.core.http.HttpClient;
 import com.anthropic.core.http.HttpRequest;
 import com.anthropic.core.http.HttpRequestBody;
 import com.anthropic.core.http.HttpResponse;
-import com.anthropic.helpers.MessageAccumulator;
-import com.anthropic.models.messages.RawMessageStreamEvent;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
-import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
@@ -17,13 +14,13 @@ import io.opentelemetry.api.trace.TraceFlags;
 import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -125,7 +122,9 @@ public class TracingHttpClient implements HttpClient {
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson);
+                    inputJson,
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
 
             var response = underlying.execute(bufferedRequest, requestOptions);
             return new TeeingStreamHttpResponse(response, span, tracer);
@@ -153,7 +152,9 @@ public class TracingHttpClient implements HttpClient {
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson);
+                    inputJson,
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
             return underlying
                     .executeAsync(bufferedRequest, requestOptions)
                     .thenApply(
@@ -264,9 +265,39 @@ public class TracingHttpClient implements HttpClient {
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
+
+                // Recorded before tagging: the anthropic sdk raises above this layer, so the
+                // error status is ours alone to set, and losing it to a body-parsing problem is
+                // worse than losing the parsed output.
+                // Anything outside 2xx, not just 4xx/5xx: both vendor SDKs treat success as
+                // exactly 200..299, so a final 3xx that the http client did not follow (a 304, or
+                // a redirect with no usable Location) is raised to the caller as an
+                // UnexpectedStatusCodeException and must mark the span failed too.
+                int statusCode = delegate.statusCode();
+                if (statusCode < 200 || statusCode >= 300) {
+                    InstrumentationSemConv.tagLLMSpanHttpError(
+                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                }
+
+                // Wire-format bookkeeping lives in ResponseReassembler; this hands semconv
+                // everything the response carried in one flat call. A null body (empty or
+                // unparseable response) still tags the headers.
                 // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
                 // search, etc.) nested under the LLM span while it is still live.
-                tagSpanFromBuffer(tracer, span, bytes, timeToFirstTokenNanos.get());
+                try {
+                    var reassembled =
+                            ResponseReassembler.reassemble(bytes, timeToFirstTokenNanos.get());
+                    InstrumentationSemConv.tagLLMSpanResponse(
+                            tracer,
+                            span,
+                            InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                            reassembled.body(),
+                            reassembled.timeToFirstTokenNanos(),
+                            headersAsMap(delegate.headers()));
+                } catch (Exception e) {
+                    // Observability must never change the response behavior seen by the caller.
+                    log.error("Could not tag span from response buffer", e);
+                }
             } finally {
                 span.end();
             }
@@ -360,89 +391,25 @@ public class TracingHttpClient implements HttpClient {
     // Span tagging from buffered bytes
     // -------------------------------------------------------------------------
 
-    private static void tagSpanFromBuffer(
-            Tracer tracer, Span span, byte[] bytes, Long timeToFirstTokenNanos) {
-        if (bytes.length == 0) return;
-        try {
-            String firstLine = firstNonEmptyLine(bytes);
-            // Anthropic SSE starts with "event: message_start\ndata: ..." so we detect
-            // either prefix. OpenAI SSE starts directly with "data:".
-            boolean isSse =
-                    firstLine != null
-                            && (firstLine.startsWith("data:") || firstLine.startsWith("event:"));
-            if (isSse) {
-                tagSpanFromSseBytes(tracer, span, bytes, timeToFirstTokenNanos);
-            } else {
-                // Non-streaming: plain Message JSON — pass it whole, no time_to_first_token
-                String responseJson = new String(bytes, StandardCharsets.UTF_8);
-                InstrumentationSemConv.tagLLMSpanResponse(
-                        tracer,
-                        span,
-                        InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
-                        responseJson,
-                        null);
-            }
-        } catch (Exception e) {
-            log.error("Could not tag span from Anthropic response buffer", e);
-        }
-    }
-
-    private static String firstNonEmptyLine(byte[] bytes) {
-        int start = 0;
-        for (int i = 0; i <= bytes.length; i++) {
-            if (i == bytes.length || bytes[i] == '\n') {
-                String line = new String(bytes, start, i - start, StandardCharsets.UTF_8).strip();
-                if (!line.isEmpty()) return line;
-                start = i + 1;
-            }
-        }
-        return null;
-    }
-
     /**
-     * Anthropic SSE wire format has named events:
-     *
-     * <pre>
-     * event: message_start
-     * data: {"type":"message_start","message":{...}}
-     *
-     * event: content_block_delta
-     * data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hi"}}
-     * </pre>
-     *
-     * We only need the {@code data:} lines — the event name is redundant with the {@code type}
-     * field inside the JSON. Feed each data payload to {@link MessageAccumulator} and serialize the
-     * assembled {@link com.anthropic.models.messages.Message} for the span.
+     * Adapts the anthropic sdk's {@code Headers} to the vendor-neutral shape {@link
+     * InstrumentationSemConv} consumes. Returns an empty map on failure so a header-shape change
+     * can never take down the tagging that follows it.
      */
-    private static void tagSpanFromSseBytes(
-            Tracer tracer, Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
+    private static Map<String, List<String>> headersAsMap(
+            @Nullable com.anthropic.core.http.Headers headers) {
+        if (headers == null) {
+            return Map.of();
+        }
         try {
-            var mapper = BraintrustJsonMapper.get();
-            var reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    new ByteArrayInputStream(sseBytes), StandardCharsets.UTF_8));
-            var accumulator = MessageAccumulator.create();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.startsWith("data:")) continue;
-                String data = line.substring("data:".length()).strip();
-                if (data.isEmpty()) continue;
-                try {
-                    accumulator.accumulate(mapper.readValue(data, RawMessageStreamEvent.class));
-                } catch (Exception ignored) {
-                    // skip unrecognized event types (e.g. ping)
-                }
+            var map = new HashMap<String, List<String>>();
+            for (String name : headers.names()) {
+                map.put(name, headers.values(name));
             }
-            String assembledMessageJson = BraintrustJsonMapper.toJson(accumulator.message());
-            InstrumentationSemConv.tagLLMSpanResponse(
-                    tracer,
-                    span,
-                    InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
-                    assembledMessageJson,
-                    timeToFirstTokenNanos);
+            return map;
         } catch (Exception e) {
-            log.error("Could not parse Anthropic SSE buffer to tag streaming span output", e);
+            log.debug("could not read headers", e);
+            return Map.of();
         }
     }
 }

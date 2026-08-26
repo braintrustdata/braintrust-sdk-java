@@ -84,6 +84,8 @@ public class BraintrustLangchainTest {
         assertNotNull(metadataJson, "Metadata should be present");
         JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("openai", metadata.get("provider").asText(), "Provider should be 'openai'");
+
+        assertOpenAiIdsCaptured(span);
         assertEquals(
                 "gpt-4o-mini", metadata.get("model").asText(), "Model should be 'gpt-4o-mini'");
 
@@ -212,6 +214,8 @@ public class BraintrustLangchainTest {
         assertNotNull(metadataJson, "Metadata should be present");
         JsonNode metadata = JSON_MAPPER.readTree(metadataJson);
         assertEquals("openai", metadata.get("provider").asText(), "Provider should be 'openai'");
+
+        assertOpenAiIdsCaptured(llmSpan);
         assertEquals(
                 "gpt-4o-mini", metadata.get("model").asText(), "Model should be 'gpt-4o-mini'");
 
@@ -574,5 +578,24 @@ public class BraintrustLangchainTest {
                     "The %d-day forecast for %s: Mostly sunny with temperatures between 65-75°F.",
                     days, location);
         }
+    }
+
+    /**
+     * Covers both places langchain4j surfaces response headers: {@code execute()} for a blocking
+     * call and {@code onOpen()} for an SSE stream. Presence only for the header — OpenAI returns
+     * both {@code req_*} and bare UUIDs for it.
+     */
+    private static void assertOpenAiIdsCaptured(SpanData span) {
+        var attributes = span.getAttributes();
+
+        String requestId = attributes.get(AttributeKey.stringKey("x-request-id"));
+        assertNotNull(requestId, "x-request-id header must be captured");
+        assertFalse(requestId.isBlank(), "x-request-id must not be blank");
+
+        String responseId = attributes.get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        assertTrue(
+                responseId.startsWith("resp_") || responseId.startsWith("chatcmpl-"),
+                "unexpected response_id: " + responseId);
     }
 }

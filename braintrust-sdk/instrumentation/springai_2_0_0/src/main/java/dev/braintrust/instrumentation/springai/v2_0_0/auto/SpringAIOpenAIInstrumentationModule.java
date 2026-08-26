@@ -37,6 +37,8 @@ public class SpringAIOpenAIInstrumentationModule extends InstrumentationModule {
                 OPENAI_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 OPENAI_PACKAGE + "TracingHttpClient$TeeInputStream",
                 OPENAI_PACKAGE + "TracingHttpClient$ExtractedRequest",
+                OPENAI_PACKAGE + "ResponseReassembler",
+                OPENAI_PACKAGE + "ResponseReassembler$Result",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }

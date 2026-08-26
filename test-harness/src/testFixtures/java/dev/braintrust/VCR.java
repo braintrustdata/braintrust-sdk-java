@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -474,6 +475,7 @@ public class VCR {
                 com.github.tomakehurst.wiremock.client.WireMock.aResponse()
                         .withStatus(status)
                         .withHeader("Content-Type", responseContentType);
+        copyRecordedResponseHeaders(mapping, response);
 
         // Binary event-stream bodies must be served as raw bytes to avoid UTF-8 corruption
         if (isEventStream) {
@@ -497,6 +499,45 @@ public class VCR {
         }
 
         wireMock.stubFor(stub.willReturn(response));
+    }
+
+    /**
+     * Replays the recorded response headers onto a programmatically-built stub.
+     *
+     * <p>Mappings that WireMock loads natively serve their recorded headers for free, but the
+     * programmatic path above rebuilds the response from scratch and would otherwise serve only
+     * {@code Content-Type} — silently hiding provider headers (rate limits, {@code x-request-id})
+     * from any instrumentation under test on exactly the SSE responses these stubs exist for.
+     */
+    private static void copyRecordedResponseHeaders(
+            JsonNode mapping,
+            com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder response) {
+        JsonNode headers = mapping.at("/response/headers");
+        if (!headers.isObject()) {
+            return;
+        }
+        Iterator<Map.Entry<String, JsonNode>> fields = headers.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> header = fields.next();
+            String name = header.getKey();
+            // Content-Type is already set from the cassette; the framing headers belong to
+            // Jetty, and replaying a recorded Content-Length would contradict the body we serve.
+            if (name.equalsIgnoreCase("Content-Type")
+                    || name.equalsIgnoreCase("Content-Length")
+                    || name.equalsIgnoreCase("Transfer-Encoding")) {
+                continue;
+            }
+            JsonNode value = header.getValue();
+            if (value.isArray()) {
+                List<String> values = new ArrayList<>();
+                value.forEach(v -> values.add(v.asText()));
+                if (!values.isEmpty()) {
+                    response.withHeader(name, values.toArray(new String[0]));
+                }
+            } else if (value.isTextual()) {
+                response.withHeader(name, value.asText());
+            }
+        }
     }
 
     /**

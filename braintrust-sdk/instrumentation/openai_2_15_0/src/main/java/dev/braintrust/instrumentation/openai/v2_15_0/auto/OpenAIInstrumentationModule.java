@@ -37,6 +37,8 @@ public class OpenAIInstrumentationModule extends InstrumentationModule {
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$ExtractedRequest",
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustOpenAI",
                 MANUAL_INSTRUMENTATION_PACKAGE + "ContextCapturingProxy",
+                MANUAL_INSTRUMENTATION_PACKAGE + "ResponseReassembler",
+                MANUAL_INSTRUMENTATION_PACKAGE + "ResponseReassembler$Result",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }

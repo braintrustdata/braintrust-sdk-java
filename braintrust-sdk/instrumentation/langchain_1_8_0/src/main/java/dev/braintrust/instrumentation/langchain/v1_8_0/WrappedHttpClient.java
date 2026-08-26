@@ -22,6 +22,8 @@ import io.opentelemetry.context.Scope;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,7 +53,12 @@ class WrappedHttpClient implements HttpClient {
             tagRequest(span, request);
             var response = underlying.execute(request);
             InstrumentationSemConv.tagLLMSpanResponse(
-                    tracer, span, options.providerName(), response.body());
+                    tracer,
+                    span,
+                    options.providerName(),
+                    response.body(),
+                    null,
+                    response.headers());
             return response;
         } catch (Throwable t) {
             InstrumentationSemConv.tagLLMSpanResponse(span, t);
@@ -116,7 +123,14 @@ class WrappedHttpClient implements HttpClient {
             List<String> pathSegments =
                     Arrays.stream(uri.getPath().split("/")).filter(s -> !s.isEmpty()).toList();
             InstrumentationSemConv.tagLLMSpanRequest(
-                    span, options.providerName(), baseUrl, pathSegments, "POST", request.body());
+                    span,
+                    options.providerName(),
+                    baseUrl,
+                    pathSegments,
+                    "POST",
+                    request.body(),
+                    null,
+                    request.headers());
         } catch (Exception e) {
             log.debug("Failed to tag request span", e);
         }
@@ -137,6 +151,13 @@ class WrappedHttpClient implements HttpClient {
         // failure here is what stops onClose from finalizing a failed call as a successful span.
         @javax.annotation.Nullable private volatile String streamFailure;
 
+        // onOpen is the only point the SSE transport exposes response headers, but the body is
+        // not assembled until the stream closes — so they are copied aside here and handed to the
+        // semconv layer together with the body in finalizeSpan, potentially from another thread.
+        // A copy rather than the client's own map: we outlive the callback that handed it to us.
+        // Starts empty, which is also the right answer for a stream that errors before it opens.
+        private final Map<String, List<String>> responseHeaders = new ConcurrentHashMap<>();
+
         WrappedServerSentEventListener(
                 ServerSentEventListener delegate, Span span, String providerName, Tracer tracer) {
             this.delegate = delegate;
@@ -148,7 +169,31 @@ class WrappedHttpClient implements HttpClient {
         @Override
         public void onOpen(SuccessfulHttpResponse response) {
             try (Scope ignored = span.makeCurrent()) {
+                captureResponseHeaders(response);
                 delegate.onOpen(response);
+            }
+        }
+
+        /**
+         * Copies the response headers aside, entry by entry rather than in bulk: {@link
+         * ConcurrentHashMap} rejects null keys and values, and header maps from some HttpClient
+         * implementations carry a null key for the status line. Best-effort throughout — throwing
+         * here would break the caller's stream for the sake of a span attribute.
+         */
+        private void captureResponseHeaders(SuccessfulHttpResponse response) {
+            try {
+                Map<String, List<String>> headers = response.headers();
+                if (headers == null) {
+                    return;
+                }
+                headers.forEach(
+                        (name, values) -> {
+                            if (name != null && values != null) {
+                                responseHeaders.put(name, values);
+                            }
+                        });
+            } catch (Exception e) {
+                log.debug("could not capture response headers", e);
             }
         }
 
@@ -216,7 +261,7 @@ class WrappedHttpClient implements HttpClient {
                 Long ttft = elapsed != 0L ? elapsed : null;
                 String responseBody = accumulator.build();
                 InstrumentationSemConv.tagLLMSpanResponse(
-                        tracer, span, providerName, responseBody, ttft);
+                        tracer, span, providerName, responseBody, ttft, responseHeaders);
             } catch (Exception e) {
                 log.debug("Failed to finalize streaming span", e);
             }

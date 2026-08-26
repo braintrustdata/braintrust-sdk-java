@@ -4,13 +4,8 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.openai.core.ObjectMappers;
 import com.openai.core.RequestOptions;
 import com.openai.core.http.*;
-import com.openai.helpers.ChatCompletionAccumulator;
-import com.openai.helpers.ResponseAccumulator;
-import com.openai.models.chat.completions.ChatCompletionChunk;
-import com.openai.models.responses.ResponseStreamEvent;
 import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
-import dev.braintrust.json.BraintrustJsonMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
@@ -20,6 +15,9 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -68,7 +66,7 @@ class TracingHttpClient implements HttpClient {
         Context context = contextFromTraceparent(values.get(0));
         HttpRequest stripped =
                 request.toBuilder()
-                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, java.util.List.of())
+                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, List.of())
                         .build();
         return new ExtractedRequest(stripped, context);
     }
@@ -126,7 +124,9 @@ class TracingHttpClient implements HttpClient {
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson);
+                    inputJson,
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
             var response = underlying.execute(bufferedRequest, requestOptions);
             // Always tee the response body. onStreamClosed() detects whether the collected
             // bytes are SSE or plain JSON and tags the span accordingly.
@@ -155,7 +155,9 @@ class TracingHttpClient implements HttpClient {
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson);
+                    inputJson,
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
             return underlying
                     .executeAsync(bufferedRequest, requestOptions)
                     .thenApply(
@@ -237,104 +239,30 @@ class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * Tags the span from bytes collected by {@link TeeingStreamHttpResponse}. Auto-detects whether
-     * the bytes are an SSE stream (first non-empty line starts with {@code "data: "}) or a plain
-     * JSON response, and parses accordingly.
+     * The response body as a single JSON document, plus the timing that goes with it. Reassembly is
+     * kept separate from tagging so that {@link TeeingStreamHttpResponse#onStreamClosed} can hand
+     * the semconv layer everything about the response in one call — a body we couldn't produce
+     * becomes a null {@code body} rather than a skipped tagging call, which is what keeps the
+     * response headers from being lost on an empty or unrecognized body.
      */
-    private static void tagSpanFromBuffer(
-            Tracer tracer, Span span, byte[] bytes, Long timeToFirstTokenNanos) {
-        if (bytes.length == 0) return;
-        try {
-            String firstLine = firstNonEmptyLine(bytes);
-            if (firstLine != null
-                    && (firstLine.startsWith("data:") || firstLine.startsWith("event:"))) {
-                tagSpanFromSseBytes(tracer, span, bytes, timeToFirstTokenNanos);
-            } else {
-                String responseJson = new String(bytes, StandardCharsets.UTF_8);
-                InstrumentationSemConv.tagLLMSpanResponse(
-                        tracer, span, InstrumentationSemConv.PROVIDER_NAME_OPENAI, responseJson);
-            }
-        } catch (Exception e) {
-            log.error("Could not tag span from response buffer", e);
-        }
-    }
-
-    private static String firstNonEmptyLine(byte[] bytes) {
-        int start = 0;
-        for (int i = 0; i <= bytes.length; i++) {
-            if (i == bytes.length || bytes[i] == '\n') {
-                String line = new String(bytes, start, i - start, StandardCharsets.UTF_8).strip();
-                if (!line.isEmpty()) return line;
-                start = i + 1;
-            }
-        }
-        return null;
-    }
-
     /**
-     * Parses SSE wire bytes, feeds each {@code data:} chunk through {@link
-     * ChatCompletionAccumulator}, then tags the span with the reassembled output JSON.
+     * Adapts openai-java's {@link Headers} to the vendor-neutral shape {@link
+     * InstrumentationSemConv} consumes. Returns an empty map on failure so a header-shape change
+     * can never take down the tagging that follows it.
      */
-    private static void tagSpanFromSseBytes(
-            Tracer tracer, Span span, byte[] sseBytes, Long timeToFirstTokenNanos) {
+    private static Map<String, List<String>> headersAsMap(@Nullable Headers headers) {
+        if (headers == null) {
+            return Map.of();
+        }
         try {
-            var reader =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    new ByteArrayInputStream(sseBytes), StandardCharsets.UTF_8));
-            String line;
-            String responseJson = null;
-            while ((line = reader.readLine()) != null) {
-                if (!line.startsWith("data:")) continue;
-                var firstEventJson = line.substring("data:".length()).strip();
-                // after the first data chunk is found, read the rest of the stream with the proper
-                // accumulator type
-                var jsonTree = JSON_MAPPER.readTree(firstEventJson);
-                if (jsonTree.has("type") && jsonTree.get("type").asText().startsWith("response")) {
-                    // response API SSEvents
-                    ResponseAccumulator accumulator = ResponseAccumulator.create();
-                    accumulator.accumulate(
-                            JSON_MAPPER.readValue(firstEventJson, ResponseStreamEvent.class));
-                    while ((line = reader.readLine()) != null) {
-                        if (!line.startsWith("data:")) continue;
-                        String data = line.substring("data:".length()).strip();
-                        if (data.isEmpty() || data.equals("[DONE]")) continue;
-                        ResponseStreamEvent rse =
-                                JSON_MAPPER.readValue(data, ResponseStreamEvent.class);
-                        accumulator.accumulate(rse);
-                    }
-                    responseJson = JSON_MAPPER.writeValueAsString(accumulator.response());
-                } else if (jsonTree.has("object")
-                        && jsonTree.get("object").asText().equals("chat.completion.chunk")) {
-                    // completions API SSEvents
-                    var accumulator = ChatCompletionAccumulator.create();
-                    accumulator.accumulate(
-                            JSON_MAPPER.readValue(firstEventJson, ChatCompletionChunk.class));
-                    while ((line = reader.readLine()) != null) {
-                        if (!line.startsWith("data:")) continue;
-                        String data = line.substring("data:".length()).strip();
-                        if (data.isEmpty() || data.equals("[DONE]")) continue;
-                        ChatCompletionChunk chunk =
-                                BraintrustJsonMapper.get()
-                                        .readValue(data, ChatCompletionChunk.class);
-                        accumulator.accumulate(chunk);
-                    }
-                    responseJson = JSON_MAPPER.writeValueAsString(accumulator.chatCompletion());
-                } else {
-                    log.warn("unknown SSE object {}", firstEventJson);
-                }
-                break;
+            var map = new HashMap<String, List<String>>();
+            for (String name : headers.names()) {
+                map.put(name, headers.values(name));
             }
-            if (null != responseJson) {
-                InstrumentationSemConv.tagLLMSpanResponse(
-                        tracer,
-                        span,
-                        InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                        responseJson,
-                        timeToFirstTokenNanos);
-            }
+            return map;
         } catch (Exception e) {
-            log.error("Could not parse SSE buffer to tag streaming span output", e);
+            log.debug("could not read headers", e);
+            return Map.of();
         }
     }
 
@@ -374,10 +302,40 @@ class TracingHttpClient implements HttpClient {
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
+
+                // Recorded before tagging: openai-java raises above this layer, so the error
+                // status is ours alone to set, and losing it to a body-parsing problem is worse
+                // than losing the parsed output.
+                // Anything outside 2xx, not just 4xx/5xx: both vendor SDKs treat success as
+                // exactly 200..299, so a final 3xx that the http client did not follow (a 304, or
+                // a redirect with no usable Location) is raised to the caller as an
+                // UnexpectedStatusCodeException and must mark the span failed too.
+                int statusCode = delegate.statusCode();
+                if (statusCode < 200 || statusCode >= 300) {
+                    InstrumentationSemConv.tagLLMSpanHttpError(
+                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                }
+
+                // Wire-format bookkeeping lives in ResponseReassembler; this hands semconv
+                // everything the response carried in one flat call. A null body (empty response,
+                // or an SSE shape we didn't recognize) still tags the headers.
                 // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
                 // search, etc.) nested under the LLM span while it is still live. No-op for Chat
                 // Completions responses (no `output` array).
-                tagSpanFromBuffer(tracer, span, bytes, timeToFirstTokenNanos.get());
+                try {
+                    var reassembled =
+                            ResponseReassembler.reassemble(bytes, timeToFirstTokenNanos.get());
+                    InstrumentationSemConv.tagLLMSpanResponse(
+                            tracer,
+                            span,
+                            InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                            reassembled.body(),
+                            reassembled.timeToFirstTokenNanos(),
+                            headersAsMap(delegate.headers()));
+                } catch (Exception e) {
+                    // Observability must never change the response behavior seen by the caller.
+                    log.error("Could not tag span from response buffer", e);
+                }
             } finally {
                 span.end();
             }

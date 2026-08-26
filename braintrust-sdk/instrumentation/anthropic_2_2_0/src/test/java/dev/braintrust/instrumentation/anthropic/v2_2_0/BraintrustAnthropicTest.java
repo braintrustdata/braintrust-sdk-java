@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.core.RequestOptions;
+import com.anthropic.core.http.Headers;
+import com.anthropic.core.http.HttpMethod;
+import com.anthropic.core.http.HttpRequest;
+import com.anthropic.core.http.HttpResponse;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,12 +16,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class BraintrustAnthropicTest {
     private static final String TEST_MODEL = "claude-haiku-4-5";
@@ -561,5 +572,197 @@ public class BraintrustAnthropicTest {
         assertTrue(
                 wrapped.toString().contains("ContextCapturingProxy"),
                 "toString should identify the proxy, got: " + wrapped);
+    }
+
+    /**
+     * Anthropic returns its correlation ID as {@code request-id} (no {@code x-} prefix, unlike
+     * OpenAI) and its object ID as {@code msg_*}. Both must land on the span for streaming and
+     * non-streaming alike — the header comes off the HTTP response, the object ID out of the
+     * reassembled body, so the two travel independent paths.
+     */
+    @Test
+    @SneakyThrows
+    void testCorrelationIdsCaptured() {
+        AnthropicClient anthropicClient =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+
+        var request =
+                MessageCreateParams.builder()
+                        .model(Model.of(TEST_MODEL))
+                        .system("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .maxTokens(50)
+                        .temperature(0.0)
+                        .build();
+
+        anthropicClient.messages().create(request);
+        assertAnthropicIdsCaptured(testHarness.awaitExportedSpans().get(0));
+    }
+
+    @Test
+    @SneakyThrows
+    void testCorrelationIdsCapturedStreaming() {
+        AnthropicClient anthropicClient =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+
+        var request =
+                MessageCreateParams.builder()
+                        .model(Model.of(TEST_MODEL))
+                        .system("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .maxTokens(50)
+                        .temperature(0.0)
+                        .build();
+
+        try (var stream = anthropicClient.messages().createStreaming(request)) {
+            stream.stream().forEach(event -> {});
+        }
+        assertAnthropicIdsCaptured(testHarness.awaitExportedSpans().get(0));
+    }
+
+    /**
+     * Asserts presence only for the header: its value is an opaque vendor string, so pinning its
+     * shape would encode an assumption the provider never made.
+     */
+    private static void assertAnthropicIdsCaptured(io.opentelemetry.sdk.trace.data.SpanData span) {
+        var attributes = span.getAttributes();
+
+        String requestId = attributes.get(AttributeKey.stringKey("request-id"));
+        assertNotNull(requestId, "request-id header must be captured");
+        assertFalse(requestId.isBlank(), "request-id must not be blank");
+
+        String responseId = attributes.get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        assertTrue(responseId.startsWith("msg_"), "unexpected response_id: " + responseId);
+
+        assertNull(
+                attributes.get(AttributeKey.stringKey("x-request-id")),
+                "OpenAI's header name must not appear on an Anthropic span");
+    }
+
+    // -------------------------------------------------------------------------
+    // Status-code handling
+    //
+    // Driven against a stub delegate rather than the VCR proxy: a 3xx or a 1xx cannot
+    // realistically be recorded from the vendor, and those are exactly the statuses that
+    // distinguish "non-2xx" from "4xx and up".
+    // -------------------------------------------------------------------------
+
+    /**
+     * anthropic-java's ErrorHandler treats success as exactly 200..299 and raises everything else
+     * to the caller, so every one of these must mark the span failed. 304 is the realistic case:
+     * the http client does not follow it, so it arrives here as a final response.
+     */
+    @ParameterizedTest(name = "status {0}")
+    @ValueSource(ints = {100, 204, 301, 304, 400, 500})
+    @SneakyThrows
+    void nonSuccessStatusMarksSpanFailed(int statusCode) {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(), new StubHttpClient(statusCode, "{}"));
+
+        try (var response = client.execute(messagesRequest(), RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        boolean isSuccess = statusCode >= 200 && statusCode < 300;
+        assertEquals(
+                isSuccess ? StatusCode.UNSET : StatusCode.ERROR,
+                span.getStatus().getStatusCode(),
+                "status "
+                        + statusCode
+                        + (isSuccess ? " should not" : " should")
+                        + " mark the span failed");
+    }
+
+    /** The correlation header is still captured on a status the SDK will reject. */
+    @Test
+    @SneakyThrows
+    void requestIdIsCapturedOnANonSuccessStatus() {
+        var client =
+                new TracingHttpClient(testHarness.openTelemetry(), new StubHttpClient(304, ""));
+
+        try (var response = client.execute(messagesRequest(), RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertEquals(
+                "stubbed-request-id",
+                span.getAttributes().get(AttributeKey.stringKey("request-id")),
+                "an empty-bodied non-2xx must still yield the vendor request id");
+    }
+
+    @Test
+    void nonJsonResponseTaggingIsBestEffort() {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(),
+                        new StubHttpClient(502, "<html>Bad Gateway</html>"));
+
+        assertDoesNotThrow(
+                () -> {
+                    try (var response = client.execute(messagesRequest(), RequestOptions.none())) {
+                        response.body().readAllBytes();
+                    }
+                });
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+        assertEquals(
+                "stubbed-request-id",
+                span.getAttributes().get(AttributeKey.stringKey("request-id")));
+    }
+
+    private static HttpRequest messagesRequest() {
+        return HttpRequest.builder()
+                .method(HttpMethod.POST)
+                .baseUrl("https://api.openai.com/v1")
+                .addPathSegments("v1", "messages")
+                .build();
+    }
+
+    /** Returns a canned response; never touches the network. */
+    private record StubHttpClient(int statusCode, String body)
+            implements com.anthropic.core.http.HttpClient {
+
+        @Override
+        public HttpResponse execute(HttpRequest request, RequestOptions requestOptions) {
+            return new HttpResponse() {
+                @Override
+                public int statusCode() {
+                    return statusCode;
+                }
+
+                @Override
+                public Headers headers() {
+                    return Headers.builder().put("request-id", "stubbed-request-id").build();
+                }
+
+                @Override
+                public InputStream body() {
+                    return new ByteArrayInputStream(body.getBytes());
+                }
+
+                @Override
+                public void close() {}
+            };
+        }
+
+        @Override
+        public CompletableFuture<HttpResponse> executeAsync(
+                HttpRequest request, RequestOptions requestOptions) {
+            return CompletableFuture.completedFuture(execute(request, requestOptions));
+        }
+
+        @Override
+        public void close() {}
     }
 }
