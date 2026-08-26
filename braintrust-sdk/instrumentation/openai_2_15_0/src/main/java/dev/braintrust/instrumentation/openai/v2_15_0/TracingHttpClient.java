@@ -20,6 +20,9 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -68,7 +71,7 @@ class TracingHttpClient implements HttpClient {
         Context context = contextFromTraceparent(values.get(0));
         HttpRequest stripped =
                 request.toBuilder()
-                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, java.util.List.of())
+                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, List.of())
                         .build();
         return new ExtractedRequest(stripped, context);
     }
@@ -259,6 +262,28 @@ class TracingHttpClient implements HttpClient {
         }
     }
 
+    /**
+     * Adapts openai-java's {@link Headers} to the vendor-neutral shape {@link
+     * InstrumentationSemConv} consumes. Returns null on failure so a header-shape change can never
+     * take down the response tagging that follows it.
+     */
+    @Nullable
+    private static Map<String, List<String>> headersAsMap(@Nullable Headers headers) {
+        if (headers == null) {
+            return null;
+        }
+        try {
+            var map = new HashMap<String, List<String>>();
+            for (String name : headers.names()) {
+                map.put(name, headers.values(name));
+            }
+            return map;
+        } catch (Exception e) {
+            log.debug("could not read response headers", e);
+            return null;
+        }
+    }
+
     private static String firstNonEmptyLine(byte[] bytes) {
         int start = 0;
         for (int i = 0; i <= bytes.length; i++) {
@@ -368,12 +393,27 @@ class TracingHttpClient implements HttpClient {
         /** Called back by {@link TeeInputStream} when the stream is fully drained or closed. */
         private void onStreamClosed() {
             try {
+                // Scooped first and unconditionally: tagSpanFromBuffer bails on an empty body,
+                // and a failed request is both the likeliest source of one and the case where
+                // the vendor's request id is most worth having.
+                InstrumentationSemConv.tagLLMSpanIdHeaders(span, headersAsMap(delegate.headers()));
+
                 // Synchronize on teeBuffer to ensure any write() that was in-flight on a
                 // concurrent read thread has fully completed before we snapshot the bytes.
                 byte[] bytes;
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
+
+                // Recorded before tagging: openai-java raises above this layer, so the error
+                // status is ours alone to set, and losing it to a body-parsing problem is worse
+                // than losing the parsed output.
+                int statusCode = delegate.statusCode();
+                if (statusCode >= 400) {
+                    InstrumentationSemConv.tagLLMSpanHttpError(
+                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                }
+
                 // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
                 // search, etc.) nested under the LLM span while it is still live. No-op for Chat
                 // Completions responses (no `output` array).

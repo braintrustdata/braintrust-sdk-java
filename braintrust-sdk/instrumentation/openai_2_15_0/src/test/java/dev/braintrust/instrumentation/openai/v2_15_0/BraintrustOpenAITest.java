@@ -24,6 +24,7 @@ import com.openai.models.responses.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.Map;
@@ -649,5 +650,65 @@ public class BraintrustOpenAITest {
         assertNotNull(
                 attributes.get(AttributeKey.stringKey("braintrust.output_json")),
                 "output must be set");
+        assertOpenAIIdsCaptured(span);
+    }
+
+    /**
+     * Both correlation IDs OpenAI hands back. Deliberately asserts only presence and the object-ID
+     * prefix: {@code x-request-id} is opaque, and OpenAI returns both {@code req_*} and bare UUIDs
+     * for it, so pinning its shape would be wrong.
+     */
+    private static void assertOpenAIIdsCaptured(SpanData span) {
+        var attributes = span.getAttributes();
+
+        String requestId = attributes.get(AttributeKey.stringKey("x-request-id"));
+        assertNotNull(requestId, "x-request-id header must be captured");
+        assertFalse(requestId.isBlank(), "x-request-id must not be blank");
+
+        String responseId = attributes.get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        assertTrue(
+                responseId.startsWith("resp_") || responseId.startsWith("chatcmpl-"),
+                "unexpected response_id: " + responseId);
+    }
+
+    /**
+     * A failed call is the case where the vendor's request id matters most, and the only one where
+     * it is the *sole* ID available: an error body carries no object id of its own. openai-java
+     * raises its exception above the HTTP layer we instrument, so the error status on the span is
+     * ours alone to set.
+     */
+    @Test
+    @SneakyThrows
+    void testHttpErrorTagsSpan() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model("gpt-4o-mini-nonexistent-model")
+                        .addUserMessage("What is the capital of France?")
+                        .build();
+
+        assertThrows(Exception.class, () -> openAIClient.chat().completions().create(request));
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        assertEquals(
+                StatusCode.ERROR,
+                span.getStatus().getStatusCode(),
+                "a non-2xx response must mark the span failed");
+
+        var attributes = span.getAttributes();
+        String requestId = attributes.get(AttributeKey.stringKey("x-request-id"));
+        assertNotNull(requestId, "x-request-id must still be captured on a failed call");
+        assertNull(
+                attributes.get(AttributeKey.stringKey("response_id")),
+                "an error body has no object id to capture");
     }
 }

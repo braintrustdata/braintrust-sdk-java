@@ -562,4 +562,76 @@ public class BraintrustAnthropicTest {
                 wrapped.toString().contains("ContextCapturingProxy"),
                 "toString should identify the proxy, got: " + wrapped);
     }
+
+    /**
+     * Anthropic returns its correlation ID as {@code request-id} (no {@code x-} prefix, unlike
+     * OpenAI) and its object ID as {@code msg_*}. Both must land on the span for streaming and
+     * non-streaming alike — the header comes off the HTTP response, the object ID out of the
+     * reassembled body, so the two travel independent paths.
+     */
+    @Test
+    @SneakyThrows
+    void testCorrelationIdsCaptured() {
+        AnthropicClient anthropicClient =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+
+        var request =
+                MessageCreateParams.builder()
+                        .model(Model.of(TEST_MODEL))
+                        .system("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .maxTokens(50)
+                        .temperature(0.0)
+                        .build();
+
+        anthropicClient.messages().create(request);
+        assertAnthropicIdsCaptured(testHarness.awaitExportedSpans().get(0));
+    }
+
+    @Test
+    @SneakyThrows
+    void testCorrelationIdsCapturedStreaming() {
+        AnthropicClient anthropicClient =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+
+        var request =
+                MessageCreateParams.builder()
+                        .model(Model.of(TEST_MODEL))
+                        .system("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .maxTokens(50)
+                        .temperature(0.0)
+                        .build();
+
+        try (var stream = anthropicClient.messages().createStreaming(request)) {
+            stream.stream().forEach(event -> {});
+        }
+        assertAnthropicIdsCaptured(testHarness.awaitExportedSpans().get(0));
+    }
+
+    /**
+     * Asserts presence only for the header: its value is an opaque vendor string, so pinning its
+     * shape would encode an assumption the provider never made.
+     */
+    private static void assertAnthropicIdsCaptured(io.opentelemetry.sdk.trace.data.SpanData span) {
+        var attributes = span.getAttributes();
+
+        String requestId = attributes.get(AttributeKey.stringKey("request-id"));
+        assertNotNull(requestId, "request-id header must be captured");
+        assertFalse(requestId.isBlank(), "request-id must not be blank");
+
+        String responseId = attributes.get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        assertTrue(responseId.startsWith("msg_"), "unexpected response_id: " + responseId);
+
+        assertNull(
+                attributes.get(AttributeKey.stringKey("x-request-id")),
+                "OpenAI's header name must not appear on an Anthropic span");
+    }
 }

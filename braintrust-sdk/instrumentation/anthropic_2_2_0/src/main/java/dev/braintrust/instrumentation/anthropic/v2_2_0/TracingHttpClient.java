@@ -24,6 +24,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -260,10 +263,25 @@ public class TracingHttpClient implements HttpClient {
 
         private void onStreamClosed() {
             try {
+                // Scooped first and unconditionally: tagSpanFromBuffer bails on an empty body,
+                // and a failed request is both the likeliest source of one and the case where
+                // the vendor's request id is most worth having.
+                InstrumentationSemConv.tagLLMSpanIdHeaders(span, headersAsMap(delegate.headers()));
+
                 byte[] bytes;
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
                 }
+
+                // Recorded before tagging: the anthropic sdk raises above this layer, so the
+                // error status is ours alone to set, and losing it to a body-parsing problem is
+                // worse than losing the parsed output.
+                int statusCode = delegate.statusCode();
+                if (statusCode >= 400) {
+                    InstrumentationSemConv.tagLLMSpanHttpError(
+                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                }
+
                 // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
                 // search, etc.) nested under the LLM span while it is still live.
                 tagSpanFromBuffer(tracer, span, bytes, timeToFirstTokenNanos.get());
@@ -384,6 +402,29 @@ public class TracingHttpClient implements HttpClient {
             }
         } catch (Exception e) {
             log.error("Could not tag span from Anthropic response buffer", e);
+        }
+    }
+
+    /**
+     * Adapts the anthropic sdk's {@code Headers} to the vendor-neutral shape {@link
+     * InstrumentationSemConv} consumes. Returns null on failure so a header-shape change can never
+     * take down the response tagging that follows it.
+     */
+    @Nullable
+    private static Map<String, List<String>> headersAsMap(
+            @Nullable com.anthropic.core.http.Headers headers) {
+        if (headers == null) {
+            return null;
+        }
+        try {
+            var map = new HashMap<String, List<String>>();
+            for (String name : headers.names()) {
+                map.put(name, headers.values(name));
+            }
+            return map;
+        } catch (Exception e) {
+            log.debug("could not read response headers", e);
+            return null;
         }
     }
 

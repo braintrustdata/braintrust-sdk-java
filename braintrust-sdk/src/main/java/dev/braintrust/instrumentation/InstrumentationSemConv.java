@@ -123,6 +123,103 @@ public class InstrumentationSemConv {
     }
 
     /**
+     * Provider correlation-ID response headers. Captured onto the span under the header's own name:
+     * attributes no collector handler claims fall through into the Braintrust span's metadata
+     * verbatim, so the header name doubles as the metadata key and there is no naming convention to
+     * keep in sync across SDKs.
+     *
+     * <p>A single flat list rather than a per-provider map — OpenAI never sends {@code request-id}
+     * and Anthropic never sends {@code x-request-id}, so looking for both everywhere costs nothing
+     * and captures both if some proxy in between happens to send them.
+     */
+    private static final List<String> ID_HEADERS = List.of("x-request-id", "request-id");
+
+    /**
+     * Tags any {@link #ID_HEADERS} present onto the span. Best-effort: a header the vendor didn't
+     * send is simply not tagged.
+     *
+     * <p>Matching is case-insensitive here rather than at the call site because callers disagree —
+     * openai-java's {@code Headers} is backed by a case-insensitive {@code TreeMap}, while
+     * langchain4j hands over a plain {@code HashMap}.
+     */
+    public static void tagLLMSpanIdHeaders(
+            @Nonnull Span span, @Nullable Map<String, List<String>> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+            String name = entry.getKey();
+            if (name == null) {
+                continue;
+            }
+            for (String idHeader : ID_HEADERS) {
+                if (!idHeader.equalsIgnoreCase(name)) {
+                    continue;
+                }
+                List<String> values = entry.getValue();
+                if (values == null || values.isEmpty()) {
+                    break;
+                }
+                String value = values.get(0);
+                // Values are opaque — OpenAI returns both `req_*` and bare UUIDs for
+                // x-request-id — so never parse or validate the shape, only the emptiness.
+                if (value != null && !value.isBlank()) {
+                    span.setAttribute(idHeader, value);
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Marks the span failed for a non-2xx HTTP response. The vendor SDKs raise their exception
+     * above the HTTP client layer we instrument, so without this an errored call would otherwise
+     * end with an unset status and no indication anything went wrong.
+     */
+    public static void tagLLMSpanHttpError(
+            @Nonnull Span span, int statusCode, @Nullable String responseBody) {
+        span.setStatus(StatusCode.ERROR, httpErrorMessage(statusCode, responseBody));
+    }
+
+    /** Prefers the provider's own error message, falling back to the bare status code. */
+    private static String httpErrorMessage(int statusCode, @Nullable String responseBody) {
+        String fallback = "HTTP " + statusCode;
+        if (responseBody == null || responseBody.isBlank()) {
+            return fallback;
+        }
+        try {
+            JsonNode error = BraintrustJsonMapper.get().readTree(responseBody).get("error");
+            if (error != null) {
+                // OpenAI nests the text under `error.message`; Anthropic uses the same shape.
+                JsonNode message = error.isTextual() ? error : error.get("message");
+                if (message != null && message.isTextual() && !message.asText().isBlank()) {
+                    return fallback + ": " + message.asText();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("could not parse error message out of response body", e);
+        }
+        return fallback;
+    }
+
+    /**
+     * Tags the provider's object ID for the response ({@code resp_*}, {@code chatcmpl-*}, {@code
+     * msg_*}) onto the span. Like {@link #tagLLMSpanIdHeaders} this rides the collector's
+     * fall-through into metadata, but the raw field name {@code id} would be uselessly ambiguous
+     * there, so it is qualified — same reasoning as {@code tool_id} in {@link
+     * #openAIToolSpanMetadata}.
+     *
+     * <p>Absent on responses that carry no ID of their own (Bedrock, and any error body), which is
+     * exactly when the ID headers matter instead.
+     */
+    private static void tagResponseId(Span span, JsonNode responseJson) {
+        JsonNode id = responseJson.get("id");
+        if (id != null && id.isTextual() && !id.asText().isBlank()) {
+            span.setAttribute("response_id", id.asText());
+        }
+    }
+
+    /**
      * Emit child {@code type:"tool"} spans for built-in tool calls the vendor executed <em>server
      * side</em> (web search, file search, code interpreter, image generation, remote MCP) that the
      * provider reports inline with the LLM response. These are otherwise invisible on the trace —
@@ -200,6 +297,8 @@ public class InstrumentationSemConv {
     @SneakyThrows
     private static void tagOpenAIResponse(
             Span span, JsonNode responseJson, @Nullable Long timeToFirstTokenNanoseconds) {
+        tagResponseId(span, responseJson);
+
         // Output — chat completions API uses "choices"; Responses API uses "output"; audio
         // transcriptions and translations return a text-keyed object.
         if (responseJson.has("choices")) {
@@ -493,6 +592,8 @@ public class InstrumentationSemConv {
             String responseBody,
             JsonNode responseJson,
             @Nullable Long timeToFirstTokenNanoseconds) {
+        tagResponseId(span, responseJson);
+
         // Anthropic response is the full Message object — output it whole
         span.setAttribute("braintrust.output_json", responseBody);
 
