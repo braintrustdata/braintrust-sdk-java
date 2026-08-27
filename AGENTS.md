@@ -160,11 +160,12 @@ VCR_MODE=record ./gradlew :braintrust-sdk:test --tests 'dev.braintrust.devserver
 - when running btx, use the spec filter to target what is specifically under development: `VCR_MODE=off ./gradlew :btx:test -Pbtx.spec.filter=openai/prompt_cach --rerun`
 - don't reformat the whole repo, but do run `./gradlew spotlessApply` on files you changed before committing. the pre-commit hook and `./gradlew check` both run `spotlessCheck`, which fails on unformatted code.
 
-## Gotchas
+## Misc Tips and Best Practices
 
 - **don't hand-edit cassettes.** they're content-hashed and guarded against committed secrets. a failing VCR test means the recorded interaction changed — re-record it (see the VCR section), don't patch the json.
 - **`braintrust-api` is generated code.** don't edit sources under it by hand; it's regenerated from the braintrust openapi spec pinned as `braintrustOpenApiRef` in gradle.properties.
 - **there are no version constants to bump.** the sdk version is derived from git tags at build time (`generateVersion()` in build.gradle) and written into braintrust.properties. "bump the version" is not a source change.
+- When adding test cases, favor adding to the test file of the module being changed rather than making a new file. For example, if you fix a bug in the `Foo` module, add the test case to `FooTest.java` instead of making a new file, `FooTestMyBuggyCase.java`
 
 ## Releasing
 

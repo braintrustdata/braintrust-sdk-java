@@ -9,6 +9,11 @@ import com.openai.client.OpenAIClientAsync;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import com.openai.core.JsonValue;
+import com.openai.core.RequestOptions;
+import com.openai.core.http.Headers;
+import com.openai.core.http.HttpMethod;
+import com.openai.core.http.HttpRequest;
+import com.openai.core.http.HttpResponse;
 import com.openai.core.http.StreamResponse;
 import com.openai.helpers.ChatCompletionAccumulator;
 import com.openai.helpers.ResponseAccumulator;
@@ -24,15 +29,21 @@ import com.openai.models.responses.*;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class BraintrustOpenAITest {
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
@@ -649,5 +660,261 @@ public class BraintrustOpenAITest {
         assertNotNull(
                 attributes.get(AttributeKey.stringKey("braintrust.output_json")),
                 "output must be set");
+        assertOpenAIIdsCaptured(span);
+    }
+
+    /**
+     * Both correlation IDs OpenAI hands back. Deliberately asserts only presence and the object-ID
+     * prefix: {@code x-request-id} is opaque, and OpenAI returns both {@code req_*} and bare UUIDs
+     * for it, so pinning its shape would be wrong.
+     */
+    private static void assertOpenAIIdsCaptured(SpanData span) {
+        var attributes = span.getAttributes();
+
+        String requestId = attributes.get(AttributeKey.stringKey("x-request-id"));
+        assertNotNull(requestId, "x-request-id header must be captured");
+        assertFalse(requestId.isBlank(), "x-request-id must not be blank");
+
+        String responseId = attributes.get(AttributeKey.stringKey("response_id"));
+        assertNotNull(responseId, "response_id must be captured from the response body");
+        assertTrue(
+                responseId.startsWith("resp_") || responseId.startsWith("chatcmpl-"),
+                "unexpected response_id: " + responseId);
+    }
+
+    /**
+     * A failed call is the case where the vendor's request id matters most, and the only one where
+     * it is the *sole* ID available: an error body carries no object id of its own. openai-java
+     * raises its exception above the HTTP layer we instrument, so the error status on the span is
+     * ours alone to set.
+     */
+    @Test
+    @SneakyThrows
+    void testHttpErrorTagsSpan() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model("gpt-4o-mini-nonexistent-model")
+                        .addUserMessage("What is the capital of France?")
+                        .build();
+
+        assertThrows(Exception.class, () -> openAIClient.chat().completions().create(request));
+
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+
+        assertEquals(
+                StatusCode.ERROR,
+                span.getStatus().getStatusCode(),
+                "a non-2xx response must mark the span failed");
+
+        var attributes = span.getAttributes();
+        String requestId = attributes.get(AttributeKey.stringKey("x-request-id"));
+        assertNotNull(requestId, "x-request-id must still be captured on a failed call");
+        assertNull(
+                attributes.get(AttributeKey.stringKey("response_id")),
+                "an error body has no object id to capture");
+    }
+
+    /**
+     * Request headers now flow into the semconv layer, and outgoing OpenAI request headers carry
+     * the caller's API key — so this pins the allow-list: the only non-{@code braintrust.*}
+     * attributes on the span are the two correlation IDs, nothing else from either header set.
+     */
+    @Test
+    @SneakyThrows
+    void testOnlyAllowListedHeadersAreTagged() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addSystemMessage("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .temperature(0.0)
+                        .build();
+
+        openAIClient.chat().completions().create(request);
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        var foreignKeys =
+                span.getAttributes().asMap().keySet().stream()
+                        .map(AttributeKey::getKey)
+                        .filter(k -> !k.startsWith("braintrust."))
+                        .sorted()
+                        .toList();
+        assertEquals(List.of("response_id", "x-request-id"), foreignKeys);
+
+        String rendered = span.getAttributes().toString();
+        assertFalse(
+                rendered.contains(testHarness.openAiApiKey()),
+                "the api key must never reach a span attribute");
+        assertFalse(
+                rendered.toLowerCase().contains("authorization"),
+                "no authorization header may reach a span attribute");
+    }
+
+    /**
+     * Proves the request-header path independently of the response one. OpenAI returns {@code
+     * x-request-id} but never {@code request-id}, so a caller-set {@code request-id} is the one
+     * allow-listed header that can only have come from the request.
+     */
+    @Test
+    @SneakyThrows
+    void testCallerSuppliedCorrelationHeaderIsTagged() {
+        OpenAIClient openAIClient =
+                OpenAIOkHttpClient.builder()
+                        .baseUrl(testHarness.openAiBaseUrl())
+                        .apiKey(testHarness.openAiApiKey())
+                        .build();
+
+        var request =
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addSystemMessage("You are a helpful assistant")
+                        .addUserMessage("What is the capital of France?")
+                        .temperature(0.0)
+                        .putAdditionalHeader("request-id", "caller-supplied-correlation-id")
+                        .build();
+
+        openAIClient.chat().completions().create(request);
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertEquals(
+                "caller-supplied-correlation-id",
+                span.getAttributes().get(AttributeKey.stringKey("request-id")),
+                "a caller-set correlation header must be captured from the request");
+        // The vendor's own id still lands from the response, independently.
+        assertNotNull(span.getAttributes().get(AttributeKey.stringKey("x-request-id")));
+    }
+
+    // -------------------------------------------------------------------------
+    // Status-code handling
+    //
+    // Driven against a stub delegate rather than the VCR proxy: a 3xx or a 1xx cannot
+    // realistically be recorded from the vendor, and those are exactly the statuses that
+    // distinguish "non-2xx" from "4xx and up".
+    // -------------------------------------------------------------------------
+
+    /**
+     * openai-java's ErrorHandler treats success as exactly 200..299 and raises everything else to
+     * the caller, so every one of these must mark the span failed. 304 is the realistic case: the
+     * http client does not follow it, so it arrives here as a final response.
+     */
+    @ParameterizedTest(name = "status {0}")
+    @ValueSource(ints = {100, 204, 301, 304, 400, 500})
+    @SneakyThrows
+    void nonSuccessStatusMarksSpanFailed(int statusCode) {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(), new StubHttpClient(statusCode, "{}"));
+
+        try (var response = client.execute(chatCompletionsRequest(), RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        boolean isSuccess = statusCode >= 200 && statusCode < 300;
+        assertEquals(
+                isSuccess ? StatusCode.UNSET : StatusCode.ERROR,
+                span.getStatus().getStatusCode(),
+                "status "
+                        + statusCode
+                        + (isSuccess ? " should not" : " should")
+                        + " mark the span failed");
+    }
+
+    /** The correlation header is still captured on a status the SDK will reject. */
+    @Test
+    @SneakyThrows
+    void requestIdIsCapturedOnANonSuccessStatus() {
+        var client =
+                new TracingHttpClient(testHarness.openTelemetry(), new StubHttpClient(304, ""));
+
+        try (var response = client.execute(chatCompletionsRequest(), RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertEquals(
+                "req_stubbed",
+                span.getAttributes().get(AttributeKey.stringKey("x-request-id")),
+                "an empty-bodied non-2xx must still yield the vendor request id");
+    }
+
+    @Test
+    void nonJsonResponseTaggingIsBestEffort() {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(),
+                        new StubHttpClient(502, "<html>Bad Gateway</html>"));
+
+        assertDoesNotThrow(
+                () -> {
+                    try (var response =
+                            client.execute(chatCompletionsRequest(), RequestOptions.none())) {
+                        response.body().readAllBytes();
+                    }
+                });
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+        assertEquals(
+                "req_stubbed", span.getAttributes().get(AttributeKey.stringKey("x-request-id")));
+    }
+
+    private static HttpRequest chatCompletionsRequest() {
+        return HttpRequest.builder()
+                .method(HttpMethod.POST)
+                .baseUrl("https://api.openai.com/v1")
+                .addPathSegments("chat", "completions")
+                .build();
+    }
+
+    /** Returns a canned response; never touches the network. */
+    private record StubHttpClient(int statusCode, String body)
+            implements com.openai.core.http.HttpClient {
+
+        @Override
+        public HttpResponse execute(HttpRequest request, RequestOptions requestOptions) {
+            return new HttpResponse() {
+                @Override
+                public int statusCode() {
+                    return statusCode;
+                }
+
+                @Override
+                public Headers headers() {
+                    return Headers.builder().put("x-request-id", "req_stubbed").build();
+                }
+
+                @Override
+                public InputStream body() {
+                    return new ByteArrayInputStream(body.getBytes());
+                }
+
+                @Override
+                public void close() {}
+            };
+        }
+
+        @Override
+        public CompletableFuture<HttpResponse> executeAsync(
+                HttpRequest request, RequestOptions requestOptions) {
+            return CompletableFuture.completedFuture(execute(request, requestOptions));
+        }
+
+        @Override
+        public void close() {}
     }
 }

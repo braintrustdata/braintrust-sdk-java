@@ -38,6 +38,8 @@ public class SpringAIAnthropicInstrumentationModule extends InstrumentationModul
                 ANTHROPIC_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 ANTHROPIC_PACKAGE + "TracingHttpClient$TeeInputStream",
                 ANTHROPIC_PACKAGE + "TracingHttpClient$ExtractedRequest",
+                ANTHROPIC_PACKAGE + "ResponseReassembler",
+                ANTHROPIC_PACKAGE + "ResponseReassembler$Result",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv");
     }

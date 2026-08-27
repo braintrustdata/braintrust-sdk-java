@@ -190,7 +190,9 @@ public class BraintrustSpringAI {
                         baseUrl,
                         pathSegments,
                         request.getMethod().name(),
-                        requestBody);
+                        requestBody,
+                        null,
+                        request.getHeaders());
 
                 ClientHttpResponse response = execution.execute(request, body);
 
@@ -198,7 +200,8 @@ public class BraintrustSpringAI {
                 byte[] responseBytes = response.getBody().readAllBytes();
                 String responseBody = new String(responseBytes, StandardCharsets.UTF_8);
 
-                InstrumentationSemConv.tagLLMSpanResponse(tracer, span, providerName, responseBody);
+                InstrumentationSemConv.tagLLMSpanResponse(
+                        tracer, span, providerName, responseBody, null, response.getHeaders());
 
                 span.end();
                 return new BufferedClientHttpResponse(response, responseBytes);
@@ -295,11 +298,17 @@ public class BraintrustSpringAI {
                                         baseUrl,
                                         pathSegments,
                                         method,
-                                        capturedBody);
+                                        capturedBody,
+                                        null,
+                                        request.headers());
 
                                 // Wrap the response body to intercept each chunk for TTFT
                                 // tracking and to reassemble the full SSE stream for response
                                 // tagging.
+                                // Captured here rather than in wrapStreamingBody: the stream is
+                                // finalized asynchronously on completion, long after the
+                                // ClientResponse is in scope.
+                                var responseHeaders = response.headers().asHttpHeaders();
                                 return response.mutate()
                                         .body(
                                                 originalBody ->
@@ -307,7 +316,8 @@ public class BraintrustSpringAI {
                                                                 originalBody,
                                                                 span,
                                                                 startNanos,
-                                                                streamCtx))
+                                                                streamCtx,
+                                                                responseHeaders))
                                         .build();
                             })
                     .doOnError(
@@ -331,7 +341,8 @@ public class BraintrustSpringAI {
                 Publisher<? extends DataBuffer> originalBody,
                 Span span,
                 long startNanos,
-                StreamContext streamCtx) {
+                StreamContext streamCtx,
+                HttpHeaders responseHeaders) {
             final long[] ttftNanos = {-1};
             StringBuilder assembled = new StringBuilder();
 
@@ -362,7 +373,8 @@ public class BraintrustSpringAI {
                                             span,
                                             streamCtx.providerName(),
                                             responseBody,
-                                            ttft);
+                                            ttft,
+                                            responseHeaders);
                                 } catch (Exception e) {
                                     log.debug("failed to tag streaming response", e);
                                 }
@@ -602,6 +614,7 @@ public class BraintrustSpringAI {
         var usage = mapper.createObjectNode();
         String model = null;
         String stopReason = null;
+        String messageId = null;
 
         // Reconstruct each content block by index, preserving order and type.
         Map<Integer, ObjectNode> blocksByIndex = new LinkedHashMap<>();
@@ -626,6 +639,10 @@ public class BraintrustSpringAI {
                     if (message != null && message.isObject()) {
                         if (model == null && message.hasNonNull("model")) {
                             model = message.get("model").asText();
+                        }
+                        // The msg_* object id only ever appears on message_start.
+                        if (messageId == null && message.hasNonNull("id")) {
+                            messageId = message.get("id").asText();
                         }
                         copyFields(message.get("usage"), usage);
                     }
@@ -696,6 +713,11 @@ public class BraintrustSpringAI {
                 .forEach(entry -> contentBlocks.add(entry.getValue()));
 
         var result = mapper.createObjectNode();
+        // Carried through so the reassembled stream keeps the same object id a non-streaming
+        // response would have reported.
+        if (messageId != null) {
+            result.put("id", messageId);
+        }
         result.put("role", "assistant");
         result.set("content", contentBlocks);
         if (stopReason != null) {
