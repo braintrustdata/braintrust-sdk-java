@@ -1,13 +1,13 @@
 {
-  "id": "resp_050cff5ce90128c7006a7fc279ddc487d08d20eb4e7cbf2ae6",
+  "id": "resp_0302cef2c22aff8c006a95bd21890487d0bddabf9675765d72",
   "object": "response",
-  "created_at": 1786757753,
+  "created_at": 1788198178,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1786757760,
+  "completed_at": 1788198220,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,19 +18,19 @@
   "moderation": null,
   "output": [
     {
-      "id": "ws_050cff5ce90128c7006a7fc27d7c8c87d0919a4bacb3b2679e",
+      "id": "ws_0302cef2c22aff8c006a95bd24b19887d0acac6ebf95fd20fd",
       "type": "web_search_call",
       "status": "completed",
       "action": {
         "type": "search",
         "queries": [
-          "recent news about artificial intelligence"
+          "recent news headline about artificial intelligence 2023"
         ],
-        "query": "recent news about artificial intelligence"
+        "query": "recent news headline about artificial intelligence 2023"
       }
     },
     {
-      "id": "msg_050cff5ce90128c7006a7fc27f26a887d0ae49e55d9edeb9f2",
+      "id": "msg_0302cef2c22aff8c006a95bd26ea1c87d0b32c1a8d009685ba",
       "type": "message",
       "status": "completed",
       "content": [
@@ -39,14 +39,35 @@
           "annotations": [
             {
               "type": "url_citation",
-              "end_index": 493,
-              "start_index": 392,
-              "title": "2025 in artificial intelligence",
-              "url": "https://en.wikipedia.org/wiki/2025_in_artificial_intelligence?utm_source=openai"
+              "end_index": 1542,
+              "start_index": 1392,
+              "title": "AWS is shutting down Mechanical Turk, which let humans beat AI at certain work tasks",
+              "url": "https://www.techradar.com/pro/aws-is-shutting-down-mechanical-turk-which-let-humans-beat-ai-at-certain-work-tasks?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 1781,
+              "start_index": 1562,
+              "title": "AWS is shutting down Mechanical Turk, which let humans beat AI at certain work tasks",
+              "url": "https://www.techradar.com/pro/aws-is-shutting-down-mechanical-turk-which-let-humans-beat-ai-at-certain-work-tasks?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 1967,
+              "start_index": 1818,
+              "title": "Bill Gates sounds the alarm on an AI transition",
+              "url": "https://www.axios.com/2026/08/26/bill-gates-sounds-the-alarm-on-an-ai-transition?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2351,
+              "start_index": 2005,
+              "title": "New kind of AI uses a fresh approach to reasoning -\u202c researchers say it costs up to 11 times less to run than a leading OpenAI model",
+              "url": "https://www.livescience.com/technology/artificial-intelligence/new-kind-of-ai-uses-a-fresh-approach-to-reasoning-researchers-say-it-costs-up-to-11-times-less-to-run-than-a-leading-openai-model?utm_source=openai"
             }
           ],
           "logprobs": [],
-          "text": "As of August 2026, a notable development in artificial intelligence is the release of OpenAI's GPT-5 on August 8, 2025. According to OpenAI CEO Sam Altman, GPT-5 is designed to provide PhD-level expertise. However, it has faced challenges with basic tasks such as spelling and geography, and it cannot continuously learn. Additionally, GPT-5 scores lower than Grok-4 on Humanity's Last Exam. ([en.wikipedia.org](https://en.wikipedia.org/wiki/2025_in_artificial_intelligence?utm_source=openai)) "
+          "text": "One recent headline about artificial intelligence is:\n\n**\"AWS is shutting down Mechanical Turk, which let humans beat AI at certain work tasks\"**\n\nAmazon has announced it will shut down its Mechanical Turk (MTurk) platform on September 30, 2026. Launched in 2005, MTurk enabled companies to outsource small, routine digital tasks to human workers, particularly those tasks that computers initially struggled with, such as labeling data, tagging images, and transcribing audio. At its peak, the platform connected over 500,000 workers, known as \"turkers,\" and played a key role in labeling data for Amazon\u2019s SageMaker AI service. However, rapid advancements in artificial intelligence have rendered many of these tasks more efficiently managed by machines, leading to a steady decline in MTurk\u2019s relevance. Worker advocates, including Turkopticon's Krista Pawloski, noted that Amazon had deprioritized the platform in recent years, even as competitors like Scale AI and Prolific emerged. The closure signals a broader shift in AI economics, where automated systems are increasingly surpassing human capabilities in data processing. Despite MTurk\u2019s shutdown, Amazon affirms its ongoing commitment to serving its AWS and retail customers. The move has left some long-term workers scrambling to find alternative platforms, especially as certain businesses still depend on human task outsourcing. ([techradar.com](https://www.techradar.com/pro/aws-is-shutting-down-mechanical-turk-which-let-humans-beat-ai-at-certain-work-tasks?utm_source=openai))\n\n\n## Highlights:\n- [AWS is shutting down Mechanical Turk, which let humans beat AI at certain work tasks](https://www.techradar.com/pro/aws-is-shutting-down-mechanical-turk-which-let-humans-beat-ai-at-certain-work-tasks?utm_source=openai), Published on Saturday, August 29\n- [Bill Gates sounds the alarm on an AI transition](https://www.axios.com/2026/08/26/bill-gates-sounds-the-alarm-on-an-ai-transition?utm_source=openai), Published on Wednesday, August 26\n- [New kind of AI uses a fresh approach to reasoning -\u202c researchers say it costs up to 11 times less to run than a leading OpenAI model](https://www.livescience.com/technology/artificial-intelligence/new-kind-of-ai-uses-a-fresh-approach-to-reasoning-researchers-say-it-costs-up-to-11-times-less-to-run-than-a-leading-openai-model?utm_source=openai), Published on Saturday, August 29 "
         }
       ],
       "role": "assistant"
@@ -116,11 +137,11 @@
       "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 134,
+    "output_tokens": 550,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 448
+    "total_tokens": 864
   },
   "user": null,
   "metadata": {}

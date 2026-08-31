@@ -1,13 +1,13 @@
 {
-  "id": "resp_01d05b55cbe8c4a5016a8885f1433087d0b6ca64613756b6f1",
+  "id": "resp_0101af2ea84b56a6016a95bbc5316087d0979c70b5e36ed044",
   "object": "response",
-  "created_at": 1787332081,
+  "created_at": 1788197829,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1787332083,
+  "completed_at": 1788197836,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,7 +18,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "ws_01d05b55cbe8c4a5016a8885f1ca6487d0b1785ad0fc537caa",
+      "id": "ws_0101af2ea84b56a6016a95bbc7f0e887d0893eed6df9b97576",
       "type": "web_search_call",
       "status": "completed",
       "action": {
@@ -30,7 +30,7 @@
       }
     },
     {
-      "id": "msg_01d05b55cbe8c4a5016a8885f2a49887d0a403dbd3456a0c73",
+      "id": "msg_0101af2ea84b56a6016a95bbc9b6b087d0a716c1e9db704ba9",
       "type": "message",
       "status": "completed",
       "content": [
@@ -39,14 +39,21 @@
           "annotations": [
             {
               "type": "url_citation",
-              "end_index": 333,
-              "start_index": 278,
-              "title": "Blab AI | Artificial Intelligence News, Tools & Research",
-              "url": "https://ai.blab.com/?utm_source=openai"
+              "end_index": 277,
+              "start_index": 162,
+              "title": "Exclusive: AI advocacy group launches data center push in battleground states",
+              "url": "https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 478,
+              "start_index": 297,
+              "title": "Exclusive: AI advocacy group launches data center push in battleground states",
+              "url": "https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai"
             }
           ],
           "logprobs": [],
-          "text": "On August 12, 2026, Health Secretary Robert F. Kennedy Jr. and CMS Administrator Dr. Mehmet Oz informed a Senate panel that artificial intelligence is being utilized to address healthcare disparities in rural areas, though evidence supporting its effectiveness remains limited. ([ai.blab.com](https://ai.blab.com/?utm_source=openai)) "
+          "text": "An AI advocacy group has launched a $50 million campaign to support AI data center development in battleground states, starting with Kansas, Ohio, and Wisconsin. ([axios.com](https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai))\n\n\n## Highlights:\n- [Exclusive: AI advocacy group launches data center push in battleground states](https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai), Published on Monday, August 31 "
         }
       ],
       "role": "assistant"
@@ -116,11 +123,11 @@
       "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 84,
+    "output_tokens": 142,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 400
+    "total_tokens": 458
   },
   "user": null,
   "metadata": {}

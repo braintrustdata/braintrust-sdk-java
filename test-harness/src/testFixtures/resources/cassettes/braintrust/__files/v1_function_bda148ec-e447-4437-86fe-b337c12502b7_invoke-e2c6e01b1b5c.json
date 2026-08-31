@@ -1,0 +1,1 @@
+{"name":"close-enough-judge","score":1,"metadata":{"rationale":"1. The expected output is 'hello world'.\n2. The actual output is also 'hello world'.\n3. Both strings match exactly in terms of characters, casing, and spacing.\n4. Since there are no discrepancies between the expected and actual output, they are a close enough match.","choice":"YES"}}

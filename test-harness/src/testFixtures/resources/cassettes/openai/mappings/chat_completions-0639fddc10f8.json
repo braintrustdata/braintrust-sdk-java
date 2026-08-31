@@ -21,25 +21,25 @@
     "headers" : {
       "Server" : "cloudflare",
       "x-ratelimit-reset-tokens" : "0s",
-      "set-cookie" : "__cf_bm=ozc2gUnynyH8L4tv9YvDaNMjIS7TjG.C08wv1nFUSK4-1783444668.4550447-1.0.1.1-QvsIlcnkQL5tOvqYSDfW0M_lDJhE_ThLepnyoDHtVsUg.Q377g4__UT0RTGRpIHZOGI1JTKFm8JNgpPCC3DCciUdoAXTfsCGRG7d4P7BFIJhpii689XgvAlUruWNjI31; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:47:49 GMT",
+      "set-cookie" : "__cf_bm=nTqEQqbhVVzoII0lobZQ78SbBmsmbyXrsi0PrjK5C4E-1788198221.0610769-1.0.1.1-Ezel9D1jFGh3whmK6lvBFla1wUpW04e6UMZsqWQ25S3NBl.PphvZ9fI8f1GAYhf0F11Rgnr6.ubADxe3Yj6tLc6Oiu03e8u_YFYZKBh9SMF6R.JAvXauWo8LIabwKS4W; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:13:41 GMT",
       "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json",
-      "x-request-id" : "req_f88bc6bea16b453d969991420c68e913",
+      "x-request-id" : "req_98fda29f69d347f89026b0ec1fbb0e97",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
-      "CF-Ray" : "a1788139d983f16e-SEA",
+      "CF-Ray" : "a33dd6c1994531b0-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
       "x-ratelimit-remaining-tokens" : "149999982",
       "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Tue, 07 Jul 2026 17:17:49 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:43:41 GMT",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "482",
+      "openai-processing-ms" : "448",
       "alt-svc" : "h3=\":443\"; ma=86400"
     }
   },
@@ -48,5 +48,5 @@
   "scenarioName" : "scenario-3-chat-completions",
   "requiredScenarioState" : "Started",
   "newScenarioState" : "scenario-3-chat-completions-2",
-  "insertionIndex" : 22
+  "insertionIndex" : 55
 }

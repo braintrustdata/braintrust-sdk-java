@@ -10,22 +10,18 @@
     "bodyFileName" : "api_apikey_login-9611c99e6aac.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
-      "expires" : "0",
-      "x-amz-apigw-id" : "AJUEFHPcoAMEIzQ=",
-      "vary" : "Origin, Accept-Encoding",
-      "x-amzn-Remapped-content-length" : "376",
-      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a4d33b3-279c8d24791b57e973dbabc8;Parent=339b8ae539282c23;Sampled=0;Lineage=1:fc3b4ff1:0",
-      "Date" : "Tue, 07 Jul 2026 17:13:23 GMT",
-      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 3062c1f9ccf5f043983bc180e222dd9c.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
-      "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a4d33b3000000000c1ef65b28182ed2",
-      "x-amzn-RequestId" : "e789a893-d496-4ee8-bbf9-d9b58d502f82",
-      "X-Amz-Cf-Id" : "8TmOSk5p73_GMYAqAyGMODz_doyX1MXXbVD0Ne9eqGA0pBx7NpOJLg==",
-      "etag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
-      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
-      "surrogate-control" : "no-store",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "Date" : "Mon, 31 Aug 2026 17:34:31 GMT",
+      "Via" : "1.1 b3a8bdee20374465a3f2aa64f19ec30e.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "ETag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "ROXvzBKxUn_zgMNs1-BbW5J_FTq7LCKl2nrnLR8sTpoAYqtAFEPRWQ==",
+      "Vary" : "Origin, Accept-Encoding",
+      "Expires" : "0",
+      "Surrogate-Control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
@@ -34,5 +30,5 @@
   "scenarioName" : "scenario-1-api-apikey-login",
   "requiredScenarioState" : "scenario-1-api-apikey-login-5",
   "newScenarioState" : "scenario-1-api-apikey-login-6",
-  "insertionIndex" : 121
+  "insertionIndex" : 123
 }

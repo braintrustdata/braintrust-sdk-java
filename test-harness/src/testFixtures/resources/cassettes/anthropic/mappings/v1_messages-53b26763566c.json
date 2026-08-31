@@ -1,0 +1,56 @@
+{
+  "id" : "2536ad87-71c9-34e2-ae3a-e601c7901338",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":\"Count from 1 to 5.\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"system\":\"You are a helpful assistant.\",\"temperature\":0.0,\"stream\":true}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-53b26763566c.txt",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "2000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-08-31T17:37:04Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-08-31T17:37:04Z",
+      "anthropic-ratelimit-tokens-remaining" : "12000000",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "anthropic-ratelimit-input-tokens-remaining" : "10000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "text/event-stream; charset=utf-8",
+      "CF-RAY" : "a33dcd0f4bdb4f60-SEA",
+      "anthropic-ratelimit-tokens-limit" : "12000000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CebEQzUxgEpvE8KQ7sc1Y",
+      "anthropic-ratelimit-tokens-reset" : "2026-08-31T17:37:04Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Mon, 31 Aug 2026 17:37:04 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-08-31T17:37:04Z",
+      "Cache-Control" : "no-cache",
+      "anthropic-ratelimit-input-tokens-limit" : "10000000",
+      "traceresponse" : "00-15eacf9bf1ace9ebae859b00de60a71a-94d7c61d95849b2d-01",
+      "anthropic-ratelimit-output-tokens-remaining" : "2000000"
+    }
+  },
+  "uuid" : "2536ad87-71c9-34e2-ae3a-e601c7901338",
+  "persistent" : true,
+  "scenarioName" : "scenario-3-v1-messages",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-3-v1-messages-2",
+  "insertionIndex" : 14
+}

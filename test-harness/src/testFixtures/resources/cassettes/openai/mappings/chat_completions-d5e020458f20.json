@@ -19,25 +19,25 @@
     "status" : 200,
     "bodyFileName" : "chat_completions-d5e020458f20.json",
     "headers" : {
-      "x-request-id" : "req_9b437872fd2a4ba1856b0fece5069817",
+      "x-request-id" : "req_6cc2b99605504a1cb02c3606d9ce5dcf",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a1788119cf30b9cd-SEA",
+      "CF-Ray" : "a33dd37e1f37f3ea-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
-      "x-ratelimit-remaining-tokens" : "149999987",
+      "x-ratelimit-remaining-tokens" : "149999990",
       "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Tue, 07 Jul 2026 17:17:44 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:41:28 GMT",
       "x-ratelimit-reset-tokens" : "0s",
       "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=AqJ9pqX9Vyr4oDwlDvLRFFr_9YTYBPSRWLFdIUtA8Gc-1783444663.3271396-1.0.1.1-6qbP4fZMkgPVJydQfmsqI5eeHqt3yuiMxFGBA5sTBV8KSJWcBlcETuSOW.468CanAjyjkFWbEO3DLSuMWdoscC5sPFfD24ehQj3O2XDzE_ea__o0UdNbM1fF_PgioCzm; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:47:44 GMT",
+      "set-cookie" : "__cf_bm=7wWJNlt4FNZSJo2ZORqfrj8kDQhZmwxAkLkNicyGkGc-1788198087.3726146-1.0.1.1-8LCPvStXvuiVufkgVTLuNABBn9mMe3irDdxyH1Gujg5Re7tn03rPcfpkPOXlYbMdrMDcEa_lS5Z0Sryfxjj.CiZNf5u0q39TfQ8X153fJiijAEYnaY_hnui9sTZLMFKZ; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:11:28 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "588",
+      "openai-processing-ms" : "599",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json"
@@ -45,5 +45,5 @@
   },
   "uuid" : "52b394af-90b1-3b73-aeca-4f5f26a4d505",
   "persistent" : true,
-  "insertionIndex" : 11
+  "insertionIndex" : 41
 }

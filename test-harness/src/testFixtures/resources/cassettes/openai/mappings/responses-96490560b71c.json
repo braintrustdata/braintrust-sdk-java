@@ -19,18 +19,18 @@
     "status" : 200,
     "bodyFileName" : "responses-96490560b71c.txt",
     "headers" : {
-      "x-request-id" : "8092c78d-a556-4b5f-b837-6754dfde20f1",
+      "x-request-id" : "req_e71160f5a23d479f9faa3a7c81612e31",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a1788171f90cd451-SEA",
+      "CF-Ray" : "a33dd79c2af96e7d-SEA",
       "X-Content-Type-Options" : "nosniff",
-      "Date" : "Tue, 07 Jul 2026 17:17:57 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:44:16 GMT",
       "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=5Hf34KjWK_r5XIq9UZt48cVn7w4mwkAYvS8rDI1IMuI-1783444677.434944-1.0.1.1-zP5II5ZyqBzKIwH5m4GWQYLI5CNah9Xfu6eouJzVCKq5V51j52rRi4D5O6ua5gAkE14mC_mXx2XfHkJ.PcqJjaIGut_MG5XN1gUVzRiQ347WnDndEGsXWgdZ9m5ehE7_; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:47:57 GMT",
+      "set-cookie" : "__cf_bm=yxmg0IKGGsE1swq0VVowbr2wq.0hID_3W5_daiGaMp8-1788198256.0301173-1.0.1.1-VQxgWiJpsPFqy78pkel57kSQP5DsAYVYKjl4ww6OFJVpG4ja0wUXG3eFMNOQcljE_uwvWWezqrpgHNA0E4ofytfLj9M_BgUybQV0CYQSeNE1paO0ZS6_RIrZsm5JkSz5; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:14:16 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "175",
+      "openai-processing-ms" : "166",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "text/event-stream; charset=utf-8"
@@ -41,5 +41,5 @@
   "scenarioName" : "scenario-2-responses",
   "requiredScenarioState" : "Started",
   "newScenarioState" : "scenario-2-responses-2",
-  "insertionIndex" : 17
+  "insertionIndex" : 44
 }

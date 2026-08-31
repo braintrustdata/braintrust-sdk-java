@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-EJ0IY0lm8oL6WG6FSLV1e6LjYjwru",
+  "object": "chat.completion",
+  "created": 1788198086,
+  "model": "gpt-4o-mini-2024-07-18",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "The current temperature is the same in both Paris and New York, at 72°F, and both cities are experiencing sunny weather.",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 169,
+    "completion_tokens": 27,
+    "total_tokens": 196,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_54940053b1"
+}

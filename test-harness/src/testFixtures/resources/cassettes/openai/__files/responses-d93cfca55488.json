@@ -1,13 +1,13 @@
 {
-  "id": "resp_0911b2daf2cc626d006a837099849887d0a840ba688fbe7808",
+  "id": "resp_0fb0a24f56a49be2006a95bbb54a0887d0814ebf4a4d649dbb",
   "object": "response",
-  "created_at": 1786998937,
+  "created_at": 1788197815,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1786998939,
+  "completed_at": 1788197826,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,7 +18,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "ws_0911b2daf2cc626d006a837099b31887d08d2d0269a6cd23de",
+      "id": "ws_0fb0a24f56a49be2006a95bbb8003487d0b3d898811b6168e3",
       "type": "web_search_call",
       "status": "completed",
       "action": {
@@ -30,7 +30,7 @@
       }
     },
     {
-      "id": "msg_0911b2daf2cc626d006a83709ad25c87d0a02c9444c591bbb4",
+      "id": "msg_0fb0a24f56a49be2006a95bbb9ff9087d0ad5b435d46b8e072",
       "type": "message",
       "status": "completed",
       "content": [
@@ -39,14 +39,35 @@
           "annotations": [
             {
               "type": "url_citation",
-              "end_index": 332,
-              "start_index": 233,
-              "title": "New York Post launches \"Hamilton\" AI chatbot",
-              "url": "https://www.axios.com/2026/08/11/new-york-post-hamilton-ai-chatbot?utm_source=openai"
+              "end_index": 393,
+              "start_index": 278,
+              "title": "Exclusive: AI advocacy group launches data center push in battleground states",
+              "url": "https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 594,
+              "start_index": 413,
+              "title": "Exclusive: AI advocacy group launches data center push in battleground states",
+              "url": "https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 793,
+              "start_index": 629,
+              "title": "Exclusive: AI startup TrustedRouter raises $1.25 million",
+              "url": "https://www.axios.com/2026/08/31/exclusive-ai-startup-trustedrouter-raises-125-million?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 969,
+              "start_index": 828,
+              "title": "AI turns to health care for an image fix",
+              "url": "https://www.axios.com/2026/08/31/ai-health-care-cures-disease-anthropic-open-ai?utm_source=openai"
             }
           ],
           "logprobs": [],
-          "text": "The New York Post Media Group has launched \"Hamilton,\" an AI chatbot designed to enhance personalized news experiences, marking the first collaboration between Google Cloud and a North American news outlet to support such a feature. ([axios.com](https://www.axios.com/2026/08/11/new-york-post-hamilton-ai-chatbot?utm_source=openai)) "
+          "text": "An AI advocacy group has launched a $50 million campaign to support AI data center development in battleground states, aiming to address political backlash and emphasize the need for infrastructure that supports AI leadership while safeguarding communities and the environment. ([axios.com](https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai))\n\n\n## Highlights:\n- [Exclusive: AI advocacy group launches data center push in battleground states](https://www.axios.com/2026/08/31/ai-advocacy-group-data-center-battleground-states?utm_source=openai), Published on Monday, August 31\n- [Exclusive: AI startup TrustedRouter raises $1.25 million](https://www.axios.com/2026/08/31/exclusive-ai-startup-trustedrouter-raises-125-million?utm_source=openai), Published on Monday, August 31\n- [AI turns to health care for an image fix](https://www.axios.com/2026/08/31/ai-health-care-cures-disease-anthropic-open-ai?utm_source=openai), Published on Monday, August 31 "
         }
       ],
       "role": "assistant"
@@ -118,11 +139,11 @@
       "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 73,
+    "output_tokens": 248,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 396
+    "total_tokens": 571
   },
   "user": null,
   "metadata": {}

@@ -1,0 +1,41 @@
+{
+  "id" : "494aef5f-8215-3fe7-b05d-6a49d53fc262",
+  "name" : "btql",
+  "request" : {
+    "url" : "/btql",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"query\":\"SELECT * FROM project_logs('f1e858a4-58e3-408f-983f-016760d7fa25') WHERE root_span_id = 'ae831d8e000a476c0fc38c8c88380b23' ORDER BY created ASC LIMIT 1000\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "btql-4517fb16a4f0.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "x-bt-brainstore-duration-ms" : "44",
+      "x-bt-api-duration-ms" : "92",
+      "Date" : "Mon, 31 Aug 2026 17:38:10 GMT",
+      "Via" : "1.1 04efc78121acf5d40974e6a71bebce20.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Cache-Control" : "private, no-cache",
+      "Access-Control-Allow-Credentials" : "true",
+      "x-bt-internal-trace-id" : "7347009baf411b26f6f9a255fc07934b",
+      "X-Amz-Cf-Id" : "FdwooFUxwTNrbEqR1EBmInbtAgLePzQuEK_8-oszIIGnlIKcoOWyTQ==",
+      "Vary" : "Origin",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "494aef5f-8215-3fe7-b05d-6a49d53fc262",
+  "persistent" : true,
+  "insertionIndex" : 179
+}

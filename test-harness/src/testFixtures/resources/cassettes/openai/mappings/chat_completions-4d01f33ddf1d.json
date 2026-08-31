@@ -1,0 +1,52 @@
+{
+  "id" : "bd4ed7df-eaba-3cc6-bb88-0e14835711e2",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"system\",\n    \"content\" : \"you are a helpful assistant\"\n  }, {\n    \"role\" : \"user\",\n    \"content\" : \"What is the capital of France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-4d01f33ddf1d.json",
+    "headers" : {
+      "x-request-id" : "req_5a9d76eb59aa40c0a0761509297770e7",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a33dccbbcb22ec80-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 31 Aug 2026 17:36:51 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=1w0eBjDbEr8F4HekfbpJpnF070qamLvn_1qgeo8Di8E-1788197810.529692-1.0.1.1-ytxfKG11TG53ScKnVuVLqPscaUsh3nukU3UaNFsnOlp71bNE1ZAIjgRjSWU.XGNErG0rXCNhqFZ3mwDJi_wPa8gmhh_.T7RSYPSbcPaoDPnVRdsnmqhuGMr_LG3np8Aq; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:06:51 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "709",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "bd4ed7df-eaba-3cc6-bb88-0e14835711e2",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-chat-completions",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-2-chat-completions-2",
+  "insertionIndex" : 29
+}

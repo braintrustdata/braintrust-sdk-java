@@ -1,0 +1,109 @@
+{
+  "id": "resp_0bea5f73b8f03046016a95bbd8618087d0a25534d93757cfcc",
+  "object": "response",
+  "created_at": 1788197848,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1788197855,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_0bea5f73b8f03046016a95bbd952c487d0a66a684f9161620d",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqlbvf-2zqhCONuWPc2jxLstZZ8m19mj8Qqskui5W0TwU5cnm7pAyVkHU5KHqUA7DZIZPxcL69wuqY6uX_nMO3c3zOCubDZl097eENDbZagVQrRguVz9qF3p9zIAjyG6HEOjjQLpGghmV8YSsAxFxmo3gk7Enpg04BsxSAWXpA5dpK82Bg6PUvs4m8-Bq4CyjXtuoj8aOOBbL9jfBPxl4OJ0HSgr47bRYhmGIlCSRQ-xjkzBZGHhXHXmUiEnPxpTzP0NDYOSJfznG6lpgIk2_En_4Qlon0jZtg3EP_fzMlP9dSwmk6Nek2NKu3rGNgWHzwfMQJxu87fJ-7hu0stDRPUkRH9VSpLu5mz7ztSZrL6xAwmqfljKqSDUziJOmvBzNG76cOmSF8VhvR6HxRZu98virxHp-q5_E9I6am0_uYnuMBiIGC9Uv6t6M0dtAab9QvYwg6GXJ8t-tfpXc7QXMXsCLZkhqAEZTLcGVrazInpSQUnY8B5hRSK9YIv4aqf5_PrGeiPX8fEtxxvcVqQhde6vDclHiUPmByaJJG3icYi1KJAg1K2yqbp09125kjGWG4oYTAxg-W0MZNMVd96me9MA4XqrQirmzsyhxSxPO5b6YXmIcCCan53KkGhFdNh0yxkzpMUJGrs7ckj4VxNmIhZs4F-ag3H9_HZ4m41S7ng4EChjNyIk048JWBSUz0Dx0YpYXJVOs4ZeTVscjIxS6eI4XkRF5mSYFqN2s-NJ7634k13Gzb9l8n-muvi_Lj7gLTGwXkh5ze-PMWFq3YlgpTII5Zm54gQ7bGiEhqT8i-nL27Dsl8hlSik7OVt4ewAmaYO35cxAFxvpQYumP6Dta5CGdRZNIG4EY0HMf_nJCIKu89kymOZEr4j4roxIeypKvXDGkjh7pcq1cZdYQMghd2ObbFes2dzelTsGiU6d_Qay8IxY6kufHiNDVo-a4ayL49lyEZ8UVHQtuwXpTn0ujHuGwXntz8zehxK73ABQmkt-nbqjm3wHK4NEHwDiKyJRWEQgx7W2tBH7iholW1x91hcWwT_v3ZAbyFQDqwlpYDuYHLfZ95PcBh0u4JQ8I-V4PoBobgUs5FsfEwnfQy6-cFngdEgCNDko_QVFiIyBALwx2jgCc9XhBVBBgFrqd08ZI0Z73GpWztSjk_o0G2-UQbu3MhD37SE50ux1QsLJLX-hRknHhXrGerLG-qzD5qlA_EkwniS-VeJmD-aQ4S4TaU-sJdIa1j2kfA4aJjGBlDLV_TIFl4N4Lvs3jI2AVQtoujKRguH5vuH-VChU3FOY3jhPA41-YrYHZZmUqv9tFWADh09Hp59gKjWkLbWcKOY6RwQI5DUdXCRAOVfTN8kPmSFCvIgVkDPQp7BFf7efePsObKYbYcG50gkIhcaV5iw9_Det-zIjEaq-SpmnKFoDTdLaF5Iyf3qQ0waWxFGDlPfEnnZfRKTifbVus2w37SdJLf_6aawhg67dkaYc1BVoUgbr_N417zP1994gSOyZT8aSgVVZvvAK8M87i89j9I3Q-QnoBKDu9k4MnHQ-eoOctgH4si3nZqiHsgC9McTCT2xpS4abLFvCoOVyhZIIPW_Yz537YQcxoUMN3JDaYxxY8Ji81C4FouXG4JveUbHjLmHdHN0_gZgf-43pfTS6G6xH4PvYdeVMORQd7OGS7FgfVkbRcSRJvoKF0eDzNzf-vXfZxw3NQnVSjlbLlH_8nenmxM1qsLTHbrKkDuat4BIwaUaCS_-8EueBfVP8mey9_EXW6uacD_4RxDglGtjrsoi3C4Ae7xlImrlCgyakdyruMTVp1w9mrFTvfdxTd9_8QNWvo_ciA_RssT9L0NGm0KFkLQsOmF9IQNRkG7Ev2_qQKvVNdXSK-l7lqUu-jgbvxXVIYjJrVxMolcv1t9P2-DxZo4czn9R21rgc6gTlGd018PNFIEN-NE11m-3fDdqa9x2-BzmI1p91L9wBBGXF_xUl92xSZu9hh_CQwZFuvfSOQONlTTCcAMxUKVmA3VgHMhRiz9RDGw9hn7zUFZquSwjT8FtegK4dWkRg6GDUlORbRC8geRbnle4zf5enwX_Kw8m2IUUa-26HPRnTquQpQX0yIDsC2mIy7ZP44Q78mw8BHqXByEjK2pPqHHSiD-akHJc6qRhO3BeM--LyFcy2tDMt2ToJFQi_IEJZbecgi_pBS_MrsV2dAKvMw3jgssdwUnfpZH4BC0z5qaVgY6Hoe57doieBwNKQ3SgQKhgy-IZ9ybMcHw3fhsWU2h6BKW28MZg4l5cqXSW_yANc9DhPSz02vumx3_DNRlvVrTsarKYlYl0kzgun6LUr-yx4XeBEdI8N8j10v9Dcx1Ysrz-FAU0b43LhW9tijNwf3-WrBE8cPolbkKH-xxbZ-3Vi1wOlZRyxJZm6uHmc6iDtqwOneYvkmdgYD_uTkxOI7yn6tvR8z7bvvOzrlW6fUPi_HahIt55opCMQgVDHWpsllFTDb_tQoAFnXuT4iz3sZmE69t31VV2mL06S0OCU5JPshqgztsqE5NHsjcAa_2jjJ2oESj3YSIPuBT",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating term and sum**\n\nThe user asked about the sequence 2, 6, 12, 20, 30. I initially determined that the nth term could be expressed as \\( a_n = n(n+1) \\). Now, for the new query, the 10th term would be \\( a_{10} = 10 \\times 11 = 110 \\). \n\nTo find the sum of the first 10 terms, I can use the sum formulas for squares and integers: the total comes to 440. This matches the formula for the sum of pronic numbers, so I'm confident in my calculations!"
+        },
+        {
+          "type": "summary_text",
+          "text": "**Summarizing results**\n\nI\u2019ve determined that the 10th term of the sequence is 110 and the sum of the first 10 terms is 440. The pattern corresponds to pronic numbers, represented as \\( a_n = n(n+1) \\). \n\nSo, \\( a_{10} = 10 \\times 11 = 110 \\) and the sum \\( S_{10} = \\sum n(n+1) = 440 \\). I should present both the term and sum clearly, possibly using a bullet list or just plain text for simplicity."
+        }
+      ]
+    },
+    {
+      "id": "msg_0bea5f73b8f03046016a95bbdeba1087d0b434a360e11fa1ce",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The 10th term is  \n  a\u2081\u2080 = 10\u00b7(10 + 1) = 10\u00b711 = 110  \n\nThe sum of the first 10 terms is  \n  S\u2081\u2080 = \u2211\u2099\u208c\u2081\u00b9\u2070 n(n + 1)  \n       = \u2211 n\u00b2  +  \u2211 n  \n       = [10\u00b711\u00b721/6] + [10\u00b711/2]  \n       = 385  +  55  \n       = 440  \n\nEquivalently, there\u2019s a closed\u2010form for the sum of pronic numbers:  \n  S\u2081\u2080 = 10\u00b711\u00b712/3 = 440."
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": "current_turn",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 176,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 553,
+    "output_tokens_details": {
+      "reasoning_tokens": 384
+    },
+    "total_tokens": 729
+  },
+  "user": null,
+  "metadata": {}
+}

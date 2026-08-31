@@ -19,24 +19,24 @@
     "status" : 200,
     "bodyFileName" : "responses-2348ab6c9b2a.json",
     "headers" : {
-      "x-request-id" : "req_1620703f102c4aa38b3d98365a09355f",
+      "x-request-id" : "req_d6f5470a3a86477cb85e1e629fc02e77",
       "x-ratelimit-limit-tokens" : "30000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a2eb3d47ec8c57bc-SEA",
+      "CF-Ray" : "a33dd2dd4bd0a3b3-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "6ms",
-      "x-ratelimit-remaining-tokens" : "29998938",
+      "x-ratelimit-remaining-tokens" : "29998918",
       "x-ratelimit-remaining-requests" : "9999",
-      "Date" : "Fri, 21 Aug 2026 17:08:28 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:41:11 GMT",
       "x-ratelimit-reset-tokens" : "2ms",
       "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=2vmsJeWAJSr8AD7KaFCpNgG4_peHcGM8nqHZGTQb79U-1787332102.3905027-1.0.1.1-5H4umw73.SZszIcaxWBYMGHZ0zIdDMS_ToL8wl.REA8hlTg4czEEVliuAqLgBEm_SCzNTprC_zDpg6yC0DUSOhCORlMBgYw.SsRqWDUGlfeMmZeKZVcOVfbg1.appijX; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 21 Aug 2026 17:38:28 GMT",
+      "set-cookie" : "__cf_bm=OTIeYzgQTk16nI6eW893wHarI2jm5rMfwzmwLZ3Uiu4-1788198061.6501687-1.0.1.1-34r_jv6fGnj5.PoeLjsq3XPFqe2ygVLPBGFiKcWVI4uQw.rF.wm4B2CS2j7fNRbvZHQ0N8xXn_kZqEbOSnTdy1dYNUmXIVr2nBFviQO3pLBtyQ2CAymvjnu3QUCLNdTY; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:11:11 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "10000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "6093",
+      "openai-processing-ms" : "9339",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json"
@@ -44,5 +44,5 @@
   },
   "uuid" : "91f1b96e-0ad5-3ea0-b353-0594e11384ca",
   "persistent" : true,
-  "insertionIndex" : 57
+  "insertionIndex" : 33
 }

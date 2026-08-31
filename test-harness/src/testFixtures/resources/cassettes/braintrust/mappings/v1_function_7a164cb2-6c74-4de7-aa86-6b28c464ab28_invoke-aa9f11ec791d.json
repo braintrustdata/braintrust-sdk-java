@@ -1,0 +1,41 @@
+{
+  "id" : "7aa0b9d2-ee25-3273-a308-0d074d70c4ea",
+  "name" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28_invoke",
+  "request" : {
+    "url" : "/v1/function/7a164cb2-6c74-4de7-aa86-6b28c464ab28/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"carrot\",\"output\":\"java-fruit\",\"expected\":\"vegetable\",\"metadata\":{}},\"expected\":null,\"messages\":[],\"parent\":{\"object_type\":\"playground_logs\",\"object_id\":\"ceea7422-3507-4d1c-a5f7-7acf41d9fac2\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"5c46775c193a07b0\",\"root_span_id\":\"25d5d8e5856ea63ef2fff41617223f4e\"}},\"mcp_auth\":{}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28_invoke-aa9f11ec791d.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "x-bt-function-creds-cached" : "HIT",
+      "Date" : "Mon, 31 Aug 2026 17:34:53 GMT",
+      "Via" : "1.1 28edb03169fa053a4a523d90d15ff6ae.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwMDAc7qdCI1B00cpfd6z0HZ+sICaxiiljhxQv+qi0b93JBn3wMLviOECChEaJ/mES0QrrWqeyJyb290X3NwYW5faWQiOiIyNWQ1ZDhlNTg1NmVhNjNlZjJmZmY0MTYxNzIyM2Y0ZSJ9",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "farrrqpPBbRb80AtRspsMlvPb5kvD_oknJr328gYdCjIRW-amXYCvA==",
+      "Vary" : "Origin",
+      "x-bt-span-id" : "6b18a296-3871-42ff-aa8b-46fddc9067df",
+      "x-bt-function-meta-cached" : "HIT",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "7aa0b9d2-ee25-3273-a308-0d074d70c4ea",
+  "persistent" : true,
+  "insertionIndex" : 121
+}

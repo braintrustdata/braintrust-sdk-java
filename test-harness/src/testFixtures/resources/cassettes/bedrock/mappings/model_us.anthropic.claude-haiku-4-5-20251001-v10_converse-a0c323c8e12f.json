@@ -19,8 +19,8 @@
     "status" : 200,
     "bodyFileName" : "model_us.anthropic.claude-haiku-4-5-20251001-v10_converse-a0c323c8e12f.json",
     "headers" : {
-      "x-amzn-RequestId" : "0aaa7e7f-69e0-41c7-b583-9ed0a1712760",
-      "Date" : "Tue, 07 Jul 2026 17:17:28 GMT",
+      "x-amzn-RequestId" : "93bc3e2f-76f4-4b87-b322-1b188e57497a",
+      "Date" : "Mon, 31 Aug 2026 17:40:23 GMT",
       "Content-Type" : "application/json"
     }
   },

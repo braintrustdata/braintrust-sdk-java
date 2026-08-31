@@ -19,8 +19,8 @@
     "status" : 200,
     "bodyFileName" : "model_us.anthropic.claude-haiku-4-5-20251001-v10_converse-stream-7036d5c4e7a0.txt",
     "headers" : {
-      "x-amzn-RequestId" : "06a69971-0d02-445b-8279-be16c99b5ffb",
-      "Date" : "Tue, 07 Jul 2026 17:17:24 GMT",
+      "x-amzn-RequestId" : "e971bbdd-5441-4fdd-87cc-2cfb0928e194",
+      "Date" : "Mon, 31 Aug 2026 17:40:04 GMT",
       "Content-Type" : "application/vnd.amazon.eventstream"
     }
   },
