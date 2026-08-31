@@ -21,13 +21,15 @@
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "X-Amz-Cf-Pop" : "SEA900-P9",
-      "x-amzn-RequestId" : "6547adb7-82b6-41af-a34d-a0dc909a9837",
-      "X-Amz-Cf-Id" : "LH9JdavBFFgLWWd3VbzhyljkLdahWhELQ_npRCop9dTXmjJ36ktOCQ==",
       "x-bt-function-creds-cached" : "HIT",
+      "Date" : "Mon, 31 Aug 2026 17:35:57 GMT",
+      "Via" : "1.1 1271197444822e7c59413a59ecbcecd6.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "ShaR_XZSQ4xmTvHVBTU9o6cGRUxQiB_HiIC2QZ4euordvwpq5boC0Q==",
+      "Vary" : "Origin",
       "x-bt-function-meta-cached" : "HIT",
-      "X-Amzn-Trace-Id" : "Root=1-6a4d33e7-7ab9f52e07263edf284bb6cd;Parent=3e625ed95e70930d;Sampled=0;Lineage=1:98839c8e:0",
-      "Date" : "Tue, 07 Jul 2026 17:14:16 GMT",
-      "Via" : "1.1 e8b22a8fa8511f8f972b4965a9af80b4.cloudfront.net (CloudFront)",
       "Content-Type" : "application/json"
     }
   },

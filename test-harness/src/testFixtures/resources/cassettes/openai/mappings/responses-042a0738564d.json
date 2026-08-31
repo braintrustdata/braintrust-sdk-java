@@ -1,0 +1,48 @@
+{
+  "id" : "84ae5d6a-5cda-35bf-8bd6-18724c3f189b",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"o4-mini\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"\n    } ]\n  }, {\n    \"type\" : \"reasoning\",\n    \"encrypted_content\" : \"gAAAAABqlbvYExiVEN0PpKufywUbaup2cuEwH0bdepoaoOvuKkJxPF8FeJJOjVnJ5GXeeDWf4f_aKLwh5FuYHTm6tA-obuyqmOPkQjOYzIZhoJFxiPC0jaMR2wo0dDnjyifjoEwtxjubkgESbidVkpiOT1furUoAKw2fvUwkA6-B9d3ontlw4-IPGNl90PxaDR-4DpK9sDTnAg04W6P09xdhvlvNo80JbX6kuJROnVpUlthFEUtbq938i5Qu2OWDWQi_Zf6X02AteH5JjKhHGOKnnquapSe_fUJq-5XMnUZauKcY4HJ3QX7OVcMzd-wNBb8LVEIzH7Sb56-5ufu8tvzZXomqHoE9sMKFoAdPqA3rCTEUJIr0iXbFK34zmb-hZpmoNau1eIiE5SUVUUYqrY1IPSwKxuKWV9gtQeiPB3_Uctj19yohGplOcqWY1itcegVUMX9mdKA6jDQXAywEzgzGAneYapu5GOpyYZnNk_2Z9rZL8uw9Twc5YPowPm5lvtN4FIdqLjhRw7lsdshamzKwXXYcAu73BDDHTV0bxi6WFDQeMAw4KigfCL4kKPTPOEEABR1MFgo9FZ-vG7f4JzZWfibOmuNAe_MVNfXlrRk6fkaf11fBWEwlX24mCRZFtzvBaNawozP6c0NETtP22sOpzqR94Fpnk-v72AocHlDXOaNT6LTN4jOVqZgAU5b7pFKP3ZXVdU3jpjk3pglvjimeRLAM0HJm8li2CpR4NwJbZBZKVuARGJb3LWep7h2EDAUKKO5RQH5-VS9Es4AnEUjVED6j0dANEHCMvJjg0MtTvAf7WfsYSJDhuynm5jBLO023oUASn79HFI_UBt_m6RzlIEqGxggRBqMAZL7r-2giMzWvITGTAVf8r8MDf2JpTdaruTnDQFZwmkROghHNflGeP855i4cB3baAtGIcUFymzmNPRo-oI0GexuLBZilRXADIVtEXdpcK0F-oChIQfcX5jQloD5AIvIX14zmv3ji73rc4EegE1u8UEO9KyLDWMRUr_mrerCsQJ3VIVKjHcRCeJ-_R27msJrAKI6cnnazUt4igcxYAm-qNfN0XeNEL-PllSKDfjSdVS5eHgttK1lXjlh82bWyeN_9IP1foF2_NnxVNtZrWinrQiCBCQ1j-Bzdh3-GyQ0PLLUrNQIzDbndtqYRL4B_DtUw2EbNv5f8ypXM5H9sNyMMvJunHSPlj3hHWoGx5xyKCxBwVuJYG03dsAhfnNSmEZ4qK04c6hvWs7TE0iKWsymihBBCwcvUqQTAn83ACfPPMIGdbS9sWfcOrzqjOmo5GkWEw9Okn6VOZrRhsAbasFEOpVd9lebfu9mDZKUcafIhdxT3cFoUSLi4FhsgBF4E0tZ345asumwPEa5LkcOeYrjEl5MGzLmirxTM9q0BJZDjc5O4aAKpVL9JeTqE6bDty_AgNcTfKVlt8cnPTZkm5-oLxGSQft61pn44NB7h7hWXwY7JQVrhIdRDgY6B4z4FASrV6d1YOj4Yl9GXnk0TYyxxZ7Ih_FQOphXpxqvZNeiTWdVfwqv2dv8QbDOwfuHBIXGLQ-CYEtUfQl9RCZ0-YjzmEzdXF9evJTgdTm_C-x-j2IAQMHgZVeYCJvFGvt-qX2XepXduaaBOQFenPAN5cF7E7ic33eeUdqoHFiuj-1RMs0eYCsNH-Qb1cLvTQ_GbR_O6cm6F-RftLaJohXPjaY-885Fi3SPLhJxbAjpB4t9KrX1JB5MnyVmri9g8f8F6-_6_1ypPXOnoZZJ2hQ1xU8UksX53zwIiKPBWPXvUA4lj_uZzDbsLN3YFawBKg1tbD7ir3ZCLpsSpade_Zqlg3lHFKhLEOJu54mSM5E8r-wL9Se9dsgqKwsC6Fnl9TTS5R3KVS_n8Tf7U3MXjlSEyN3MR_C40kSTRBl5vwrKa2ZkitFRIykBkRhnv9m8SM0FTRjIjtVt7-_tFe_Kt1qgTgA-vdf4-hu6Y7L-Mav2Hr3-3xRt7IW4ZSz7QwQA3Rj1NoQY4cWhEzMWWguRQRSeeWQXF8g0XVGYNbaMUXafdP8p77wfEJIM87Y-opI7xCZMsstGnfk4zCVAsitL_R-6qGuYfVuvF-rrMV8_9qMYbdH1O_KFVn_Vi9jXICK3pFVtJCmDfuUf5QDzT_mtjcRfKYeO3rnat1BiurIVqyfZkA5HaSoySslJ_5gb4lFy2X_vye0fSeZ7cIqFvnF-l7he6SncvUbiZ2Ko0gSb5rCCEX6HAbk0ZTF7h4bpH54FNpV4wy045U_YFNXZ0IbilPcZig_TaF-aP2b74wS3id0mhOHndt2HBSd2ffNQTmj7XxJ4JPkTkL6chiXvTAQEqPnKCy05ZBy9xfn8bL4fCaiYhYv8v7ZFNUDUz6ZNerlyekMp40-eCerlkk39Hju2GE7jBkrzpGpuwGQynI20sXCfew6lWq-7c9dZYxrjsaH7QP_uariE8plG9GS1qEdH-VTC7H0Vcuv81uKu3s1wVf2eOR2Fvkbj7xCQUhNwA5ba-SsBJjSO21RycIcsr43UJzecwV5On51zZ689s7juFH65HtA1M-RqwO0jsC54nlQ2Vbp3fFu6_Dpu49fi0iaJyYfHGk8OxyFykwwUBDe1PRgk1yh2awE3Q6x2OManROmbsjxrxBKR0vuotLl1RcIkbqqr43FxORo3K-R0oCl1tg2RQ8eCVkq5di7gwttanLXAOKEGBQpD_3k4gOdKRM6knT0zuLmT4wOzqID_iKDtvb47vRvDFgIJEXl8jJdnApILoXki-Afw==\",\n    \"summary\" : [ {\n      \"type\" : \"summary_text\",\n      \"text\" : \"**Identifying the sequence pattern**\\n\\nThe user asked about the sequence: 2, 6, 12, 20, 30. I see that these numbers can be expressed as n(n+1). For example, 2=1*2, 6=2*3, etc. I'm realizing they represent pronic numbers, which are products of consecutive integers. So, the nth term formula is a_n = n(n+1). This sequence’s differences are also revealing a pattern: 4, 6, 8, and 10—interesting how those connect!**Clarifying the formula**\\n\\nI see this is a second-order linear sequence, where a_n = n^2 + n, starting with a1 = 2 — that's good! The pattern shows that I'm adding even numbers, beginning at 4 and increasing by 2. Each term corresponds to the product of consecutive integers, confirming the formula as a_n = n(n+1). So for example, 2=1*2, 6=2*3, and so on. I've got it all summed up now—I've reached the end!\"\n    } ]\n  }, {\n    \"type\" : \"message\",\n    \"role\" : \"assistant\",\n    \"content\" : [ {\n      \"type\" : \"output_text\",\n      \"text\" : \"Each term is the product of two consecutive integers:\\n  • 2 = 1·2  \\n  • 6 = 2·3  \\n  • 12 = 3·4  \\n  • 20 = 4·5  \\n  • 30 = 5·6  \\n\\nThese are called “pronic” numbers.  In general, the nth term is\\n\\n  aₙ = n·(n + 1) = n² + n.\"\n    } ]\n  }, {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"\n    } ]\n  } ],\n  \"stream\" : false,\n  \"store\" : false,\n  \"include\" : [ \"reasoning.encrypted_content\" ],\n  \"reasoning\" : {\n    \"effort\" : \"high\",\n    \"summary\" : \"detailed\"\n  }\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-042a0738564d.json",
+    "headers" : {
+      "x-request-id" : "req_54775536912247dd82c8d9e71863888d",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a33dcda7a8fa7606-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999617",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Mon, 31 Aug 2026 17:37:35 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=mtMl54rYh6BF2G.nUGryJahmX1zjgpdMY.p9ol4NTWg-1788197848.2674417-1.0.1.1-L8yVJR3V8qTX6TvYFnPtrh3V8Tq.6z.9PENnX2UVvv5M895bvhv8AT4hgVPczy5LTy_quJy.qIBYnlXQkoJA.mmbX4ssSf8S2zcauj3fy.jVkiaTPhWiNltJ4mZJbd2w; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:07:35 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "6761",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "84ae5d6a-5cda-35bf-8bd6-18724c3f189b",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

@@ -1,13 +1,13 @@
 {
-  "id": "resp_09c031fc6e4a4e14016a8886039cdc87d0bbc2d0ca8c59d1eb",
+  "id": "resp_0d40e777d0428c5f016a95bca9f36487d09dc1a3505bea2575",
   "object": "response",
-  "created_at": 1787332099,
+  "created_at": 1788198057,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1787332101,
+  "completed_at": 1788198059,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,19 +18,19 @@
   "moderation": null,
   "output": [
     {
-      "id": "fc_09c031fc6e4a4e14016a88860516cc87d0950dfd08dbbc162e",
+      "id": "fc_0d40e777d0428c5f016a95bcab8cf487d0811bb6ccedbf1ac6",
       "type": "function_call",
       "status": "completed",
       "arguments": "{\"arg0\":\"Paris\"}",
-      "call_id": "call_bSgzx73lJpOic45Tz17TF5Zo",
+      "call_id": "call_dlJJaeYbZqiLTojthEVSuD5f",
       "name": "getWeather"
     },
     {
-      "id": "fc_09c031fc6e4a4e14016a88860516e487d09299471312720fc5",
+      "id": "fc_0d40e777d0428c5f016a95bcab8d0c87d0adde747ded153af1",
       "type": "function_call",
       "status": "completed",
       "arguments": "{\"arg0\":\"New York\"}",
-      "call_id": "call_IESRKUeQQSqSxxh2op9jKdrL",
+      "call_id": "call_kLgnom9OZNcToRYj0vDlqYyN",
       "name": "getWeather"
     }
   ],

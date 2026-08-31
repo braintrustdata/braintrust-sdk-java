@@ -10,7 +10,7 @@
       }
     },
     "bodyPatterns" : [ {
-      "equalToJson" : "{\n  \"model\" : \"o4-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"\n  } ],\n  \"stream\" : false,\n  \"reasoning_effort\" : \"medium\"\n}",
+      "equalToJson" : "{\"messages\":[{\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\",\"role\":\"user\"}],\"model\":\"o4-mini\",\"reasoning_effort\":\"medium\",\"stream\":false}",
       "ignoreArrayOrder" : true,
       "ignoreExtraElements" : false
     } ]
@@ -19,31 +19,31 @@
     "status" : 200,
     "bodyFileName" : "chat_completions-b5bcb38ce8df.json",
     "headers" : {
-      "x-request-id" : "req_08731d3c4d734f9dbec8937ff43f6b9a",
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=JEdWw9VzOADEo_Eq54Kle4NiD5wr0DC0IkA1hzb9MXs-1788197855.2737541-1.0.1.1-FRoVeAoOUfZSPMWdHzVmZp.rtN8hPs.bN88BeQH0sMHz7BdbioQjRG8ofUDZduCMXmjGteUYSIhnc8NwAAQQHgDrIpeZnIVQElhWG.yIg7E.cBvWxrm7IxySXvC.ZK_V; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:07:47 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_94f766c967aa41a7b8b6c5fa0b60d629",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
-      "Server" : "cloudflare",
-      "CF-Ray" : "a2ad4d87c8531421-SEA",
+      "CF-Ray" : "a33dcdd37c0a76ce-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
       "x-ratelimit-remaining-tokens" : "149999970",
       "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Fri, 14 Aug 2026 04:44:16 GMT",
-      "x-ratelimit-reset-tokens" : "0s",
-      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=a2csL43EaTjPoUL5rKW8RS3vqRVUbFvwoLqGuFUXFj8-1786682650.844532-1.0.1.1-yVMQBonLnMHpTtOz6AqSFb2krLVftOtfFEkpd2nsZoy7sHK04YLiL3rt7Bp1epw8TNp0HKYG3M4IRs4EADUzn5YO01gAdjaqU2MMGRZX7WXZLBHjvCpfe4_OzAqJZ.Vh; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 14 Aug 2026 05:14:16 GMT",
-      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Mon, 31 Aug 2026 17:37:47 GMT",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "4468",
-      "alt-svc" : "h3=\":443\"; ma=86400",
-      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
-      "Content-Type" : "application/json"
+      "openai-processing-ms" : "11966",
+      "alt-svc" : "h3=\":443\"; ma=86400"
     }
   },
   "uuid" : "2c18cacf-35a1-374b-9f56-93255fa2c5ec",
   "persistent" : true,
-  "insertionIndex" : 38
+  "insertionIndex" : 4
 }

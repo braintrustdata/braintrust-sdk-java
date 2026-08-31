@@ -1,13 +1,13 @@
 {
-  "id": "resp_0c3ea78a41204e80016a888606758487d08aefcf49c7f9c6b3",
+  "id": "resp_0a1647fbb564f737016a95bcadc86c87d0aff88d4981223752",
   "object": "response",
-  "created_at": 1787332102,
+  "created_at": 1788198061,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1787332108,
+  "completed_at": 1788198070,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,7 +18,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "ws_0c3ea78a41204e80016a888607544c87d09a067faaef412ce5",
+      "id": "ws_0a1647fbb564f737016a95bcaf0a3087d09a35589019d67185",
       "type": "web_search_call",
       "status": "completed",
       "action": {
@@ -30,7 +30,7 @@
       }
     },
     {
-      "id": "msg_0c3ea78a41204e80016a88860859e487d0b30f080a7beea399",
+      "id": "msg_0a1647fbb564f737016a95bcb0976087d09492703d4b6518f0",
       "type": "message",
       "status": "completed",
       "content": [
@@ -39,49 +39,49 @@
           "annotations": [
             {
               "type": "url_citation",
-              "end_index": 643,
-              "start_index": 550,
-              "title": "Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test",
-              "url": "https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"
+              "end_index": 741,
+              "start_index": 639,
+              "title": "Moderna says skin cancer vaccine trial a success",
+              "url": "https://theweek.com/health/moderna-says-skin-cancer-vaccine-success?utm_source=openai"
             },
             {
               "type": "url_citation",
-              "end_index": 1135,
-              "start_index": 1042,
-              "title": "New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine",
-              "url": "https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"
-            },
-            {
-              "type": "url_citation",
-              "end_index": 1650,
-              "start_index": 1446,
-              "title": "Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth \u2014 TradingView News",
-              "url": "https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"
-            },
-            {
-              "type": "url_citation",
-              "end_index": 2047,
-              "start_index": 1875,
-              "title": "Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test",
-              "url": "https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai"
-            },
-            {
-              "type": "url_citation",
-              "end_index": 2253,
-              "start_index": 2085,
+              "end_index": 1385,
+              "start_index": 1248,
               "title": "FDA approves first mRNA vaccine for seasonal flu",
               "url": "https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"
             },
             {
               "type": "url_citation",
-              "end_index": 2454,
-              "start_index": 2290,
+              "end_index": 1907,
+              "start_index": 1703,
+              "title": "Moderna reports Q2 2026 revenue $145M, GAAP net loss $0.8B and reiterates up to 10% 2026 revenue growth \u2014 TradingView News",
+              "url": "https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2247,
+              "start_index": 2110,
+              "title": "Moderna says skin cancer vaccine trial a success",
+              "url": "https://theweek.com/health/moderna-says-skin-cancer-vaccine-success?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2452,
+              "start_index": 2284,
+              "title": "FDA approves first mRNA vaccine for seasonal flu",
+              "url": "https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2653,
+              "start_index": 2489,
               "title": "New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine",
               "url": "https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai"
             }
           ],
           "logprobs": [],
-          "text": "Moderna has recently achieved significant milestones in its mRNA-based therapies:\n\n**1. mRNA-Based Cancer Vaccine Success**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA cancer vaccine, intismeran. Tested alongside Merck's immunotherapy drug Keytruda in over 1,100 melanoma patients, the combination therapy significantly reduced the recurrence and spread of high-risk skin cancer post-surgery. This breakthrough led to a substantial increase in Moderna's stock value. ([apnews.com](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai))\n\n**2. FDA Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva, for adults aged 50 and older. This marks the first mRNA flu vaccine to receive FDA approval, offering a more adaptable response to flu virus mutations. The approval followed a unanimous advisory committee vote, despite initial regulatory challenges. ([apnews.com](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai))\n\n**3. Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. The company reiterated plans to achieve up to 10% revenue growth for the year, highlighting upcoming regulatory milestones and ongoing late-stage program readouts. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand the applications of its mRNA technology beyond COVID-19 vaccines, focusing on personalized cancer treatments and seasonal flu prevention.\n\n\n## Highlights:\n- [Moderna shares surge after it says its experimental mRNA cancer treatment passed a key test](https://apnews.com/article/2330dce708b0af215b68570b19d025df?utm_source=openai), Published on Wednesday, August 19\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "
+          "text": "Moderna has recently achieved significant milestones in both oncology and infectious disease treatments:\n\n**Advancements in Cancer Treatment**\n\nModerna, in collaboration with Merck, announced promising results from a late-stage clinical trial of their personalized mRNA-based cancer vaccine, intismeran. This vaccine, combined with Merck's immunotherapy drug Keytruda, significantly reduced the recurrence and spread of high-risk melanoma in patients who had undergone surgery. This marks the first successful late-stage trial of a personalized mRNA cancer therapy, potentially opening new avenues for treating melanoma and other cancers. ([theweek.com](https://theweek.com/health/moderna-says-skin-cancer-vaccine-success?utm_source=openai))\n\n**Approval of mRNA Flu Vaccine**\n\nThe U.S. Food and Drug Administration (FDA) approved Moderna's mRNA-based seasonal flu vaccine, mFlusiva (mRNA-1010), for individuals aged 50 and older. This vaccine utilizes the same mRNA technology as Moderna's COVID-19 vaccine, offering a faster production process and better adaptability to circulating flu strains. Clinical trials demonstrated that mFlusiva was 26.6% more effective in preventing flu than standard vaccines, particularly in those aged 65 and older. ([livescience.com](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai))\n\n**Financial Performance**\n\nIn the second quarter of 2026, Moderna reported total revenue of $145 million and a GAAP net loss of $782 million. Despite the loss, the company reiterated its plan to achieve up to 10% revenue growth for the year and projected year-end cash and investments between $4.7 and $5.2 billion. ([tradingview.com](https://www.tradingview.com/news/tradingview%3A51f64edf05d88%3A0-moderna-reports-q2-2026-revenue-145m-gaap-net-loss-0-8b-and-reiterates-up-to-10-2026-revenue-growth/?utm_source=openai))\n\nThese developments underscore Moderna's ongoing efforts to expand its mRNA technology applications beyond COVID-19, focusing on personalized cancer treatments and seasonal vaccines.\n\n\n## Highlights:\n- [Moderna says skin cancer vaccine trial a success](https://theweek.com/health/moderna-says-skin-cancer-vaccine-success?utm_source=openai), Published on Thursday, August 20\n- [FDA approves first mRNA vaccine for seasonal flu](https://www.livescience.com/health/medicine-drugs/fda-approves-first-mrna-vaccine-for-seasonal-flu?utm_source=openai), Published on Thursday, August 06\n- [New kind of flu shot is on the way as the FDA approves Moderna's mRNA-based vaccine](https://apnews.com/article/59d991a6bf70c26e2f0c210cc8ca87f1?utm_source=openai), Published on Thursday, August 06 "
         }
       ],
       "role": "assistant"
@@ -193,11 +193,11 @@
       "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 630,
+    "output_tokens": 650,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 1008
+    "total_tokens": 1028
   },
   "user": null,
   "metadata": {}

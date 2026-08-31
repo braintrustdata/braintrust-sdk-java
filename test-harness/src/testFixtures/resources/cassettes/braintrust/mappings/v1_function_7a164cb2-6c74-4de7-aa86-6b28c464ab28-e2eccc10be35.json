@@ -10,22 +10,18 @@
     "bodyFileName" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28-e2eccc10be35.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
-      "expires" : "0",
-      "x-amz-apigw-id" : "AJUD0GoIIAMER0g=",
-      "vary" : "Origin, Accept-Encoding",
-      "x-amzn-Remapped-content-length" : "1156",
-      "X-Amz-Cf-Pop" : [ "SEA900-P10", "SEA900-P9" ],
-      "X-Amzn-Trace-Id" : "Root=1-6a4d33b1-2004bcd1399986c17dda30c8;Parent=0df3fc78fd400f30;Sampled=0;Lineage=1:fc3b4ff1:0",
-      "Date" : "Tue, 07 Jul 2026 17:13:22 GMT",
-      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront), 1.1 e8b22a8fa8511f8f972b4965a9af80b4.cloudfront.net (CloudFront)",
-      "access-control-expose-headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint",
-      "access-control-allow-credentials" : "true",
-      "x-bt-internal-trace-id" : "6a4d33b100000000680988a6a152d8cb",
-      "x-amzn-RequestId" : "1b7d345b-1d87-45bb-95ed-3b27764ed95e",
-      "X-Amz-Cf-Id" : "lGbQFL8x4mljGex94_jtmU6VzEtSHL8owKhm04FhxfA6mxvC6m7Qyw==",
-      "etag" : "W/\"484-KUHUs0ytlrOyv+d1b83LJCSkHwY\"",
-      "cache-control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
-      "surrogate-control" : "no-store",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "Date" : "Mon, 31 Aug 2026 17:34:28 GMT",
+      "Via" : "1.1 dea0b5e705fff834db8ae3992ea09cfa.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "ETag" : "W/\"484-KUHUs0ytlrOyv+d1b83LJCSkHwY\"",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "ijc7q93y6MawQH6u_nShoIsSQ2M2Wb5Ssdte9nqqDtAbZMImkKqG_g==",
+      "Vary" : "Origin, Accept-Encoding",
+      "Expires" : "0",
+      "Surrogate-Control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
@@ -34,5 +30,5 @@
   "scenarioName" : "scenario-10-v1-function-7a164cb2-6c74-4de7-aa86-6b28c464ab28",
   "requiredScenarioState" : "Started",
   "newScenarioState" : "scenario-10-v1-function-7a164cb2-6c74-4de7-aa86-6b28c464ab28-2",
-  "insertionIndex" : 124
+  "insertionIndex" : 126
 }

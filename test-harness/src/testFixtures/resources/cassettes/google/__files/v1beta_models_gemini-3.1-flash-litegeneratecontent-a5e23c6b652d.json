@@ -4,8 +4,8 @@
       "content": {
         "parts": [
           {
-            "text": "The capital of Germany is Berlin.",
-            "thoughtSignature": "EjQKMgERTTIPpTnUNDOLed+40872B4YyX/4VxzhqxtYuiTe0SbDD/4raFFAhWFFm6+XHWHVt"
+            "text": "The capital of Germany is **Berlin**.",
+            "thoughtSignature": "EnEKbwERTTIPUi17wdVqJRLVWpXYTkQIwnj9hJ2BKAkBd64ZSvk82+sYx/gkI+cYM5FmapgO1DHm2bKErbhOci9mGRcgNZxqHJhE2QXwTosFlDTUFGunoxX4R4v0AxAYYeT1TsJO10BFuQnzdeuC+pA9xQ=="
           }
         ],
         "role": "model"
@@ -16,8 +16,8 @@
   ],
   "usageMetadata": {
     "promptTokenCount": 8,
-    "candidatesTokenCount": 7,
-    "totalTokenCount": 15,
+    "candidatesTokenCount": 8,
+    "totalTokenCount": 16,
     "promptTokensDetails": [
       {
         "modality": "TEXT",
@@ -27,5 +27,5 @@
     "serviceTier": "standard"
   },
   "modelVersion": "gemini-3.1-flash-lite",
-  "responseId": "rjRNat-YIcCfqtsPsvqliQQ"
+  "responseId": "j7yVauph1qOq2w-Q96TZCw"
 }

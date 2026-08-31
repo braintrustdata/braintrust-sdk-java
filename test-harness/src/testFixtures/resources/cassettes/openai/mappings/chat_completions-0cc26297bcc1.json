@@ -1,0 +1,51 @@
+{
+  "id" : "e788905c-b9c7-385a-9bcf-df76876ff42d",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"What is the weather like in Paris, France?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"max_tokens\" : 500,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"get_weather\",\n      \"description\" : \"Get the current weather for a location\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"location\" : {\n            \"type\" : \"string\",\n            \"description\" : \"The city and state, e.g. San Francisco, CA\"\n          },\n          \"unit\" : {\n            \"type\" : \"string\",\n            \"enum\" : [ \"celsius\", \"fahrenheit\" ],\n            \"description\" : \"The unit of temperature\"\n          }\n        },\n        \"required\" : [ \"location\" ]\n      }\n    }\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-0cc26297bcc1.json",
+    "headers" : {
+      "x-request-id" : "req_24068c5c109041cda4489a2e3cf96034",
+      "x-ratelimit-limit-tokens" : "30000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a33dcd671ddaa3b3-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Mon, 31 Aug 2026 17:37:18 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=wkWhuYTB1u5arKPJKhpjtGMzwdZiaI9KwlkSPrL7Y3E-1788197837.939905-1.0.1.1-qkF6CtiD8_KJq.N3MvoRzKHT1yqxZiroS3FaU_2iIGBZR_RSu22Un6_mWMTApYowVOx.SbL0e8QdS955JAJir2zBQgry25P3D1JgfuMK1XwaVSQcLlRNnVszFb5sTcaX; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:07:18 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "514",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "e788905c-b9c7-385a-9bcf-df76876ff42d",
+  "persistent" : true,
+  "scenarioName" : "scenario-4-chat-completions",
+  "requiredScenarioState" : "scenario-4-chat-completions-2",
+  "insertionIndex" : 17
+}

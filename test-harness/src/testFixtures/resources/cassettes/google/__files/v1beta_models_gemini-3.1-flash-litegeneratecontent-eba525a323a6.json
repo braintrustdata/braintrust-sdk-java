@@ -5,7 +5,7 @@
         "parts": [
           {
             "text": "The capital of France is Paris.",
-            "thoughtSignature": "EjQKMgERTTIPOIp+ySF4m9Yj4ioSxZBM0GfPmlqHz/NVZNTMUXpQ5oeAldCpzBYYJaYPhwjC"
+            "thoughtSignature": "EnEKbwERTTIPuatNOBvUnK65p/NgbUg6+8SMdWhfzL4Mx8vsmGKgbmo0anFD0cpUJ9QC0WbCQ3qWsdmgG+Ho9TungmFixBzKqXxO8TDQbedAqF77q4WXSgtPKGwhsFZF2qnGjyGuy9fiQgtMpPfppL+eTQ=="
           }
         ],
         "role": "model"
@@ -27,5 +27,5 @@
     "serviceTier": "standard"
   },
   "modelVersion": "gemini-3.1-flash-lite",
-  "responseId": "sDRNav6yCLKf6dkP-pqFqQ8"
+  "responseId": "kLyVarTTH-rSjMcPxdmi4AY"
 }

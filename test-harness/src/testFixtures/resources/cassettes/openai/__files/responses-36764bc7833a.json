@@ -1,13 +1,13 @@
 {
-  "id": "resp_00c6daa36ade876c006a4d34c00e44819ba57e38cc1e78d16f",
+  "id": "resp_008ff3f03dd97ebb006a95bd55a09487d08ef03d72ed5f7576",
   "object": "response",
-  "created_at": 1783444672,
+  "created_at": 1788198229,
   "status": "completed",
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1783444673,
+  "completed_at": 1788198231,
   "error": null,
   "frequency_penalty": 0.0,
   "incomplete_details": null,
@@ -18,13 +18,14 @@
   "moderation": null,
   "output": [
     {
-      "id": "rs_00c6daa36ade876c006a4d34c089b4819b82a34feee4170ca5",
+      "id": "rs_008ff3f03dd97ebb006a95bd564d6087d0972ebf379d77ac22",
       "type": "reasoning",
       "content": [],
+      "encrypted_content": "gAAAAABqlb1XaxgxJme9AAvFBwm7stYtP4P-YU4rzIKXs3F1fAdVn0qYN13hxVz_DpXAYP4AeocMR3m0G0gWGk1gDJfJfo5TvbNxV5uAV28YElC_B587cS9wjP-Jom4UWisuzaW5_1yws7rACtz50tx5b5bTiohb1cPZNcxwGFtSZD9q7W-4x3OtRexwx3341sJJ-tZwCF2LwIZKaFDzhezXWLuEwJKZ9APhfO_J-zchQ823fhCjeCrH5C_ViMszfnPPX0RzXwdIagtp_BcKnDFl7hMC9dpGLXHx4FZ-ZlBgFF3dM0EoMCIYUJObVYXoxLM8xLKW_NZxpCeVmbiJEN5yo31-Ov5lKUFAOld2Y3b6ba-2G97H0O7lxNzDkLSh0509QOE6CImjYIOBr5BDjkU-7VYZNOpbKyYPTsQR4x4tLKvCGon2iSG59C1qaoXYrpcMRoosXV8FZy0x3XIvuxPwoThuR48pyLJMFmSPJQGDhFudxja7xx49OWBs2Z68VkHDVxgs8AAgdtoFSXajlNpvAFsJ-yxqTbt0ckaSwCHmTaTnP4QD2Hoi7C6Yrt38Ikhhf2BaC4Zya-FXI7kG7syjdYDTxg9VAZYTskA1jO59gWz38srKU51nV2V7-XP-lZXDwWy_k3ewvxqwquBzO3ofMv3Qzmy0btB7UefmcIfRBj4LTvlc0g_h7MweHPVNwgOmNxvpUdYWzofB5RX4ycg0dXxE668Qc1XLt6mTxcnbb5cKFjAIpSJRrI9_sbEg2pmP7TqKWUnmSaCY5Xj2a39MI7w0MpWb4edWvHsHojaVikaGZlKmHppkO_quYct7XltaTDdsWQZwqSBevoIlQNjs9z2Los5wQY_xuddZGay2Pg_bbxCZ6zpEj3csJHvuMPmhkDwMTrj7-TC-OcXxBqGuDhZ_4G9rpByPd7Ii45jBV9v9HO-BFsgvRcsmeTCYJ_0qgB9__w73Hlt_Bg3GUpX21jt5Ws7wcqdbGCHpKz--DxEaDGg_EOQH8KhQo2Um0aI3yUeIY4aQr_QgTVLZpCNLs3WZ7b6Y3Zvmvs9UOfx2FADmcyu6laPFK9tWnQXT4YzrnKjq17f01Kwz5R5YD3r_z7017hEAKbtcFshMI8JwRkMTZTlyUcJaHzg0iU0OhEFGOfigOMFisMYWldnOgdr93-1sU_vM-rruaJggaU8fez1iEYyyF68621nbt-c7RHGw4xq4Xe4CVBZYksYN9bDVzIgtvg3nN9EV9I_vvZwAoakrgPffuIri4v6G-9YyifAUpyGBwZYm5wUn2ThVxNdbIeU2idbHXMhIgFoe2idLY-FYmZPHxNY=",
       "summary": []
     },
     {
-      "id": "msg_00c6daa36ade876c006a4d34c111b4819b81c99786dc5b160a",
+      "id": "msg_008ff3f03dd97ebb006a95bd57020487d0baae3da064d74270",
       "type": "message",
       "status": "completed",
       "content": [
@@ -85,13 +86,14 @@
   "usage": {
     "input_tokens": 18,
     "input_tokens_details": {
+      "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 28,
+    "output_tokens": 34,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 46
+    "total_tokens": 52
   },
   "user": null,
   "metadata": {}

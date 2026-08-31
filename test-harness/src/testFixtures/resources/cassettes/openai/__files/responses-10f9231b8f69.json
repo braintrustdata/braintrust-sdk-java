@@ -1,0 +1,109 @@
+{
+  "id": "resp_0cdcf22d3808a85f006a95bbf5a6a087d097d20e5b654a6593",
+  "object": "response",
+  "created_at": 1788197877,
+  "status": "completed",
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1788197885,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "o4-mini-2025-04-16",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_0cdcf22d3808a85f006a95bbf60e7887d0b5754b314762df94",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABqlbv9129WPcKdg8d4KHpuU8fKWbJMTbz1g-IhN9CUOkZ9mlzjnLW04tfeqBpT_pd97nAuuyfQshIhku7ePFI1ySjpRhqRIM3OZYg_4RFM9J6jkWgP3Exe_hYG0a_OSE5dxOuGo8bfhMfAXk-JI2-ftngXA1hEExwEFeFbYw3JKJAo5hO30dqcGkud5EGwZChRmOR03rOfMU2kphLA2b96iUjtGta0rWgJHBleITHnWfCixTJ36BeTrGQaIotdM09IS4y4hFiGA9y7tadY9b-KzwZKkjcWwCozRKO-OzQ8nz1eZUcpwB8RCXK5b4XBt7h-rkkoFnLnTfk8XzbtDZaleFnHQGE1034XxDlJqZnqxXhejGKu4k72_rWCl656fhpHdfOytB1vzm6bKCsZDzM3vDH1r-iNyHr7a_5M8y7O26SzocHRxcyt39EzwOkhon_3oE_bMglnr1pUTdKIOfNrTp5_AsLK0QnhnqLdoUWv6dSDQ7Tv9cHRxcyjb8GE1b9puRFQZ_nmGlROdALhnZaXfhMa-yS1aohiseIFU0bqmdcvwSW6kFfDocSA8rnQ8bpArc2Ca5DIB1w3qLT_kdbvqKpiCqvx3ZpM79krkODorkg5jYUSMC07_S3Ksb7Ttay6PAGBJT6pdVKdgvluH73zsSprcGO7VP1_e2hF5swdjkq8Rqsj7xYyE6WhTyQ1X8lzBpebNl0uSf-1D9FTCdIgC8LH5OE8UL0na0qPFPHXLukKUIyPXnPOH0VX-gLs0dL0BLjTJ7yidxkDvlkaWLqjlozrY5gVRwTov0M2K6g-qcNNv-yNfPTud7112tLxiFZRA9bJYKsbdQZbFE5_bUV3fUf_bfcs0FkFbhbSZdWJ0EuzuoYBFzzUp8FdtiWRnqM8Cjxh07lOnA0LlWAmd9vpzdIkSOTjjQyQsKtUwYysO5vrb4ENj0zQQ2pMmgyRby1yFzDYgk1vBXkika6E6pU8GboEDycghObBrX6Iwo-3FciE6DIGH0D3gwoHdHeW5GaUwaucHZjHKvt1-_9VeJdSdUAdDu_W7uEgLtKJbfCb8Sf5Mu4-_emvs3fsCF5Et_U5h6-GGneZ5zMcjUbSZ4r_ydtPb7peUAAAEaACSeAVSc7UFGftrCHZU2vqoLFesGZwv29HrUl-rWIwNs0NoG-eAfqGFTus1IaJGDEEsqfUJlv1ySW_yv2J96VqBoTua1IttZMlLoh1yCfoM5R5m3tCDOF9cHFDBr5Zi3KV4kUTuQlKMmjOO3zdmvJ5Bzh0Geoq_rz4B-0FrLwVqfTuNhhXtcd3FZKYZzYyGWJTgegaf0qySVMB7meaL8fs0zp9AZibNpMcuLnEMkQsOG5s_LDNT_jbV8sWXgVcykkpGZDz5WhHUGXdRPKALSSB8IR1qWsthLsS9JDhS1UuHu9YxjMNrEOvoVozwaKRZSRMdj4tdNdazb2a6DEpRNJCQeHo33-SACPJaynwVxVZOdSthXw2D8AzU8_omESDFmaAmNgPMSplyuijnT9S-cyvfovOOtN0_8E5o8yNsWkCAEmKVgSaKhwcIlmfptd7HYej2gig6cPBBh10Qz454U-8x8q0KrAdWlFFg4xwPLYeX9HYELcIKuJlq_v1Es2gY2nDRJV5ITP2MsZojzc59nCwyoqU8o6OLLTauZFHjWphuyDcKrdJv6oIDq6hFk5vmNhh1Luz3oUWGiSM4sgE63cW3bFYJSqC9syt5St-j1Qu4HL5XrC51y_Wl3VAjtmZe3hiUu6C8U-1hXyZktdxHG-XIzFA9wOZkP5Zuhz7yKpUg7CY9-9Kl-jvdUmcjxpjzwtHUtKU2QB90OR1alLjvve7U51RbW0L8zAok0pJtzNNzc2J6x-akwl2wnC-DQW7wb54M8NUuX2GX4-Knkm-3qPmTIfQyhhuixjCFvkdkhWyntCEMvvaUuPuuYXfI7DP2kvGlKbJTncd_fNTV3Pa99lK3nIF-J_Z7T0Og5X29AOusmYIRmtVoaV0r5rC67flE09XT1iURtL5DvjJGjWw4FdyASm9C_ktnXeh7ayZuKEGPpuT52L074hygr8QuSWbFlpFVVWp631De8N0M5b7MPWlX6_hNxSXIGK73wJH7AZmkcRZVsSscZVbnWFS_L68Vy9ZKvJHieK82Ab46J-OdP2QfGPsHvTuIQLh8FekDWWvW9Qo2d17LhvkrNHQxk2ER2AYmhs7w3e9qM78haNucPJgHZpiCNZ3yg9bv894ZELkZwQko55jqjrD_z649uud59T514z9OttGrV3sKbTuij9G-XjWUEnhQ2NiVysl3Ob_BGfNdCjYOyNBrek8YQUYX4-gbOyZM_YyTDOaAyI1JYl8Au8ugSYknTPi1dPFXUykpDYEnF7ZZm4xNOhx9qd7F03HSKj7iRjBMIj4RNvT7E1S4oY7l-GMvvfEklE02UspHMyg02XrJbk_4DXXeuLEtNBzEcvjTB-bD6QfnRZ0525FEEwfWZGuGg9V65B2ItQEn-1av3W80i4sq87eQNUlrDThsnOyNDEp_e1hVgLxTTgaFzSRmPVt11Sun7nPC84fOHIOUr89khUGyRX-Trc3GI1PzfxLfhZiB6ycJEF-HetLILgjywOsLc9KMiKKjuDJrKZPhJ86Kuhk4-P9eGeJnzWtxzRHsxnwCZEMYJMbqNi7gyegzC4awuqV8PBmDFbFH_yHqVh1CIrGasq78nOtc2hY6HMA2CWKn6t_snqk1Rq0bZ_VYOAEq8jG4ZsZywNccHNdbq4WnT8K_FpV3yAGSHIqWX9A8ftFsjcxvcxFnHfJ4ouS8xD4tX3abAdC90BHVGfymql1X7tQcpzus7DeDFHkSvEYp0njDR9cygfOk14nS8gaeMBqT6I72-jYw0x7zLJPm2k01GLYMbj51xbghnOEI9VIGASoss0cGo4zSvIC9b1ApNHaFNYG6y-H00cL8dQBBD-jlZBZHyo2WvDF-3389gOkU8AxAM0mcyBpbboDDUT3B_VjDgxwk5Esaegfaw2AmW3xy6OwBX4isL7rEPUb7TohQXOJCPLsE_wlrGGSgxs8qYbD863a_lrJ6g3qnWdMGq4JvtXxFyCqqnjN4O3XdlLAGI-KYsljf3GQD3DfwgGN7NOoNaBIKY4-lrUTFncqOdEWXHnJGA8duIPJF68UPbHTI82C40SqaqnHcMfsTJQ87XaUMiElP5FJ83qMODaG4QS7o7TP9ohy0iZctx136unXetFB71zQ8Jzdg3JSIcQ6CVULvdp3DR3qwogKaaIBXY_a2sWqUA==",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating pronic numbers**\n\nThe user has a sequence: 2, 6, 12, 20, 30, which corresponds to pronic numbers, where the nth term is given by a_n = n(n+1). They want to know the 10th term and the sum of the first 10 terms. The 10th term is calculated as a_10 = 10*11 = 110. For the sum S_10, I\u2019ll compute the individual sums: S_10 = 385 (sum of squares) + 55 (sum of n), which totals to 440. Alternatively, the formula for the sum simplifies this to the same result!"
+        },
+        {
+          "type": "summary_text",
+          "text": "**Finding the 10th term and sum**\n\nI calculated the 10th term by using the formula a_10 = 10 * 11, giving me 110. Then, for the sum of the first 10 terms, I added the series: 2 + 6 + 12 + 20 + 30 + 42 + 56 + 72 + 90 + 110, which totals to 440. I can mention that the general formula for the sum of the first n terms is n(n+1)(n+2)/3. So, the 10th term is 110, and the sum is 440. Let's provide this neatly!"
+        }
+      ]
+    },
+    {
+      "id": "msg_0cdcf22d3808a85f006a95bbfc88bc87d0b77a1c39df3eed36",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The 10th term is  \na\u2081\u2080 = 10\u00b7(10\u2009+\u20091) = 10\u00b711 = 110.  \n\nThe sum of the first 10 terms is  \nS\u2081\u2080 = \u2211\u2096\u208c\u2081\u00b9\u2070 k(k\u2009+\u20091)  \n     = \u2211\u2096\u208c\u2081\u00b9\u2070 k\u00b2  +  \u2211\u2096\u208c\u2081\u00b9\u2070 k  \n     = 385  +  55  \n     = 440.  \n\n(You can also use the closed\u2010form S\u2099 = n(n\u2009+\u20091)(n\u2009+\u20092)/3 \u21d2 S\u2081\u2080 = 10\u00b711\u00b712/3 = 440.)"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": "current_turn",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 186,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 771,
+    "output_tokens_details": {
+      "reasoning_tokens": 576
+    },
+    "total_tokens": 957
+  },
+  "user": null,
+  "metadata": {}
+}

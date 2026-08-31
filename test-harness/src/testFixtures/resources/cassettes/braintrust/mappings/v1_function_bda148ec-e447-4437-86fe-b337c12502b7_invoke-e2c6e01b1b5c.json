@@ -1,0 +1,48 @@
+{
+  "id" : "e8d6b60c-8ba9-3831-9bb6-2578ac89c909",
+  "name" : "v1_function_bda148ec-e447-4437-86fe-b337c12502b7_invoke",
+  "request" : {
+    "url" : "/v1/function/bda148ec-e447-4437-86fe-b337c12502b7/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"test input\",\"output\":\"hello world\",\"expected\":\"hello world\",\"metadata\":{}},\"expected\":null,\"messages\":[],\"parent\":{\"object_type\":\"project_logs\",\"object_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"eb85fed14607ba1c\",\"root_span_id\":\"b2c4e2f917794144eff5e6ac0e08e33e\"}},\"mcp_auth\":{}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_bda148ec-e447-4437-86fe-b337c12502b7_invoke-e2c6e01b1b5c.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "vary" : "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "x-bt-function-creds-cached" : "HIT",
+      "x-bt-cached" : "MISS",
+      "Date" : "Mon, 31 Aug 2026 17:36:07 GMT",
+      "Via" : "1.1 3062c1f9ccf5f043983bc180e222dd9c.cloudfront.net (CloudFront)",
+      "x-bt-passthrough" : "false",
+      "x-bt-span-export" : "AwIDAfHoWKRY40CPmD8BZ2DX+iUCPYbyw5UPTMC6RAneR2mMcAM+TlPWqj5DB4+Z7vfoBlGveyJyb290X3NwYW5faWQiOiJiMmM0ZTJmOTE3Nzk0MTQ0ZWZmNWU2YWMwZTA4ZTMzZSJ9",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "x-bt-secrets-scope" : "org_and_project",
+      "Access-Control-Allow-Credentials" : "true",
+      "x-bt-stale-secrets" : "false",
+      "X-Amz-Cf-Id" : "-Lgh6tsD-S8mhsNxbGwUss_cXWV90Acx6rs1_6upiiiRJ-vhx2WsQA==",
+      "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "x-bt-request-id" : "a9f2255c-fa9e-41cc-ba24-51788d549d72",
+      "x-bt-span-id" : "3d86f2c3-950f-4cc0-ba44-09de47698c70",
+      "x-bt-function-meta-cached" : "MISS",
+      "cache-control" : "no-cache",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "e8d6b60c-8ba9-3831-9bb6-2578ac89c909",
+  "persistent" : true,
+  "insertionIndex" : 31
+}

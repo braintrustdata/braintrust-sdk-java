@@ -21,29 +21,29 @@
     "headers" : {
       "Server" : "cloudflare",
       "x-ratelimit-reset-tokens" : "0s",
-      "set-cookie" : "__cf_bm=lT2C9PI5oTWQB9phzLZSzZNrjIpD4QdqzWo3giDLfUg-1783444685.5146697-1.0.1.1-iARveTJX6WsJyU3JyUbArzpSjIZ43uP7ew.KgdaNez0kQhcvQXY5mzUQ_FJjJztsXfxn2tanFdhcez.UOL2CQa.0uGrTMIVyZ_ut50obQdXiRgRo2fw5xZ3UMywAq153; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Jul 2026 17:48:06 GMT",
+      "set-cookie" : "__cf_bm=IUo4nrWlxoLG6_7Wqeg.al8TbbpOxFagTzm_KlMxXD8-1788198270.6457648-1.0.1.1-I19_7Zqej6lpQ39eRtCS8JApqLtf2HX6nngt6V16WvXLP3BNjVTVtoXeRoyZYCu_rOBcfsQX7E4dBwwchykr0f1iY2BmvQCrlAfcx1OfwljJQ9CVcD2Kor9XJE1CRG1U; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:14:31 GMT",
       "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json",
-      "x-request-id" : "req_bd7c70b05e91482bbb2d8cbf180252c5",
+      "x-request-id" : "req_1a77220fd83c4c6aba0a728a23ae9631",
       "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
-      "CF-Ray" : "a17881a478e9d7dd-SEA",
+      "CF-Ray" : "a33dd7f78f4a76b6-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "2ms",
       "x-ratelimit-remaining-tokens" : "149999980",
       "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "29999",
-      "Date" : "Tue, 07 Jul 2026 17:18:06 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:44:31 GMT",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "471",
+      "openai-processing-ms" : "984",
       "alt-svc" : "h3=\":443\"; ma=86400"
     }
   },
   "uuid" : "77761a50-8676-326e-b094-73543f3813e4",
   "persistent" : true,
-  "insertionIndex" : 25
+  "insertionIndex" : 61
 }

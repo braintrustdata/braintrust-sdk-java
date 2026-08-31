@@ -19,24 +19,24 @@
     "status" : 200,
     "bodyFileName" : "responses-0c37df81d2cf.json",
     "headers" : {
-      "x-request-id" : "req_caffbff4fcfa4447b1f0f244b349c260",
+      "x-request-id" : "req_1d318236def3478983e87916819ca60e",
       "x-ratelimit-limit-tokens" : "30000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a2b477186f387696-SEA",
+      "CF-Ray" : "a33dd5a1ac612672-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "6ms",
       "x-ratelimit-remaining-tokens" : "29999667",
       "x-ratelimit-remaining-requests" : "9999",
-      "Date" : "Sat, 15 Aug 2026 01:36:00 GMT",
+      "Date" : "Mon, 31 Aug 2026 17:43:40 GMT",
       "x-ratelimit-reset-tokens" : "0s",
       "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=fKB9N5Strq0k5Ze6sBfi4jGPWxkXhYwFN8qyUXdPsIM-1786757753.6642315-1.0.1.1-wyZZ9kuB_61Xx6odgjT2OxPYQpP8j3xce70cTL5rB304kOCWgffE6Fj.BtDgeYCAyjCkI7SOuZ4KDifin5OZNXNfsEcE5OgeU7w.lKUK9iMdxo4FO.1aWZFgahNgnkqF; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 15 Aug 2026 02:06:00 GMT",
+      "set-cookie" : "__cf_bm=2M0GqUYqBC0JSmC4rCPKFF2OnKbeT5RbSsryzRYj6uE-1788198174.9836721-1.0.1.1-iE17FNyl4.Ify5.RS8lNIQOtVa1MEQQOEYey1..9kAQj0yNSId_SulqDMs.TDJV65SPjgX3eVf5YepnIcSjgYYJME6ZN0ZzIsa4kxswJs8v34JOSg6uj5UQSTpf5eLkE; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:13:40 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "10000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "6801",
+      "openai-processing-ms" : "45284",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "application/json"
@@ -44,5 +44,5 @@
   },
   "uuid" : "281f816f-d189-3cf5-88f9-fd4fdc9fe66d",
   "persistent" : true,
-  "insertionIndex" : 38
+  "insertionIndex" : 56
 }

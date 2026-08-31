@@ -19,8 +19,8 @@
     "status" : 200,
     "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-c1cf32bb5183.json",
     "headers" : {
-      "x-amzn-RequestId" : "cd4f4a63-023c-435e-8b48-bc0ac7b3a5dd",
-      "Date" : "Tue, 07 Jul 2026 17:15:06 GMT",
+      "x-amzn-RequestId" : "b3aba81a-d417-43df-bc3d-b63c150d6cee",
+      "Date" : "Mon, 31 Aug 2026 17:37:13 GMT",
       "Content-Type" : "application/json"
     }
   },

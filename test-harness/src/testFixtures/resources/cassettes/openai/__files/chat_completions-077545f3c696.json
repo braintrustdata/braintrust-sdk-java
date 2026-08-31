@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-EJ0E4DbrAvjTvzRQUGVOrPWkWfqkV",
+  "object": "chat.completion",
+  "created": 1788197808,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "The first attachment is a solid red square, and the second attachment is a PDF file named \"blank.pdf\" that contains no readable content or images.",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 495,
+    "completion_tokens": 30,
+    "total_tokens": 525,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_ffd8308b42"
+}
