@@ -1,34 +1,41 @@
 {
-  "id" : "7fc7ac7d-600b-3bb1-bbeb-6c20419871bd",
-  "name" : "api_apikey_login",
+  "id" : "8414d439-b521-35f4-8bee-0a54e09dee2b",
+  "name" : "v1_experiment",
   "request" : {
-    "url" : "/api/apikey/login",
-    "method" : "POST"
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"max-concurrency-test\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "api_apikey_login-fda483633056.json",
+    "bodyFileName" : "v1_experiment-d25fd7674fdc.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "X-Amz-Cf-Pop" : "SEA900-P10",
       "Date" : "Wed, 02 Sep 2026 05:16:21 GMT",
-      "Via" : "1.1 82fa7f20ab5a12301da8e01f9493e222.cloudfront.net (CloudFront)",
+      "Via" : "1.1 cb2aa1abf9fb243a4dc4cb073a92424e.cloudfront.net (CloudFront)",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
       "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
-      "ETag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
+      "ETag" : "W/\"1c8-pRyrCQTW84pbwgU7+aHf5A2snnM\"",
       "Access-Control-Allow-Credentials" : "true",
-      "X-Amz-Cf-Id" : "e8tFNa9JscmsTVjGSnVGDaO-wzk69sBYdtoUlmnM9DCwmDpfiwHE6A==",
+      "X-Amz-Cf-Id" : "Gqcx-UeeTTIatKzz2LvKZAZpPOwEUPtbeApqojMLMklnnfiZxhZ2vA==",
       "Vary" : "Origin, Accept-Encoding",
       "Expires" : "0",
       "Surrogate-Control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
-  "uuid" : "7fc7ac7d-600b-3bb1-bbeb-6c20419871bd",
+  "uuid" : "8414d439-b521-35f4-8bee-0a54e09dee2b",
   "persistent" : true,
-  "scenarioName" : "scenario-1-api-apikey-login",
-  "requiredScenarioState" : "scenario-1-api-apikey-login-6",
-  "newScenarioState" : "scenario-1-api-apikey-login-7",
-  "insertionIndex" : 208
+  "insertionIndex" : 207
 }

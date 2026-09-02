@@ -1,13 +1,23 @@
 {
-  "id" : "058e04ef-a97a-3a53-8129-7fc92d2dacd5",
-  "name" : "api_apikey_login",
+  "id" : "52ce3247-31fb-354d-bb03-8abc792fb339",
+  "name" : "v1_experiment",
   "request" : {
-    "url" : "/api/apikey/login",
-    "method" : "POST"
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"bad-score-test\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "api_apikey_login-9611c99e6aac.json",
+    "bodyFileName" : "v1_experiment-f4bcbfaef3af.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "X-Amz-Cf-Pop" : "SEA900-P10",
@@ -16,19 +26,18 @@
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
       "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
-      "ETag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
+      "ETag" : "W/\"1c2-LL5Gg+/1eJtV3ksHwkyQRHY7WIc\"",
       "Access-Control-Allow-Credentials" : "true",
-      "X-Amz-Cf-Id" : "5Z_ghrPhfu3bThjf6xSTwFUp3iF-hmEHKgQUTZMyFmHxjepRPtNK3A==",
+      "X-Amz-Cf-Id" : "1uuKpdw8Q4mJ4cQE0EkJyJPeEI1bJjBT4L4iSiyV4mIwAhcssWorng==",
       "Vary" : "Origin, Accept-Encoding",
       "Expires" : "0",
       "Surrogate-Control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
-  "uuid" : "058e04ef-a97a-3a53-8129-7fc92d2dacd5",
+  "uuid" : "52ce3247-31fb-354d-bb03-8abc792fb339",
   "persistent" : true,
-  "scenarioName" : "scenario-1-api-apikey-login",
-  "requiredScenarioState" : "scenario-1-api-apikey-login-5",
-  "newScenarioState" : "scenario-1-api-apikey-login-6",
-  "insertionIndex" : 211
+  "scenarioName" : "scenario-3-v1-experiment",
+  "requiredScenarioState" : "scenario-3-v1-experiment-2",
+  "insertionIndex" : 210
 }

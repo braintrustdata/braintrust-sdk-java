@@ -1,34 +1,41 @@
 {
-  "id" : "9602117c-895c-3d23-a069-36bd7207a729",
-  "name" : "api_apikey_login",
+  "id" : "0254f542-fbbd-37af-903b-d925ff1ca4af",
+  "name" : "v1_project",
   "request" : {
-    "url" : "/api/apikey/login",
-    "method" : "POST"
+    "urlPath" : "/v1/project",
+    "method" : "GET",
+    "queryParameters" : {
+      "project_name" : {
+        "hasExactly" : [ {
+          "equalTo" : "java-unit-test"
+        } ]
+      }
+    }
   },
   "response" : {
     "status" : 200,
-    "bodyFileName" : "api_apikey_login-228248286fba.json",
+    "bodyFileName" : "v1_project-dd7665d7a48a.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "X-Amz-Cf-Pop" : "SEA900-P10",
       "Date" : "Wed, 02 Sep 2026 05:16:19 GMT",
-      "Via" : "1.1 f8731007efc5ab360d90cee573a1e916.cloudfront.net (CloudFront)",
+      "Via" : "1.1 98b0bd91dae8cd13230da037f5a4d5e0.cloudfront.net (CloudFront)",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
       "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
-      "ETag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
+      "ETag" : "W/\"169-XiwCuJsCqAZuAH8JspCgkYonnKw\"",
       "Access-Control-Allow-Credentials" : "true",
-      "X-Amz-Cf-Id" : "fpjGMXVOttkN6DHWVPW4X73OaQL7iB8df5W4J2y4u9tNe1MUXqlhbA==",
+      "X-Amz-Cf-Id" : "467kCtUocQJkAM7_BY-LX3MPHUYQPbB1-tkQAKqBqE2aBFCwkkgc3g==",
       "Vary" : "Origin, Accept-Encoding",
       "Expires" : "0",
       "Surrogate-Control" : "no-store",
       "Content-Type" : "application/json; charset=utf-8"
     }
   },
-  "uuid" : "9602117c-895c-3d23-a069-36bd7207a729",
+  "uuid" : "0254f542-fbbd-37af-903b-d925ff1ca4af",
   "persistent" : true,
-  "scenarioName" : "scenario-1-api-apikey-login",
-  "requiredScenarioState" : "scenario-1-api-apikey-login-3",
-  "newScenarioState" : "scenario-1-api-apikey-login-4",
-  "insertionIndex" : 217
+  "scenarioName" : "scenario-2-v1-project",
+  "requiredScenarioState" : "scenario-2-v1-project-4",
+  "newScenarioState" : "scenario-2-v1-project-5",
+  "insertionIndex" : 215
 }
