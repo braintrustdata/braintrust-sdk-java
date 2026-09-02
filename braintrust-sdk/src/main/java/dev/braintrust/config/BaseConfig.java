@@ -75,4 +75,12 @@ class BaseConfig {
         }
         return NULL_OVERRIDE.equals(settingValue) ? null : settingValue;
     }
+
+    /** throws if number is not positive */
+    protected final int assertPositive(int number) {
+        if (number <= 0) {
+            throw new IllegalArgumentException("positive number required. got: " + number);
+        }
+        return number;
+    }
 }

@@ -26,9 +26,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -43,6 +48,9 @@ import lombok.extern.slf4j.Slf4j;
 public class Devserver {
     private static final Pattern PREVIEW_DOMAIN_PATTERN =
             Pattern.compile("^https://[^/]+\\.preview\\.braintrust\\.dev$");
+
+    /** How long {@link #stop()} waits for in-flight experiment snapshots to finish. */
+    private static final Duration SNAPSHOT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(60);
 
     // Allowed headers for CORS
     private static final String ALLOWED_HEADERS =
@@ -87,6 +95,31 @@ public class Devserver {
     private final @Nullable String orgName;
     private final Map<String, RemoteEval<?, ?>> evals;
     private @Nullable HttpServer server;
+
+    /** Threads for HTTP request handling. Holds no threads until the first request arrives. */
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    /**
+     * Threads that eval cases run on, kept separate from the HTTP pool. Submitting to this pool
+     * blocks once it is saturated, and playground runs submit cases while occupying an HTTP thread
+     * — so sharing one pool with request handling would deadlock. Experiment snapshots keep using
+     * it after their response has been sent, so it outlives individual requests.
+     *
+     * <p>Like the HTTP pool it holds no threads while idle, so there is nothing to gain from
+     * deferring its creation to {@link #start()}.
+     */
+    private final ExecutorService evalExecutor;
+
+    private final int maxConcurrency;
+
+    /**
+     * Experiment snapshots that are still running. A snapshot outlives the request that triggered
+     * it (the caller gets the experiment link immediately and the cases keep running), so the
+     * server has to remember them: {@link #stop()} waits on them rather than truncating an
+     * experiment someone is already looking at. Finished runs are swept out as new ones arrive.
+     */
+    private final Set<EvalResult> runningSnapshots = ConcurrentHashMap.newKeySet();
+
     private final @Nullable Consumer<io.opentelemetry.sdk.trace.SdkTracerProviderBuilder>
             traceBuilderHook;
     private final @Nullable Consumer<BraintrustConfig.Builder> configBuilderHook;
@@ -101,6 +134,12 @@ public class Devserver {
         this.orgName = builder.orgName;
         this.traceBuilderHook = builder.traceBuilderHook;
         this.configBuilderHook = builder.configBuilderHook;
+        this.maxConcurrency =
+                builder.maxConcurrency != null
+                        ? builder.maxConcurrency
+                        : config.defaultMaxConcurrency();
+        this.evalExecutor =
+                BraintrustUtils.newExecutor(maxConcurrency, "braintrust-devserver-eval-");
         Map<String, RemoteEval<?, ?>> evalMap = new HashMap<>();
         for (RemoteEval<?, ?> eval : builder.evals) {
             if (evalMap.containsKey(eval.getName())) {
@@ -128,9 +167,13 @@ public class Devserver {
         if (server != null) {
             throw new IllegalStateException("Server is already running");
         }
+        if (executor.isShutdown()) {
+            // The pools are final and shut down by stop(), so a stopped devserver is done for good.
+            throw new IllegalStateException("Server has been stopped; build a new one to restart");
+        }
 
         server = HttpServer.create(new InetSocketAddress(host, port), 0);
-        server.setExecutor(Executors.newCachedThreadPool());
+        server.setExecutor(executor);
 
         server.createContext("/", withCors(this::handleHealthCheck));
         server.createContext("/list", withCors(this::handleList));
@@ -146,8 +189,66 @@ public class Devserver {
         if (server != null) {
             server.stop(0);
             server = null;
+            executor.shutdown();
+            // Snapshot experiments run in the background and their link has already been handed
+            // to the user, so give them a bounded chance to finish. This has to happen before the
+            // pool is shut down: a snapshot still draining its dataset submits its remaining cases
+            // as it goes, and those submits would be rejected.
+            awaitRunningSnapshots(SNAPSHOT_SHUTDOWN_TIMEOUT);
+            // Lets evals still running in the background finish, but rejects new work.
+            evalExecutor.shutdown();
             log.info("Braintrust dev server stopped");
         }
+    }
+
+    /**
+     * Remembers a snapshot run so {@link #stop()} can wait on it, sweeping out the ones that have
+     * since finished. Snapshots are the only evals that outlive their request, and there are few of
+     * them, so a sweep per snapshot is cheaper than anything that watches them continuously.
+     */
+    private void trackSnapshot(EvalResult result) {
+        runningSnapshots.removeIf(EvalResult::isDone);
+        // This may race with stop(): shutdown's best-effort sweep can finish before this result is
+        // added. That is acceptable once server shutdown is underway, when in-flight requests and
+        // their background evals are no longer guaranteed to complete.
+        runningSnapshots.add(result);
+    }
+
+    /**
+     * Blocks until every snapshot still running has finished, or {@code timeout} elapses across all
+     * of them.
+     *
+     * @return true if they all finished
+     */
+    private boolean awaitRunningSnapshots(Duration timeout) {
+        runningSnapshots.removeIf(EvalResult::isDone);
+        if (runningSnapshots.isEmpty()) {
+            return true;
+        }
+        log.info(
+                "Waiting up to {}s for {} snapshot experiment(s) to finish",
+                timeout.toSeconds(),
+                runningSnapshots.size());
+        var deadline = System.nanoTime() + timeout.toNanos();
+        for (var result : runningSnapshots) {
+            var remaining = Duration.ofNanos(Math.max(0, deadline - System.nanoTime()));
+            try {
+                if (!result.awaitCompletion(remaining)) {
+                    // Out of budget. The cases run on daemon threads, so whatever this snapshot
+                    // has not flushed by the time the JVM exits is lost.
+                    log.warn(
+                            "Stopped waiting: snapshot experiment(s) still running and may be"
+                                    + " incomplete: {}",
+                            result.getExperimentUrl());
+                    return false;
+                }
+            } catch (Exception e) {
+                // The run aborted; awaitCompletion rethrows its error. Nothing to do about it at
+                // shutdown and the other snapshots still deserve their wait.
+            }
+        }
+        runningSnapshots.clear();
+        return true;
     }
 
     private void handleHealthCheck(HttpExchange exchange) throws IOException {
@@ -417,134 +518,95 @@ public class Devserver {
                 final var braintrustParent = parentInfo.braintrustParent();
                 final var braintrustGeneration = parentInfo.generation();
 
-                // NOTE: this code is serial but written in a thread-safe manner to support
-                // concurrent dataset fetching and eval execution
-                extractDataset(
-                                request,
-                                apiClient,
-                                eval.getInputConverter(),
-                                eval.getOutputConverter())
-                        .forEach(
-                                datasetCase -> {
-                                    var evalSpan =
-                                            tracer.spanBuilder("eval")
-                                                    .setNoParent()
-                                                    .setSpanKind(SpanKind.CLIENT)
-                                                    .setAttribute(
-                                                            PARENT,
-                                                            braintrustParent.toParentValue())
-                                                    .startSpan();
-                                    Context evalContext = Context.current().with(evalSpan);
-                                    evalContext =
-                                            BraintrustContext.setParentInBaggage(
-                                                    evalContext,
-                                                    braintrustParent.type(),
-                                                    braintrustParent.id());
-                                    // Make the eval context (with span and baggage) current
-                                    try (var rootScope = evalContext.makeCurrent()) {
-                                        final TaskResult<I, O> taskResult;
-                                        { // run task
-                                            var taskSpan = tracer.spanBuilder("task").startSpan();
-                                            try (var unused =
-                                                    Context.current()
-                                                            .with(taskSpan)
-                                                            .makeCurrent()) {
-                                                var task = eval.getTask();
-                                                try {
-                                                    taskResult =
-                                                            task.apply(
-                                                                    datasetCase, mergedParameters);
-                                                } catch (Exception e) {
-                                                    taskSpan.setStatus(
-                                                            StatusCode.ERROR, e.getMessage());
-                                                    taskSpan.recordException(e);
-                                                    taskSpan.end();
-                                                    evalSpan.setStatus(
-                                                            StatusCode.ERROR, e.getMessage());
-                                                    log.debug(
-                                                            "Task threw exception for input: "
-                                                                    + datasetCase.input(),
-                                                            e);
-                                                    // Set eval span attributes so Braintrust can
-                                                    // resolve the trace
-                                                    setEvalSpanAttributesForError(
-                                                            evalSpan,
-                                                            braintrustParent,
-                                                            braintrustGeneration,
-                                                            datasetCase);
-                                                    // Send progress event even on error so the
-                                                    // Playground can link to the trace
-                                                    sendProgressEvent(
-                                                            os,
-                                                            evalSpan.getSpanContext().getSpanId(),
-                                                            datasetCase.origin(),
-                                                            eval.getName(),
-                                                            null);
-                                                    // run scoreForTaskException on each scorer
-                                                    List<Scorer<I, O>> allScorersForError =
-                                                            new ArrayList<>(eval.getScorers());
-                                                    allScorersForError.addAll(remoteScorers);
-                                                    for (var scorer : allScorersForError) {
-                                                        runScoreForTaskException(
-                                                                tracer,
-                                                                evalSpan,
-                                                                braintrustParent,
-                                                                braintrustGeneration,
-                                                                scorer,
-                                                                e,
-                                                                datasetCase,
-                                                                scoresByName);
-                                                    }
-                                                    return;
-                                                }
-                                                // Send progress event for task completion
-                                                sendProgressEvent(
-                                                        os,
-                                                        evalSpan.getSpanContext().getSpanId(),
-                                                        datasetCase.origin(),
-                                                        eval.getName(),
-                                                        taskResult.result());
-                                                setTaskSpanAttributes(
-                                                        taskSpan,
-                                                        braintrustParent,
-                                                        braintrustGeneration,
-                                                        datasetCase,
-                                                        taskResult);
-                                            } finally {
-                                                taskSpan.end();
-                                            }
-                                            // setting eval span attributes here because we need the
-                                            // task output
-                                            setEvalSpanAttributes(
-                                                    evalSpan,
-                                                    braintrustParent,
-                                                    braintrustGeneration,
-                                                    datasetCase,
-                                                    taskResult);
-                                        }
-                                        // run scorers - one score span per scorer
-                                        // Combine local scorers from RemoteEval with remote scorers
-                                        // from request
-                                        List<Scorer<I, O>> allScorers =
-                                                new ArrayList<>(eval.getScorers());
-                                        allScorers.addAll(remoteScorers);
-                                        for (var scorer : allScorers) {
-                                            runScorer(
+                // Cases are evaluated concurrently on the eval pool. The cursor is drained by
+                // this (request) thread, which submits cases as fast as the pool accepts them and
+                // then waits for them; it never runs a case itself, so it cannot deadlock against
+                // the pool. How many cases run at once is the pool's business, not ours.
+                //
+                // streamFailure is set by the first case whose progress event can't be written,
+                // i.e. the client disconnected. Nobody is listening any more, so the run stops
+                // there rather than evaluating (and billing for) the remaining cases. runFailure
+                // similarly stops the run when a case hits an unrecoverable error, but remains
+                // reportable to the connected client as an SSE error.
+                var streamFailure = new AtomicReference<IOException>();
+                var runFailure = new AtomicReference<Throwable>();
+                var caseContext = Context.current();
+                // The request thread starts as one pending party so completion cannot win while
+                // cases are still being registered. The counter and single future avoid retaining
+                // one Future for every case in a potentially large remote dataset.
+                var pendingCases = new AtomicInteger(1);
+                var casesCompleted = new CompletableFuture<Void>();
+                int submittedCount = 0;
+                Throwable drainError = null;
+                try (var cursor =
+                        extractDataset(
+                                        request,
+                                        apiClient,
+                                        eval.getInputConverter(),
+                                        eval.getOutputConverter())
+                                .openCursor()) {
+                    for (var next = cursor.next(); next.isPresent(); next = cursor.next()) {
+                        if (streamFailure.get() != null || runFailure.get() != null) {
+                            break;
+                        }
+                        var datasetCase = next.get();
+                        pendingCases.incrementAndGet();
+                        try {
+                            evalExecutor.execute(
+                                    () -> {
+                                        try {
+                                            evalPlaygroundCase(
+                                                    os,
+                                                    eval,
                                                     tracer,
-                                                    evalSpan,
+                                                    caseContext,
+                                                    mergedParameters,
                                                     braintrustParent,
                                                     braintrustGeneration,
-                                                    scorer,
-                                                    taskResult,
-                                                    scoresByName);
+                                                    remoteScorers,
+                                                    scoresByName,
+                                                    streamFailure,
+                                                    runFailure,
+                                                    datasetCase);
+                                        } finally {
+                                            caseCompleted(pendingCases, casesCompleted);
                                         }
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(
-                                                "Failed to send progress event", e);
-                                    } finally {
-                                        evalSpan.end();
-                                    }
-                                });
+                                    });
+                            submittedCount++;
+                        } catch (Throwable t) {
+                            // execute() rejected the case, so undo the registration before
+                            // surfacing the drain failure below.
+                            caseCompleted(pendingCases, casesCompleted);
+                            throw t;
+                        }
+                    }
+                } catch (Throwable t) {
+                    // e.g. a failure fetching the next page of a dataset, or a submit rejected
+                    // because the server stopped. Cases already submitted still finish below.
+                    drainError = t;
+                }
+                caseCompleted(pendingCases, casesCompleted);
+                casesCompleted.join();
+                var brokenStream = streamFailure.get();
+                if (brokenStream != null) {
+                    // There is nowhere to send a summary, a done or even an error event, so just
+                    // log and let the finally below close the stream.
+                    log.warn(
+                            "Playground run aborted: client stream closed after {} case(s)",
+                            submittedCount,
+                            brokenStream);
+                    return;
+                }
+                var caseFailure = runFailure.get();
+                if (caseFailure instanceof Exception caseException) {
+                    throw caseException;
+                }
+                if (caseFailure != null) {
+                    throw new RuntimeException("Eval case failed", caseFailure);
+                }
+                if (drainError != null) {
+                    throw new RuntimeException("Failed to evaluate dataset", drainError);
+                }
 
                 // Aggregate scores
                 Map<String, EvalResponse.ScoreSummary> scoreSummaries = new LinkedHashMap<>();
@@ -590,14 +652,160 @@ public class Devserver {
         }
     }
 
+    private static void caseCompleted(
+            AtomicInteger pendingCases, CompletableFuture<Void> casesCompleted) {
+        if (pendingCases.decrementAndGet() == 0) {
+            casesCompleted.complete(null);
+        }
+    }
+
+    /**
+     * Evaluates one case of a playground run: emits the {@code eval}/{@code task}/{@code score}
+     * spans under the playground parent, streams a {@code progress} event, and accumulates scores
+     * into {@code scoresByName}.
+     *
+     * <p>Runs on the eval pool, one case per thread, so the OpenTelemetry scopes it opens stay
+     * thread-confined. Task and initial scorer errors are handled by their scorer fallbacks; an
+     * error that escapes those fallbacks is recorded in {@code runFailure} and aborts the run.
+     * Failing to write to the SSE stream records {@code streamFailure} instead because the client
+     * is gone and cannot receive an error event.
+     */
+    private <I, O> void evalPlaygroundCase(
+            OutputStream os,
+            RemoteEval<I, O> eval,
+            Tracer tracer,
+            Context caseContext,
+            Parameters mergedParameters,
+            BraintrustUtils.Parent braintrustParent,
+            @Nullable String braintrustGeneration,
+            List<Scorer<I, O>> remoteScorers,
+            Map<String, List<Double>> scoresByName,
+            AtomicReference<IOException> streamFailure,
+            AtomicReference<Throwable> runFailure,
+            DatasetCase<I, O> datasetCase) {
+        if (streamFailure.get() != null || runFailure.get() != null) {
+            // The run has already failed; don't start work whose results will be discarded.
+            return;
+        }
+        try (var caseScope = caseContext.makeCurrent()) {
+            var evalSpan =
+                    tracer.spanBuilder("eval")
+                            .setNoParent()
+                            .setSpanKind(SpanKind.CLIENT)
+                            .setAttribute(PARENT, braintrustParent.toParentValue())
+                            .startSpan();
+            Context evalContext = Context.current().with(evalSpan);
+            evalContext =
+                    BraintrustContext.setParentInBaggage(
+                            evalContext, braintrustParent.type(), braintrustParent.id());
+            // Make the eval context (with span and baggage) current
+            try (var rootScope = evalContext.makeCurrent()) {
+                final TaskResult<I, O> taskResult;
+                { // run task
+                    var taskSpan = tracer.spanBuilder("task").startSpan();
+                    try (var unused = Context.current().with(taskSpan).makeCurrent()) {
+                        var task = eval.getTask();
+                        try {
+                            taskResult = task.apply(datasetCase, mergedParameters);
+                        } catch (Exception e) {
+                            taskSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                            taskSpan.recordException(e);
+                            taskSpan.end();
+                            evalSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                            log.debug("Task threw exception for input: " + datasetCase.input(), e);
+                            // Set eval span attributes so Braintrust can resolve the trace
+                            setEvalSpanAttributesForError(
+                                    evalSpan, braintrustParent, braintrustGeneration, datasetCase);
+                            // Send progress event even on error so the Playground can link
+                            // to the trace
+                            sendProgressEvent(
+                                    os,
+                                    evalSpan.getSpanContext().getSpanId(),
+                                    datasetCase.origin(),
+                                    eval.getName(),
+                                    null);
+                            // run scoreForTaskException on each scorer
+                            List<Scorer<I, O>> allScorersForError =
+                                    new ArrayList<>(eval.getScorers());
+                            allScorersForError.addAll(remoteScorers);
+                            for (var scorer : allScorersForError) {
+                                runScoreForTaskException(
+                                        tracer,
+                                        evalSpan,
+                                        braintrustParent,
+                                        braintrustGeneration,
+                                        scorer,
+                                        e,
+                                        datasetCase,
+                                        scoresByName);
+                            }
+                            return;
+                        }
+                        // Send progress event for task completion
+                        sendProgressEvent(
+                                os,
+                                evalSpan.getSpanContext().getSpanId(),
+                                datasetCase.origin(),
+                                eval.getName(),
+                                taskResult.result());
+                        setTaskSpanAttributes(
+                                taskSpan,
+                                braintrustParent,
+                                braintrustGeneration,
+                                datasetCase,
+                                taskResult);
+                    } finally {
+                        taskSpan.end();
+                    }
+                    // setting eval span attributes here because we need the task output
+                    setEvalSpanAttributes(
+                            evalSpan,
+                            braintrustParent,
+                            braintrustGeneration,
+                            datasetCase,
+                            taskResult);
+                }
+                // run scorers - one score span per scorer. Combine local scorers from
+                // RemoteEval with remote scorers from request
+                List<Scorer<I, O>> allScorers = new ArrayList<>(eval.getScorers());
+                allScorers.addAll(remoteScorers);
+                for (var scorer : allScorers) {
+                    runScorer(
+                            tracer,
+                            evalSpan,
+                            braintrustParent,
+                            braintrustGeneration,
+                            scorer,
+                            taskResult,
+                            scoresByName);
+                }
+            } finally {
+                evalSpan.end();
+            }
+        } catch (IOException e) {
+            // The SSE stream is broken — the client disconnected. Abort the run: the cases still
+            // to come have nowhere to report to.
+            streamFailure.compareAndSet(null, e);
+        } catch (Throwable t) {
+            if (runFailure.compareAndSet(null, t)) {
+                log.warn("Aborting playground run after case failed: {}", datasetCase.input(), t);
+            }
+        }
+    }
+
     /**
      * Handles an experiment "snapshot" run: a remote eval triggered as an Experiment from the UI
      * (no playground parent). Rather than re-implementing experiment creation and span emission, it
-     * builds a first-class {@link Eval} and runs it synchronously — so snapshots get the exact same
-     * behavior as a normal {@code Eval.run()} (experiment creation with {@code ensure_new}, dataset
-     * id/version linkage for Braintrust-backed datasets, standard span shape). When the run
-     * completes it streams a single {@code summary} (with the created experiment's id/name/url) and
-     * a {@code done} event.
+     * builds a first-class {@link Eval} — so snapshots get the exact same behavior as a normal
+     * {@code Eval.run()} (experiment creation with {@code ensure_new}, dataset id/version linkage
+     * for Braintrust-backed datasets, standard span shape).
+     *
+     * <p>The eval is started with {@link Eval#start()} rather than run to completion: as soon as
+     * the experiment exists this streams a single {@code summary} (with the created experiment's
+     * id/name/url) and a {@code done} event, then returns while the cases keep evaluating on the
+     * server's executor. Errors creating the experiment surface to the caller; failures once the
+     * run is underway are logged by the eval. The started run is registered with {@link
+     * #trackSnapshot} so that stopping the server waits for it rather than truncating it.
      *
      * <p>Unlike playground runs, snapshots do not stream per-case {@code progress} events: the user
      * is handed the experiment link and views results in the experiment UI.
@@ -619,10 +827,7 @@ public class Devserver {
         List<Scorer<I, O>> allScorers = new ArrayList<>(eval.getScorers());
         allScorers.addAll(remoteScorers);
 
-        // TODO: when async evals are supported, simply begin the eval and hand back the link to the
-        // user and finish eval in the background
-
-        var evalResult =
+        var evalBuilder =
                 Eval.<I, O>builder()
                         .name(experimentName)
                         .config(braintrust.config())
@@ -643,9 +848,15 @@ public class Devserver {
                                         : request.getParameters())
                         // Each snapshot run should produce a distinct experiment even if a prior
                         // run used the same name (the backend dedupes the name on conflict).
-                        .ensureNew(true)
-                        .build()
-                        .run();
+                        .ensureNew(true);
+
+        // Run cases on the eval pool so they outlive this request, and hand the experiment link
+        // back as soon as the experiment exists rather than waiting for the run to finish. That
+        // pool decides how many cases run at once, so maxConcurrency is deliberately not set here.
+        evalBuilder.executor(evalExecutor);
+        var evalResult = evalBuilder.build().start();
+        // The run outlives this request; register it so stop() can wait on it.
+        trackSnapshot(evalResult);
 
         // Snapshots don't stream per-scorer progress. The scores are recorded on the experiment
         // and visible via the experiment link.
@@ -844,7 +1055,12 @@ public class Devserver {
         }
         Map<String, Double> scorerScores = new LinkedHashMap<>();
         for (Score score : scores) {
-            scoresByName.computeIfAbsent(score.name(), k -> new ArrayList<>()).add(score.value());
+            // Cases score concurrently. computeIfAbsent is atomic but the add() is not, so the
+            // list itself has to be synchronized.
+            scoresByName
+                    .computeIfAbsent(
+                            score.name(), k -> Collections.synchronizedList(new ArrayList<>()))
+                    .add(score.value());
             scorerScores.put(score.name(), score.value());
         }
         setScoreSpanAttributes(
@@ -853,7 +1069,10 @@ public class Devserver {
 
     private void sendSSEEvent(OutputStream os, String eventType, String data) throws IOException {
         String event = "event: " + eventType + "\n" + "data: " + data + "\n\n";
-        synchronized (this) {
+        // Lock the stream, not the server: concurrent cases of one run must not interleave a
+        // partial event, but concurrent *requests* write to different streams and shouldn't
+        // serialize against each other (or against the synchronized start()/stop()).
+        synchronized (os) {
             os.write(event.getBytes(StandardCharsets.UTF_8));
         }
     }
@@ -1378,6 +1597,7 @@ public class Devserver {
         private @Nullable Consumer<io.opentelemetry.sdk.trace.SdkTracerProviderBuilder>
                 traceBuilderHook = null;
         private @Nullable Consumer<BraintrustConfig.Builder> configBuilderHook = null;
+        private @Nullable Integer maxConcurrency = null;
 
         public Devserver build() {
             if (evals.isEmpty()) {
@@ -1391,6 +1611,24 @@ public class Devserver {
 
         public Builder config(BraintrustConfig config) {
             this.config = config;
+            return this;
+        }
+
+        /**
+         * Sizes the server's eval thread pool, and so how many cases it evaluates at once across
+         * all in-flight playground runs and experiment snapshots. When unset, falls back to {@link
+         * BraintrustConfig#defaultMaxConcurrency()}.
+         *
+         * <p>Cases run concurrently, so a {@link RemoteEval}'s task and scorers must be thread-safe
+         * — which {@code RemoteEval} already requires. Pass {@code 1} to evaluate cases one at a
+         * time.
+         */
+        public Builder maxConcurrency(int maxConcurrency) {
+            if (maxConcurrency < 1) {
+                throw new IllegalArgumentException(
+                        "maxConcurrency must be at least 1, got " + maxConcurrency);
+            }
+            this.maxConcurrency = maxConcurrency;
             return this;
         }
 

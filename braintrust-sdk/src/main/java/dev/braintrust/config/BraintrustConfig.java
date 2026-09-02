@@ -64,6 +64,41 @@ public final class BraintrustConfig extends BaseConfig {
     /** Custom X509 trust manager for OTLP exporter. Builder-only field, not backed by envars. */
     private final X509TrustManager x509TrustManager;
 
+    /**
+     * Sizes the thread pools the SDK creates for batch work (e.g. eval execution), and so how much
+     * of that work runs at once. Used only when the caller has not supplied an executor of their
+     * own.
+     */
+    private final int defaultMaxConcurrency =
+            assertPositive(getConfig("BRAINTRUST_DEFAULT_MAX_CONCURRENCY", 3));
+
+    /**
+     * How many spans/log records may sit in the OTel batch processor's queue waiting to be
+     * exported. Anything that ends while the queue is full is <b>silently dropped</b>, so a run
+     * that produces spans faster than they can be exported — a high-concurrency eval, say — loses
+     * data. Raise this to buy headroom for bursty runs.
+     *
+     * <p>The queue is a fixed-size array allocated up front, so this trades memory for headroom;
+     * keep it to a sane number rather than something like {@link Integer#MAX_VALUE}.
+     */
+    private final int otelMaxQueueSize =
+            assertPositive(getConfig("BRAINTRUST_OTEL_MAX_QUEUE_SIZE", 4096));
+
+    /**
+     * How many spans/log records the OTel batch processor sends per export request. The processor
+     * exports as soon as this many are queued, so raising it means fewer, larger requests — which
+     * is usually what drains a backed-up queue faster.
+     */
+    private final int otelMaxExportBatchSize =
+            assertPositive(getConfig("BRAINTRUST_OTEL_MAX_EXPORT_BATCH_SIZE", 1024));
+
+    /**
+     * How long the OTel batch processor waits before exporting a partial batch, in milliseconds. It
+     * does not wait this long when a full batch is already queued.
+     */
+    private final int otelExportIntervalMillis =
+            assertPositive(getConfig("BRAINTRUST_OTEL_EXPORT_INTERVAL_MILLIS", 5_000));
+
     /** CORS origins to allow when running remote eval devserver */
     private final String devserverCorsOriginWhitelistCsv =
             getConfig(
@@ -100,6 +135,14 @@ public final class BraintrustConfig extends BaseConfig {
         if (defaultProjectId.isEmpty() && defaultProjectName.isEmpty()) {
             // should never happen
             throw new RuntimeException("A project name or ID is required.");
+        }
+        if (otelMaxExportBatchSize > otelMaxQueueSize) {
+            throw new IllegalArgumentException(
+                    "BRAINTRUST_OTEL_MAX_EXPORT_BATCH_SIZE must not exceed"
+                            + " BRAINTRUST_OTEL_MAX_QUEUE_SIZE: "
+                            + otelMaxExportBatchSize
+                            + " > "
+                            + otelMaxQueueSize);
         }
 
         this.sslContext = sslContext != null ? sslContext : SSLContext.getDefault();
@@ -257,6 +300,28 @@ public final class BraintrustConfig extends BaseConfig {
 
         public Builder devserverCorsOriginWhitelistCsv(String csv) {
             envOverrides.put("BRAINTRUST_DEVSERVER_CORS_ORIGIN_WHITELIST_CSV", csv);
+            return this;
+        }
+
+        public Builder defaultMaxConcurrency(int maxConcurrency) {
+            envOverrides.put("BRAINTRUST_DEFAULT_MAX_CONCURRENCY", String.valueOf(maxConcurrency));
+            return this;
+        }
+
+        public Builder otelMaxQueueSize(int maxQueueSize) {
+            envOverrides.put("BRAINTRUST_OTEL_MAX_QUEUE_SIZE", String.valueOf(maxQueueSize));
+            return this;
+        }
+
+        public Builder otelMaxExportBatchSize(int maxExportBatchSize) {
+            envOverrides.put(
+                    "BRAINTRUST_OTEL_MAX_EXPORT_BATCH_SIZE", String.valueOf(maxExportBatchSize));
+            return this;
+        }
+
+        public Builder otelExportIntervalMillis(int exportIntervalMillis) {
+            envOverrides.put(
+                    "BRAINTRUST_OTEL_EXPORT_INTERVAL_MILLIS", String.valueOf(exportIntervalMillis));
             return this;
         }
 

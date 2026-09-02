@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -759,19 +760,29 @@ class DevserverTest {
         String experimentId = summaryData.get("experimentId").asText();
 
         // Spans should be parented to experiment_id:<id> using the standard Eval span shape.
-        List<SpanData> allSpans = testHarness.awaitExportedSpans();
+        // The snapshot response is sent as soon as the experiment exists — cases keep evaluating
+        // on the server's executor after that — so poll until this experiment's spans arrive
+        // rather than assuming the run finished when the response did.
         String expectedParent = "experiment_id:" + experimentId;
-        var evalSpans =
-                allSpans.stream()
-                        .filter(s -> s.getName().equals("eval"))
-                        .filter(
-                                s ->
-                                        expectedParent.equals(
-                                                s.getAttributes()
-                                                        .get(
-                                                                AttributeKey.stringKey(
-                                                                        "braintrust.parent"))))
-                        .toList();
+        List<SpanData> evalSpans = List.of();
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (true) {
+            evalSpans =
+                    testHarness.awaitExportedSpans().stream()
+                            .filter(s -> s.getName().equals("eval"))
+                            .filter(
+                                    s ->
+                                            expectedParent.equals(
+                                                    s.getAttributes()
+                                                            .get(
+                                                                    AttributeKey.stringKey(
+                                                                            "braintrust.parent"))))
+                            .toList();
+            if (evalSpans.size() >= 2 || System.nanoTime() > deadline) {
+                break;
+            }
+            Thread.sleep(100);
+        }
         assertEquals(2, evalSpans.size(), "Should have 2 eval spans parented to the experiment");
 
         for (SpanData evalSpan : evalSpans) {

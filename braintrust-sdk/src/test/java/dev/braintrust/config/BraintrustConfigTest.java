@@ -75,6 +75,20 @@ class BraintrustConfigTest {
     }
 
     @Test
+    void rejectsOtelExportBatchSizeLargerThanQueue() {
+        var thrown =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () ->
+                                BraintrustConfig.builder()
+                                        .otelMaxQueueSize(512)
+                                        .otelMaxExportBatchSize(1024)
+                                        .build());
+
+        assertTrue(thrown.getMessage().contains("must not exceed"));
+    }
+
+    @Test
     void testDefaultSslContextWhenNotProvided() throws Exception {
         // Create config without custom SSL context
         var config =

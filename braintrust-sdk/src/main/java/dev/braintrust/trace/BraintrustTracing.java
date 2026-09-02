@@ -124,9 +124,9 @@ public final class BraintrustTracing {
             @Nonnull List<SpanProcessor> additionalDelegates,
             @Nonnull SdkLoggerProviderBuilder loggerProviderBuilder,
             @Nonnull SdkMeterProviderBuilder meterProviderBuilder) {
-        final Duration exportInterval = Duration.ofSeconds(5);
-        final int maxQueueSize = 2048;
-        final int maxExportBatchSize = 512;
+        final Duration exportInterval = Duration.ofMillis(config.otelExportIntervalMillis());
+        final int maxQueueSize = config.otelMaxQueueSize();
+        final int maxExportBatchSize = config.otelMaxExportBatchSize();
         log.info(sdkInfoLogMessage());
 
         // Create resource first so BraintrustSpanProcessor can access service.name
@@ -174,14 +174,16 @@ public final class BraintrustTracing {
                     log.debug("Shutting down. Force-Flushing all otel data.");
                     var result =
                             CompletableResultCode.ofAll(
-                                    // run all flushes in parallel. Should (rarely)
-                                    // block for approx 10 seconds max
                                     Stream.of(spanProcessor.shutdown(), logProcessor.shutdown())
-                                            .map(operation -> operation.join(10, TimeUnit.SECONDS))
+                                            .map(operation -> operation.join(60, TimeUnit.SECONDS))
                                             .toList());
-                    log.debug(
-                            "otel shutdown complete. Flush done: %s, Flush successful: %s"
-                                    .formatted(result.isDone(), result.isSuccess()));
+                    if (!result.isDone() || !result.isSuccess()) {
+                        log.warn(
+                                "failed to successfully shutdown otel. Flush done: %s, Flush successful: %s"
+                                        .formatted(result.isDone(), result.isSuccess()));
+                    } else {
+                        log.debug("otel shutdown successful");
+                    }
                 });
     }
 

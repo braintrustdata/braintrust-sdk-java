@@ -17,7 +17,12 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,6 +52,14 @@ public final class Eval<INPUT, OUTPUT> {
     private final @Nonnull Map<String, Object> metadata;
     private final @Nonnull Parameters parameters;
     private final boolean ensureNew;
+    private final int maxConcurrency;
+    private final @Nullable Executor executor;
+
+    /**
+     * True when no executor was supplied, so each run creates its own pool and is responsible for
+     * shutting it down when it finishes.
+     */
+    private final boolean ownsExecutor;
 
     private Eval(Builder<INPUT, OUTPUT> builder) {
         this.experimentName = builder.experimentName;
@@ -65,11 +78,38 @@ public final class Eval<INPUT, OUTPUT> {
         this.metadata = Map.copyOf(builder.metadata);
         this.parameters = builder.buildParameters();
         this.ensureNew = builder.ensureNew;
+        this.maxConcurrency =
+                builder.maxConcurrency != null
+                        ? builder.maxConcurrency
+                        : config.defaultMaxConcurrency();
+        this.executor = builder.executor;
+        this.ownsExecutor = builder.executor == null;
     }
 
-    /** Runs the evaluation and returns results. */
+    /** Runs the evaluation to completion and returns the results. */
     public EvalResult run() {
-        try (var cursor = dataset.openCursor()) {
+        var result = start();
+        result.awaitCompletion();
+        return result;
+    }
+
+    /**
+     * Creates the experiment and begins evaluating cases in the background, returning as soon as
+     * the experiment exists on Braintrust.
+     *
+     * <p>The returned {@link EvalResult} carries the experiment id, name and url immediately — so
+     * callers can surface the link right away — while its cases are still being evaluated. Use
+     * {@link EvalResult#isDone()} and {@link EvalResult#awaitCompletion()} to observe the run.
+     *
+     * <p>Errors raised while creating the experiment are thrown from this method. Errors raised
+     * once the run is underway are reported through {@link EvalResult#awaitCompletion()}.
+     */
+    public EvalResult start() {
+        var state = new EvalResult.RunState();
+        var cursor = dataset.openCursor();
+        final EvalResult result;
+        final Executor caseExecutor;
+        try {
             Optional<String> datasetVersion = Optional.empty();
             Optional<String> datasetId = Optional.empty();
             if (dataset instanceof DatasetBrainstoreImpl<INPUT, OUTPUT>) {
@@ -94,8 +134,6 @@ public final class Eval<INPUT, OUTPUT> {
 
             var experiment = new ExperimentsApi(client).postExperiment(createExperiment);
 
-            cursor.forEach(datasetCase -> evalOne(experiment.getId().toString(), datasetCase));
-
             // Use the experiment's actual name from the response: with ensure_new the backend may
             // dedupe a conflicting name (e.g. "foo" -> "foo-2f8ca776"), and the URL must point at
             // the real, created experiment.
@@ -109,10 +147,184 @@ public final class Eval<INPUT, OUTPUT> {
                                                     project.getName())
                                             .toASCIIString(),
                                     resolvedName);
-            return new EvalResult(experiment.getId().toString(), resolvedName, experimentUrl);
+            result =
+                    new EvalResult(
+                            experiment.getId().toString(), resolvedName, experimentUrl, state);
+
+            caseExecutor =
+                    ownsExecutor
+                            ? BraintrustUtils.newExecutor(maxConcurrency, "braintrust-eval-worker-")
+                            : Objects.requireNonNull(executor);
+        } catch (Throwable t) {
+            cursor.close();
+            throw t;
+        }
+
+        // Each case re-establishes the context that was current when the run was started. The eval
+        // span itself is created with setNoParent(), so this carries baggage rather than parentage.
+        var callerContext = Context.current();
+        var experimentId = Objects.requireNonNull(result.getExperimentId());
+        var coordinator =
+                new Thread(
+                        () ->
+                                evalAllCases(
+                                        cursor, caseExecutor, experimentId, callerContext, state),
+                        "braintrust-eval-coordinator");
+        coordinator.setDaemon(true);
+        coordinator.start();
+        return result;
+    }
+
+    /**
+     * Drains the dataset cursor on this (coordinator) thread, submitting each case to {@code
+     * caseExecutor} as fast as it will take them, then waits for every submitted case to finish.
+     *
+     * <p>The eval does not limit how many cases are in flight — the executor does. The default
+     * executor blocks the submit below once every worker is busy, so the loop advances at the pace
+     * the pool sets and the whole dataset is never materialized in memory. A caller-supplied
+     * executor with an unbounded queue accepts every case immediately and provides no such
+     * backpressure.
+     *
+     * <p>The drain is deliberately single-threaded: {@link Dataset.Cursor} is
+     * {@code @NotThreadSafe} and its {@code next()} may make network calls, so one thread pulls
+     * cases and fans them out.
+     *
+     * <p>Runs on the coordinator thread, never on a worker. Both submitting and waiting can block
+     * until a case finishes, so doing either from inside the pool that runs the cases would
+     * deadlock once the pool is saturated.
+     */
+    private void evalAllCases(
+            Dataset.Cursor<DatasetCase<INPUT, OUTPUT>> cursor,
+            Executor caseExecutor,
+            String experimentId,
+            Context callerContext,
+            EvalResult.RunState state) {
+        // The coordinator starts as one pending party so completion cannot win while cases are
+        // still being registered. This counter and single future use constant memory for the run.
+        var pendingCases = new AtomicInteger(1);
+        var casesCompleted = new CompletableFuture<Void>();
+        Throwable fatal = null;
+        try (cursor) {
+            for (var next = cursor.next(); next.isPresent(); next = cursor.next()) {
+                if (state.isAborting()) {
+                    // A case hit a fatal error (see EvalAbortedException). Stop feeding the pool;
+                    // cases already in flight finish or skip themselves.
+                    break;
+                }
+                var datasetCase = next.get();
+                pendingCases.incrementAndGet();
+                try {
+                    caseExecutor.execute(
+                            () -> {
+                                try {
+                                    evalOneTracked(experimentId, callerContext, datasetCase, state);
+                                } finally {
+                                    caseCompleted(pendingCases, casesCompleted);
+                                }
+                            });
+                } catch (Throwable t) {
+                    // execute() rejected the case, so undo the registration before surfacing the
+                    // drain failure below.
+                    caseCompleted(pendingCases, casesCompleted);
+                    throw t;
+                }
+            }
+        } catch (Throwable t) {
+            // e.g. a failure fetching the next page of a dataset, or a rejected submit. Cases
+            // already submitted still get to finish below.
+            fatal = t;
+        }
+        caseCompleted(pendingCases, casesCompleted);
+        casesCompleted.join();
+        if (ownsExecutor && caseExecutor instanceof ExecutorService owned) {
+            owned.shutdown();
+        }
+        if (fatal != null) {
+            // A coordinator-side failure (dataset paging, a rejected submit) aborts the run too;
+            // registering it here lets the first error encountered win either way.
+            state.abort(fatal);
+        }
+        var abortCause = state.abortCauseOrNull();
+        if (abortCause != null) {
+            // Logged before completing, so that a caller unblocked by awaitCompletion() cannot
+            // race ahead of it. Callers that never await (e.g. a run started with start() and left
+            // to finish in the background) would otherwise never see this at all.
+            log.error(
+                    "Eval aborted for experiment {} after {} case(s)",
+                    experimentId,
+                    state.getCasesExecuted(),
+                    abortCause);
+        } else {
+            log.debug(
+                    "Eval complete for experiment {}: {} case(s) executed",
+                    experimentId,
+                    state.getCasesExecuted());
+        }
+        state.complete();
+    }
+
+    private static void caseCompleted(
+            AtomicInteger pendingCases, CompletableFuture<Void> casesCompleted) {
+        if (pendingCases.decrementAndGet() == 0) {
+            casesCompleted.complete(null);
         }
     }
 
+    /**
+     * Evaluates one case and counts it against {@code state}. Case-level failures are handled
+     * inside {@link #evalOne} and recorded on the case's spans; the run state only tracks how many
+     * cases ran. Any throw that escapes {@link #evalOne} aborts the whole run, because it means the
+     * eval rather than the case is broken.
+     */
+    private void evalOneTracked(
+            String experimentId,
+            Context callerContext,
+            DatasetCase<INPUT, OUTPUT> datasetCase,
+            EvalResult.RunState state) {
+        if (state.isAborting()) {
+            // Another case already aborted the run; don't start work we're about to throw away.
+            return;
+        }
+        try (var unused = callerContext.makeCurrent()) {
+            evalOne(experimentId, datasetCase);
+            state.caseExecuted();
+        } catch (EvalAbortedException e) {
+            state.caseExecuted();
+            log.error("Aborting eval for experiment {}", experimentId, e.getCause());
+            // Reported to the caller through EvalResult#awaitCompletion(), which rethrows the
+            // original error rather than this marker.
+            state.abort(e.getCause());
+        } catch (Throwable t) {
+            // Nothing that reaches here is a contained per-case failure: a task that throws is
+            // recorded on its span and passed to Scorer#scoreForTaskException, and classifier
+            // exceptions land in the root span's `classifier_errors`. An escape therefore means
+            // the eval or the SDK is broken, and every remaining case would hit the same problem,
+            // so abort the run and surface the original error.
+            state.caseExecuted();
+            log.error("Aborting eval for input: {}", datasetCase.input(), t);
+            state.abort(t);
+        }
+    }
+
+    /**
+     * Marks an error that must abort the entire run rather than just failing its case: the eval is
+     * misconfigured or its scorers are broken, so every remaining case would hit the same problem.
+     * Never escapes {@link #evalOneTracked}, which unwraps it onto the run's state.
+     */
+    private static final class EvalAbortedException extends RuntimeException {
+        EvalAbortedException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    /**
+     * Evaluates a single case. Runs entirely on one thread so that the OpenTelemetry scopes it
+     * opens stay thread-confined.
+     *
+     * <p>Returns normally whether or not the case succeeded: a task exception is recorded on the
+     * case's spans and handed to each {@link Scorer#scoreForTaskException}. Anything this method
+     * throws aborts the run (see {@link #evalOneTracked}).
+     */
     private void evalOne(String experimentId, DatasetCase<INPUT, OUTPUT> datasetCase) {
         var rootSpan =
                 tracer.spanBuilder("eval") // TODO: allow names for eval cases
@@ -123,18 +335,21 @@ public final class Eval<INPUT, OUTPUT> {
                         .setAttribute("braintrust.input_json", toJson(datasetCase.input()))
                         .setAttribute("braintrust.expected_json", toJson(datasetCase.expected()))
                         .startSpan();
-        if (datasetCase.origin().isPresent()) {
-            rootSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
-        }
-        if (!datasetCase.tags().isEmpty()) {
-            rootSpan.setAttribute(
-                    AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
-        }
-        if (!datasetCase.metadata().isEmpty()) {
-            rootSpan.setAttribute(
-                    AttributeKey.stringKey("braintrust.metadata"), toJson(datasetCase.metadata()));
-        }
+        // Everything from here on runs inside the try, so that a throw while writing attributes
+        // (serializing a case's metadata, say) still ends the span instead of leaking it.
         try (var rootScope = BraintrustContext.ofExperiment(experimentId, rootSpan).makeCurrent()) {
+            if (datasetCase.origin().isPresent()) {
+                rootSpan.setAttribute("braintrust.origin", toJson(datasetCase.origin().get()));
+            }
+            if (!datasetCase.tags().isEmpty()) {
+                rootSpan.setAttribute(
+                        AttributeKey.stringArrayKey("braintrust.tags"), datasetCase.tags());
+            }
+            if (!datasetCase.metadata().isEmpty()) {
+                rootSpan.setAttribute(
+                        AttributeKey.stringKey("braintrust.metadata"),
+                        toJson(datasetCase.metadata()));
+            }
             final TaskResult<INPUT, OUTPUT> taskResult;
             final String taskSpanId;
             { // run task
@@ -160,7 +375,8 @@ public final class Eval<INPUT, OUTPUT> {
                     taskSpan.end();
                     rootSpan.setStatus(StatusCode.ERROR, e.getMessage());
                     log.debug("Task threw exception for input: " + datasetCase.input(), e);
-                    // run scoreForTaskException on each scorer
+                    // The case is over, but each scorer still gets a chance to score the failure.
+                    // Classifiers do not run: they have no scoreForTaskException analogue.
                     for (var scorer : scorers) {
                         runScoreForTaskException(experimentId, rootSpan, scorer, e, datasetCase);
                     }
@@ -251,7 +467,11 @@ public final class Eval<INPUT, OUTPUT> {
                 scoreSpan.recordException(e);
                 log.debug("Scorer '{}' threw exception", scorer.getName(), e);
                 // fall back to scoreForScorerException — if this throws, eval aborts
-                scores = scorer.scoreForScorerException(e, taskResult);
+                try {
+                    scores = scorer.scoreForScorerException(e, taskResult);
+                } catch (Throwable fatal) {
+                    throw new EvalAbortedException(fatal);
+                }
             }
             recordScores(scoreSpan, rootSpan, scorer, scores);
         } finally {
@@ -274,8 +494,13 @@ public final class Eval<INPUT, OUTPUT> {
                         .setAttribute(PARENT, "experiment_id:" + experimentId)
                         .startSpan();
         try (var unused = BraintrustContext.ofExperiment(experimentId, scoreSpan).makeCurrent()) {
-            // if this throws, it propagates and the eval aborts
-            var scores = scorer.scoreForTaskException(taskException, datasetCase);
+            final List<Score> scores;
+            try {
+                scores = scorer.scoreForTaskException(taskException, datasetCase);
+            } catch (Throwable fatal) {
+                // if this throws, the eval aborts
+                throw new EvalAbortedException(fatal);
+            }
             recordScores(scoreSpan, rootSpan, scorer, scores);
         } finally {
             scoreSpan.end();
@@ -369,9 +594,12 @@ public final class Eval<INPUT, OUTPUT> {
         final Map<String, Double> scorerScores = new LinkedHashMap<>();
         for (var score : scores) {
             if (score.value() < 0.0 || score.value() > 1.0) {
-                throw new RuntimeException(
-                        "score must be between 0 and 1: %s : %s"
-                                .formatted(scorer.getName(), score));
+                // A scorer that returns an out-of-range score is broken, not unlucky: abort the
+                // run rather than let every remaining case hit the same bug.
+                throw new EvalAbortedException(
+                        new RuntimeException(
+                                "score must be between 0 and 1: %s : %s"
+                                        .formatted(scorer.getName(), score)));
             }
             scorerScores.put(score.name(), score.value());
         }
@@ -406,6 +634,8 @@ public final class Eval<INPUT, OUTPUT> {
         private @Nonnull List<String> tags = List.of();
         private @Nonnull Map<String, Object> metadata = Map.of();
         private boolean ensureNew = false;
+        private @Nullable Integer maxConcurrency = null;
+        private @Nullable Executor executor;
 
         public Eval<INPUT, OUTPUT> build() {
             if (config == null) {
@@ -451,6 +681,33 @@ public final class Eval<INPUT, OUTPUT> {
         @Deprecated
         public Builder<INPUT, OUTPUT> apiClient(BraintrustApiClient apiClient) {
             return apiClient(apiClient.openApiClient());
+        }
+
+        /** Sets the maximum amount of cases which can be evaluated simultaneously. */
+        public Builder<INPUT, OUTPUT> maxConcurrency(int maxConcurrency) {
+            if (maxConcurrency < 1) {
+                throw new IllegalArgumentException(
+                        "maxConcurrency must be at least 1, got " + maxConcurrency);
+            }
+            this.maxConcurrency = maxConcurrency;
+            return this;
+        }
+
+        /**
+         * Sets the executor that eval cases run on, replacing the pool the eval would otherwise
+         * create for itself (see {@link #maxConcurrency(int)}, which is then ignored).
+         *
+         * <p>This executor decides how many cases run at once, and it is also the eval's only
+         * backpressure: the eval submits cases as fast as the executor accepts them. An executor
+         * with an unbounded queue therefore accepts the entire dataset up front and holds every
+         * pending case in memory. Prefer one that blocks or otherwise bounds its queue.
+         *
+         * <p>An executor supplied here is never shut down by the SDK — the caller owns its
+         * lifecycle.
+         */
+        public Builder<INPUT, OUTPUT> executor(@Nonnull Executor executor) {
+            this.executor = Objects.requireNonNull(executor);
+            return this;
         }
 
         public Builder<INPUT, OUTPUT> tracer(Tracer tracer) {

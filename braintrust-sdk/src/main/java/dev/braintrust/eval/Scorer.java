@@ -7,14 +7,18 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A scorer evaluates the result of a task against a dataset case, producing a score between 0
  * (inclusive) and 1 (inclusive).
  *
+ * <p>Implementations must be thread safe.
+ *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
  */
+@ThreadSafe
 public interface Scorer<INPUT, OUTPUT> {
     String getName();
 

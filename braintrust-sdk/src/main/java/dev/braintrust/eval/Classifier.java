@@ -2,6 +2,7 @@ package dev.braintrust.eval;
 
 import java.util.List;
 import java.util.function.Function;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A classifier categorizes and labels eval outputs, producing zero or more structured {@link
@@ -11,9 +12,12 @@ import java.util.function.Function;
  * the span name and as the default grouping key for classifications whose own {@code name} is
  * blank).
  *
+ * <p>Implementations must be thread safe.
+ *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
  */
+@ThreadSafe
 public interface Classifier<INPUT, OUTPUT> {
     String INVALID_CLASSIFICATION_MESSAGE =
             "When returning structured classifier results, each classification must be a non-empty"

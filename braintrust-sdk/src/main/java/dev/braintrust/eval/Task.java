@@ -1,5 +1,7 @@
 package dev.braintrust.eval;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * A task function that runs against a single dataset case and produces an output.
  *
@@ -11,9 +13,12 @@ package dev.braintrust.eval;
  * single-arg {@link #apply(DatasetCase)} method instead — the two-arg version delegates to it by
  * default.
  *
+ * <p>Implementations must be thread safe.
+ *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
  */
+@ThreadSafe
 public interface Task<INPUT, OUTPUT> {
     /**
      * Executes this task against a single dataset case, with access to merged eval parameters.

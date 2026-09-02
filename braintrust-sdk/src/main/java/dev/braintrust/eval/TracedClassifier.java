@@ -2,6 +2,7 @@ package dev.braintrust.eval;
 
 import dev.braintrust.trace.BrainstoreTrace;
 import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A classifier that receives access to the full distributed trace of the task that was evaluated.
@@ -10,9 +11,12 @@ import java.util.List;
  * invocations, or other spans produced during task execution — not just the final {@link
  * TaskResult}.
  *
+ * <p>Implementations must be thread safe.
+ *
  * @param <INPUT> type of the input data
  * @param <OUTPUT> type of the output data
  */
+@ThreadSafe
 public interface TracedClassifier<INPUT, OUTPUT> extends Classifier<INPUT, OUTPUT> {
 
     /**
