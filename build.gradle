@@ -44,25 +44,28 @@ ext {
  * - 0.0.3-c4af682 (from tag v0.0.3)
  * - 0.0.3-c4af682-DIRTY
  */
+def runGit(List<String> arguments) {
+  def stdout = new StringBuilder()
+  def stderr = new StringBuilder()
+  def process = (['git'] + arguments).execute()
+  process.waitForProcessOutput(stdout, stderr)
+  return [exitValue: process.exitValue(), output: stdout.toString().trim()]
+}
+
 def generateVersion() {
   // Check if workspace is clean
-  def gitStatusProcess = ['git', 'status', '--porcelain'].execute()
-  gitStatusProcess.waitFor()
-  def gitStatus = gitStatusProcess.text.trim()
+  def gitStatus = runGit(['status', '--porcelain']).output
   def isDirty = !gitStatus.isEmpty()
 
   // Get current commit SHA (short version)
-  def gitShaProcess = ['git', 'rev-parse', '--short', 'HEAD'].execute()
-  gitShaProcess.waitFor()
-  def gitSha = gitShaProcess.text.trim()
+  def gitSha = runGit(['rev-parse', '--short', 'HEAD']).output
 
   // Check if we're currently on a tag
   def currentTag = null
   try {
-    def currentTagProcess = ['git', 'describe', '--exact-match', '--tags', 'HEAD'].execute()
-    currentTagProcess.waitFor()
-    if (currentTagProcess.exitValue() == 0) {
-      currentTag = currentTagProcess.text.trim()
+    def currentTagResult = runGit(['describe', '--exact-match', '--tags', 'HEAD'])
+    if (currentTagResult.exitValue == 0) {
+      currentTag = currentTagResult.output
     }
   } catch (Exception e) {
     // Not on a tag, that's fine
@@ -76,10 +79,9 @@ def generateVersion() {
     // Not on a tag, find the most recent tag
     def mostRecentTag = null
     try {
-      def mostRecentTagProcess = ['git', 'describe', '--tags', '--abbrev=0'].execute()
-      mostRecentTagProcess.waitFor()
-      if (mostRecentTagProcess.exitValue() == 0) {
-        mostRecentTag = mostRecentTagProcess.text.trim()
+      def mostRecentTagResult = runGit(['describe', '--tags', '--abbrev=0'])
+      if (mostRecentTagResult.exitValue == 0) {
+        mostRecentTag = mostRecentTagResult.output
       }
     } catch (Exception e) {
       // No tags found, use just the SHA
