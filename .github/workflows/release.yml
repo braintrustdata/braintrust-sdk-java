@@ -1,29 +1,30 @@
-# Drives a release end-to-end from GitHub Actions in a single workflow.
+# Drives a release end-to-end from GitHub Actions.
 #
 # Click "Run workflow", enter a version like v1.2.3, and this will:
-#   1. Validate the version (semver, no -SNAPSHOT) and the SHA.
-#   2. Run ./gradlew check on the pinned SHA as a final gate.
-#   3. Create and push the annotated tag vX.Y.Z pointing at the SHA
+#   1. Validate the version and resolve the exact commit to release.
+#   2. Create the candidate tag locally and run ./gradlew check against it.
+#   3. Ask for approval through the protected `release` environment.
+#   4. Create and push the annotated tag vX.Y.Z pointing at the tested commit
 #      (using GITHUB_TOKEN).
+#   5. Build release artifacts at that tag.
+#   6. Create the GitHub Release and upload the SDK / agent / OTel
+#      extension jars.
+#   7. Publish to Maven Central via Sonatype, signed with the project
+#      GPG key.
+#   8. Poll Maven Central until the new version is visible.
+#   9. Ask javadoc.io to ingest the new Javadocs.
 #
 # The releaser must supply an explicit commit SHA (not a branch name) so
 # that commits which land on main during the environment approval gate
 # are NOT silently included in the release.
-#   4. Build release artifacts at that tag.
-#   5. Create the GitHub Release and upload the SDK / agent / OTel
-#      extension jars.
-#   6. Publish to Maven Central via Sonatype, signed with the project
-#      GPG key.
-#   7. Poll Maven Central until the new version is visible.
-#   8. Ask javadoc.io to ingest the new Javadocs.
 #
 # Re-publishing a failed release: re-run this workflow with the same
-# version. If the tag already exists, the tag-creation step is skipped
-# and the rest of the pipeline runs against the existing tag.
+# version. If the tag already exists, preflight tests that tag and the
+# release job skips tag creation.
 #
-# The entire job runs in the protected `release` GitHub Environment,
-# which holds the Sonatype / GPG secrets and requires reviewer approval
-# before any tag is pushed or any artifact is published.
+# Only the publishing job uses the protected `release` GitHub Environment,
+# which holds the Sonatype / GPG secrets and requires reviewer approval.
+# Input validation and the full CI gate finish before approval is requested.
 name: Release
 
 on:
@@ -39,30 +40,25 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  preflight:
+    name: Validate and test
     runs-on: ubuntu-24.04
-    # Gate the entire release behind a protected GitHub Environment.
-    # Required reviewers, deployment branch/tag rules, and the Sonatype /
-    # GPG secrets are configured on the environment itself in repo
-    # settings (Settings → Environments → release).
-    environment: release
+    outputs:
+      release_sha: ${{ steps.release-ref.outputs.release_sha }}
+      tag_existed: ${{ steps.release-ref.outputs.tag_existed }}
     steps:
       - name: Validate inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
         run: |
-          V="${{ inputs.version }}"
-          if [[ ! "$V" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: version must be semver (e.g. v1.2.3)" >&2
             exit 1
           fi
-          if [[ "$V" == *-SNAPSHOT ]]; then
-            echo "Error: version cannot end with -SNAPSHOT" >&2
-            exit 1
-          fi
-          SHA="${{ inputs.sha }}"
           if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Error: sha must be a full 40-character lowercase commit SHA. Got: '$SHA'" >&2
             echo "Tip: copy the SHA from the commit page on GitHub (use the 'Copy full SHA' button)." >&2
@@ -72,35 +68,94 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ inputs.sha }}
           fetch-depth: 0
 
-      - name: Verify SHA is reachable from main
+      - name: Resolve and check out release ref
+        id: release-ref
+        env:
+          TAG: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
         run: |
-          SHA="${{ inputs.sha }}"
-          git fetch origin main --quiet
-          if ! git merge-base --is-ancestor "$SHA" origin/main; then
-            echo "Error: commit $SHA is not an ancestor of origin/main." >&2
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main" --tags --force --quiet
+
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            TAG_EXISTED=true
+            RELEASE_SHA="$(git rev-parse "${TAG}^{commit}")"
+            echo "Tag '$TAG' already exists; testing the existing tag at $RELEASE_SHA."
+          else
+            TAG_EXISTED=false
+            if ! git cat-file -e "${SHA}^{commit}" 2>/dev/null; then
+              echo "Error: commit $SHA does not exist in the repository." >&2
+              exit 1
+            fi
+            RELEASE_SHA="$SHA"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG" "$RELEASE_SHA"
+            echo "Created candidate tag '$TAG' locally at $RELEASE_SHA."
+          fi
+
+          if ! git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
+            echo "Error: release commit $RELEASE_SHA is not an ancestor of origin/main." >&2
             echo "Releases must be cut from commits that have landed on main." >&2
             exit 1
           fi
-          echo "Commit $SHA is reachable from origin/main."
 
-      - name: Determine whether tag already exists
+          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag_existed=$TAG_EXISTED" >> "$GITHUB_OUTPUT"
+          git checkout --detach "$TAG"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0
+
+      - name: Run CI at candidate tag
+        run: ./gradlew check
+
+  release:
+    name: Release
+    needs: preflight
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    # Only publishing is gated by the protected environment. Preflight input
+    # validation and tests must pass before GitHub requests reviewer approval.
+    environment: release
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.preflight.outputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Verify tag state
         id: tag-state
+        env:
+          TAG: ${{ inputs.version }}
+          TESTED_SHA: ${{ needs.preflight.outputs.release_sha }}
+          TAG_EXISTED_AT_PREFLIGHT: ${{ needs.preflight.outputs.tag_existed }}
         run: |
-          TAG="${{ inputs.version }}"
-          git fetch --tags --quiet
+          git fetch origin --tags --force --quiet
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            CURRENT_SHA="$(git rev-parse "${TAG}^{commit}")"
+            if [[ "$CURRENT_SHA" != "$TESTED_SHA" ]]; then
+              echo "Error: tag '$TAG' moved after preflight ($TESTED_SHA -> $CURRENT_SHA)." >&2
+              exit 1
+            fi
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag '$TAG' already exists; will publish from the existing tag."
-          elif git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag '$TAG' exists on origin but not locally; fetching."
-            git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+            echo "Tag '$TAG' already exists at the tested commit."
           else
+            if [[ "$TAG_EXISTED_AT_PREFLIGHT" == "true" ]]; then
+              echo "Error: tag '$TAG' was deleted after preflight." >&2
+              exit 1
+            fi
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Tag '$TAG' does not exist yet; will create at $SHA."
+            echo "Tag '$TAG' does not exist yet; will create it at $TESTED_SHA."
           fi
 
       - name: Set up JDK 17
@@ -112,29 +167,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0
 
-      - name: Run CI (pre-tag, on chosen ref)
-        if: steps.tag-state.outputs.exists == 'false'
-        run: ./gradlew check
-
       - name: Configure git identity
         if: steps.tag-state.outputs.exists == 'false'
         run: |
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create and push tag
         if: steps.tag-state.outputs.exists == 'false'
+        env:
+          TAG: ${{ inputs.version }}
+          TESTED_SHA: ${{ needs.preflight.outputs.release_sha }}
         run: |
-          TAG="${{ inputs.version }}"
-          SHA="${{ inputs.sha }}"
-          git tag -a "$TAG" -m "Release $TAG" "$SHA"
+          git tag -a "$TAG" -m "Release $TAG" "$TESTED_SHA"
           git push origin "$TAG"
 
       - name: Checkout tag
-        run: git checkout "${{ inputs.version }}"
-
-      - name: Run CI (at tag)
-        run: ./gradlew check
+        env:
+          TAG: ${{ inputs.version }}
+        run: git checkout "$TAG"
 
       - name: Build release artifacts
         run: ./gradlew build publishToMavenLocal

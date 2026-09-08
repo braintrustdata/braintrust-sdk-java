@@ -180,12 +180,14 @@ To cut a release:
 3. Enter:
    - `version`: the release version as `vX.Y.Z` (semver, no `-SNAPSHOT`).
    - `sha`: the **full 40-character commit SHA** on `main` you want to release. Copy it from the commit page on GitHub using "Copy full SHA". A branch name is intentionally not accepted — pinning to a SHA prevents commits that land on `main` during the approval gate from sneaking into the release.
-4. The job runs in the protected `release` GitHub Environment and will pause for **required-reviewer approval** before doing anything. Approve from the workflow run page (or the repo's Deployments tab).
-5. Once approved, the `Release` workflow will, in one job:
-   - Validate the version and the SHA, and verify the SHA is reachable from `origin/main`.
-   - Check out the pinned SHA and run `./gradlew check`.
-   - Create and push the annotated tag `vX.Y.Z` pointing at the SHA (using the default `GITHUB_TOKEN` — no separate bot identity is needed since the publish steps are in the same workflow).
-   - Check out the tag, re-run `./gradlew check`, and build release artifacts.
+4. The workflow first runs an ungated preflight job:
+   - Validate the version and SHA.
+   - Resolve the commit to release and verify it is reachable from `origin/main`.
+   - Create the candidate tag locally (or check out the existing tag when re-publishing) and run `./gradlew check` against that exact tag.
+5. After preflight passes, the publishing job enters the protected `release` GitHub Environment and pauses for **required-reviewer approval**. Approve from the workflow run page (or the repo's Deployments tab).
+6. Once approved, the publishing job will:
+   - Verify that the tag did not move while approval was pending, then create and push it if needed.
+   - Build release artifacts at the tested tag.
    - Create the GitHub Release with the SDK, agent, and OTel extension jars attached.
    - Publish to Maven Central via Sonatype, signed with the project GPG key.
    - Poll Maven Central until the new version is visible (this can take many hours).
