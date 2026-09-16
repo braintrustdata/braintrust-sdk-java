@@ -2,6 +2,7 @@ package dev.braintrust.trace;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.json.BraintrustJsonMapper;
 import java.io.IOException;
 import java.net.URI;
@@ -26,8 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 interface AttachmentUploader {
     /**
      * Enqueues an attachment for upload.
-     *
-     * <p>NOTE: if the upload queue is full, this method will block until space becomes available
      *
      * @param reference the attachment reference metadata
      * @param data the attachment data to upload
@@ -83,16 +82,6 @@ interface AttachmentUploader {
      */
     @Slf4j
     class S3AttachmentUploader implements AttachmentUploader {
-        private static final int QUEUE_SIZE = 1024;
-
-        /** Default per-request timeout for HTTP calls. */
-        private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(60);
-
-        /** Default maximum number of retry attempts for transient failures. */
-        private static final int DEFAULT_MAX_RETRIES = 8;
-
-        /** Default initial backoff delay between retries. Doubles on each subsequent attempt. */
-        private static final Duration DEFAULT_INITIAL_RETRY_DELAY = Duration.ofMillis(500);
 
         private final BraintrustOpenApiClient apiClient;
         private final Duration requestTimeout;
@@ -110,46 +99,18 @@ interface AttachmentUploader {
         private CountDownLatch currentBatch = new CountDownLatch(1);
 
         /**
-         * Creates a new attachment uploader with default retry settings.
+         * Creates a new attachment uploader.
          *
          * @param apiClient the Braintrust API client (provides auth, base URL, and HTTP transport)
-         */
-        S3AttachmentUploader(@Nonnull BraintrustOpenApiClient apiClient) {
-            this(
-                    apiClient,
-                    DEFAULT_REQUEST_TIMEOUT,
-                    DEFAULT_MAX_RETRIES,
-                    DEFAULT_INITIAL_RETRY_DELAY);
-        }
-
-        /**
-         * Creates a new attachment uploader with custom retry settings.
-         *
-         * @param apiClient the Braintrust API client (provides auth, base URL, and HTTP transport)
-         * @param requestTimeout the per-request timeout for HTTP calls
-         * @param maxRetries the maximum number of retry attempts for transient failures
-         * @param initialRetryDelay the initial backoff delay between retries (doubles on each
-         *     attempt)
+         * @param config attachment uploader settings
          */
         S3AttachmentUploader(
-                @Nonnull BraintrustOpenApiClient apiClient,
-                @Nonnull Duration requestTimeout,
-                int maxRetries,
-                @Nonnull Duration initialRetryDelay) {
-            if (requestTimeout.toMillis() < 0) {
-                throw new IllegalArgumentException("requestTimeout must be >= 0");
-            }
-            if (maxRetries <= 0) {
-                throw new IllegalArgumentException("maxRetries must be > 0");
-            }
-            if (initialRetryDelay.toMillis() < 0) {
-                throw new IllegalArgumentException("initialRetryDelay must be >= 0");
-            }
+                @Nonnull BraintrustOpenApiClient apiClient, @Nonnull BraintrustConfig config) {
             this.apiClient = apiClient;
-            this.requestTimeout = requestTimeout;
-            this.maxRetries = maxRetries;
-            this.initialRetryDelay = initialRetryDelay;
-            this.queue = new LinkedBlockingQueue<>(QUEUE_SIZE);
+            this.requestTimeout = config.attachmentUploaderRequestTimeout();
+            this.maxRetries = config.attachmentUploaderMaxRetries();
+            this.initialRetryDelay = config.attachmentUploaderInitialRetryDelay();
+            this.queue = new LinkedBlockingQueue<>(config.attachmentUploaderQueueSize());
             BraintrustShutdownHook.addShutdownHook(
                     BraintrustShutdownHook.ShutdownOrder.ATTACHMENT_UPLOADER, this::shutdown);
         }

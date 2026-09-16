@@ -22,11 +22,16 @@ public class AttachmentUploaderTest {
     @BeforeEach
     void setUp(WireMockRuntimeInfo wmRuntimeInfo) {
         baseUrl = wmRuntimeInfo.getHttpBaseUrl();
-        var config = BraintrustConfig.builder().apiKey("test-api-key").apiUrl(baseUrl).build();
+        var config =
+                BraintrustConfig.builder()
+                        .apiKey("test-api-key")
+                        .apiUrl(baseUrl)
+                        .attachmentUploaderRequestTimeout(Duration.ofMillis(10_000))
+                        .attachmentUploaderMaxRetries(1)
+                        .attachmentUploaderInitialRetryDelay(Duration.ofMillis(50))
+                        .build();
         var apiClient = BraintrustOpenApiClient.of(config);
-        uploader =
-                new AttachmentUploader.S3AttachmentUploader(
-                        apiClient, Duration.ofMillis(10_000), 1, Duration.ofMillis(50));
+        uploader = new AttachmentUploader.S3AttachmentUploader(apiClient, config);
     }
 
     @AfterEach
@@ -307,11 +312,15 @@ public class AttachmentUploaderTest {
 
         @Test
         void retryOnServerError() throws Exception {
-            var config = BraintrustConfig.builder().apiKey("test-api-key").apiUrl(baseUrl).build();
+            var config =
+                    BraintrustConfig.builder()
+                            .apiKey("test-api-key")
+                            .apiUrl(baseUrl)
+                            .attachmentUploaderMaxRetries(2)
+                            .attachmentUploaderInitialRetryDelay(Duration.ofMillis(100))
+                            .build();
             var apiClient = BraintrustOpenApiClient.of(config);
-            var retryUploader =
-                    new AttachmentUploader.S3AttachmentUploader(
-                            apiClient, Duration.ofSeconds(30), 2, Duration.ofMillis(100));
+            var retryUploader = new AttachmentUploader.S3AttachmentUploader(apiClient, config);
 
             // First two requests fail with 500, third succeeds
             stubFor(

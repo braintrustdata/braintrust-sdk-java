@@ -54,7 +54,7 @@ public class BraintrustSpanProcessor implements SpanProcessor {
                 new AttachmentProcessor(
                         config,
                         new AttachmentUploader.S3AttachmentUploader(
-                                BraintrustOpenApiClient.of(config)));
+                                BraintrustOpenApiClient.of(config), config));
     }
 
     private static List<BraintrustSampler> buildSamplers(BraintrustConfig config) {
