@@ -48,7 +48,8 @@ interface AttachmentUploader {
      * first, then flush.
      *
      * @param timeout the maximum time to wait
-     * @return true if all uploads completed, false if timed out
+     * @return true if all uploads accepted through the snapshot succeeded; false on timeout,
+     *     unfinished work at shutdown, or any permanently dropped upload through that snapshot
      */
     boolean forceFlush(@Nonnull Duration timeout);
 
@@ -65,7 +66,8 @@ interface AttachmentUploader {
      */
     void shutdown(@Nonnull Duration timeout);
 
-    boolean isShutdown();
+    /** Whether uploads can currently be accepted, independent of available queue capacity. */
+    boolean isAcceptingJobs();
 
     /**
      * Background uploader for Braintrust attachments that uploads to S3 via signed URLs.
@@ -75,28 +77,51 @@ interface AttachmentUploader {
      * <ol>
      *   <li>Requests a signed upload URL from the Braintrust API
      *   <li>Uploads the data to the signed URL
-     *   <li>Reports the upload status (done/error) to the Braintrust API
+     *   <li>Reports successful uploads to the Braintrust API (best effort)
      * </ol>
      *
-     * <p>The uploader starts lazily on first enqueue and can be shut down gracefully.
+     * <p>The uploader starts lazily on first enqueue and can be shut down gracefully. HTTP 400,
+     * 413, and 415 from signed-URL requests or object-store uploads drop that attachment with a
+     * debug log and a best-effort error status report, then continue queued work. Other failures
+     * retain their original key and bytes ahead of queued work. Admission pauses so new attachments
+     * remain inline until the retained upload succeeds or is permanently dropped. Recovery retries
+     * obtain fresh signed URLs and wait exponentially, starting at the configured initial retry
+     * delay and capped at two minutes. Existing finite HTTP retries and request durations are
+     * additional to this wait.
+     *
+     * <p>Retryable failures continue indefinitely while running. Explicit shutdown permanently
+     * closes admission and only retries within its grace period; retained uploads are in-memory and
+     * may be lost on forced shutdown.
      */
     @Slf4j
     class S3AttachmentUploader implements AttachmentUploader {
+
+        private static final long MAX_RECOVERY_RETRY_DELAY_MILLIS = 120_000L;
+
+        @FunctionalInterface
+        interface RecoverySleeper {
+            void sleep(long delayMillis) throws InterruptedException;
+        }
 
         private final BraintrustOpenApiClient apiClient;
         private final Duration requestTimeout;
         private final int maxRetries;
         private final Duration initialRetryDelay;
+        private final RecoverySleeper recoverySleeper;
 
         private final LinkedBlockingQueue<UploadJob> queue;
-        private final AtomicReference<ExecutorService> worker = new AtomicReference<>();
         private final AtomicReference<String> orgId = new AtomicReference<>();
 
         // non thread safe fields must be checked and read under the lock
         private final Object lock = new Object();
-        private boolean rejectNewJobs = false;
+        private ExecutorService worker;
+        private boolean shutdownRequested = false;
+        private boolean uploadsPaused = false;
         private boolean workerDone = false;
-        private CountDownLatch currentBatch = new CountDownLatch(1);
+        private long acceptedJobs = 0;
+        private long processedJobs = 0;
+        // FIFO sequence of the first permanently dropped upload; zero means none.
+        private long firstDroppedJob = 0;
 
         /**
          * Creates a new attachment uploader.
@@ -106,10 +131,18 @@ interface AttachmentUploader {
          */
         S3AttachmentUploader(
                 @Nonnull BraintrustOpenApiClient apiClient, @Nonnull BraintrustConfig config) {
+            this(apiClient, config, Thread::sleep);
+        }
+
+        S3AttachmentUploader(
+                @Nonnull BraintrustOpenApiClient apiClient,
+                @Nonnull BraintrustConfig config,
+                @Nonnull RecoverySleeper recoverySleeper) {
             this.apiClient = apiClient;
             this.requestTimeout = config.attachmentUploaderRequestTimeout();
             this.maxRetries = config.attachmentUploaderMaxRetries();
             this.initialRetryDelay = config.attachmentUploaderInitialRetryDelay();
+            this.recoverySleeper = recoverySleeper;
             this.queue = new LinkedBlockingQueue<>(config.attachmentUploaderQueueSize());
             BraintrustShutdownHook.addShutdownHook(
                     BraintrustShutdownHook.ShutdownOrder.ATTACHMENT_UPLOADER, this::shutdown);
@@ -117,16 +150,21 @@ interface AttachmentUploader {
 
         @Override
         public boolean enqueue(@Nonnull AttachmentReference reference, @Nonnull byte[] data) {
-            if (checkRejectNewJobsThreadSafe()) {
-                return false;
-            }
             try {
-                ensureWorkerStarted();
-                UploadJob job = new UploadJob(reference, data);
-                return queue.offer(job, 0, TimeUnit.MILLISECONDS);
+                synchronized (lock) {
+                    if (!isAcceptingJobs()) {
+                        return false;
+                    }
+                    ensureWorkerStarted();
+                    if (!queue.offer(new UploadJob(reference, data))) {
+                        return false;
+                    }
+                    acceptedJobs++;
+                    return true;
+                }
             } catch (Exception e) {
                 log.error("failed to enqueue attachment", e);
-                shutdown();
+                shutdown(Duration.ZERO);
                 return false;
             }
         }
@@ -134,108 +172,180 @@ interface AttachmentUploader {
         @Override
         @SneakyThrows
         public boolean forceFlush(@Nonnull Duration timeout) {
-            return awaitCurrentBatch(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            long timeoutNanos = timeout.toNanos();
+            long started = System.nanoTime();
+            synchronized (lock) {
+                long target = acceptedJobs;
+                while (processedJobs < target) {
+                    long remaining = timeoutNanos - (System.nanoTime() - started);
+                    if (workerDone || remaining <= 0) {
+                        return false;
+                    }
+                    TimeUnit.NANOSECONDS.timedWait(lock, remaining);
+                }
+                return firstDroppedJob == 0 || firstDroppedJob > target;
+            }
         }
 
         @Override
         @SneakyThrows
         public void shutdown(@Nonnull Duration timeout) {
+            ExecutorService executor;
             synchronized (lock) {
-                rejectNewJobs = true;
-                if (workerDone) {
+                shutdownRequested = true;
+                executor = worker;
+                if (executor == null) {
+                    workerDone = true;
+                    lock.notifyAll();
                     return;
                 }
             }
-            ExecutorService executor = worker.getAndSet(null);
-            if (executor == null) {
-                return;
-            }
             executor.shutdown();
-            if (!executor.awaitTermination(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                log.warn("failed to gracefully shut down s3 upload worker");
+            try {
+                if (!executor.awaitTermination(timeout.toNanos(), TimeUnit.NANOSECONDS)) {
+                    log.warn("failed to gracefully shut down s3 upload worker");
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
                 executor.shutdownNow();
+                Thread.currentThread().interrupt();
+                throw e;
             }
         }
 
         @Override
-        public boolean isShutdown() {
-            return checkRejectNewJobsThreadSafe();
+        public boolean isAcceptingJobs() {
+            synchronized (lock) {
+                return !shutdownRequested && !uploadsPaused && !workerDone;
+            }
         }
 
         // ── Worker lifecycle ──────────────────────────────────────────────
 
-        /**
-         * start worker thread or do nothing if already started
-         *
-         * <p>calling this method does not require the lock
-         */
+        /** Starts the single worker lazily. Must be called under {@link #lock}. */
         private void ensureWorkerStarted() {
-            if (worker.get() == null) {
-                var newWorker =
+            if (worker == null) {
+                worker =
                         Executors.newSingleThreadExecutor(
                                 r -> {
                                     Thread t = new Thread(r, "braintrust-attachment-uploader");
                                     t.setDaemon(true);
                                     return t;
                                 });
-                if (worker.compareAndSet(null, newWorker)) {
-                    // NOTE: if shutdown is called concurrently job submission may throw an
-                    // exception. This is fine.
-                    newWorker.submit(this::workerLoop);
-                } else {
-                    // tried to start the worker concurrently. This is fine, we'll just shut down
-                    // and dereference the redundant worker
-                    newWorker.shutdown();
-                }
+                worker.submit(this::workerLoop);
             }
         }
 
         private void workerLoop() {
             log.debug("Attachment uploader worker started");
-            while ((!checkRejectNewJobsThreadSafe()) || queue.peek() != null) {
-                UploadJob job = null;
-                try {
-                    job = queue.poll(100, TimeUnit.MILLISECONDS);
-                    if (job == null) {
-                        finishCurrentBatch();
-                    } else {
-                        upload(job);
-                    }
-                } catch (InterruptedException e) {
-                    // worker thread shutdownNow was invoked
-                    if (!queue.isEmpty()) {
-                        log.warn(
-                                "s3 uploader force shutdown was reached. Dropping {} uploads",
-                                queue.size(),
-                                e);
-                    }
-                    break;
-                } catch (Exception e) {
-                    // this only user of this util is our span processor so we'll just fall back to
-                    // sending attachments in span data if an error occurs
+            UploadJob job = null;
+            long recoveryDelay =
+                    Math.min(initialRetryDelay.toMillis(), MAX_RECOVERY_RETRY_DELAY_MILLIS);
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
                     synchronized (lock) {
-                        rejectNewJobs = true;
+                        if (shutdownRequested && job == null && queue.isEmpty()) {
+                            break;
+                        }
                     }
                     if (job == null) {
-                        log.warn("Failed to upload attachment", e);
-                    } else {
-                        log.warn("Failed to upload attachment key={}", job.reference().key(), e);
-                        reportStatus(job.reference().key(), "error", e.getMessage());
+                        job = queue.poll(100, TimeUnit.MILLISECONDS);
+                        if (job == null) {
+                            continue;
+                        }
                     }
-                    // NOTE: we'll continue the loop attempting uploads of the remaining jobs until
-                    // the queue is drained
+                    boolean dropped = false;
+                    try {
+                        upload(job);
+                    } catch (InterruptedException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        // Login wraps checked exceptions; interruption must still terminate
+                        // recovery.
+                        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+                            if (cause instanceof InterruptedException interrupted) {
+                                throw interrupted;
+                            }
+                        }
+                        if (e instanceof UploadHttpException failure && failure.isPermanent()) {
+                            log.debug(
+                                    "Dropping invalid attachment after HTTP {}. key={}",
+                                    failure.statusCode,
+                                    job.reference().key(),
+                                    e);
+                            reportStatus(job.reference().key(), "error", e.getMessage());
+                            dropped = true;
+                        } else {
+                            boolean firstFailure;
+                            long pending;
+                            synchronized (lock) {
+                                firstFailure = !uploadsPaused;
+                                uploadsPaused = true;
+                                pending = acceptedJobs - processedJobs;
+                            }
+                            log.warn(
+                                    firstFailure
+                                            ? "Attachment uploads paused after failure; new"
+                                                    + " attachments will remain inline. key={}"
+                                                    + " pending={} retryDelayMillis={}"
+                                            : "Attachment upload recovery failed; retrying. key={}"
+                                                    + " pending={} retryDelayMillis={}",
+                                    job.reference().key(),
+                                    pending,
+                                    recoveryDelay,
+                                    e);
+                            recoverySleeper.sleep(recoveryDelay);
+                            recoveryDelay =
+                                    Math.min(recoveryDelay * 2, MAX_RECOVERY_RETRY_DELAY_MILLIS);
+                            continue;
+                        }
+                    }
+                    synchronized (lock) {
+                        processedJobs++;
+                        if (dropped && firstDroppedJob == 0) {
+                            firstDroppedJob = processedJobs;
+                        }
+                        if (uploadsPaused && !shutdownRequested && !dropped) {
+                            log.info(
+                                    "Attachment uploads recovered; accepting new attachments."
+                                            + " key={}",
+                                    job.reference().key());
+                        }
+                        uploadsPaused = false;
+                        lock.notifyAll();
+                    }
+                    recoveryDelay =
+                            Math.min(initialRetryDelay.toMillis(), MAX_RECOVERY_RETRY_DELAY_MILLIS);
+                    job = null;
                 }
-            }
-            synchronized (lock) {
-                workerDone = true;
-                finishCurrentBatch();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                synchronized (lock) {
+                    workerDone = true;
+                    long unresolved = acceptedJobs - processedJobs;
+                    if (unresolved > 0) {
+                        log.warn(
+                                "Attachment uploader stopped with {} unresolved uploads",
+                                unresolved);
+                    }
+                    queue.clear();
+                    lock.notifyAll();
+                }
                 log.debug("Attachment uploader worker stopped");
             }
         }
 
-        private boolean checkRejectNewJobsThreadSafe() {
-            synchronized (lock) {
-                return rejectNewJobs;
+        private static final class UploadHttpException extends IOException {
+            private final int statusCode;
+
+            UploadHttpException(int statusCode, String message) {
+                super(message);
+                this.statusCode = statusCode;
+            }
+
+            boolean isPermanent() {
+                return statusCode == 400 || statusCode == 413 || statusCode == 415;
             }
         }
 
@@ -255,6 +365,9 @@ interface AttachmentUploader {
                     job.reference().contentType(),
                     job.data());
 
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
             reportStatus(job.reference().key(), "done", null);
         }
 
@@ -287,6 +400,10 @@ interface AttachmentUploader {
                     statusMap.put("error_message", errorMessage);
                 }
                 updateUploadStatus(getOrgId(), key, statusMap);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn(
+                        "Interrupted reporting attachment status key={} status={}", key, status, e);
             } catch (Exception e) {
                 log.warn("Failed to report attachment status key={} status={}", key, status, e);
             }
@@ -333,7 +450,8 @@ interface AttachmentUploader {
                     sendWithRetry(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (!isSuccessStatus(response.statusCode())) {
-                throw new IOException(
+                throw new UploadHttpException(
+                        response.statusCode(),
                         "Failed to request upload URL: HTTP "
                                 + response.statusCode()
                                 + " - "
@@ -387,7 +505,8 @@ interface AttachmentUploader {
                     sendWithRetry(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
             if (!isSuccessStatus(response.statusCode())) {
-                throw new IOException(
+                throw new UploadHttpException(
+                        response.statusCode(),
                         "Failed to upload to object store: HTTP "
                                 + response.statusCode()
                                 + " - "
@@ -524,24 +643,6 @@ interface AttachmentUploader {
             } catch (URISyntaxException e) {
                 log.warn("Failed to parse signed URL for Azure detection: {}", signedUrl, e);
             }
-        }
-
-        // ── Batch coordination ────────────────────────────────────────────
-
-        private void finishCurrentBatch() {
-            synchronized (lock) {
-                currentBatch.countDown();
-                currentBatch = new CountDownLatch(1);
-            }
-        }
-
-        private boolean awaitCurrentBatch(long timeout, TimeUnit timeUnit)
-                throws InterruptedException {
-            CountDownLatch latch;
-            synchronized (lock) {
-                latch = currentBatch;
-            }
-            return latch.await(timeout, timeUnit);
         }
 
         // ── DTOs ──────────────────────────────────────────────────────────

@@ -140,7 +140,7 @@ class AttachmentProcessor {
     String processAndUpload(String json) {
         if ((!config.autoConvertAIAttachments())
                 || json == null
-                || uploader.isShutdown()
+                || !uploader.isAcceptingJobs()
                 || !BASE64_HEURISTIC.matcher(json).find()) {
             return json;
         }
