@@ -633,6 +633,16 @@ public class BraintrustOpenAITest {
     @SneakyThrows
     private static void assertValidOpenAISpan(SpanData span, boolean isStreaming) {
         var attributes = span.getAttributes();
+        JsonNode instrumentation =
+                JSON_MAPPER
+                        .readTree(attributes.get(AttributeKey.stringKey("braintrust.context_json")))
+                        .path("span_origin")
+                        .path("instrumentation");
+        assertEquals("openai", instrumentation.path("name").asText());
+        assertEquals(
+                System.getProperty("braintrust.muzzle.minimumVersion"),
+                instrumentation.path("version").asText(),
+                "span origin version must match the minimum passing muzzle version");
         // proper provider
         {
             String metadataJson = attributes.get(AttributeKey.stringKey("braintrust.metadata"));

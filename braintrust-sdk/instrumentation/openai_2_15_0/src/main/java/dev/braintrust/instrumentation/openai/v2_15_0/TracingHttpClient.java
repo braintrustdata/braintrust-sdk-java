@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.openai.core.ObjectMappers;
 import com.openai.core.RequestOptions;
 import com.openai.core.http.*;
-import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -32,8 +31,20 @@ class TracingHttpClient implements HttpClient {
     private final HttpClient underlying;
 
     public TracingHttpClient(OpenTelemetry openTelemetry, HttpClient underlying) {
-        this.tracer = openTelemetry.getTracer(BraintrustBridge.INSTRUMENTATION_NAME);
+        this(
+                openTelemetry.getTracer(
+                        BraintrustOpenAI.INSTRUMENTATION_NAME,
+                        BraintrustOpenAI.INSTRUMENTATION_VERSION),
+                underlying);
+    }
+
+    TracingHttpClient(Tracer tracer, HttpClient underlying) {
+        this.tracer = tracer;
         this.underlying = underlying;
+    }
+
+    TracingHttpClient withTracer(Tracer tracer) {
+        return this.tracer == tracer ? this : new TracingHttpClient(tracer, underlying);
     }
 
     /**

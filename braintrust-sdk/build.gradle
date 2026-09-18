@@ -54,6 +54,13 @@ subprojects { subproject ->
       // Make them available at compile time so instrumentation modules can reference them.
       dependencies.add('compileOnly', project(':braintrust-java-agent:bootstrap'))
 
+      // Derive provenance expectations from muzzle, not from the Java instrumentation constants.
+      def minimumMuzzleVersion = subproject.extensions.getByName('muzzle').minimumVersion
+      tasks.withType(Test).configureEach {
+        inputs.property 'muzzleMinimumVersion', minimumMuzzleVersion
+        systemProperty 'braintrust.muzzle.minimumVersion', minimumMuzzleVersion
+      }
+
       // --- $Muzzle side-class generation (compile-time) ---
 
       // Configuration for the muzzle generator classpath

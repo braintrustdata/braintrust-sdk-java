@@ -4,6 +4,7 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.AnthropicClientAsync;
 import dev.braintrust.instrumentation.anthropic.v2_2_0.BraintrustAnthropic;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,22 +24,25 @@ final class SpringAIAnthropic {
 
     /** Wraps the official SDK clients inside an {@code AnthropicChatModel}. Idempotent. */
     static <T> T wrap(OpenTelemetry openTelemetry, T chatModel) {
-        wrapClientField(openTelemetry, chatModel, "anthropicClient");
-        wrapClientField(openTelemetry, chatModel, "anthropicClientAsync");
+        Tracer tracer =
+                openTelemetry.getTracer(
+                        BraintrustSpringAI.INSTRUMENTATION_NAME,
+                        BraintrustSpringAI.INSTRUMENTATION_VERSION);
+        wrapClientField(tracer, chatModel, "anthropicClient");
+        wrapClientField(tracer, chatModel, "anthropicClientAsync");
         return chatModel;
     }
 
-    private static void wrapClientField(
-            OpenTelemetry openTelemetry, Object chatModel, String fieldName) {
+    private static void wrapClientField(Tracer tracer, Object chatModel, String fieldName) {
         try {
             // The wrapped client is a context-capturing view (not just mutated in place), so
             // swap it back into the model's field — that way the caller's span parents async
             // streaming requests correctly.
             Object client = getField(chatModel, fieldName);
             if (client instanceof AnthropicClient sync) {
-                setField(chatModel, fieldName, BraintrustAnthropic.wrap(openTelemetry, sync));
+                setField(chatModel, fieldName, BraintrustAnthropic.wrap(tracer, sync));
             } else if (client instanceof AnthropicClientAsync async) {
-                setField(chatModel, fieldName, BraintrustAnthropic.wrap(openTelemetry, async));
+                setField(chatModel, fieldName, BraintrustAnthropic.wrap(tracer, async));
             }
         } catch (Exception e) {
             log.error("failed to instrument spring ai anthropic client field {}", fieldName, e);

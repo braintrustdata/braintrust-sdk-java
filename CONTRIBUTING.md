@@ -20,3 +20,19 @@ Because the SDK is new and under active development, third-party contribution be
 ## Development
 
 See [AGENTS.md](./AGENTS.md) for best practices developing, testing, and releasing the SDK.
+
+### Instrumentation origin versions
+
+Instrumentation tests compare exported `span_origin.instrumentation.version` against the
+minimum passing version declared in that module's `muzzle` configuration. Gradle supplies
+the expected version through the test JVM property `braintrust.muzzle.minimumVersion` and
+tracks it as a test input. No Maven version lookup or full muzzle run is needed.
+
+The minimum comes from inclusive range lower bounds or pinned versions, ignoring `fail`
+directives. Multiple passing directives for the same artifact use their lowest version;
+different artifacts in one module must agree. Unbounded, exclusive, or skipped lower bounds
+are rejected rather than guessing a supported version.
+
+When changing a module's minimum supported version, update both its muzzle configuration
+and its Java `INSTRUMENTATION_VERSION` constant. Run the module's Gradle `test` task to
+check that the emitted origin matches.

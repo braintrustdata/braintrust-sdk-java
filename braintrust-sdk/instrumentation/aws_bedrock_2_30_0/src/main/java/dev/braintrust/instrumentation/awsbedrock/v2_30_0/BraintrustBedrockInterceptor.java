@@ -39,7 +39,8 @@ import software.amazon.eventstream.MessageDecoder;
  */
 @Slf4j
 class BraintrustBedrockInterceptor implements ExecutionInterceptor {
-    private static final String INSTRUMENTATION_NAME = "braintrust-aws-bedrock";
+    private static final String INSTRUMENTATION_NAME = "aws-bedrock";
+    private static final String INSTRUMENTATION_VERSION = "2.30.0";
 
     private static final ExecutionAttribute<Span> SPAN_ATTRIBUTE =
             new ExecutionAttribute<>("braintrust.span");
@@ -49,7 +50,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
     private final Tracer tracer;
 
     BraintrustBedrockInterceptor(OpenTelemetry openTelemetry) {
-        this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
+        this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
     }
 
     private static final Set<String> INSTRUMENTED_OPERATIONS = Set.of("Converse", "ConverseStream");
