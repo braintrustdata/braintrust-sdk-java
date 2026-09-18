@@ -33,8 +33,18 @@ class BraintrustSpanExporter implements SpanExporter {
             return CompletableResultCode.ofSuccess();
         }
 
-        // Group spans by their parent (project or experiment)
-        var spansByParent = spans.stream().collect(Collectors.groupingBy(this::getParentFromSpan));
+        // Finish customization before sending any group, so failed redaction cannot leak a batch.
+        Map<String, List<SpanData>> spansByParent;
+        try {
+            var exportSpans = spans.stream();
+            if (!config.spanCustomizers().isEmpty()) {
+                exportSpans = exportSpans.map(this::customizeSpan);
+            }
+            spansByParent = exportSpans.collect(Collectors.groupingBy(this::getParentFromSpan));
+        } catch (Exception e) {
+            log.error("Failed to customize spans for export", e);
+            return CompletableResultCode.ofFailure();
+        }
 
         // Export each group with the appropriate x-bt-parent header
         var results =
@@ -47,6 +57,30 @@ class BraintrustSpanExporter implements SpanExporter {
         log.debug("span export results: {}", combined.isSuccess());
 
         return combined;
+    }
+
+    private SpanData customizeSpan(SpanData span) {
+        var traceId = span.getTraceId();
+        var spanId = span.getSpanId();
+        var parentSpanId = span.getParentSpanId();
+        var current = span;
+        for (var customizer : config.spanCustomizers()) {
+            current = customizer.onSpanExport(current);
+            if (current == null) {
+                throw new IllegalStateException("SpanCustomizer.onSpanExport must not return null");
+            }
+            if (!traceId.equals(current.getTraceId())
+                    || !spanId.equals(current.getSpanId())
+                    || !parentSpanId.equals(current.getParentSpanId())
+                    || !traceId.equals(current.getSpanContext().getTraceId())
+                    || !spanId.equals(current.getSpanContext().getSpanId())
+                    || !parentSpanId.equals(current.getParentSpanContext().getSpanId())) {
+                throw new IllegalStateException(
+                        "SpanCustomizer.onSpanExport must not change trace ID, span ID, or parent"
+                                + " span ID");
+            }
+        }
+        return current;
     }
 
     private String getParentFromSpan(SpanData span) {

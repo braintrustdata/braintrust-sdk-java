@@ -145,6 +145,7 @@ dependencies {
 
   testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+  testImplementation 'io.opentelemetry.proto:opentelemetry-proto:1.11.0-alpha'
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
   testImplementation 'org.wiremock:wiremock:3.13.1'
