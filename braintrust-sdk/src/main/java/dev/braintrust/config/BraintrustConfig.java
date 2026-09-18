@@ -58,6 +58,30 @@ public final class BraintrustConfig extends BaseConfig {
     private final Boolean autoConvertAIAttachments =
             getConfig("BRAINTRUST_AUTO_CONVERT_AI_ATTACHMENTS", true);
 
+    /** Maximum number of attachment uploads waiting for the background uploader. */
+    private final int attachmentUploaderQueueSize =
+            assertPositive(getConfig("BRAINTRUST_ATTACHMENT_UPLOADER_QUEUE_SIZE", 1024));
+
+    /** Per-request timeout for attachment upload HTTP calls. */
+    private final Duration attachmentUploaderRequestTimeout =
+            Duration.ofMillis(
+                    assertPositive(
+                            getConfig(
+                                    "BRAINTRUST_ATTACHMENT_UPLOADER_REQUEST_TIMEOUT_MILLIS",
+                                    60_000)));
+
+    /** Maximum number of retries for transient attachment upload failures. */
+    private final int attachmentUploaderMaxRetries =
+            assertPositive(getConfig("BRAINTRUST_ATTACHMENT_UPLOADER_MAX_RETRIES", 8));
+
+    /** Initial attachment upload retry delay. The uploader doubles it after each failure. */
+    private final Duration attachmentUploaderInitialRetryDelay =
+            Duration.ofMillis(
+                    assertPositive(
+                            getConfig(
+                                    "BRAINTRUST_ATTACHMENT_UPLOADER_INITIAL_RETRY_DELAY_MILLIS",
+                                    500)));
+
     /** Custom SSL context for OTLP exporter. Builder-only field, not backed by envars. */
     private final SSLContext sslContext;
 
@@ -285,6 +309,32 @@ public final class BraintrustConfig extends BaseConfig {
 
         public Builder autoConvertAIAttachments(boolean value) {
             envOverrides.put("BRAINTRUST_AUTO_CONVERT_AI_ATTACHMENTS", String.valueOf(value));
+            return this;
+        }
+
+        public Builder attachmentUploaderQueueSize(int queueSize) {
+            envOverrides.put(
+                    "BRAINTRUST_ATTACHMENT_UPLOADER_QUEUE_SIZE", String.valueOf(queueSize));
+            return this;
+        }
+
+        public Builder attachmentUploaderRequestTimeout(Duration requestTimeout) {
+            envOverrides.put(
+                    "BRAINTRUST_ATTACHMENT_UPLOADER_REQUEST_TIMEOUT_MILLIS",
+                    String.valueOf(requestTimeout.toMillis()));
+            return this;
+        }
+
+        public Builder attachmentUploaderMaxRetries(int maxRetries) {
+            envOverrides.put(
+                    "BRAINTRUST_ATTACHMENT_UPLOADER_MAX_RETRIES", String.valueOf(maxRetries));
+            return this;
+        }
+
+        public Builder attachmentUploaderInitialRetryDelay(Duration initialRetryDelay) {
+            envOverrides.put(
+                    "BRAINTRUST_ATTACHMENT_UPLOADER_INITIAL_RETRY_DELAY_MILLIS",
+                    String.valueOf(initialRetryDelay.toMillis()));
             return this;
         }
 

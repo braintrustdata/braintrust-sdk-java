@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +73,27 @@ class BraintrustConfigTest {
                     builderMethodNames.contains(configFieldName),
                     "Builder is missing method for field: " + configFieldName);
         }
+    }
+
+    @Test
+    void attachmentUploaderSettingsKeepDefaultsAndAllowOverrides() {
+        var defaults = BraintrustConfig.builder().build();
+        assertEquals(1024, defaults.attachmentUploaderQueueSize());
+        assertEquals(Duration.ofSeconds(60), defaults.attachmentUploaderRequestTimeout());
+        assertEquals(8, defaults.attachmentUploaderMaxRetries());
+        assertEquals(Duration.ofMillis(500), defaults.attachmentUploaderInitialRetryDelay());
+
+        var configured =
+                BraintrustConfig.builder()
+                        .attachmentUploaderQueueSize(64)
+                        .attachmentUploaderRequestTimeout(Duration.ofSeconds(5))
+                        .attachmentUploaderMaxRetries(2)
+                        .attachmentUploaderInitialRetryDelay(Duration.ofMillis(25))
+                        .build();
+        assertEquals(64, configured.attachmentUploaderQueueSize());
+        assertEquals(Duration.ofSeconds(5), configured.attachmentUploaderRequestTimeout());
+        assertEquals(2, configured.attachmentUploaderMaxRetries());
+        assertEquals(Duration.ofMillis(25), configured.attachmentUploaderInitialRetryDelay());
     }
 
     @Test
