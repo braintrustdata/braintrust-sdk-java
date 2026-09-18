@@ -4,7 +4,6 @@ import static dev.braintrust.json.BraintrustJsonMapper.fromJson;
 import static dev.braintrust.json.BraintrustJsonMapper.toJson;
 
 import com.google.genai.types.HttpOptions;
-import dev.braintrust.bootstrap.BraintrustBridge;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -30,6 +29,9 @@ import okhttp3.ResponseBody;
  */
 @Slf4j
 class BraintrustApiClient extends ApiClient {
+    private static final String INSTRUMENTATION_NAME = "genai";
+    private static final String INSTRUMENTATION_VERSION = "1.18.0";
+
     private final ApiClient delegate;
     private final Tracer tracer;
 
@@ -44,7 +46,7 @@ class BraintrustApiClient extends ApiClient {
                 delegate.httpOptions != null ? Optional.of(delegate.httpOptions) : Optional.empty(),
                 delegate.clientOptions != null ? delegate.clientOptions : Optional.empty());
         this.delegate = delegate;
-        this.tracer = openTelemetry.getTracer(BraintrustBridge.INSTRUMENTATION_NAME);
+        this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
     }
 
     private void tagSpan(

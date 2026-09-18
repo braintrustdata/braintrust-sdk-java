@@ -5,6 +5,7 @@ import com.anthropic.client.AnthropicClientAsync;
 import com.anthropic.core.ClientOptions;
 import com.anthropic.core.http.HttpClient;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.function.Consumer;
@@ -13,10 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 /** Braintrust Anthropic client instrumentation. */
 @Slf4j
 public final class BraintrustAnthropic {
+    static final String INSTRUMENTATION_NAME = "anthropic";
+    static final String INSTRUMENTATION_VERSION = "2.2.0";
 
     /** Instrument Anthropic client with Braintrust traces. */
     public static AnthropicClient wrap(OpenTelemetry openTelemetry, AnthropicClient client) {
-        if (!instrument(openTelemetry, client)) {
+        if (!instrument(
+                openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION),
+                client,
+                false)) {
             return client;
         }
         return ContextCapturingProxy.wrap(client, AnthropicClient.class);
@@ -25,7 +31,29 @@ public final class BraintrustAnthropic {
     /** Instrument an async Anthropic client with Braintrust traces. */
     public static AnthropicClientAsync wrap(
             OpenTelemetry openTelemetry, AnthropicClientAsync client) {
-        if (!instrument(openTelemetry, client)) {
+        if (!instrument(
+                openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION),
+                client,
+                false)) {
+            return client;
+        }
+        return ContextCapturingProxy.wrap(client, AnthropicClientAsync.class);
+    }
+
+    /**
+     * Instruments a client using the owning library's tracer, replacing any existing provider
+     * tracer without adding another tracing layer.
+     */
+    public static AnthropicClient wrap(Tracer tracer, AnthropicClient client) {
+        if (!instrument(tracer, client, true)) {
+            return client;
+        }
+        return ContextCapturingProxy.wrap(client, AnthropicClient.class);
+    }
+
+    /** Async counterpart of {@link #wrap(Tracer, AnthropicClient)}. */
+    public static AnthropicClientAsync wrap(Tracer tracer, AnthropicClientAsync client) {
+        if (!instrument(tracer, client, true)) {
             return client;
         }
         return ContextCapturingProxy.wrap(client, AnthropicClientAsync.class);
@@ -40,13 +68,15 @@ public final class BraintrustAnthropic {
      *     proxy's internal context header is only stripped by {@link TracingHttpClient}, so
      *     installing it without one would leak trace/span IDs to the provider.
      */
-    private static boolean instrument(OpenTelemetry openTelemetry, Object client) {
+    private static boolean instrument(Tracer tracer, Object client, boolean replaceTracer) {
         if (ContextCapturingProxy.isContextCapturingProxy(client)) {
-            // already instrumented
-            return true;
+            if (!replaceTracer) {
+                return true;
+            }
+            client = ContextCapturingProxy.unwrap(client);
         }
         try {
-            instrumentHttpClient(openTelemetry, client);
+            instrumentHttpClient(tracer, client, replaceTracer);
             return true;
         } catch (Exception e) {
             log.error(
@@ -57,14 +87,14 @@ public final class BraintrustAnthropic {
         }
     }
 
-    private static void instrumentHttpClient(OpenTelemetry openTelemetry, Object client) {
+    private static void instrumentHttpClient(Tracer tracer, Object client, boolean replaceTracer) {
         int[] instrumented = {0};
         forAllFields(
                 client,
                 fieldName -> {
                     try {
                         if (getField(client, fieldName) instanceof ClientOptions clientOptions) {
-                            instrumentClientOptions(openTelemetry, clientOptions);
+                            instrumentClientOptions(tracer, clientOptions, replaceTracer);
                             instrumented[0]++;
                         }
                     } catch (ReflectiveOperationException e) {
@@ -83,18 +113,22 @@ public final class BraintrustAnthropic {
 
     /** Swaps both HTTP client fields on a {@link ClientOptions} for tracing wrappers. */
     private static void instrumentClientOptions(
-            OpenTelemetry openTelemetry, ClientOptions clientOptions) {
-        swapHttpClient(openTelemetry, clientOptions, "originalHttpClient");
-        swapHttpClient(openTelemetry, clientOptions, "httpClient");
+            Tracer tracer, ClientOptions clientOptions, boolean replaceTracer) {
+        swapHttpClient(tracer, clientOptions, "originalHttpClient", replaceTracer);
+        swapHttpClient(tracer, clientOptions, "httpClient", replaceTracer);
     }
 
     private static void swapHttpClient(
-            OpenTelemetry openTelemetry, ClientOptions clientOptions, String fieldName) {
+            Tracer tracer, ClientOptions clientOptions, String fieldName, boolean replaceTracer) {
         try {
             HttpClient httpClient = getField(clientOptions, fieldName);
-            if (!(httpClient instanceof TracingHttpClient)) {
+            if (httpClient instanceof TracingHttpClient tracing) {
+                if (replaceTracer) {
+                    setPrivateField(clientOptions, fieldName, tracing.withTracer(tracer));
+                }
+            } else {
                 setPrivateField(
-                        clientOptions, fieldName, new TracingHttpClient(openTelemetry, httpClient));
+                        clientOptions, fieldName, new TracingHttpClient(tracer, httpClient));
             }
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);

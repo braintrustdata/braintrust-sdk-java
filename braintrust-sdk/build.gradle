@@ -54,6 +54,13 @@ subprojects { subproject ->
       // Make them available at compile time so instrumentation modules can reference them.
       dependencies.add('compileOnly', project(':braintrust-java-agent:bootstrap'))
 
+      // Derive provenance expectations from muzzle, not from the Java instrumentation constants.
+      def minimumMuzzleVersion = subproject.extensions.getByName('muzzle').minimumVersion
+      tasks.withType(Test).configureEach {
+        inputs.property 'muzzleMinimumVersion', minimumMuzzleVersion
+        systemProperty 'braintrust.muzzle.minimumVersion', minimumMuzzleVersion
+      }
+
       // --- $Muzzle side-class generation (compile-time) ---
 
       // Configuration for the muzzle generator classpath
@@ -145,6 +152,7 @@ dependencies {
 
   testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
+  testImplementation 'io.opentelemetry.proto:opentelemetry-proto:1.11.0-alpha'
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
   testImplementation 'org.wiremock:wiremock:3.13.1'

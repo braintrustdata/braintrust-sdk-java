@@ -643,6 +643,18 @@ public class BraintrustLangchainTest {
         for (var span : spans) {
             String spanName = span.getName();
             var attributes = span.getAttributes();
+            var instrumentation =
+                    JSON_MAPPER
+                            .readTree(
+                                    attributes.get(
+                                            AttributeKey.stringKey("braintrust.context_json")))
+                            .path("span_origin")
+                            .path("instrumentation");
+            assertEquals("langchain4j", instrumentation.path("name").asText());
+            assertEquals(
+                    System.getProperty("braintrust.muzzle.minimumVersion"),
+                    instrumentation.path("version").asText(),
+                    "span origin version must match the minimum passing muzzle version");
 
             if (spanName.equals("Assistant.chat")) {
                 numServiceMethodSpans++;
@@ -702,6 +714,18 @@ public class BraintrustLangchainTest {
         int numToolCallSpans = 0;
         for (var span : spans) {
             var attributes = span.getAttributes();
+            var instrumentation =
+                    JSON_MAPPER
+                            .readTree(
+                                    attributes.get(
+                                            AttributeKey.stringKey("braintrust.context_json")))
+                            .path("span_origin")
+                            .path("instrumentation");
+            assertEquals("langchain4j", instrumentation.path("name").asText());
+            assertEquals(
+                    System.getProperty("braintrust.muzzle.minimumVersion"),
+                    instrumentation.path("version").asText(),
+                    "span origin version must match the minimum passing muzzle version");
             switch (span.getName()) {
                 case "Assistant.chat" -> numServiceMethodSpans++;
                 case "responses" -> {

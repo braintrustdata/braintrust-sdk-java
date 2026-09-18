@@ -2,13 +2,17 @@ package dev.braintrust.config;
 
 import dev.braintrust.Braintrust;
 import dev.braintrust.api.BraintrustOpenApiClient;
+import dev.braintrust.trace.SpanCustomizer;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -88,6 +92,9 @@ public final class BraintrustConfig extends BaseConfig {
     /** Custom X509 trust manager for OTLP exporter. Builder-only field, not backed by envars. */
     private final X509TrustManager x509TrustManager;
 
+    /** Immutable export customizers in registration order. Builder-only, not backed by envars. */
+    private final List<SpanCustomizer> spanCustomizers;
+
     /**
      * Sizes the thread pools the SDK creates for batch work (e.g. eval execution), and so how much
      * of that work runs at once. Used only when the caller has not supplied an executor of their
@@ -147,14 +154,15 @@ public final class BraintrustConfig extends BaseConfig {
         for (int i = 0; i < envOverrides.length - 1; i = i + 2) {
             overridesMap.put(envOverrides[i], envOverrides[i + 1]);
         }
-        return new BraintrustConfig(overridesMap, null, null);
+        return new BraintrustConfig(overridesMap, null, null, List.of());
     }
 
     @SneakyThrows
     private BraintrustConfig(
             Map<String, String> envOverrides,
             SSLContext sslContext,
-            X509TrustManager x509TrustManager) {
+            X509TrustManager x509TrustManager,
+            List<SpanCustomizer> spanCustomizers) {
         super(envOverrides);
         if (defaultProjectId.isEmpty() && defaultProjectName.isEmpty()) {
             // should never happen
@@ -169,6 +177,7 @@ public final class BraintrustConfig extends BaseConfig {
                             + otelMaxQueueSize);
         }
 
+        this.spanCustomizers = List.copyOf(spanCustomizers);
         this.sslContext = sslContext != null ? sslContext : SSLContext.getDefault();
         if (x509TrustManager != null) {
             this.x509TrustManager = x509TrustManager;
@@ -215,6 +224,7 @@ public final class BraintrustConfig extends BaseConfig {
         private final Map<String, String> envOverrides = new HashMap<>();
         private SSLContext sslContext;
         private X509TrustManager x509TrustManager;
+        private final List<SpanCustomizer> spanCustomizers = new ArrayList<>();
 
         public Builder apiKey(String value) {
             envOverrides.put("BRAINTRUST_API_KEY", value);
@@ -375,8 +385,20 @@ public final class BraintrustConfig extends BaseConfig {
             return this;
         }
 
+        /**
+         * Adds a span customizer and run its hooks over all spans which pass through braintrust
+         * export
+         *
+         * @throws NullPointerException if {@code customizer} is null
+         */
+        public Builder addSpanCustomizer(SpanCustomizer customizer) {
+            spanCustomizers.add(Objects.requireNonNull(customizer, "customizer"));
+            return this;
+        }
+
         public BraintrustConfig build() {
-            return new BraintrustConfig(envOverrides, sslContext, x509TrustManager);
+            return new BraintrustConfig(
+                    envOverrides, sslContext, x509TrustManager, spanCustomizers);
         }
     }
 

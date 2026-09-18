@@ -6,8 +6,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** Globally available bootstrap classpath resource class */
 public class BraintrustBridge {
-    public static final String INSTRUMENTATION_NAME = "braintrust-java";
-
     /**
      * Diagnostic utility tracking the number of times braintrust otel has been installed.
      *

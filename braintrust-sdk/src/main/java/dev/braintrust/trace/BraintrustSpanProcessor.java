@@ -9,6 +9,7 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo;
+import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.trace.ReadWriteSpan;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SpanProcessor;
@@ -117,7 +118,9 @@ public class BraintrustSpanProcessor implements SpanProcessor {
 
     @SuppressWarnings("unchecked")
     private static String mergedContextJson(
-            @Nullable String existingContextJson, @Nullable SpanOriginEnvironment environment) {
+            @Nullable String existingContextJson,
+            @Nullable SpanOriginEnvironment environment,
+            InstrumentationScopeInfo instrumentationScope) {
         Map<String, Object> context = new HashMap<>();
         if (existingContextJson != null && !existingContextJson.isBlank()) {
             try {
@@ -135,8 +138,15 @@ public class BraintrustSpanProcessor implements SpanProcessor {
                         : new HashMap<>();
         spanOrigin.putIfAbsent("name", "braintrust.sdk.java");
         spanOrigin.putIfAbsent("version", BraintrustTracing.INSTRUMENTATION_VERSION);
-        spanOrigin.putIfAbsent(
-                "instrumentation", Map.of("name", BraintrustTracing.INSTRUMENTATION_NAME));
+        if (spanOrigin.get("instrumentation") == null) {
+            var instrumentation = new HashMap<String, Object>();
+            instrumentation.put("name", instrumentationScope.getName());
+            var version = instrumentationScope.getVersion();
+            if (version != null && !version.isBlank()) {
+                instrumentation.put("version", version);
+            }
+            spanOrigin.put("instrumentation", instrumentation);
+        }
         if (!spanOrigin.containsKey("environment") && environment != null) {
             var env = new HashMap<String, Object>();
             if (environment.type() != null && !environment.type().isBlank()) {
@@ -180,7 +190,9 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
         var newContextJson =
                 mergedContextJson(
-                        spanData.getAttributes().get(CONTEXT_JSON), spanOriginEnvironment);
+                        spanData.getAttributes().get(CONTEXT_JSON),
+                        spanOriginEnvironment,
+                        spanData.getInstrumentationScopeInfo());
 
         if (!Objects.equals(newInputJson, inputJson)
                 || !Objects.equals(newOutputJson, outputJson)) {
