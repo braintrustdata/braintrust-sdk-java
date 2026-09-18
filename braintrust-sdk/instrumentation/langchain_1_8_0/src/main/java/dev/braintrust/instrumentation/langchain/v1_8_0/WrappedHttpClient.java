@@ -1,6 +1,5 @@
 package dev.braintrust.instrumentation.langchain.v1_8_0;
 
-import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import dev.braintrust.instrumentation.SseResponseAccumulator;
 import dev.braintrust.instrumentation.SseStreamAccumulator;
@@ -37,7 +36,10 @@ class WrappedHttpClient implements HttpClient {
             OpenTelemetry openTelemetry,
             HttpClient underlying,
             BraintrustLangchain.Options options) {
-        this.tracer = openTelemetry.getTracer(BraintrustBridge.INSTRUMENTATION_NAME);
+        this.tracer =
+                openTelemetry.getTracer(
+                        BraintrustLangchain.INSTRUMENTATION_NAME,
+                        BraintrustLangchain.INSTRUMENTATION_VERSION);
         this.underlying = underlying;
         this.options = options;
     }

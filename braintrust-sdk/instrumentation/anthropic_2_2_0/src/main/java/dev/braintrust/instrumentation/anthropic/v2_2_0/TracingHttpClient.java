@@ -5,7 +5,6 @@ import com.anthropic.core.http.HttpClient;
 import com.anthropic.core.http.HttpRequest;
 import com.anthropic.core.http.HttpRequestBody;
 import com.anthropic.core.http.HttpResponse;
-import dev.braintrust.bootstrap.BraintrustBridge;
 import dev.braintrust.instrumentation.InstrumentationSemConv;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -34,8 +33,20 @@ public class TracingHttpClient implements HttpClient {
     private final HttpClient underlying;
 
     public TracingHttpClient(OpenTelemetry openTelemetry, HttpClient underlying) {
-        this.tracer = openTelemetry.getTracer(BraintrustBridge.INSTRUMENTATION_NAME);
+        this(
+                openTelemetry.getTracer(
+                        BraintrustAnthropic.INSTRUMENTATION_NAME,
+                        BraintrustAnthropic.INSTRUMENTATION_VERSION),
+                underlying);
+    }
+
+    TracingHttpClient(Tracer tracer, HttpClient underlying) {
+        this.tracer = tracer;
         this.underlying = underlying;
+    }
+
+    TracingHttpClient withTracer(Tracer tracer) {
+        return this.tracer == tracer ? this : new TracingHttpClient(tracer, underlying);
     }
 
     /**

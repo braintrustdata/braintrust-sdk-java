@@ -8,6 +8,7 @@ import com.openai.core.http.HttpClient;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import dev.braintrust.prompt.BraintrustPrompt;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
@@ -19,10 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 /** Braintrust OpenAI client instrumentation. */
 @Slf4j
 public class BraintrustOpenAI {
+    static final String INSTRUMENTATION_NAME = "openai";
+    static final String INSTRUMENTATION_VERSION = "2.15.0";
 
     /** Instrument openai client with braintrust traces */
     public static OpenAIClient wrapOpenAI(OpenTelemetry openTelemetry, OpenAIClient openAIClient) {
-        if (!instrument(openTelemetry, openAIClient)) {
+        if (!instrument(
+                openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION),
+                openAIClient,
+                false)) {
             return openAIClient;
         }
         return ContextCapturingProxy.wrap(openAIClient, OpenAIClient.class);
@@ -31,7 +37,29 @@ public class BraintrustOpenAI {
     /** Instrument an async openai client with braintrust traces */
     public static OpenAIClientAsync wrapOpenAI(
             OpenTelemetry openTelemetry, OpenAIClientAsync openAIClient) {
-        if (!instrument(openTelemetry, openAIClient)) {
+        if (!instrument(
+                openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION),
+                openAIClient,
+                false)) {
+            return openAIClient;
+        }
+        return ContextCapturingProxy.wrap(openAIClient, OpenAIClientAsync.class);
+    }
+
+    /**
+     * Instruments a client using the owning library's tracer, replacing any existing provider
+     * tracer without adding another tracing layer.
+     */
+    public static OpenAIClient wrapOpenAI(Tracer tracer, OpenAIClient openAIClient) {
+        if (!instrument(tracer, openAIClient, true)) {
+            return openAIClient;
+        }
+        return ContextCapturingProxy.wrap(openAIClient, OpenAIClient.class);
+    }
+
+    /** Async counterpart of {@link #wrapOpenAI(Tracer, OpenAIClient)}. */
+    public static OpenAIClientAsync wrapOpenAI(Tracer tracer, OpenAIClientAsync openAIClient) {
+        if (!instrument(tracer, openAIClient, true)) {
             return openAIClient;
         }
         return ContextCapturingProxy.wrap(openAIClient, OpenAIClientAsync.class);
@@ -46,13 +74,15 @@ public class BraintrustOpenAI {
      *     proxy's internal context header is only stripped by {@link TracingHttpClient}, so
      *     installing it without one would leak trace/span IDs to the provider.
      */
-    private static boolean instrument(OpenTelemetry openTelemetry, Object client) {
+    private static boolean instrument(Tracer tracer, Object client, boolean replaceTracer) {
         if (ContextCapturingProxy.isContextCapturingProxy(client)) {
-            // already instrumented
-            return true;
+            if (!replaceTracer) {
+                return true;
+            }
+            client = ContextCapturingProxy.unwrap(client);
         }
         try {
-            instrumentHttpClient(openTelemetry, client);
+            instrumentHttpClient(tracer, client, replaceTracer);
             return true;
         } catch (Exception e) {
             log.error(
@@ -80,7 +110,8 @@ public class BraintrustOpenAI {
                 .build();
     }
 
-    private static void instrumentHttpClient(OpenTelemetry openTelemetry, Object openAIClient) {
+    private static void instrumentHttpClient(
+            Tracer tracer, Object openAIClient, boolean replaceTracer) {
         int[] instrumented = {0};
         forAllFields(
                 openAIClient,
@@ -88,7 +119,7 @@ public class BraintrustOpenAI {
                     try {
                         if (getField(openAIClient, fieldName)
                                 instanceof ClientOptions clientOptions) {
-                            instrumentClientOptions(openTelemetry, clientOptions);
+                            instrumentClientOptions(tracer, clientOptions, replaceTracer);
                             instrumented[0]++;
                         }
                     } catch (ReflectiveOperationException e) {
@@ -122,18 +153,22 @@ public class BraintrustOpenAI {
 
     /** Swaps both HTTP client fields on a {@link ClientOptions} for tracing wrappers. */
     private static void instrumentClientOptions(
-            OpenTelemetry openTelemetry, ClientOptions clientOptions) {
-        swapHttpClient(openTelemetry, clientOptions, "originalHttpClient");
-        swapHttpClient(openTelemetry, clientOptions, "httpClient");
+            Tracer tracer, ClientOptions clientOptions, boolean replaceTracer) {
+        swapHttpClient(tracer, clientOptions, "originalHttpClient", replaceTracer);
+        swapHttpClient(tracer, clientOptions, "httpClient", replaceTracer);
     }
 
     private static void swapHttpClient(
-            OpenTelemetry openTelemetry, ClientOptions clientOptions, String fieldName) {
+            Tracer tracer, ClientOptions clientOptions, String fieldName, boolean replaceTracer) {
         try {
             HttpClient httpClient = getField(clientOptions, fieldName);
-            if (!(httpClient instanceof TracingHttpClient)) {
+            if (httpClient instanceof TracingHttpClient tracing) {
+                if (replaceTracer) {
+                    setPrivateField(clientOptions, fieldName, tracing.withTracer(tracer));
+                }
+            } else {
                 setPrivateField(
-                        clientOptions, fieldName, new TracingHttpClient(openTelemetry, httpClient));
+                        clientOptions, fieldName, new TracingHttpClient(tracer, httpClient));
             }
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);

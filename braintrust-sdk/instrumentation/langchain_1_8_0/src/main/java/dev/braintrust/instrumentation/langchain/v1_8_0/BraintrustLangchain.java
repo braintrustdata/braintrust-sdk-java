@@ -13,8 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 /** Braintrust LangChain4j client instrumentation. */
 @Slf4j
 public final class BraintrustLangchain {
+    static final String INSTRUMENTATION_NAME = "langchain4j";
+    static final String INSTRUMENTATION_VERSION = "1.8.0";
 
-    private static final String INSTRUMENTATION_NAME = "braintrust-langchain4j";
     private static final ThreadLocal<Boolean> AI_SERVICES_RECURSION_GUARD =
             ThreadLocal.withInitial(() -> false);
 
@@ -27,7 +28,7 @@ public final class BraintrustLangchain {
         AI_SERVICES_RECURSION_GUARD.set(true);
         try {
             AiServiceContext context = getPrivateField(aiServices, "context");
-            Tracer tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
+            Tracer tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
 
             // ////// CREATE A LLM SPAN FOR EACH CALL TO AI PROVIDER
             var chatModel = context.chatModel;

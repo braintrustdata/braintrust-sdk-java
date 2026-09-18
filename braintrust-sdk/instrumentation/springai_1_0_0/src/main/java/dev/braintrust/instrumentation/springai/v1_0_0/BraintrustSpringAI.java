@@ -53,7 +53,8 @@ import reactor.core.publisher.Mono;
  */
 @Slf4j
 public class BraintrustSpringAI {
-    private static final String TRACER_NAME = "braintrust-java";
+    private static final String INSTRUMENTATION_NAME = "springai";
+    private static final String INSTRUMENTATION_VERSION = "1.0.0";
 
     private static final String OPENAI_BUILDER_CLASS =
             "org.springframework.ai.openai.OpenAiChatModel$Builder";
@@ -83,7 +84,7 @@ public class BraintrustSpringAI {
     // -------------------------------------------------------------------------
 
     private static void wrapOpenAI(OpenTelemetry openTelemetry, Object builder) throws Exception {
-        Tracer tracer = openTelemetry.getTracer(TRACER_NAME);
+        Tracer tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
         Object openAiApi = getField(builder, "openAiApi");
         String baseUrl = getField(openAiApi, "baseUrl");
 
@@ -115,7 +116,7 @@ public class BraintrustSpringAI {
 
     private static void wrapAnthropic(OpenTelemetry openTelemetry, Object builder)
             throws Exception {
-        Tracer tracer = openTelemetry.getTracer(TRACER_NAME);
+        Tracer tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME, INSTRUMENTATION_VERSION);
         Object anthropicApi = getField(builder, "anthropicApi");
         String baseUrl = extractAnthropicBaseUrl(anthropicApi);
 

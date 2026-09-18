@@ -62,6 +62,13 @@ final class ContextCapturingProxy implements InvocationHandler {
                 && Proxy.getInvocationHandler(o) instanceof ContextCapturingProxy;
     }
 
+    static Object unwrap(Object proxy) {
+        do {
+            proxy = ((ContextCapturingProxy) Proxy.getInvocationHandler(proxy)).delegate;
+        } while (isContextCapturingProxy(proxy));
+        return proxy;
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         // equals/hashCode/toString are the only Object methods routed to an InvocationHandler.
