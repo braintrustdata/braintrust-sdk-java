@@ -1,0 +1,47 @@
+name: Shipped dependency submission
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shipped-dependency-submission
+  cancel-in-progress: false
+
+jobs:
+  dependency-submission:
+    # Never replace the default-branch inventory with a manually selected branch.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+      with:
+        java-version: 17
+        distribution: 'temurin'
+
+    - name: Submit shipped dependencies
+      uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      env:
+        # All selected library configurations describe shipped runtime dependencies.
+        DEPENDENCY_GRAPH_RUNTIME_INCLUDE_CONFIGURATIONS: '.*'
+      with:
+        cache-provider: basic
+        additional-arguments: --no-configuration-cache
+        # Include the shaded agent's source runtime graph: the agent's `internal`
+        # configuration sees the shadow JAR, not the libraries already bundled in it.
+        dependency-graph-include-projects: '^:(braintrust-sdk|braintrust-otel-extension|braintrust-java-agent(:internal)?)$'
+        # SDK: runtimeClasspath + non-transitive embed inputs.
+        # Extension / agent internals: runtimeClasspath.
+        # Agent: bootstrap + bootstrapLibs + internal packaging inputs.
+        # Do not include compile/test classpaths, examples, or compatibility tooling.
+        dependency-graph-include-configurations: '^(runtimeClasspath|embed|bootstrap|bootstrapLibs|internal)$'
