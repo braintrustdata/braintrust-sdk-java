@@ -1,0 +1,6 @@
+{
+  "DEPENDENCY_GRAPH_PLUGIN_VERSION": "1.4.2",
+  "DEPENDENCY_GRAPH_INCLUDE_PROJECTS": "^:(braintrust-sdk|braintrust-otel-extension|braintrust-java-agent(:internal)?)$",
+  "DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS": "^(runtimeClasspath|embed|bootstrap|bootstrapLibs|internal)$",
+  "DEPENDENCY_GRAPH_RUNTIME_INCLUDE_CONFIGURATIONS": ".*"
+}

@@ -24,7 +24,7 @@ dependencies {
   runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 
   // ByteBuddy for bytecode manipulation — bundled as .classdata in BraintrustClassLoader
-  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+  implementation "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
 
   // OTel API on the bootstrap classpath at runtime so we compile against them but do NOT bundle them.
   compileOnly "io.opentelemetry:opentelemetry-api:${otelVersion}"

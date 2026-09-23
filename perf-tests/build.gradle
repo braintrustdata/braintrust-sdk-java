@@ -37,7 +37,7 @@ dependencies {
   testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"
   testImplementation "dev.langchain4j:langchain4j-open-ai:${langchainVersion}"
 
-  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testImplementation "net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}"
 
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

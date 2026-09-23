@@ -418,9 +418,10 @@ sourceSets {
 dependencies {
     // Required by the openapi-generator native Java library
     implementation "com.fasterxml.jackson.core:jackson-databind:${rootProject.ext.jacksonVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-annotations:${rootProject.ext.jacksonVersion}"
+    // Jackson annotations uses a major.minor version, unlike the other Jackson modules.
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.22'
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${rootProject.ext.jacksonVersion}"
-    implementation 'org.openapitools:jackson-databind-nullable:0.2.10'
+    implementation "org.openapitools:jackson-databind-nullable:${rootProject.ext.jacksonDatabindNullableVersion}"
 
     // jsr305 provides javax.annotation.{Nonnull,Nullable} used by the generated code.
     // javax.annotation-api is also needed for @javax.annotation.Generated on all generated classes.

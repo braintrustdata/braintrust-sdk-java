@@ -29,19 +29,13 @@ jobs:
         java-version: 17
         distribution: 'temurin'
 
+    - name: Load shared dependency scan settings
+      run: jq -r 'to_entries[] | "\(.key)=\(.value)"' .github/dependency-graph.json >> "$GITHUB_ENV"
+
     - name: Submit shipped dependencies
       uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-      env:
-        # All selected library configurations describe shipped runtime dependencies.
-        DEPENDENCY_GRAPH_RUNTIME_INCLUDE_CONFIGURATIONS: '.*'
+      # Shared with scripts/check-dependencies.py, including the plugin version.
+      # Includes the agent's internal runtime graph behind its shaded JAR.
       with:
         cache-provider: basic
         additional-arguments: --no-configuration-cache
-        # Include the shaded agent's source runtime graph: the agent's `internal`
-        # configuration sees the shadow JAR, not the libraries already bundled in it.
-        dependency-graph-include-projects: '^:(braintrust-sdk|braintrust-otel-extension|braintrust-java-agent(:internal)?)$'
-        # SDK: runtimeClasspath + non-transitive embed inputs.
-        # Extension / agent internals: runtimeClasspath.
-        # Agent: bootstrap + bootstrapLibs + internal packaging inputs.
-        # Do not include compile/test classpaths, examples, or compatibility tooling.
-        dependency-graph-include-configurations: '^(runtimeClasspath|embed|bootstrap|bootstrapLibs|internal)$'

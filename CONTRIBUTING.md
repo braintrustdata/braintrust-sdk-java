@@ -38,8 +38,38 @@ instrumentation targets are excluded. Transitive dependencies that ship are stil
 included, and submitted dependencies are marked as runtime. This is a shipped-product
 inventory, not a security inventory of everything executed during development or CI.
 
-When changing JAR assembly or adding a published artifact, update the workflow's
-project/configuration filters to cover its dependency inputs.
+The workflow and local scanner share the project/configuration filters and graph
+plugin version in `.github/dependency-graph.json`. When changing JAR assembly or
+adding a published artifact, update those filters to cover its dependency inputs.
+
+### Checking the current branch locally
+
+Install Python 3.9+, JDK 17, and the GitHub CLI, then authenticate with `gh auth login`.
+From the repository root, run:
+
+```bash
+./scripts/check-dependencies.py
+```
+
+This resolves the current working tree's shipped dependencies, including uncommitted
+build-file changes, and queries GitHub's reviewed advisory database for each resolved
+version. It includes transitive dependencies and prints the affected package/version,
+severity, CVE or GHSA identifier, and advisory URL for each finding.
+The shared configuration is authoritative: inherited dependency-graph environment
+variables and JVM system properties are ignored, including exclusion filters.
+
+Exit codes:
+
+- `0`: no matching GitHub-reviewed advisories.
+- `1`: vulnerable dependency versions found.
+- `2`: incomplete scan, such as a dependency resolution, authentication, or network
+  failure. Fix the error and rerun; this is not a clean result.
+
+The scanner requires network access to resolve dependencies and query GitHub. It does
+not submit a dependency graph, modify Dependabot alerts, build/test the SDK, or change
+dependency versions. Temporary reports are removed automatically. A clean result
+only covers known reviewed advisories for the shipped inventory, not excluded
+development dependencies or whether an individual vulnerability is exploitable.
 
 ### Switching from automatic dependency submission
 
