@@ -36,7 +36,7 @@ dependencies {
   implementation project(':braintrust-sdk')
 
   // ByteBuddy for ElementMatcher types used in instrumentation definitions
-  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+  compileOnly "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
 
   // Target libraries — compileOnly because they will be on the app classpath at runtime
   compileOnly "dev.langchain4j:langchain4j:${langchainVersion}"
@@ -48,7 +48,7 @@ dependencies {
   testImplementation project(':braintrust-java-agent:instrumenter')
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testImplementation "net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}"
   testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "dev.langchain4j:langchain4j:${langchainVersion}"
   testImplementation "dev.langchain4j:langchain4j-http-client:${langchainVersion}"

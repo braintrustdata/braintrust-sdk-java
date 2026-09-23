@@ -60,7 +60,7 @@ subprojects { subproject ->
       // Configuration for the muzzle generator classpath
       configurations.maybeCreate('muzzleGenerator')
       dependencies.add('muzzleGenerator', instrumentationApi)
-      dependencies.add('muzzleGenerator', 'net.bytebuddy:byte-buddy:1.17.5')
+      dependencies.add('muzzleGenerator', "net.bytebuddy:byte-buddy:${byteBuddyVersion}")
 
       task generateMuzzle(type: JavaExec) {
         dependsOn compileJava, instrumentationApi.tasks.named('compileJava')

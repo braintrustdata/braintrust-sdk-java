@@ -5,12 +5,12 @@ dependencies {
   implementation 'com.google.code.findbugs:jsr305:3.0.2' // for @Nullable annotations
   implementation "io.opentelemetry:opentelemetry-api:${otelVersion}"
   implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-  implementation 'net.bytebuddy:byte-buddy:1.17.5'
+  implementation "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
 
   // Test dependencies
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testImplementation "net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}"
 }
 
 test {

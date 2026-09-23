@@ -69,14 +69,14 @@ dependencies {
   compileOnly 'com.anthropic:anthropic-java:2.2.0'
 
   // ByteBuddy for ElementMatcher types used in instrumentation definitions
-  compileOnly 'net.bytebuddy:byte-buddy:1.17.5'
+  compileOnly "net.bytebuddy:byte-buddy:${byteBuddyVersion}"
 
   // Test dependencies
   testImplementation(testFixtures(project(":test-harness")))
   testImplementation project(':braintrust-java-agent:instrumenter')
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-  testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.5'
+  testImplementation "net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}"
   testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
   testImplementation "org.springframework.ai:spring-ai-model:${springAiVersion}"
   testImplementation "org.springframework.ai:spring-ai-openai:${springAiVersion}"
