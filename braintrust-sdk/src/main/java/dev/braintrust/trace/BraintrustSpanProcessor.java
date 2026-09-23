@@ -1,6 +1,5 @@
 package dev.braintrust.trace;
 
-import dev.braintrust.api.BraintrustOpenApiClient;
 import dev.braintrust.config.BraintrustConfig;
 import dev.braintrust.config.SpanOriginEnvironment;
 import dev.braintrust.json.BraintrustJsonMapper;
@@ -18,7 +17,6 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,17 +43,11 @@ public class BraintrustSpanProcessor implements SpanProcessor {
     private final SpanProcessor delegate;
     private final List<BraintrustSampler> samplers;
     private final ConcurrentMap<String, ParentContext> parentContexts = new ConcurrentHashMap<>();
-    private final AttachmentProcessor attachmentProcessor;
 
     BraintrustSpanProcessor(BraintrustConfig config, SpanProcessor delegate) {
         this.config = config;
         this.delegate = delegate;
         this.samplers = buildSamplers(config);
-        this.attachmentProcessor =
-                new AttachmentProcessor(
-                        config,
-                        new AttachmentUploader.S3AttachmentUploader(
-                                BraintrustOpenApiClient.of(config), config));
     }
 
     private static List<BraintrustSampler> buildSamplers(BraintrustConfig config) {
@@ -182,11 +174,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         }
 
         var spanData = span.toSpanData();
-        @Nullable String inputJson = spanData.getAttributes().get(INPUT_JSON);
-        @Nullable String outputJson = spanData.getAttributes().get(OUTPUT_JSON);
-
-        @Nullable String newInputJson = attachmentProcessor.processAndUpload(inputJson);
-        @Nullable String newOutputJson = attachmentProcessor.processAndUpload(outputJson);
         var spanOriginEnvironment = config.spanOriginEnvironment().orElse(null);
         var newContextJson =
                 mergedContextJson(
@@ -194,20 +181,7 @@ public class BraintrustSpanProcessor implements SpanProcessor {
                         spanOriginEnvironment,
                         spanData.getInstrumentationScopeInfo());
 
-        if (!Objects.equals(newInputJson, inputJson)
-                || !Objects.equals(newOutputJson, outputJson)) {
-            delegate.onEnd(
-                    new TransformedReadableSpan(
-                            span,
-                            newInputJson,
-                            newOutputJson,
-                            newContextJson,
-                            spanOriginEnvironment));
-        } else {
-            delegate.onEnd(
-                    new TransformedReadableSpan(
-                            span, inputJson, outputJson, newContextJson, spanOriginEnvironment));
-        }
+        delegate.onEnd(new TransformedReadableSpan(span, newContextJson));
     }
 
     @Override
@@ -273,20 +247,9 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         private final ReadableSpan delegate;
         private final Attributes attributes;
 
-        TransformedReadableSpan(
-                ReadableSpan delegate,
-                String inputJson,
-                String outputJson,
-                String contextJson,
-                @Nullable SpanOriginEnvironment environment) {
+        TransformedReadableSpan(ReadableSpan delegate, String contextJson) {
             this.delegate = delegate;
             var builder = delegate.getAttributes().toBuilder();
-            if (inputJson != null) {
-                builder.put(INPUT_JSON, inputJson);
-            }
-            if (outputJson != null) {
-                builder.put(OUTPUT_JSON, outputJson);
-            }
             builder.put(CONTEXT_JSON, contextJson);
             attributes = builder.build();
         }
@@ -299,12 +262,6 @@ public class BraintrustSpanProcessor implements SpanProcessor {
         @Override
         @SuppressWarnings("unchecked")
         public <T> T getAttribute(AttributeKey<T> key) {
-            if (key.equals(INPUT_JSON)) {
-                return (T) attributes.get(INPUT_JSON);
-            }
-            if (key.equals(OUTPUT_JSON)) {
-                return (T) attributes.get(OUTPUT_JSON);
-            }
             if (key.equals(CONTEXT_JSON)) {
                 return (T) attributes.get(CONTEXT_JSON);
             }

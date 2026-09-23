@@ -54,10 +54,10 @@ public final class BraintrustConfig extends BaseConfig {
     private final Boolean compressOtelPayload = getConfig("BRAINTRUST_COMPRESS_OTEL_PAYLOAD", true);
 
     /**
-     * When {@code true} (the default), the Braintrust span processor automatically extracts base64
-     * data-URI attachments from LLM conversation spans, uploads them to object storage, and
-     * replaces the inline data with a lightweight reference. This reduces the size of spans
-     * exported to Braintrust.
+     * When {@code true} (the default), the Braintrust span pipeline automatically extracts base64
+     * data-URI attachments from LLM conversation spans after export customization, uploads them to
+     * object storage, and replaces the inline data with a lightweight reference. This reduces the
+     * size of spans exported to Braintrust.
      */
     private final Boolean autoConvertAIAttachments =
             getConfig("BRAINTRUST_AUTO_CONVERT_AI_ATTACHMENTS", true);

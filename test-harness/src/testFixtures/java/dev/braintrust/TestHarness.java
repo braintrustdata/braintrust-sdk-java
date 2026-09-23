@@ -46,7 +46,6 @@ import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -180,15 +179,9 @@ public class TestHarness implements AutoCloseable {
         this.spanExporter = new UnitTestSpanExporter();
         var loggerBuilder = SdkLoggerProvider.builder();
         var meterBuilder = SdkMeterProvider.builder();
-        // Wire the in-memory span exporter as an additional delegate inside the
-        // BraintrustSpanProcessor so it sees post-processed spans (attachment references
-        // instead of raw base64 data URIs, etc.).
+        // Capture the Braintrust export payload, including customization and attachment references.
         HarnessShim.enableTracing(
-                braintrust.config(),
-                tracerBuilder,
-                List.of(SimpleSpanProcessor.create(this.spanExporter)),
-                loggerBuilder,
-                meterBuilder);
+                braintrust.config(), tracerBuilder, this.spanExporter, loggerBuilder, meterBuilder);
         var contextPropagator =
                 ContextPropagators.create(
                         TextMapPropagator.composite(
@@ -777,6 +770,7 @@ public class TestHarness implements AutoCloseable {
      */
     @SneakyThrows
     public List<SpanData> awaitExportedSpans(int minSpanCount) {
+        awaitExportedSpans();
         return spanExporter.getFinishedSpanItems(minSpanCount);
     }
 

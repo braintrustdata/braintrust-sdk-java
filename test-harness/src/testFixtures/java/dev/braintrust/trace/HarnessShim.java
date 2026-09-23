@@ -4,8 +4,7 @@ import dev.braintrust.config.BraintrustConfig;
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder;
 import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
-import io.opentelemetry.sdk.trace.SpanProcessor;
-import java.util.List;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 
 public class HarnessShim {
     public static void addShutdownHook(Runnable target) {
@@ -13,20 +12,17 @@ public class HarnessShim {
                 BraintrustShutdownHook.ShutdownOrder.TEST_HARNESS, target);
     }
 
-    /**
-     * Enable Braintrust tracing with additional span processors composited into the {@link
-     * BraintrustSpanProcessor}'s delegate chain, so they see post-processed spans.
-     */
+    /** Enable Braintrust tracing and capture the same transformed spans as the OTLP transport. */
     public static void enableTracing(
             BraintrustConfig config,
             SdkTracerProviderBuilder tracerProviderBuilder,
-            List<SpanProcessor> additionalDelegates,
+            SpanExporter capturedSpans,
             SdkLoggerProviderBuilder loggerProviderBuilder,
             SdkMeterProviderBuilder meterProviderBuilder) {
         BraintrustTracing.enable(
                 config,
                 tracerProviderBuilder,
-                additionalDelegates,
+                transport -> SpanExporter.composite(transport, capturedSpans),
                 loggerProviderBuilder,
                 meterProviderBuilder);
     }
