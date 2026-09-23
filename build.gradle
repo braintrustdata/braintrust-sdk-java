@@ -136,3 +136,27 @@ task installGitHooks(type: Exec) {
   group = 'Build Setup'
   commandLine 'bash', 'scripts/install-hooks.sh'
 }
+
+// Shipped dependency filters are shared with the dependency-submission workflow.
+def shippedFilters = new groovy.json.JsonSlurper().parse(file('.github/dependency-graph.json'))
+def shippedProjects = subprojects.findAll { it.path ==~ shippedFilters.DEPENDENCY_GRAPH_INCLUDE_PROJECTS }
+shippedProjects.each { shipped ->
+  // Resolve each graph in its own project; cross-project resolution is an error in Gradle 9.
+  shipped.tasks.register('shippedDependencies', dev.braintrust.gradle.ShippedDependenciesTask) { task ->
+    shipped.configurations
+      .findAll { it.canBeResolved && it.name ==~ shippedFilters.DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS }
+      .each { task.rootComponents.put(it.name, it.incoming.resolutionResult.rootComponent) }
+    task.outputFile = shipped.layout.buildDirectory.file('shipped-dependencies.txt')
+  }
+}
+
+tasks.register('checkDependencies', dev.braintrust.gradle.CheckDependenciesTask) {
+  shippedDependencies.from(shippedProjects.collect { it.tasks.named('shippedDependencies') })
+}
+
+tasks.register('checkCodeQL', Exec) {
+  group = 'verification'
+  description = 'Runs the local CodeQL scan using the mise-pinned toolchain'
+  workingDir rootDir
+  commandLine 'mise', 'exec', '--', './scripts/check-codeql.sh'
+}

@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
+  schedule:
+    - cron: '17 3 * * *' # Daily at 03:17 UTC.
 
 permissions:
   contents: read
@@ -34,7 +36,7 @@ jobs:
 
     - name: Submit shipped dependencies
       uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-      # Shared with scripts/check-dependencies.py, including the plugin version.
+      # Shipped dependency filters are shared with the checkDependencies Gradle task.
       # Includes the agent's internal runtime graph behind its shaded JAR.
       with:
         cache-provider: basic

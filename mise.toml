@@ -1,0 +1,15 @@
+[tool_alias]
+codeql = "github:github/codeql-action"
+
+# The bundle pins the CLI and standard query packs together.
+[tools.codeql]
+version = "2.27.0"
+version_prefix = "codeql-bundle-v"
+strip_components = 1
+bin_path = "."
+
+[tools.codeql.platforms]
+linux-x64 = { asset_pattern = "codeql-bundle-linux64.tar.gz" }
+linux-arm64 = { asset_pattern = "codeql-bundle-linux-arm64.tar.gz" }
+macos-x64 = { asset_pattern = "codeql-bundle-osx64.tar.gz" }
+macos-arm64 = { asset_pattern = "codeql-bundle-osx64.tar.gz" }
