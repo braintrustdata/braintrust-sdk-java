@@ -33,3 +33,42 @@ jobs:
       with:
         name: test-results
         path: build/test-results/test/
+
+  dependency-check:
+    name: Dependency advisories
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      with:
+        persist-credentials: false
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+      with:
+        java-version: 17
+        distribution: 'temurin'
+
+    - name: Check shipped dependencies
+      id: dependencies
+      # Check the full shipped graph, including advisories that also affect main.
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: ./gradlew checkDependencies --console=plain
+
+    - name: Report dependency scan outcome
+      if: always()
+      env:
+        SCAN_OUTCOME: ${{ steps.dependencies.outcome }}
+      run: |
+        echo '## Dependency advisories' >> "$GITHUB_STEP_SUMMARY"
+        if [ "$SCAN_OUTCOME" = 'success' ]; then
+          echo 'No matching GitHub-reviewed advisories were found in shipped dependencies.' >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo '::error::Dependency scan found advisories or could not complete. Review the Check shipped dependencies step logs.'
+          echo 'The scan found advisories or could not complete. Review the **Check shipped dependencies** step logs; this is not a clean scan.' >> "$GITHUB_STEP_SUMMARY"
+        fi
+        echo 'This check covers the full shipped dependency graph, not just dependencies changed by this PR. Findings or scan errors fail the check.' >> "$GITHUB_STEP_SUMMARY"

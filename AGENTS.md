@@ -166,6 +166,10 @@ VCR_MODE=record ./gradlew :braintrust-sdk:test --tests 'dev.braintrust.devserver
 - **`braintrust-api` is generated code.** don't edit sources under it by hand; it's regenerated from the braintrust openapi spec pinned as `braintrustOpenApiRef` in gradle.properties.
 - **there are no version constants to bump.** the sdk version is derived from git tags at build time (`generateVersion()` in build.gradle) and written into braintrust.properties. "bump the version" is not a source change.
 - When adding test cases, favor adding to the test file of the module being changed rather than making a new file. For example, if you fix a bug in the `Foo` module, add the test case to `FooTest.java` instead of making a new file, `FooTestMyBuggyCase.java`
+- **run CodeQL once as a final check for code changes:** `./gradlew checkCodeQL` (first-time setup: `mise trust && mise install`). don't rerun it after every edit; rerun when needed to verify a security fix. the task fails on any finding or scan error; review the printed findings and generated SARIF report.
+- **use judgment when resolving CodeQL findings.** investigate the flagged code path and fix genuine vulnerabilities at the source. don't suppress alerts, weaken checks, or distort correct code just to make findings disappear. if a finding appears to be a false positive or there is a good reason not to follow its recommendation, tell the user which finding, the evidence and security tradeoff, and your proposed disposition. get their agreement before suppressing or dismissing it; don't silently ignore it.
+- **run dependency checker when changing dependencies:**: `./gradlew checkDependencies`
+- **don't add new build tools without approval** favor using java/gradle/groovy/bash for misc scripts and tools. Favor using the existing ecosystem instead of introducing new build dependencies. If you think a new build dependency is worth it, ask for approval to add it.
 
 ## Releasing
 
