@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class BraintrustSpringAI {
+    static final String INSTRUMENTATION_NAME = "springai";
+    static final String INSTRUMENTATION_VERSION = "2.0.0";
 
     private static final String OPENAI_CHAT_MODEL_CLASS =
             "org.springframework.ai.openai.OpenAiChatModel";

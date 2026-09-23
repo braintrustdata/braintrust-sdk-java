@@ -19,14 +19,13 @@ import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
-import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import io.opentelemetry.semconv.ServiceAttributes;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -102,26 +101,20 @@ public final class BraintrustTracing {
         enable(
                 config,
                 tracerProviderBuilder,
-                List.of(),
+                UnaryOperator.identity(),
                 loggerProviderBuilder,
                 meterProviderBuilder);
     }
 
     /**
-     * Add braintrust to existing open telemetry builders, with additional span processors that will
-     * receive spans <em>after</em> Braintrust processing (attachment upload, parent assignment,
-     * etc.).
-     *
-     * <p>The additional processors are composited into the {@link BraintrustSpanProcessor}'s
-     * delegate, so they see the transformed span data rather than the raw original.
-     *
-     * @param additionalDelegates extra span processors that receive post-processed spans alongside
-     *     the Braintrust exporter. Pass {@code List.of()} if none are needed.
+     * Enable tracing with an internal transport decorator. The test harness uses this to capture
+     * the spans sent to Braintrust after export customization and attachment conversion, rather
+     * than observing a separate processor branch that bypasses those transformations.
      */
     static void enable(
             @Nonnull BraintrustConfig config,
             @Nonnull SdkTracerProviderBuilder tracerProviderBuilder,
-            @Nonnull List<SpanProcessor> additionalDelegates,
+            @Nonnull UnaryOperator<SpanExporter> transportDecorator,
             @Nonnull SdkLoggerProviderBuilder loggerProviderBuilder,
             @Nonnull SdkMeterProviderBuilder meterProviderBuilder) {
         final Duration exportInterval = Duration.ofMillis(config.otelExportIntervalMillis());
@@ -138,23 +131,13 @@ public final class BraintrustTracing {
 
         // spans
         var braintrustExporter =
-                BatchSpanProcessor.builder(new BraintrustSpanExporter(config))
+                BatchSpanProcessor.builder(new BraintrustSpanExporter(config, transportDecorator))
                         .setScheduleDelay(exportInterval.toMillis(), TimeUnit.MILLISECONDS)
                         .setMaxQueueSize(maxQueueSize)
                         .setMaxExportBatchSize(maxExportBatchSize)
                         .build();
 
-        SpanProcessor delegate;
-        if (additionalDelegates.isEmpty()) {
-            delegate = braintrustExporter;
-        } else {
-            var all = new ArrayList<SpanProcessor>();
-            all.add(braintrustExporter);
-            all.addAll(additionalDelegates);
-            delegate = SpanProcessor.composite(all);
-        }
-
-        var spanProcessor = new BraintrustSpanProcessor(config, delegate);
+        var spanProcessor = new BraintrustSpanProcessor(config, braintrustExporter);
         tracerProviderBuilder.addResource(resource).addSpanProcessor(spanProcessor);
         // logs
         var logProcessor =

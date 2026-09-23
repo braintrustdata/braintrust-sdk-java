@@ -76,6 +76,18 @@ public class BraintrustAWSBedrockTest {
             var spans = testHarness.awaitExportedSpans(1);
             assertEquals(1, spans.size(), "expected exactly one span");
             var span = spans.get(0);
+            var instrumentation =
+                    JSON_MAPPER
+                            .readTree(
+                                    span.getAttributes()
+                                            .get(AttributeKey.stringKey("braintrust.context_json")))
+                            .path("span_origin")
+                            .path("instrumentation");
+            assertEquals("aws-bedrock", instrumentation.path("name").asText());
+            assertEquals(
+                    System.getProperty("braintrust.muzzle.minimumVersion"),
+                    instrumentation.path("version").asText(),
+                    "span origin version must match the minimum passing muzzle version");
 
             String spanAttributesJson =
                     span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));
@@ -135,6 +147,18 @@ public class BraintrustAWSBedrockTest {
             var spans = testHarness.awaitExportedSpans(1);
             assertEquals(1, spans.size(), "expected exactly one span");
             var span = spans.get(0);
+            var instrumentation =
+                    JSON_MAPPER
+                            .readTree(
+                                    span.getAttributes()
+                                            .get(AttributeKey.stringKey("braintrust.context_json")))
+                            .path("span_origin")
+                            .path("instrumentation");
+            assertEquals("aws-bedrock", instrumentation.path("name").asText());
+            assertEquals(
+                    System.getProperty("braintrust.muzzle.minimumVersion"),
+                    instrumentation.path("version").asText(),
+                    "span origin version must match the minimum passing muzzle version");
 
             String spanAttributesJson =
                     span.getAttributes().get(AttributeKey.stringKey("braintrust.span_attributes"));

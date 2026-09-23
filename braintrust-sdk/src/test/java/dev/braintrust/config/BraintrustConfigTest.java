@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
@@ -53,25 +54,48 @@ class BraintrustConfigTest {
 
     @Test
     public void testBuilderHasMethodForEveryField() {
-        List<String> fieldsToSkip = List.of("envOverrides");
+        final Map<String, List<String>> builderMethodOverrides =
+                Map.of("spanCustomizers", List.of("addSpanCustomizer"));
         // Get all fields from BraintrustConfig
         Field[] configFields = BraintrustConfig.class.getDeclaredFields();
+        Set<String> configFieldNames =
+                Arrays.stream(configFields).map(Field::getName).collect(Collectors.toSet());
 
         // Get all methods from Builder
         Method[] builderMethods = BraintrustConfig.Builder.class.getDeclaredMethods();
         Set<String> builderMethodNames =
                 Arrays.stream(builderMethods).map(Method::getName).collect(Collectors.toSet());
 
+        // Validate overrides even when the field is skipped or its method list is empty.
+        builderMethodOverrides.forEach(
+                (fieldName, methodNames) -> {
+                    assertTrue(
+                            configFieldNames.contains(fieldName),
+                            "Builder override references unknown field: " + fieldName);
+                    for (String methodName : methodNames) {
+                        assertTrue(
+                                builderMethodNames.contains(methodName),
+                                "Builder override for field "
+                                        + fieldName
+                                        + " references unknown method: "
+                                        + methodName);
+                    }
+                });
+
         // For each field, verify there's a corresponding builder method
         for (Field field : configFields) {
             String configFieldName = field.getName();
-            // Skip internal fields
-            if (fieldsToSkip.contains(configFieldName)) {
-                continue;
+            // An explicit empty list exempts a field from requiring builder methods.
+            for (String builderMethodName :
+                    builderMethodOverrides.getOrDefault(
+                            configFieldName, List.of(configFieldName))) {
+                assertTrue(
+                        builderMethodNames.contains(builderMethodName),
+                        "Builder is missing method "
+                                + builderMethodName
+                                + " for field: "
+                                + configFieldName);
             }
-            assertTrue(
-                    builderMethodNames.contains(configFieldName),
-                    "Builder is missing method for field: " + configFieldName);
         }
     }
 

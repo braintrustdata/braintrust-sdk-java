@@ -46,6 +46,22 @@ public class BraintrustAnthropicTest {
         testHarness = TestHarness.setup();
     }
 
+    @SneakyThrows
+    private static void assertInstrumentationOrigin(io.opentelemetry.sdk.trace.data.SpanData span) {
+        JsonNode instrumentation =
+                JSON_MAPPER
+                        .readTree(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.context_json")))
+                        .path("span_origin")
+                        .path("instrumentation");
+        assertEquals("anthropic", instrumentation.path("name").asText());
+        assertEquals(
+                System.getProperty("braintrust.muzzle.minimumVersion"),
+                instrumentation.path("version").asText(),
+                "span origin version must match the minimum passing muzzle version");
+    }
+
     @Test
     @SneakyThrows
     void testWrapAnthropic() {
@@ -77,6 +93,7 @@ public class BraintrustAnthropicTest {
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         var span = spans.get(0);
+        assertInstrumentationOrigin(span);
 
         assertFalse(span.getName().isEmpty(), "span name should be non-empty");
 
@@ -166,6 +183,7 @@ public class BraintrustAnthropicTest {
         var spans = testHarness.awaitExportedSpans();
         assertEquals(1, spans.size());
         var span = spans.get(0);
+        assertInstrumentationOrigin(span);
 
         assertFalse(span.getName().isEmpty(), "span name should be non-empty");
 
@@ -243,6 +261,7 @@ public class BraintrustAnthropicTest {
         assertEquals(2, spans.size());
         var llmSpan =
                 spans.stream().filter(s -> !"foo".equals(s.getName())).findFirst().orElseThrow();
+        assertInstrumentationOrigin(llmSpan);
         assertEquals(
                 parentSpan.getSpanContext().getTraceId(),
                 llmSpan.getTraceId(),

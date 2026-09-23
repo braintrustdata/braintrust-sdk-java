@@ -4,6 +4,7 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.OpenAIClientAsync;
 import dev.braintrust.instrumentation.openai.v2_15_0.BraintrustOpenAI;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,22 +24,25 @@ final class SpringAIOpenAI {
 
     /** Wraps the official SDK clients inside an {@code OpenAiChatModel}. Idempotent. */
     static <T> T wrap(OpenTelemetry openTelemetry, T chatModel) {
-        wrapClientField(openTelemetry, chatModel, "openAiClient");
-        wrapClientField(openTelemetry, chatModel, "openAiClientAsync");
+        Tracer tracer =
+                openTelemetry.getTracer(
+                        BraintrustSpringAI.INSTRUMENTATION_NAME,
+                        BraintrustSpringAI.INSTRUMENTATION_VERSION);
+        wrapClientField(tracer, chatModel, "openAiClient");
+        wrapClientField(tracer, chatModel, "openAiClientAsync");
         return chatModel;
     }
 
-    private static void wrapClientField(
-            OpenTelemetry openTelemetry, Object chatModel, String fieldName) {
+    private static void wrapClientField(Tracer tracer, Object chatModel, String fieldName) {
         try {
             // The wrapped client is a context-capturing view (not just mutated in place), so
             // swap it back into the model's field — that way the caller's span parents async
             // streaming requests correctly.
             Object client = getField(chatModel, fieldName);
             if (client instanceof OpenAIClient sync) {
-                setField(chatModel, fieldName, BraintrustOpenAI.wrapOpenAI(openTelemetry, sync));
+                setField(chatModel, fieldName, BraintrustOpenAI.wrapOpenAI(tracer, sync));
             } else if (client instanceof OpenAIClientAsync async) {
-                setField(chatModel, fieldName, BraintrustOpenAI.wrapOpenAI(openTelemetry, async));
+                setField(chatModel, fieldName, BraintrustOpenAI.wrapOpenAI(tracer, async));
             }
         } catch (Exception e) {
             log.error("failed to instrument spring ai openai client field {}", fieldName, e);

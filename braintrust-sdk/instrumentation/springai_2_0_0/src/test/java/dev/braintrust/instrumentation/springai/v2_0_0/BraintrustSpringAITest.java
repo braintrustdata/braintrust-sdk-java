@@ -115,6 +115,10 @@ public class BraintrustSpringAITest {
     @SneakyThrows
     void testCall(Provider provider) {
         ChatModel chatModel = buildChatModel(provider);
+        // Provider and Spring auto-instrumentation have already run during build().
+        // Rewrapping must retain Spring's attribution and still emit exactly one LLM span.
+        BraintrustSpringAI.wrap(testHarness.openTelemetry(), chatModel);
+        BraintrustSpringAI.wrap(testHarness.openTelemetry(), chatModel);
         var response = chatModel.call(new Prompt("What is the capital of France?"));
 
         assertNotNull(response);
@@ -185,6 +189,8 @@ public class BraintrustSpringAITest {
     @SneakyThrows
     void testStream(Provider provider) {
         ChatModel chatModel = buildChatModel(provider);
+        BraintrustSpringAI.wrap(testHarness.openTelemetry(), chatModel);
+        BraintrustSpringAI.wrap(testHarness.openTelemetry(), chatModel);
         var fullText = new StringBuilder();
         chatModel.stream(streamPrompt(provider))
                 .doOnNext(
@@ -224,6 +230,18 @@ public class BraintrustSpringAITest {
 
     @SneakyThrows
     private void assertCommonSpanAttributes(SpanData span, Provider provider) {
+        JsonNode instrumentation =
+                JSON_MAPPER
+                        .readTree(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.context_json")))
+                        .path("span_origin")
+                        .path("instrumentation");
+        assertEquals("springai", instrumentation.path("name").asText());
+        assertEquals(
+                System.getProperty("braintrust.muzzle.minimumVersion"),
+                instrumentation.path("version").asText(),
+                "span origin version must match the minimum passing muzzle version");
         assertEquals("llm", spanAttributes(span).get("type").asText());
         assertEquals(provider.expectedProvider(), metadata(span).get("provider").asText());
         assertTrue(

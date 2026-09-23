@@ -126,7 +126,7 @@ public class BraintrustTracingTest {
         var processor =
                 new BraintrustSpanProcessor(config, SimpleSpanProcessor.create(spanExporter));
         var tracerProvider = SdkTracerProvider.builder().addSpanProcessor(processor).build();
-        var tracer = tracerProvider.get("test");
+        var tracer = tracerProvider.get("springai", "2.0.0");
 
         var span = tracer.spanBuilder("late-context").startSpan();
         span.setAttribute(
@@ -145,8 +145,69 @@ public class BraintrustTracingTest {
         var spanOrigin = (Map<?, ?>) context.get("span_origin");
         assertEquals("braintrust.sdk.java", spanOrigin.get("name"));
         assertEquals(
-                BraintrustTracing.INSTRUMENTATION_NAME,
-                ((Map<?, ?>) spanOrigin.get("instrumentation")).get("name"));
+                Map.of("name", "springai", "version", "2.0.0"), spanOrigin.get("instrumentation"));
+        assertEquals(BraintrustTracing.INSTRUMENTATION_VERSION, spanOrigin.get("version"));
+        tracerProvider.close();
+    }
+
+    @Test
+    void spanOriginPreservesExplicitInstrumentationWithoutMixingVersions() throws Exception {
+        var config = BraintrustConfig.builder().apiKey("test-key").build();
+        var exporter = new UnitTestSpanExporter();
+        try (var provider =
+                SdkTracerProvider.builder()
+                        .addSpanProcessor(
+                                new BraintrustSpanProcessor(
+                                        config, SimpleSpanProcessor.create(exporter)))
+                        .build()) {
+            var span = provider.get("springai", "2.0.0").spanBuilder("custom-origin").startSpan();
+            span.setAttribute(
+                    BraintrustSpanProcessor.CONTEXT_JSON,
+                    """
+                    {"span_origin":{"instrumentation":{"name":"custom"},"environment":{"name":"test"}}}
+                    """);
+            span.end();
+
+            var origin =
+                    BraintrustJsonMapper.get()
+                            .readTree(
+                                    exporter.getFinishedSpanItems()
+                                            .get(0)
+                                            .getAttributes()
+                                            .get(BraintrustSpanProcessor.CONTEXT_JSON))
+                            .path("span_origin");
+            assertEquals(
+                    BraintrustJsonMapper.get().readTree("{\"name\":\"custom\"}"),
+                    origin.path("instrumentation"));
+            assertEquals("test", origin.path("environment").path("name").asText());
+        }
+    }
+
+    @Test
+    void spanOriginOmitsUnknownInstrumentationVersion() throws Exception {
+        var config = BraintrustConfig.builder().apiKey("test-key").build();
+        var exporter = new UnitTestSpanExporter();
+        try (var provider =
+                SdkTracerProvider.builder()
+                        .addSpanProcessor(
+                                new BraintrustSpanProcessor(
+                                        config, SimpleSpanProcessor.create(exporter)))
+                        .build()) {
+            provider.get("custom-tracer").spanBuilder("unversioned").startSpan().end();
+
+            var instrumentation =
+                    BraintrustJsonMapper.get()
+                            .readTree(
+                                    exporter.getFinishedSpanItems()
+                                            .get(0)
+                                            .getAttributes()
+                                            .get(BraintrustSpanProcessor.CONTEXT_JSON))
+                            .path("span_origin")
+                            .path("instrumentation");
+            assertEquals(
+                    BraintrustJsonMapper.get().readTree("{\"name\":\"custom-tracer\"}"),
+                    instrumentation);
+        }
     }
 
     private void doSimpleOtelTrace(Tracer tracer) {
