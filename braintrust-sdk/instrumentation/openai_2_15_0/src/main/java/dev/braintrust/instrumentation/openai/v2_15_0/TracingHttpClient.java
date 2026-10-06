@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,7 +49,7 @@ class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * Starts the LLM span. openai-java dispatches async/streaming requests through
+     * Starts a request span. openai-java dispatches async/streaming requests through
      * CompletableFuture continuations on the common pool (and frameworks like Spring AI 2.x on
      * their own executors), where the caller's thread-local context is lost — which would orphan
      * the span. {@link ContextCapturingProxy} captures the caller's context at the service-call
@@ -58,11 +59,9 @@ class TracingHttpClient implements HttpClient {
      * a long-lived client wrapped inside some unrelated span would otherwise parent every future
      * request to that stale span.
      */
-    private Span startLlmSpan(@Nullable Context headerContext) {
+    private Span startSpan(String name, @Nullable Context headerContext) {
         Context parent = headerContext != null ? headerContext : Context.current();
-        return tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME)
-                .setParent(parent)
-                .startSpan();
+        return tracer.spanBuilder(name).setParent(parent).startSpan();
     }
 
     /**
@@ -117,7 +116,10 @@ class TracingHttpClient implements HttpClient {
     public @NonNull HttpResponse execute(
             @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
         var extracted = extractCallerContext(httpRequest);
-        var span = startLlmSpan(extracted.callerContext());
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttp(extracted, requestOptions);
+        }
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try (var ignored = span.makeCurrent()) {
             // Buffer the request body so we can (a) read its bytes for the span attribute and
             // (b) supply a fresh, repeatable body to the underlying client — avoiding any
@@ -153,7 +155,10 @@ class TracingHttpClient implements HttpClient {
     public @NonNull CompletableFuture<HttpResponse> executeAsync(
             @NonNull HttpRequest httpRequest, @NonNull RequestOptions requestOptions) {
         var extracted = extractCallerContext(httpRequest);
-        var span = startLlmSpan(extracted.callerContext());
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttpAsync(extracted, requestOptions);
+        }
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try {
             var bufferedRequest = bufferRequestBody(extracted.request());
             String inputJson =
@@ -183,6 +188,65 @@ class TracingHttpClient implements HttpClient {
                                     span.end();
                                 }
                             });
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            span.end();
+            throw e;
+        }
+    }
+
+    /**
+     * Endpoints that produce model output and get the full LLM treatment, matched on the trailing
+     * path segment so a {@code v1} prefix or an Azure {@code openai/deployments/<name>} prefix
+     * doesn't matter. {@code completions} covers both chat and legacy completions; retrieve/list
+     * calls end in an id or use GET and so fall through. Everything else (files, batches, models,
+     * vector stores, ...) gets a plain {@code openai.http} span with the body left untouched.
+     */
+    private static final Set<String> LLM_ENDPOINTS =
+            Set.of("completions", "embeddings", "responses");
+
+    private static boolean isLlmRequest(HttpRequest request) {
+        var path = request.pathSegments();
+        return request.method() == HttpMethod.POST
+                && !path.isEmpty()
+                && LLM_ENDPOINTS.contains(path.get(path.size() - 1));
+    }
+
+    private HttpResponse executeHttp(ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("openai.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            var response = underlying.execute(extracted.request(), requestOptions);
+            InstrumentationSemConv.tagHttpSpanResponse(span, response.statusCode());
+            return response;
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            throw e;
+        } finally {
+            span.end();
+        }
+    }
+
+    private CompletableFuture<HttpResponse> executeHttpAsync(
+            ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("openai.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            return underlying
+                    .executeAsync(extracted.request(), requestOptions)
+                    .whenComplete(
+                            (response, error) -> {
+                                try {
+                                    if (error != null) {
+                                        InstrumentationSemConv.tagLLMSpanResponse(span, error);
+                                    } else {
+                                        InstrumentationSemConv.tagHttpSpanResponse(
+                                                span, response.statusCode());
+                                    }
+                                } finally {
+                                    span.end();
+                                }
+                            })
+                    // Isolate cleanup from cancellation of the caller's future.
+                    .copy();
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
             span.end();

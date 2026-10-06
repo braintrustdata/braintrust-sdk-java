@@ -2,6 +2,7 @@ package dev.braintrust.instrumentation.anthropic.v2_2_0;
 
 import com.anthropic.core.RequestOptions;
 import com.anthropic.core.http.HttpClient;
+import com.anthropic.core.http.HttpMethod;
 import com.anthropic.core.http.HttpRequest;
 import com.anthropic.core.http.HttpRequestBody;
 import com.anthropic.core.http.HttpResponse;
@@ -50,7 +51,7 @@ public class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * Starts the LLM span. anthropic-java (and frameworks like Spring AI 2.x) dispatch
+     * Starts a request span. anthropic-java (and frameworks like Spring AI 2.x) dispatch
      * async/streaming requests on executors where the caller's thread-local context is lost — which
      * would orphan the span. {@link ContextCapturingProxy} captures the caller's context at the
      * service-call boundary and threads it through as {@code headerContext}; when that is absent we
@@ -59,11 +60,9 @@ public class TracingHttpClient implements HttpClient {
      * instrumented — a long-lived client wrapped inside some unrelated span would otherwise parent
      * every future request to that stale span.
      */
-    private Span startLlmSpan(@Nullable Context headerContext) {
+    private Span startSpan(String name, @Nullable Context headerContext) {
         Context parent = headerContext != null ? headerContext : Context.current();
-        return tracer.spanBuilder(InstrumentationSemConv.UNSET_LLM_SPAN_NAME)
-                .setParent(parent)
-                .startSpan();
+        return tracer.spanBuilder(name).setParent(parent).startSpan();
     }
 
     /**
@@ -118,7 +117,10 @@ public class TracingHttpClient implements HttpClient {
     public @Nonnull HttpResponse execute(
             @Nonnull HttpRequest httpRequest, @Nonnull RequestOptions requestOptions) {
         var extracted = extractCallerContext(httpRequest);
-        var span = startLlmSpan(extracted.callerContext());
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttp(extracted, requestOptions);
+        }
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try (var ignored = span.makeCurrent()) {
             var bufferedRequest = bufferRequestBody(extracted.request());
 
@@ -150,7 +152,10 @@ public class TracingHttpClient implements HttpClient {
     public @Nonnull CompletableFuture<HttpResponse> executeAsync(
             @Nonnull HttpRequest httpRequest, @Nonnull RequestOptions requestOptions) {
         var extracted = extractCallerContext(httpRequest);
-        var span = startLlmSpan(extracted.callerContext());
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttpAsync(extracted, requestOptions);
+        }
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try {
             var bufferedRequest = bufferRequestBody(extracted.request());
             String inputJson =
@@ -180,6 +185,60 @@ public class TracingHttpClient implements HttpClient {
                                     span.end();
                                 }
                             });
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            span.end();
+            throw e;
+        }
+    }
+
+    /**
+     * Only {@code POST .../messages} produces model output and gets the full LLM treatment.
+     * Everything else ({@code messages/batches}, {@code messages/count_tokens}, models, files, ...)
+     * gets a plain {@code anthropic.http} span with the body left untouched.
+     */
+    private static boolean isLlmRequest(HttpRequest request) {
+        var path = request.pathSegments();
+        return request.method() == HttpMethod.POST
+                && !path.isEmpty()
+                && "messages".equals(path.get(path.size() - 1));
+    }
+
+    private HttpResponse executeHttp(ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("anthropic.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            var response = underlying.execute(extracted.request(), requestOptions);
+            InstrumentationSemConv.tagHttpSpanResponse(span, response.statusCode());
+            return response;
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            throw e;
+        } finally {
+            span.end();
+        }
+    }
+
+    private CompletableFuture<HttpResponse> executeHttpAsync(
+            ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("anthropic.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            return underlying
+                    .executeAsync(extracted.request(), requestOptions)
+                    .whenComplete(
+                            (response, error) -> {
+                                try {
+                                    if (error != null) {
+                                        InstrumentationSemConv.tagLLMSpanResponse(span, error);
+                                    } else {
+                                        InstrumentationSemConv.tagHttpSpanResponse(
+                                                span, response.statusCode());
+                                    }
+                                } finally {
+                                    span.end();
+                                }
+                            })
+                    // Isolate cleanup from cancellation of the caller's future.
+                    .copy();
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
             span.end();

@@ -1,0 +1,38 @@
+{
+  "id" : "85eb2759-1238-37f8-ada8-37485b16e3b0",
+  "name" : "v1beta_batches",
+  "request" : {
+    "urlPath" : "/v1beta/batches",
+    "method" : "GET",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "queryParameters" : {
+      "pageSize" : {
+        "hasExactly" : [ {
+          "equalTo" : "1"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1beta_batches-bbfcc72ae577.json",
+    "headers" : {
+      "X-Frame-Options" : "SAMEORIGIN",
+      "Alt-Svc" : "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "Server" : "scaffolding on HTTPServer2",
+      "X-Content-Type-Options" : "nosniff",
+      "Server-Timing" : "gfet4t7; dur=101",
+      "Vary" : [ "Origin", "X-Origin", "Referer" ],
+      "X-XSS-Protection" : "0",
+      "Date" : "Tue, 06 Oct 2026 21:10:07 GMT",
+      "Content-Type" : "application/json; charset=UTF-8"
+    }
+  },
+  "uuid" : "85eb2759-1238-37f8-ada8-37485b16e3b0",
+  "persistent" : true,
+  "insertionIndex" : 4
+}

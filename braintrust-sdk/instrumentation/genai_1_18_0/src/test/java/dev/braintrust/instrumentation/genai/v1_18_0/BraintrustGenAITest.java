@@ -6,9 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.HttpOptions;
+import com.google.genai.types.ListBatchJobsConfig;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.StatusCode;
+import java.util.List;
 import lombok.SneakyThrows;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +33,56 @@ public class BraintrustGenAITest {
     @BeforeEach
     void beforeEach() {
         testHarness = TestHarness.setup();
+    }
+
+    @Test
+    void testBatchList() {
+        var geminiClient =
+                new Client.Builder()
+                        .apiKey(testHarness.googleApiKey())
+                        .httpOptions(
+                                HttpOptions.builder().baseUrl(testHarness.googleBaseUrl()).build())
+                        .build();
+        var parent =
+                testHarness
+                        .openTelemetry()
+                        .getTracer("batch-test")
+                        .spanBuilder("parent")
+                        .startSpan();
+        try (var ignored = parent.makeCurrent()) {
+            var pager =
+                    geminiClient.batches.list(ListBatchJobsConfig.builder().pageSize(1).build());
+            // Read only the first page; iterating the pager would fetch subsequent pages.
+            var page = pager.page();
+            assertTrue(page.size() <= 1);
+            for (var batch : page) {
+                assertTrue(batch.name().orElseThrow().startsWith("batches/"));
+            }
+        } finally {
+            parent.end();
+        }
+
+        var spans = testHarness.awaitExportedSpans(2);
+        assertEquals(2, spans.size(), "one parent and one ended http span, no LLM/tool children");
+        var span =
+                spans.stream()
+                        .filter(s -> s.getName().equals("google.http"))
+                        .findFirst()
+                        .orElseThrow();
+        assertTrue(span.hasEnded());
+        assertEquals(parent.getSpanContext().getSpanId(), span.getParentSpanId());
+        assertEquals(parent.getSpanContext().getTraceId(), span.getTraceId());
+        assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
+        assertTrue(span.getEvents().isEmpty());
+        for (String attribute :
+                List.of(
+                        "braintrust.span_attributes",
+                        "braintrust.input_json",
+                        "braintrust.output_json",
+                        "braintrust.metadata",
+                        "braintrust.metrics")) {
+            assertNull(span.getAttributes().get(AttributeKey.stringKey(attribute)), attribute);
+        }
     }
 
     @Test

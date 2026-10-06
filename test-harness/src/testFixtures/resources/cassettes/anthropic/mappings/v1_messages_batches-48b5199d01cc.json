@@ -1,0 +1,37 @@
+{
+  "id" : "94f3d204-8a0b-3446-8f53-8d54bce9692d",
+  "name" : "v1_messages_batches",
+  "request" : {
+    "urlPath" : "/v1/messages/batches",
+    "method" : "GET",
+    "queryParameters" : {
+      "limit" : {
+        "hasExactly" : [ {
+          "equalTo" : "1"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages_batches-48b5199d01cc.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "CF-RAY" : "a467a68c4b3975eb-SEA",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CfmfmxGGHHLT48sYfKLne",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Tue, 06 Oct 2026 21:10:03 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=157",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "94f3d204-8a0b-3446-8f53-8d54bce9692d",
+  "persistent" : true,
+  "insertionIndex" : 34
+}
