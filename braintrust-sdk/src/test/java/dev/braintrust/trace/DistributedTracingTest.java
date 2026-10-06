@@ -140,7 +140,7 @@ public class DistributedTracingTest {
                 clientSpan.end();
             }
 
-            var allSpans = harness.awaitExportedSpans();
+            var allSpans = harness.awaitExportedSpans(2);
             assertEquals(2, allSpans.size(), "Expected two spans (client + server)");
 
             SpanData clientSpanData =
