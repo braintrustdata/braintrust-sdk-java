@@ -96,10 +96,9 @@ configurations {
 
   // Bootstrap libraries — unshaded, added to bootstrap classpath at runtime via
   // Instrumentation.appendToBootstrapClassLoaderSearch(). Includes:
-  //   - OTel API (Tracer, Span, Context, etc.)
-  //   - OTel SDK (SdkTracerProvider, SpanProcessor, etc.)
-  //   - OTel SDK autoconfigure (AutoConfiguredOpenTelemetrySdk)
-  //   - OTel SDK autoconfigure SPI (AutoConfigurationCustomizerProvider)
+  //   - OTel API (Tracer, Span, Context, etc.) and incubator API
+  // The API's no-op implementations must be able to load the incubator types.
+  // The SDK and autoconfigure remain isolated in BraintrustClassLoader.
   bootstrapLibs
 
   // Agent internals (ByteBuddy, OTLP exporter, OkHttp, instrumentation code)
@@ -110,8 +109,10 @@ configurations {
 dependencies {
   bootstrap project(':braintrust-java-agent:bootstrap')
 
-  // OTel API + SDK + autoconfigure on bootstrap classpath
+  // Keep both APIs visible to bootstrap-loaded OTel no-op factories. Otherwise the
+  // isolated ExtendedSdkTracer casts a non-extended no-op builder during shutdown.
   bootstrapLibs "io.opentelemetry:opentelemetry-api:${otelVersion}"
+  bootstrapLibs "io.opentelemetry:opentelemetry-api-incubator:${otelVersion}-alpha"
 
   internal project(path: ':braintrust-java-agent:internal', configuration: 'shadow')
 
@@ -151,7 +152,7 @@ jar {
     exclude 'META-INF/maven/**'
   }
 
-  // 2) Include bootstrap libraries as normal .class files (OTel API + SDK + autoconfigure)
+  // 2) Include bootstrap libraries as normal .class files (OTel API + incubator API)
   from(provider { configurations.bootstrapLibs.collect { zipTree(it) } }) {
     exclude 'META-INF/**'
   }
