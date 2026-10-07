@@ -7,7 +7,7 @@ dependencies {
   implementation "io.opentelemetry:opentelemetry-sdk:${otelVersion}"
   // dd-trace-api is provided at runtime by the DD agent on the bootstrap classpath,
   // but we need it at compile time for TraceInterceptor / MutableSpan.
-  implementation 'com.datadoghq:dd-trace-api:1.60.1'
+  implementation 'com.datadoghq:dd-trace-api:1.66.0'
   implementation 'org.msgpack:msgpack-core:0.9.8'
   implementation 'io.opentelemetry.proto:opentelemetry-proto:1.5.0-alpha'
   // Bootstrap classes (DDBridge) — needed at compile time for smoke test assertions.
@@ -22,7 +22,7 @@ configurations {
   ddAgent
 }
 dependencies {
-  ddAgent 'com.datadoghq:dd-java-agent:1.60.1'
+  ddAgent 'com.datadoghq:dd-java-agent:1.66.0'
 }
 
 def braintrustAgentJar = project(':braintrust-java-agent').tasks.named('jar')

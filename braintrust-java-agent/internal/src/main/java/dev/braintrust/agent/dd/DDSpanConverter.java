@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class DDSpanConverter {
-    private static final AtomicReference<Method> contextMethod = new AtomicReference<>();
     private static final AtomicReference<Method> getTraceIdMethod = new AtomicReference<>();
     private static final AtomicReference<Method> getSpanIdMethod = new AtomicReference<>();
     private static final AtomicBoolean successfulInit = new AtomicBoolean(false);
@@ -46,15 +45,10 @@ public class DDSpanConverter {
             Class<?> agentSpanClass =
                     Class.forName(
                             "datadog.trace.bootstrap.instrumentation.api.AgentSpan", true, null);
-            contextMethod.set(agentSpanClass.getMethod("context"));
-
-            Class<?> agentSpanContextClass =
-                    Class.forName(
-                            "datadog.trace.bootstrap.instrumentation.api.AgentSpanContext",
-                            true,
-                            null);
-            getTraceIdMethod.set(agentSpanContextClass.getMethod("getTraceId"));
-            getSpanIdMethod.set(agentSpanContextClass.getMethod("getSpanId"));
+            // Read IDs directly from spans: DD renamed context() to spanContext(), but these
+            // accessors are shared by both older and current agents.
+            getTraceIdMethod.set(agentSpanClass.getMethod("getTraceId"));
+            getSpanIdMethod.set(agentSpanClass.getMethod("getSpanId"));
 
             log.debug("DD span converter reflection initialized successfully.");
             successfulInit.set(true);
@@ -235,16 +229,15 @@ public class DDSpanConverter {
 
     private static SpanData convertSpan(MutableSpan ddSpan) throws Exception {
         // Extract trace ID and span ID via reflection
-        Object agentSpanContext = contextMethod.get().invoke(ddSpan);
-        DDTraceId ddTraceId = (DDTraceId) getTraceIdMethod.get().invoke(agentSpanContext);
-        long ddSpanId = (long) getSpanIdMethod.get().invoke(agentSpanContext);
+        DDTraceId ddTraceId = (DDTraceId) getTraceIdMethod.get().invoke(ddSpan);
+        long ddSpanId = (long) getSpanIdMethod.get().invoke(ddSpan);
 
         // Find parent span ID via reflection
         long reflectedParentId = 0;
         try {
-            Optional<Method> getParentIdMethod = getParentIdMethod(agentSpanContext.getClass());
+            Optional<Method> getParentIdMethod = getParentIdMethod(ddSpan.getClass());
             if (getParentIdMethod.isPresent()) {
-                reflectedParentId = (long) getParentIdMethod.get().invoke(agentSpanContext);
+                reflectedParentId = (long) getParentIdMethod.get().invoke(ddSpan);
             }
         } catch (Exception e) {
             log.debug("Cannot determine parent span ID for '{}'", ddSpan.getResourceName());
@@ -314,20 +307,20 @@ public class DDSpanConverter {
                 status);
     }
 
-    private static Optional<Method> getParentIdMethod(Class<?> agentSpanContextClass) {
+    private static Optional<Method> getParentIdMethod(Class<?> agentSpanClass) {
         synchronized (getParentIdMethods) {
-            Optional<Method> cached = getParentIdMethods.get(agentSpanContextClass);
+            Optional<Method> cached = getParentIdMethods.get(agentSpanClass);
             if (cached != null) {
                 return cached;
             }
 
             Optional<Method> resolved;
             try {
-                resolved = Optional.of(agentSpanContextClass.getMethod("getParentId"));
+                resolved = Optional.of(agentSpanClass.getMethod("getParentId"));
             } catch (NoSuchMethodException e) {
                 resolved = Optional.empty();
             }
-            getParentIdMethods.put(agentSpanContextClass, resolved);
+            getParentIdMethods.put(agentSpanClass, resolved);
             return resolved;
         }
     }

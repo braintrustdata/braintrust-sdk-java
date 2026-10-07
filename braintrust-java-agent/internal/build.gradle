@@ -38,14 +38,14 @@ dependencies {
   // These are the heavy deps that stay in BraintrustClassLoader, NOT on bootstrap.
   implementation "io.opentelemetry:opentelemetry-exporter-otlp:${otelVersion}"
 
-  // for dd compat mode
+  // Compile against the compatibility baseline; tests below exercise the current DD API.
   compileOnly 'com.datadoghq:dd-trace-api:1.60.1'
 
   // Test dependencies
   testImplementation project(':braintrust-java-agent:bootstrap')
   testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
   testImplementation "io.opentelemetry:opentelemetry-sdk-testing:${otelVersion}"
-  testImplementation 'com.datadoghq:dd-trace-api:1.60.1'
+  testImplementation 'com.datadoghq:dd-trace-api:1.66.0'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
