@@ -7,6 +7,8 @@ import dev.braintrust.bootstrap.BraintrustClassLoader;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.TracerProvider;
+import io.opentelemetry.context.Context;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
@@ -219,6 +221,43 @@ class AgentBootstrapTest {
                 "io.opentelemetry.api.trace.PropagatedSpan",
                 span.getClass().getName(),
                 "Expected a real (recording) span, not a propagated/noop span");
+    }
+
+    @Test
+    void tracerAfterShutdownPreservesParentWithoutRecording() throws Exception {
+        // Load the SDK through the actual agent loader, not the application classpath.
+        // A flat classpath hides the API/incubator visibility mismatch from issue #184.
+        var providerClass =
+                BraintrustBridge.getAgentClassLoader()
+                        .loadClass("io.opentelemetry.sdk.trace.SdkTracerProvider");
+        var builder = providerClass.getMethod("builder").invoke(null);
+        var provider = (TracerProvider) builder.getClass().getMethod("build").invoke(builder);
+        var close = providerClass.getMethod("close");
+        boolean closed = false;
+        try {
+            Tracer tracer = provider.get("shutdown-regression");
+            Span parent = tracer.spanBuilder("before-shutdown").setNoParent().startSpan();
+            assertTrue(parent.isRecording());
+            var parentContext = Context.root().with(parent);
+            parent.end();
+
+            close.invoke(provider);
+            closed = true;
+
+            Span child = tracer.spanBuilder("after-shutdown").setParent(parentContext).startSpan();
+            assertFalse(child.isRecording());
+            assertEquals(parent.getSpanContext(), child.getSpanContext());
+            child.end();
+
+            Span root = tracer.spanBuilder("after-shutdown-root").setNoParent().startSpan();
+            assertFalse(root.isRecording());
+            assertFalse(root.getSpanContext().isValid());
+            root.end();
+        } finally {
+            if (!closed) {
+                close.invoke(provider);
+            }
+        }
     }
 
     private static boolean startsWithAny(String str, List<String> prefixes) {
