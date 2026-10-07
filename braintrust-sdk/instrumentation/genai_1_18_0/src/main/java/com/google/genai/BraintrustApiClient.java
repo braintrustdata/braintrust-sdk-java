@@ -11,10 +11,14 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +35,21 @@ import okhttp3.ResponseBody;
 class BraintrustApiClient extends ApiClient {
     private static final String INSTRUMENTATION_NAME = "genai";
     private static final String INSTRUMENTATION_VERSION = "1.18.0";
+
+    /**
+     * Operations that produce model output and get the full LLM treatment, keyed on the {@code
+     * :operation} suffix of the endpoint so {@code models/}, {@code tunedModels/} and Vertex {@code
+     * publishers/google/models/} all match. Everything else (batches, files, caches, token
+     * counting, ...) gets a plain {@code google.http} span with the body left untouched.
+     */
+    private static final Set<String> LLM_OPERATIONS =
+            Set.of(
+                    "generateContent",
+                    "streamGenerateContent",
+                    "embedContent",
+                    "batchEmbedContents",
+                    "predict",
+                    "predictLongRunning");
 
     private final ApiClient delegate;
     private final Tracer tracer;
@@ -52,7 +71,6 @@ class BraintrustApiClient extends ApiClient {
     private void tagSpan(
             Span span,
             @Nullable String genAIEndpoint,
-            @Nullable String requestMethod,
             @Nullable String requestBody,
             @Nullable String responseBody) {
         try {
@@ -162,6 +180,102 @@ class BraintrustApiClient extends ApiClient {
         }
     }
 
+    private static boolean isLlmEndpoint(@Nullable String endpoint) {
+        if (endpoint == null) {
+            return false;
+        }
+        String path = endpoint.split("[?#]", 2)[0];
+        String lastSegment = path.substring(path.lastIndexOf('/') + 1);
+        int colon = lastSegment.indexOf(':');
+        return colon >= 0 && LLM_OPERATIONS.contains(lastSegment.substring(colon + 1));
+    }
+
+    private Span startSpan(String endpoint, boolean llm) {
+        return tracer.spanBuilder(llm ? getOperation(endpoint) : "google.http")
+                .setSpanKind(SpanKind.CLIENT)
+                .startSpan();
+    }
+
+    /**
+     * Completes the span for a response the delegate returned. LLM responses are buffered so the
+     * body can be tagged and still handed back; anything else is returned as-is so large payloads
+     * (file downloads, batch results) stream straight through to the caller.
+     */
+    private ApiResponse finishResponse(
+            Span span,
+            String endpoint,
+            boolean llm,
+            Supplier<String> requestBody,
+            ApiResponse response)
+            throws Exception {
+        if (!llm) {
+            // getBody() is where the SDK raises ApiException for a non-2xx response (reading the
+            // error body to build the message); a successful body is returned unread.
+            response.getBody();
+            span.setStatus(StatusCode.OK);
+            return response;
+        }
+        BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
+        span.setStatus(StatusCode.OK);
+        tagSpan(span, endpoint, requestBody.get(), bufferedResponse.getBodyAsString());
+        return bufferedResponse;
+    }
+
+    private static void recordError(Span span, Throwable t) {
+        span.setStatus(StatusCode.ERROR, t.getMessage());
+        span.recordException(t);
+    }
+
+    private ApiResponse traceRequest(
+            String endpoint, Supplier<String> requestBody, Callable<ApiResponse> call)
+            throws Exception {
+        boolean llm = isLlmEndpoint(endpoint);
+        Span span = startSpan(endpoint, llm);
+        try (Scope scope = span.makeCurrent()) {
+            return finishResponse(span, endpoint, llm, requestBody, call.call());
+        } catch (Throwable t) {
+            recordError(span, t);
+            throw t;
+        } finally {
+            span.end();
+        }
+    }
+
+    private CompletableFuture<ApiResponse> traceAsyncRequest(
+            String endpoint,
+            Supplier<String> requestBody,
+            Supplier<CompletableFuture<ApiResponse>> call) {
+        boolean llm = isLlmEndpoint(endpoint);
+        Span span = startSpan(endpoint, llm);
+        Context context = Context.current().with(span);
+
+        CompletableFuture<ApiResponse> future;
+        try {
+            future = call.get();
+        } catch (RuntimeException | Error t) {
+            recordError(span, t);
+            span.end();
+            throw t;
+        }
+        return future.handle(
+                (response, throwable) -> {
+                    try (Scope scope = context.makeCurrent()) {
+                        if (throwable != null) {
+                            recordError(span, throwable);
+                            throw new RuntimeException(throwable);
+                        }
+                        try {
+                            return finishResponse(span, endpoint, llm, requestBody, response);
+                        } catch (Exception e) {
+                            recordError(span, e);
+                            throw new RuntimeException(e);
+                        }
+                    } finally {
+                        span.end();
+                    }
+                });
+    }
+
     // Override accessor methods to delegate to original client
     @Override
     public boolean vertexAI() {
@@ -190,21 +304,10 @@ class BraintrustApiClient extends ApiClient {
             String genAIUrl,
             String requestBody,
             Optional<HttpOptions> options) {
-        Span span =
-                tracer.spanBuilder(getOperation(genAIUrl)).setSpanKind(SpanKind.CLIENT).startSpan();
-        try (Scope scope = span.makeCurrent()) {
-            ApiResponse response = delegate.request(requestMethod, genAIUrl, requestBody, options);
-            BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
-            span.setStatus(StatusCode.OK);
-            tagSpan(span, genAIUrl, requestMethod, requestBody, bufferedResponse.getBodyAsString());
-            return bufferedResponse;
-        } catch (Throwable t) {
-            span.setStatus(StatusCode.ERROR, t.getMessage());
-            span.recordException(t);
-            throw t;
-        } finally {
-            span.end();
-        }
+        return traceRequest(
+                genAIUrl,
+                () -> requestBody,
+                () -> delegate.request(requestMethod, genAIUrl, requestBody, options));
     }
 
     @Override
@@ -214,103 +317,32 @@ class BraintrustApiClient extends ApiClient {
             String genAIUrl,
             byte[] requestBodyBytes,
             Optional<HttpOptions> options) {
-        Span span =
-                tracer.spanBuilder(getOperation(genAIUrl)).setSpanKind(SpanKind.CLIENT).startSpan();
-        try (Scope scope = span.makeCurrent()) {
-            ApiResponse response =
-                    delegate.request(requestMethod, genAIUrl, requestBodyBytes, options);
-            BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
-            span.setStatus(StatusCode.OK);
-            tagSpan(
-                    span,
-                    genAIUrl,
-                    requestMethod,
-                    new String(requestBodyBytes),
-                    bufferedResponse.getBodyAsString());
-            return bufferedResponse;
-        } catch (Throwable t) {
-            span.setStatus(StatusCode.ERROR, t.getMessage());
-            span.recordException(t);
-            throw t;
-        } finally {
-            span.end();
-        }
+        return traceRequest(
+                genAIUrl,
+                decode(requestBodyBytes),
+                () -> delegate.request(requestMethod, genAIUrl, requestBodyBytes, options));
     }
 
     @Override
     public CompletableFuture<ApiResponse> asyncRequest(
             String method, String url, String body, Optional<HttpOptions> options) {
-        Span span = tracer.spanBuilder(getOperation(url)).setSpanKind(SpanKind.CLIENT).startSpan();
-        Context context = Context.current().with(span);
-
-        return delegate.asyncRequest(method, url, body, options)
-                .handle(
-                        (response, throwable) -> {
-                            try (Scope scope = context.makeCurrent()) {
-                                if (throwable != null) {
-                                    span.setStatus(StatusCode.ERROR, throwable.getMessage());
-                                    span.recordException(throwable);
-                                    throw new RuntimeException(throwable);
-                                }
-
-                                try {
-                                    BufferedApiResponse bufferedResponse =
-                                            new BufferedApiResponse(response);
-                                    span.setStatus(StatusCode.OK);
-                                    tagSpan(
-                                            span,
-                                            url,
-                                            method,
-                                            body,
-                                            bufferedResponse.getBodyAsString());
-                                    return (ApiResponse) bufferedResponse;
-                                } catch (Exception e) {
-                                    span.setStatus(StatusCode.ERROR, e.getMessage());
-                                    span.recordException(e);
-                                    throw new RuntimeException(e);
-                                }
-                            } finally {
-                                span.end();
-                            }
-                        });
+        return traceAsyncRequest(
+                url, () -> body, () -> delegate.asyncRequest(method, url, body, options));
     }
 
     @Override
     public CompletableFuture<ApiResponse> asyncRequest(
             String method, String url, byte[] body, Optional<HttpOptions> options) {
-        Span span = tracer.spanBuilder(getOperation(url)).setSpanKind(SpanKind.CLIENT).startSpan();
-        Context context = Context.current().with(span);
+        return traceAsyncRequest(
+                url, decode(body), () -> delegate.asyncRequest(method, url, body, options));
+    }
 
-        return delegate.asyncRequest(method, url, body, options)
-                .handle(
-                        (response, throwable) -> {
-                            try (Scope scope = context.makeCurrent()) {
-                                if (throwable != null) {
-                                    span.setStatus(StatusCode.ERROR, throwable.getMessage());
-                                    span.recordException(throwable);
-                                    throw new RuntimeException(throwable);
-                                }
-
-                                try {
-                                    BufferedApiResponse bufferedResponse =
-                                            new BufferedApiResponse(response);
-                                    span.setStatus(StatusCode.OK);
-                                    tagSpan(
-                                            span,
-                                            url,
-                                            method,
-                                            new String(body),
-                                            bufferedResponse.getBodyAsString());
-                                    return (ApiResponse) bufferedResponse;
-                                } catch (Exception e) {
-                                    span.setStatus(StatusCode.ERROR, e.getMessage());
-                                    span.recordException(e);
-                                    throw new RuntimeException(e);
-                                }
-                            } finally {
-                                span.end();
-                            }
-                        });
+    /**
+     * Request bytes as a string for tagging; only read for LLM calls, which are the only ones
+     * tagged.
+     */
+    private static Supplier<String> decode(@Nullable byte[] body) {
+        return () -> body == null ? null : new String(body, StandardCharsets.UTF_8);
     }
 
     private static String getModel(String genAIEndpoint) {

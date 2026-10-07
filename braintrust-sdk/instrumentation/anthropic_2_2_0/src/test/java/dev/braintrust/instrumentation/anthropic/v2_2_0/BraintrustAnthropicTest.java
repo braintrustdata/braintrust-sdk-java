@@ -8,17 +8,23 @@ import com.anthropic.core.RequestOptions;
 import com.anthropic.core.http.Headers;
 import com.anthropic.core.http.HttpMethod;
 import com.anthropic.core.http.HttpRequest;
+import com.anthropic.core.http.HttpRequestBody;
 import com.anthropic.core.http.HttpResponse;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Model;
+import com.anthropic.models.messages.batches.BatchListParams;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.braintrust.TestHarness;
 import dev.braintrust.instrumentation.Instrumenter;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
@@ -27,6 +33,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class BraintrustAnthropicTest {
@@ -60,6 +67,41 @@ public class BraintrustAnthropicTest {
                 System.getProperty("braintrust.muzzle.minimumVersion"),
                 instrumentation.path("version").asText(),
                 "span origin version must match the minimum passing muzzle version");
+    }
+
+    @Test
+    @SneakyThrows
+    void testBatchListAsync() {
+        AnthropicClient anthropicClient =
+                AnthropicOkHttpClient.builder()
+                        .baseUrl(testHarness.anthropicBaseUrl())
+                        .apiKey(testHarness.anthropicApiKey())
+                        .build();
+        var parent =
+                testHarness
+                        .openTelemetry()
+                        .getTracer("batch-test")
+                        .spanBuilder("parent")
+                        .startSpan();
+        try (var ignored = parent.makeCurrent()) {
+            var page =
+                    anthropicClient
+                            .async()
+                            .messages()
+                            .batches()
+                            .list(BatchListParams.builder().limit(1L).build())
+                            .get(5, TimeUnit.MINUTES);
+            assertTrue(page.response().data().size() <= 1);
+            if (page.response().hasMore()) {
+                assertEquals(1, page.response().data().size());
+            }
+        } finally {
+            parent.end();
+        }
+        assertHttpSpan(parent, false, false);
+        for (var span : testHarness.awaitExportedSpans()) {
+            assertEquals(parent.getSpanContext().getTraceId(), span.getTraceId());
+        }
     }
 
     @Test
@@ -738,6 +780,291 @@ public class BraintrustAnthropicTest {
         assertEquals(
                 "stubbed-request-id",
                 span.getAttributes().get(AttributeKey.stringKey("request-id")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"v1/messages", "v1/complete"})
+    @SneakyThrows
+    void inferenceEndpointsGetLlmSpans(String path) {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(),
+                        new StubHttpClient(200, "{\"model\":\"claude-test\"}"));
+        var request =
+                HttpRequest.builder()
+                        .method(HttpMethod.POST)
+                        .baseUrl("https://api.anthropic.com")
+                        .addPathSegments(path.split("/"))
+                        .build();
+
+        try (var response = client.execute(request, RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertNotEquals("anthropic.http", span.getName());
+        JsonNode spanAttributes =
+                new ObjectMapper()
+                        .readTree(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.span_attributes")));
+        assertEquals("llm", spanAttributes.get("type").asText());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "false, messages/batches, POST, 200",
+        "true, v1/messages/batches, POST, 200",
+        "false, v1/messages/batches, GET, 200",
+        "true, messages/batches, GET, 200",
+        "false, messages/batches/batch_123, GET, 200",
+        "true, v1/messages/batches/batch_123, GET, 200",
+        "false, messages/batches/batch_123/results, GET, 200",
+        "true, v1/messages/batches/batch_123/results, GET, 200",
+        "false, v1/messages/batches/batch_123/cancel, POST, 200",
+        "true, messages/batches/batch_123/cancel, POST, 200",
+        "false, v1/messages/batches/batch_123, GET, 304",
+        "true, messages/batches/batch_123, GET, 429",
+        "true, v1/messages/count_tokens, POST, 200",
+        "false, v1/models, GET, 200",
+        "true, v1/files, POST, 200",
+        "false, v1/files/file_123/content, GET, 200",
+        "false, messages/batches, POST, 500",
+        "true, v1/messages/batches, POST, 502"
+    })
+    @SneakyThrows
+    void nonLlmResponsesBypassLlmTagging(
+            boolean async, String path, HttpMethod method, int statusCode) {
+        String payload =
+                "{\"id\":\"batch_123\",\"model\":\"not-an-llm\","
+                        + "\"content\":[{\"type\":\"server_tool_use\",\"name\":\"web_search\","
+                        + "\"id\":\"tool_1\",\"input\":{\"query\":\"ignored\"}}]}\n"
+                        + "{\"custom_id\":\"second-result\"}\n";
+        var request = unbufferedRequest(path, method);
+        var delegate = new PassthroughHttpClient();
+        delegate.response =
+                new StubHttpClient(statusCode, payload).execute(request, RequestOptions.none());
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        var parent =
+                testHarness
+                        .openTelemetry()
+                        .getTracer("batch-test")
+                        .spanBuilder("parent")
+                        .startSpan();
+        HttpResponse response;
+        if (async) {
+            // Simulate the service proxy's context header on a thread with no current parent.
+            var context = parent.getSpanContext();
+            var withContext =
+                    request.toBuilder()
+                            .replaceHeaders(
+                                    ContextCapturingProxy.CONTEXT_HEADER,
+                                    "00-"
+                                            + context.getTraceId()
+                                            + "-"
+                                            + context.getSpanId()
+                                            + "-01")
+                            .build();
+            var future = client.executeAsync(withContext, RequestOptions.none());
+            assertFalse(future.isDone());
+            assertTrue(delegate.requestSpan.isRecording());
+            delegate.pending.complete(delegate.response);
+            response = future.join();
+        } else {
+            try (var ignored = parent.makeCurrent()) {
+                response = client.execute(request, RequestOptions.none());
+            }
+        }
+        assertSame(delegate.response, response, "non-LLM responses must not be wrapped");
+        assertSame(
+                request.body(), delegate.sentRequest.body(), "non-LLM bodies must not be buffered");
+        assertEquals(request.queryParams(), delegate.sentRequest.queryParams());
+        assertTrue(
+                delegate.sentRequest
+                        .headers()
+                        .values(ContextCapturingProxy.CONTEXT_HEADER)
+                        .isEmpty());
+        assertFalse(delegate.requestSpan.isRecording(), "transport completion ends the span");
+        try (response) {
+            assertEquals(
+                    payload, new String(response.body().readAllBytes(), StandardCharsets.UTF_8));
+        }
+        response.close();
+        parent.end();
+        assertHttpSpan(parent, statusCode < 200 || statusCode >= 300, false);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, false", "true, false", "true, true"})
+    void nonLlmTransportFailuresAreGeneric(boolean async, boolean immediateFailure) {
+        var request = unbufferedRequest("v1/messages/batches", HttpMethod.POST);
+        var failure = new IllegalStateException("transport failed");
+        var delegate = new PassthroughHttpClient();
+        delegate.failure = failure;
+        delegate.immediateFailure = immediateFailure;
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        var parent =
+                testHarness
+                        .openTelemetry()
+                        .getTracer("batch-test")
+                        .spanBuilder("parent")
+                        .startSpan();
+        try (var ignored = parent.makeCurrent()) {
+            if (!async) {
+                assertSame(
+                        failure,
+                        assertThrows(
+                                IllegalStateException.class,
+                                () -> client.execute(request, RequestOptions.none())));
+            } else if (immediateFailure) {
+                assertSame(
+                        failure,
+                        assertThrows(
+                                IllegalStateException.class,
+                                () -> client.executeAsync(request, RequestOptions.none())));
+            } else {
+                var future = client.executeAsync(request, RequestOptions.none());
+                assertTrue(delegate.requestSpan.isRecording());
+                delegate.pending.completeExceptionally(failure);
+                assertSame(
+                        failure,
+                        assertThrows(java.util.concurrent.CompletionException.class, future::join)
+                                .getCause());
+            }
+        }
+        assertFalse(delegate.requestSpan.isRecording());
+        parent.end();
+        assertHttpSpan(parent, true, true);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"200, false", "503, false", "200, true"})
+    void cancelledNonLlmFutureStillEndsSpanOnTransportCompletion(
+            int statusCode, boolean transportFailure) throws Exception {
+        var request = unbufferedRequest("v1/messages/batches", HttpMethod.POST);
+        var delegate = new PassthroughHttpClient();
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        var parent =
+                testHarness
+                        .openTelemetry()
+                        .getTracer("batch-test")
+                        .spanBuilder("parent")
+                        .startSpan();
+        try (var response =
+                new StubHttpClient(statusCode, "{}").execute(request, RequestOptions.none())) {
+            CompletableFuture<HttpResponse> future;
+            try (var ignored = parent.makeCurrent()) {
+                future = client.executeAsync(request, RequestOptions.none());
+            }
+            assertTrue(future.cancel(true));
+            assertFalse(delegate.pending.isDone());
+            assertTrue(delegate.requestSpan.isRecording());
+            if (transportFailure) {
+                delegate.pending.completeExceptionally(
+                        new IllegalStateException("transport failed"));
+            } else {
+                delegate.pending.complete(response);
+            }
+            assertTrue(future.isCancelled());
+            assertFalse(delegate.requestSpan.isRecording());
+        } finally {
+            parent.end();
+        }
+        assertHttpSpan(parent, transportFailure || statusCode >= 300, transportFailure);
+    }
+
+    private void assertHttpSpan(Span parent, boolean failed, boolean exception) {
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(2, spans.size(), "one parent and one ended http span, no LLM/tool children");
+        var span =
+                spans.stream()
+                        .filter(s -> s.getName().equals("anthropic.http"))
+                        .findFirst()
+                        .orElseThrow();
+        assertEquals(parent.getSpanContext().getSpanId(), span.getParentSpanId());
+        assertTrue(span.hasEnded());
+        for (String attribute :
+                List.of(
+                        "braintrust.span_attributes",
+                        "braintrust.input_json",
+                        "braintrust.output_json",
+                        "braintrust.metadata",
+                        "braintrust.metrics")) {
+            assertNull(span.getAttributes().get(AttributeKey.stringKey(attribute)), attribute);
+        }
+        assertEquals(
+                failed ? StatusCode.ERROR : StatusCode.UNSET, span.getStatus().getStatusCode());
+        assertEquals(exception ? 1 : 0, span.getEvents().size());
+        if (exception) {
+            assertEquals("exception", span.getEvents().get(0).getName());
+        }
+    }
+
+    private static HttpRequest unbufferedRequest(String path, HttpMethod method) {
+        return HttpRequest.builder()
+                .method(method)
+                .baseUrl("https://api.anthropic.com")
+                .addPathSegments(path.split("/"))
+                .putQueryParam("beta", "true")
+                .body(
+                        new HttpRequestBody() {
+                            @Override
+                            public void writeTo(OutputStream stream) {
+                                fail("Instrumentation must not read a non-LLM request body");
+                            }
+
+                            @Override
+                            public String contentType() {
+                                return "application/jsonl";
+                            }
+
+                            @Override
+                            public long contentLength() {
+                                return -1;
+                            }
+
+                            @Override
+                            public boolean repeatable() {
+                                return false;
+                            }
+
+                            @Override
+                            public void close() {}
+                        })
+                .build();
+    }
+
+    private static final class PassthroughHttpClient implements com.anthropic.core.http.HttpClient {
+        private final CompletableFuture<HttpResponse> pending = new CompletableFuture<>();
+        private HttpResponse response;
+        private RuntimeException failure;
+        private boolean immediateFailure;
+        private HttpRequest sentRequest;
+        private Span requestSpan;
+
+        @Override
+        public HttpResponse execute(HttpRequest request, RequestOptions options) {
+            sentRequest = request;
+            requestSpan = Span.current();
+            if (failure != null) {
+                throw failure;
+            }
+            return response;
+        }
+
+        @Override
+        public CompletableFuture<HttpResponse> executeAsync(
+                HttpRequest request, RequestOptions options) {
+            sentRequest = request;
+            requestSpan = Span.current();
+            if (immediateFailure) {
+                throw failure;
+            }
+            return pending;
+        }
+
+        @Override
+        public void close() {}
     }
 
     private static HttpRequest messagesRequest() {

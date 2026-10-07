@@ -1,0 +1,40 @@
+{
+  "id" : "51b97e3b-0988-379b-b8e6-c05880241124",
+  "name" : "batches",
+  "request" : {
+    "urlPath" : "/batches",
+    "method" : "GET",
+    "queryParameters" : {
+      "limit" : {
+        "hasExactly" : [ {
+          "equalTo" : "1"
+        } ]
+      }
+    }
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "batches-5a870393ae27.json",
+    "headers" : {
+      "x-request-id" : "req_c05dbfe3c57a4f3a91cd409716a74540",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "a4679bc5e975c723-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Date" : "Tue, 06 Oct 2026 21:02:41 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=4je4Bu5.ytAI1JMPMY032jXNrLF7iui8WhMRc_pz3H8-1791320561.5862432-1.0.1.1-VNn4sJMbG_kMmDjys8mecfQPkBWYlBy3xPHe7La18d0LY4xvv7OUGki7uJOvM08cqpgZPY94c4dmTuwjoP8RkLHOrXzRepagT29UIVRlML3ztvliOL1L1ZPC1ygCPmlN; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 06 Oct 2026 21:32:41 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-processing-ms" : "47",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "51b97e3b-0988-379b-b8e6-c05880241124",
+  "persistent" : true,
+  "insertionIndex" : 65
+}

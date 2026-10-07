@@ -1,0 +1,48 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "batch_6abe9f5998288190948a6f6de403ae92",
+      "object": "batch",
+      "endpoint": "/v1/responses",
+      "model": "gpt-5-mini-2025-08-07",
+      "errors": null,
+      "input_file_id": "file-8nLWAZsZMcWW3aQK78iuEH",
+      "completion_window": "24h",
+      "status": "completed",
+      "output_file_id": "file-CUgNKJ4rnpBqedp17Pw8Vo",
+      "error_file_id": null,
+      "created_at": 1790877529,
+      "in_progress_at": 1790877531,
+      "expires_at": 1790963929,
+      "finalizing_at": 1790877543,
+      "completed_at": 1790877544,
+      "failed_at": null,
+      "expired_at": null,
+      "cancelling_at": null,
+      "cancelled_at": null,
+      "request_counts": {
+        "total": 1,
+        "completed": 1,
+        "failed": 0
+      },
+      "usage": {
+        "input_tokens": 40,
+        "output_tokens": 57,
+        "total_tokens": 97,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      "metadata": {
+        "braintrust_run_id": "f68e8fe4-1e46-413a-aa8f-c87093080c0a"
+      }
+    }
+  ],
+  "first_id": "batch_6abe9f5998288190948a6f6de403ae92",
+  "last_id": "batch_6abe9f5998288190948a6f6de403ae92",
+  "has_more": true
+}

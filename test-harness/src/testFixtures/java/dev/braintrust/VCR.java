@@ -121,6 +121,10 @@ public class VCR {
                                     .usingFilesUnderDirectory(cassettesDir)
                                     .extensions(
                                             new LoginBodyRedactingTransformer(),
+                                            new MultipartRequestMatchingTransformer(
+                                                    () ->
+                                                            proxyMap.get(targetUrl)
+                                                                    .getAllServeEvents()),
                                             new ForbiddenTextCheckingTransformer(
                                                     this.textToNeverRecord)));
             proxyMap.put(targetUrl, wireMock);
@@ -217,6 +221,7 @@ public class VCR {
                         // text
                         .transformers(
                                 LoginBodyRedactingTransformer.NAME,
+                                MultipartRequestMatchingTransformer.NAME,
                                 ForbiddenTextCheckingTransformer.NAME);
 
         // For the braintrust target, exclude passthrough paths from cassette recording.

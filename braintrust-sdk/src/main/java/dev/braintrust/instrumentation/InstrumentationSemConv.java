@@ -160,6 +160,16 @@ public class InstrumentationSemConv {
         span.recordException(responseError);
     }
 
+    /**
+     * Marks a plain (non-LLM) HTTP span failed for a non-2xx status. The body is deliberately left
+     * unread so payloads like file downloads stream straight through to the caller.
+     */
+    public static void tagHttpSpanResponse(@Nonnull Span span, int statusCode) {
+        if (statusCode < 200 || statusCode >= 300) {
+            span.setStatus(StatusCode.ERROR, "HTTP " + statusCode);
+        }
+    }
+
     /** whitelist of provider id headers to capture into an llm span */
     private static final List<String> ID_HEADERS = List.of("x-request-id", "request-id");
 
