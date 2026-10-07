@@ -27,6 +27,8 @@ Thumbs.db
 *.ear
 hs_err_pid*
 replay_pid*
+# HotSpot creates these transient attach markers in the test JVM's working directory.
+/.attach_pid[0-9]*
 
 # Logs
 *.log

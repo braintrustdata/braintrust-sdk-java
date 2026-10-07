@@ -7,7 +7,12 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '43 20 * * 0' # Sundays at 20:43 UTC.
+    - cron: '13 5 * * *' # Daily at 21:13 PST (22:13 PDT), 05:13 UTC.
+
+concurrency:
+  # Keep main, nightly, and manual runs independent; supersede only PR revisions.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -29,17 +34,71 @@ jobs:
         java-version: 17
         distribution: 'temurin'
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+    - name: Restore CodeQL Gradle downloads
+      id: gradle-downloads
+      # No fallback to the full build's muzzle/task-output snapshot.
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/*/generated-gradle-jars
+          ~/.gradle/wrapper
+        key: gradle-codeql-downloads-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.gradle', '**/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', 'buildSrc/src/main/**') }}
+        restore-keys: |
+          gradle-codeql-downloads-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Set up CodeQL
+      id: codeql
+      uses: github/codeql-action/setup-codeql@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
       with:
         languages: java-kotlin
-        build-mode: manual
 
-    - name: Build Java for analysis
-      # CodeQL must observe compilation, not reuse cached outputs or an existing daemon.
-      run: ./gradlew compileJava --no-daemon --no-build-cache --rerun-tasks
+    - name: Fingerprint analysis inputs
+      id: inputs
+      env:
+        CODEQL_PATH: ${{ steps.codeql.outputs.codeql-path }}
+      run: |
+        rm -f build/codeql/cache-key.txt build/codeql/cache-inputs.json
+        ./gradlew codeqlCacheKey --refresh-dependencies --no-configuration-cache --no-daemon --no-build-cache --rerun-tasks
+        printf 'key=%s\n' "$(cat build/codeql/cache-key.txt)" >> "$GITHUB_OUTPUT"
 
-    - name: Analyze
-      uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+    - name: Save CodeQL Gradle downloads
+      # Snapshot resolved inputs before tracing; never cache compilation/task outputs.
+      if: success() && steps.gradle-downloads.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
+        path: |
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/*/generated-gradle-jars
+          ~/.gradle/wrapper
+        key: ${{ steps.gradle-downloads.outputs.cache-primary-key }}
+
+    - name: Restore CodeQL results
+      id: results
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: build/codeql/scan/results.sarif
+        # Exact matches only. The digest covers the tree, scanner, queries and build inputs.
+        key: codeql-sarif-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.inputs.outputs.key }}
+
+    - name: Scan Java
+      if: steps.results.outputs.cache-hit != 'true'
+      env:
+        CODEQL_PATH: ${{ steps.codeql.outputs.codeql-path }}
+      # Consume the fingerprinted dependencies/spec and trace a fresh full compilation.
+      run: bash scripts/scan-codeql.sh build/codeql/scan --offline
+
+    - name: Upload CodeQL results
+      uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+      with:
+        sarif_file: build/codeql/scan/results.sarif
         category: '/language:java-kotlin'
+        wait-for-processing: true
+
+    - name: Save CodeQL results
+      if: success() && steps.results.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: build/codeql/scan/results.sarif
+        # PR writes stay scoped to that PR's merge ref; main supplies shared results.
+        key: ${{ steps.results.outputs.cache-primary-key }}
