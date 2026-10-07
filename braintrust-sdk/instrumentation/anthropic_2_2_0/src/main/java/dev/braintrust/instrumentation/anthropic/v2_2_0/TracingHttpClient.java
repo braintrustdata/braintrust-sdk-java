@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -193,15 +194,18 @@ public class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * Only {@code POST .../messages} produces model output and gets the full LLM treatment.
-     * Everything else ({@code messages/batches}, {@code messages/count_tokens}, models, files, ...)
-     * gets a plain {@code anthropic.http} span with the body left untouched.
+     * Only {@code POST .../messages} and the legacy {@code POST .../complete} produce model output
+     * and get the full LLM treatment. Everything else ({@code messages/batches}, {@code
+     * messages/count_tokens}, models, files, ...) gets a plain {@code anthropic.http} span with the
+     * body left untouched.
      */
+    private static final Set<String> LLM_ENDPOINTS = Set.of("messages", "complete");
+
     private static boolean isLlmRequest(HttpRequest request) {
         var path = request.pathSegments();
         return request.method() == HttpMethod.POST
                 && !path.isEmpty()
-                && "messages".equals(path.get(path.size() - 1));
+                && LLM_ENDPOINTS.contains(path.get(path.size() - 1));
     }
 
     private HttpResponse executeHttp(ExtractedRequest extracted, RequestOptions requestOptions) {

@@ -783,6 +783,35 @@ public class BraintrustAnthropicTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"v1/messages", "v1/complete"})
+    @SneakyThrows
+    void inferenceEndpointsGetLlmSpans(String path) {
+        var client =
+                new TracingHttpClient(
+                        testHarness.openTelemetry(),
+                        new StubHttpClient(200, "{\"model\":\"claude-test\"}"));
+        var request =
+                HttpRequest.builder()
+                        .method(HttpMethod.POST)
+                        .baseUrl("https://api.anthropic.com")
+                        .addPathSegments(path.split("/"))
+                        .build();
+
+        try (var response = client.execute(request, RequestOptions.none())) {
+            response.body().readAllBytes();
+        }
+
+        var span = testHarness.awaitExportedSpans().get(0);
+        assertNotEquals("anthropic.http", span.getName());
+        JsonNode spanAttributes =
+                new ObjectMapper()
+                        .readTree(
+                                span.getAttributes()
+                                        .get(AttributeKey.stringKey("braintrust.span_attributes")));
+        assertEquals("llm", spanAttributes.get("type").asText());
+    }
+
+    @ParameterizedTest
     @CsvSource({
         "false, messages/batches, POST, 200",
         "true, v1/messages/batches, POST, 200",

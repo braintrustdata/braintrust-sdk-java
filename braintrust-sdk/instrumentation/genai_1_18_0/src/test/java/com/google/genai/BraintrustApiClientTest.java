@@ -194,7 +194,9 @@ class BraintrustApiClientTest {
                 "models/gemini:generateContent?next=batches/job",
                 "tunedModels/my-model:generateContent",
                 "projects/p/locations/l/publishers/google/models/gemini:generateContent",
-                "/v1beta/models/embedding:batchEmbedContents"
+                "/v1beta/models/embedding:batchEmbedContents",
+                "models/imagen:predict",
+                "models/veo:predictLongRunning"
             })
     void llmEndpointsAreTagged(String endpoint) throws Exception {
         String input = "{\"contents\":[{\"parts\":[{\"text\":\"hello\"}]}]}";

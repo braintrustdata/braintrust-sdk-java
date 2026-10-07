@@ -121,15 +121,13 @@ class TracingHttpClient implements HttpClient {
         }
         var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try (var ignored = span.makeCurrent()) {
-            // Buffer the request body so we can (a) read its bytes for the span attribute and
-            // (b) supply a fresh, repeatable body to the underlying client — avoiding any
-            // one-shot stream consumption issue.
-            var bufferedRequest = bufferRequestBody(extracted.request());
+            // Only JSON bodies are buffered for tagging. Multipart and binary bodies must reach
+            // the transport untouched, including one-shot upload streams.
+            boolean jsonBody = hasJsonBody(extracted.request());
+            var bufferedRequest =
+                    jsonBody ? bufferRequestBody(extracted.request()) : extracted.request();
 
-            String inputJson =
-                    bufferedRequest.body() != null
-                            ? readBodyAsString(bufferedRequest.body())
-                            : null;
+            String inputJson = jsonBody ? readBodyAsString(bufferedRequest.body()) : null;
 
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
@@ -141,8 +139,8 @@ class TracingHttpClient implements HttpClient {
                     null,
                     headersAsMap(bufferedRequest.headers()));
             var response = underlying.execute(bufferedRequest, requestOptions);
-            // Always tee the response body. onStreamClosed() detects whether the collected
-            // bytes are SSE or plain JSON and tags the span accordingly.
+            // The wrapper tags JSON/SSE responses and tracks binary response lifecycle without
+            // buffering or parsing their payloads.
             return new TeeingStreamHttpResponse(response, span, tracer);
         } catch (Exception e) {
             InstrumentationSemConv.tagLLMSpanResponse(span, e);
@@ -160,11 +158,10 @@ class TracingHttpClient implements HttpClient {
         }
         var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try {
-            var bufferedRequest = bufferRequestBody(extracted.request());
-            String inputJson =
-                    bufferedRequest.body() != null
-                            ? readBodyAsString(bufferedRequest.body())
-                            : null;
+            boolean jsonBody = hasJsonBody(extracted.request());
+            var bufferedRequest =
+                    jsonBody ? bufferRequestBody(extracted.request()) : extracted.request();
+            String inputJson = jsonBody ? readBodyAsString(bufferedRequest.body()) : null;
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_OPENAI,
@@ -196,20 +193,39 @@ class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * Endpoints that produce model output and get the full LLM treatment, matched on the trailing
-     * path segment so a {@code v1} prefix or an Azure {@code openai/deployments/<name>} prefix
-     * doesn't matter. {@code completions} covers both chat and legacy completions; retrieve/list
-     * calls end in an id or use GET and so fall through. Everything else (files, batches, models,
-     * vector stores, ...) gets a plain {@code openai.http} span with the body left untouched.
+     * Model inference endpoints get the full LLM treatment. Single trailing segments cover
+     * completions (chat and legacy), embeddings, responses, and moderations; media inference
+     * requires an explicit trailing route pair. A {@code v1} prefix or an Azure {@code
+     * openai/deployments/<name>} prefix doesn't matter. Only POST is classified as inference;
+     * retrieve/list calls and other resources (files, batches, models, vector stores, ...) get a
+     * plain {@code openai.http} span with the body left untouched.
      */
     private static final Set<String> LLM_ENDPOINTS =
-            Set.of("completions", "embeddings", "responses");
+            Set.of("completions", "embeddings", "responses", "moderations");
 
     private static boolean isLlmRequest(HttpRequest request) {
         var path = request.pathSegments();
-        return request.method() == HttpMethod.POST
-                && !path.isEmpty()
-                && LLM_ENDPOINTS.contains(path.get(path.size() - 1));
+        if (request.method() != HttpMethod.POST || path.isEmpty()) {
+            return false;
+        }
+        String endpoint = path.get(path.size() - 1);
+        if (LLM_ENDPOINTS.contains(endpoint)) {
+            return true;
+        }
+        if (path.size() < 2) {
+            return false;
+        }
+        return switch (path.get(path.size() - 2)) {
+            case "images" ->
+                    endpoint.equals("generations")
+                            || endpoint.equals("edits")
+                            || endpoint.equals("variations");
+            case "audio" ->
+                    endpoint.equals("speech")
+                            || endpoint.equals("transcriptions")
+                            || endpoint.equals("translations");
+            default -> false;
+        };
     }
 
     private HttpResponse executeHttp(ExtractedRequest extracted, RequestOptions requestOptions) {
@@ -252,6 +268,31 @@ class TracingHttpClient implements HttpClient {
             span.end();
             throw e;
         }
+    }
+
+    /** Only declared JSON bodies may be consumed for request tagging. */
+    private static boolean hasJsonBody(HttpRequest request) {
+        return request.body() != null
+                && matchesMediaType(request.body().contentType(), "application/json");
+    }
+
+    private static boolean matchesMediaType(@Nullable String contentType, String mediaType) {
+        if (contentType == null) {
+            return false;
+        }
+        int end = contentType.indexOf(';');
+        if (end < 0) {
+            end = contentType.length();
+        }
+        int start = 0;
+        while (start < end && contentType.charAt(start) <= ' ') {
+            start++;
+        }
+        while (end > start && contentType.charAt(end - 1) <= ' ') {
+            end--;
+        }
+        return end - start == mediaType.length()
+                && contentType.regionMatches(true, start, mediaType, 0, mediaType.length());
     }
 
     /**
@@ -342,9 +383,9 @@ class TracingHttpClient implements HttpClient {
     }
 
     /**
-     * {@link HttpResponse} wrapper for streaming (SSE) responses. Its {@link #body()} returns a tee
-     * {@link InputStream} that copies every byte the caller reads into an in-memory buffer. When
-     * the stream is fully consumed and {@link #close()} is called.
+     * {@link HttpResponse} wrapper that captures JSON/SSE bytes for tagging, but leaves declared
+     * binary audio payloads unbuffered. Both paths end the span when the body reaches EOF or is
+     * closed, retaining response headers and HTTP error status even without a JSON body.
      */
     private static final class TeeingStreamHttpResponse implements HttpResponse {
         private final HttpResponse delegate;
@@ -352,16 +393,26 @@ class TracingHttpClient implements HttpClient {
         private final Tracer tracer;
         private final long spanStartNanos = System.nanoTime();
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
-        private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
+        @Nullable private final ByteArrayOutputStream teeBuffer;
         private final InputStream teeStream;
 
         TeeingStreamHttpResponse(HttpResponse delegate, Span span, Tracer tracer) {
             this.delegate = delegate;
             this.span = span;
             this.tracer = tracer;
+            var contentTypes = delegate.headers().values("Content-Type");
+            String contentType = contentTypes.isEmpty() ? null : contentTypes.get(0);
+            boolean binary =
+                    contentType != null
+                            && (contentType.regionMatches(true, 0, "audio/", 0, 6)
+                                    || matchesMediaType(contentType, "application/octet-stream"));
+            this.teeBuffer = binary ? null : new ByteArrayOutputStream();
             this.teeStream =
                     new TeeInputStream(
-                            delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
+                            delegate.body(),
+                            teeBuffer != null ? teeBuffer : OutputStream.nullOutputStream(),
+                            this::onFirstByte,
+                            this::onStreamClosed);
         }
 
         private void onFirstByte() {
@@ -373,9 +424,11 @@ class TracingHttpClient implements HttpClient {
             try {
                 // Synchronize on teeBuffer to ensure any write() that was in-flight on a
                 // concurrent read thread has fully completed before we snapshot the bytes.
-                byte[] bytes;
-                synchronized (teeBuffer) {
-                    bytes = teeBuffer.toByteArray();
+                byte[] bytes = null;
+                if (teeBuffer != null) {
+                    synchronized (teeBuffer) {
+                        bytes = teeBuffer.toByteArray();
+                    }
                 }
 
                 // Recorded before tagging: openai-java raises above this layer, so the error
@@ -388,7 +441,9 @@ class TracingHttpClient implements HttpClient {
                 int statusCode = delegate.statusCode();
                 if (statusCode < 200 || statusCode >= 300) {
                     InstrumentationSemConv.tagLLMSpanHttpError(
-                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                            span,
+                            statusCode,
+                            bytes != null ? new String(bytes, StandardCharsets.UTF_8) : null);
                 }
 
                 // Wire-format bookkeeping lives in ResponseReassembler; this hands semconv
@@ -399,13 +454,16 @@ class TracingHttpClient implements HttpClient {
                 // Completions responses (no `output` array).
                 try {
                     var reassembled =
-                            ResponseReassembler.reassemble(bytes, timeToFirstTokenNanos.get());
+                            bytes != null
+                                    ? ResponseReassembler.reassemble(
+                                            bytes, timeToFirstTokenNanos.get())
+                                    : null;
                     InstrumentationSemConv.tagLLMSpanResponse(
                             tracer,
                             span,
                             InstrumentationSemConv.PROVIDER_NAME_OPENAI,
-                            reassembled.body(),
-                            reassembled.timeToFirstTokenNanos(),
+                            reassembled != null ? reassembled.body() : null,
+                            reassembled != null ? reassembled.timeToFirstTokenNanos() : null,
                             headersAsMap(delegate.headers()));
                 } catch (Exception e) {
                     // Observability must never change the response behavior seen by the caller.

@@ -1,0 +1,43 @@
+{
+  "id" : "92b43ec7-9e81-30b9-8dbd-361b51de7003",
+  "name" : "moderations",
+  "request" : {
+    "url" : "/moderations",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":\"The garden has bright flowers.\",\"model\":\"omni-moderation-latest\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "moderations-c261ebe1078b.json",
+    "headers" : {
+      "x-request-id" : "req_2343968048404ebc8960e50e52a75ec0",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "a46f19d9b8d7fcac-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "x-openai-proxy-wasm" : "v0.1",
+      "cf-cache-status" : "DYNAMIC",
+      "Date" : "Wed, 07 Oct 2026 18:52:06 GMT",
+      "set-cookie" : "__cf_bm=A_Qpf1wOIjKNqNCDF3T4UavhNNZfr4qZlB9kS41pYLA-1791399126.0373695-1.0.1.1-HA3oOhiSK0xYcUjtYTOsAcjjzeMlaPHO8tS6QclhoMOZncFdTHpkeAwvnmPIXPsCNya7S4HTVeWYAF_AZamwtir2tu5hn8XhWYkku.C_OuZgU0SxrVa.DNJfZo8kQHIe; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 07 Oct 2026 19:22:06 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "Access-Control-Expose-Headers" : "CF-Ray",
+      "openai-processing-ms" : "42",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "92b43ec7-9e81-30b9-8dbd-361b51de7003",
+  "persistent" : true,
+  "insertionIndex" : 69
+}

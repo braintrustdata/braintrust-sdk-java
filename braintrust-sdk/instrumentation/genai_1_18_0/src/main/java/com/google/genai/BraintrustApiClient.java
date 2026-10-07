@@ -48,7 +48,8 @@ class BraintrustApiClient extends ApiClient {
                     "streamGenerateContent",
                     "embedContent",
                     "batchEmbedContents",
-                    "predict");
+                    "predict",
+                    "predictLongRunning");
 
     private final ApiClient delegate;
     private final Tracer tracer;
@@ -183,14 +184,7 @@ class BraintrustApiClient extends ApiClient {
         if (endpoint == null) {
             return false;
         }
-        int end = endpoint.length();
-        for (char c : new char[] {'?', '#'}) {
-            int i = endpoint.indexOf(c);
-            if (i >= 0 && i < end) {
-                end = i;
-            }
-        }
-        String path = endpoint.substring(0, end);
+        String path = endpoint.split("[?#]", 2)[0];
         String lastSegment = path.substring(path.lastIndexOf('/') + 1);
         int colon = lastSegment.indexOf(':');
         return colon >= 0 && LLM_OPERATIONS.contains(lastSegment.substring(colon + 1));
@@ -211,7 +205,7 @@ class BraintrustApiClient extends ApiClient {
             Span span,
             String endpoint,
             boolean llm,
-            @Nullable String requestBody,
+            Supplier<String> requestBody,
             ApiResponse response)
             throws Exception {
         if (!llm) {
@@ -223,7 +217,7 @@ class BraintrustApiClient extends ApiClient {
         }
         BufferedApiResponse bufferedResponse = new BufferedApiResponse(response);
         span.setStatus(StatusCode.OK);
-        tagSpan(span, endpoint, requestBody, bufferedResponse.getBodyAsString());
+        tagSpan(span, endpoint, requestBody.get(), bufferedResponse.getBodyAsString());
         return bufferedResponse;
     }
 
@@ -233,7 +227,7 @@ class BraintrustApiClient extends ApiClient {
     }
 
     private ApiResponse traceRequest(
-            String endpoint, @Nullable String requestBody, Callable<ApiResponse> call)
+            String endpoint, Supplier<String> requestBody, Callable<ApiResponse> call)
             throws Exception {
         boolean llm = isLlmEndpoint(endpoint);
         Span span = startSpan(endpoint, llm);
@@ -249,7 +243,7 @@ class BraintrustApiClient extends ApiClient {
 
     private CompletableFuture<ApiResponse> traceAsyncRequest(
             String endpoint,
-            @Nullable String requestBody,
+            Supplier<String> requestBody,
             Supplier<CompletableFuture<ApiResponse>> call) {
         boolean llm = isLlmEndpoint(endpoint);
         Span span = startSpan(endpoint, llm);
@@ -312,7 +306,7 @@ class BraintrustApiClient extends ApiClient {
             Optional<HttpOptions> options) {
         return traceRequest(
                 genAIUrl,
-                requestBody,
+                () -> requestBody,
                 () -> delegate.request(requestMethod, genAIUrl, requestBody, options));
     }
 
@@ -325,7 +319,7 @@ class BraintrustApiClient extends ApiClient {
             Optional<HttpOptions> options) {
         return traceRequest(
                 genAIUrl,
-                decode(genAIUrl, requestBodyBytes),
+                decode(requestBodyBytes),
                 () -> delegate.request(requestMethod, genAIUrl, requestBodyBytes, options));
     }
 
@@ -333,22 +327,22 @@ class BraintrustApiClient extends ApiClient {
     public CompletableFuture<ApiResponse> asyncRequest(
             String method, String url, String body, Optional<HttpOptions> options) {
         return traceAsyncRequest(
-                url, body, () -> delegate.asyncRequest(method, url, body, options));
+                url, () -> body, () -> delegate.asyncRequest(method, url, body, options));
     }
 
     @Override
     public CompletableFuture<ApiResponse> asyncRequest(
             String method, String url, byte[] body, Optional<HttpOptions> options) {
         return traceAsyncRequest(
-                url, decode(url, body), () -> delegate.asyncRequest(method, url, body, options));
+                url, decode(body), () -> delegate.asyncRequest(method, url, body, options));
     }
 
-    /** Request bytes as a string for tagging; skipped for non-LLM calls, which are never tagged. */
-    @Nullable
-    private static String decode(String endpoint, @Nullable byte[] body) {
-        return body == null || !isLlmEndpoint(endpoint)
-                ? null
-                : new String(body, StandardCharsets.UTF_8);
+    /**
+     * Request bytes as a string for tagging; only read for LLM calls, which are the only ones
+     * tagged.
+     */
+    private static Supplier<String> decode(@Nullable byte[] body) {
+        return () -> body == null ? null : new String(body, StandardCharsets.UTF_8);
     }
 
     private static String getModel(String genAIEndpoint) {
