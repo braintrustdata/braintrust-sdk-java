@@ -3,7 +3,12 @@ package dev.braintrust.gradle.muzzle
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.InputFiles
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -13,89 +18,153 @@ import org.gradle.api.tasks.TaskAction
  * creates an isolated classloader for each version, and verifies that the instrumentation's
  * muzzle references (and helper classes) either match or don't match as expected.
  */
-class MuzzleTask extends DefaultTask {
+@CacheableTask
+abstract class MuzzleTask extends DefaultTask {
+
+    @Classpath
+    abstract ConfigurableFileCollection getInstrumentationClasspath()
+
+    @Classpath
+    abstract ConfigurableFileCollection getBootstrapClasspath()
+
+    @OutputFile
+    abstract RegularFileProperty getReportFile()
+
+    private List<Map> resolvedTargets
+
+    @Input
+    List<Map> getDirectiveInputs() {
+        directives().collect { directive ->
+            [
+                    group: directive.group,
+                    module: directive.module,
+                    versions: directive.versions ?: '',
+                    assertPass: directive.assertPass,
+                    pinnedVersions: directive.pinnedVersions.toList(),
+                    skipVersions: directive.skipVersions.toList().sort(),
+                    additionalDependencies: directive.additionalDependencies.toList(),
+                    excludedDependencies: directive.excludedDependencies.toList(),
+                    ignoredInstrumentation: directive.ignoredInstrumentation.toList()
+            ]
+        }
+    }
+
+    @Input
+    Map<String, String> getCheckerRuntime() {
+        // The checker runs inside the Gradle JVM, not the Java compilation toolchain.
+        ['java.version', 'java.runtime.version', 'java.vendor', 'java.vm.name',
+         'java.vm.version', 'java.vm.vendor', 'os.name', 'os.arch'].collectEntries {
+            [(it): System.getProperty(it, '')]
+        }
+    }
+
+    @Input
+    List<Map> getTargetInputs() {
+        targetPlan().collect { target ->
+            [directive: target.directive, coordinate: target.coordinate, artifacts: target.artifacts]
+        }
+    }
+
+    @Classpath
+    List<File> getTargetClasspath() {
+        // Keep the file order as loaded. targetInputs also records per-target boundaries,
+        // coordinates and artifact order, which a flattened classpath alone cannot express.
+        targetPlan().collectMany { it.files }
+    }
+
+    private List<MuzzleDirective> directives() {
+        project.extensions.getByType(MuzzleExtension).directives
+    }
+
+    private List<Map> targetPlan() {
+        if (resolvedTargets != null) {
+            return resolvedTargets
+        }
+        List<Map> targets = []
+        def configuredDirectives = directives()
+        for (int index = 0; index < configuredDirectives.size(); index++) {
+            MuzzleDirective directive = configuredDirectives[index]
+            List<String> versions
+            try {
+                versions = directive.pinnedVersions
+                        ? directive.pinnedVersions.toList() : discoverVersions(directive)
+            } catch (Exception e) {
+                throw new GradleException("[muzzle] Failed to resolve versions for ${directive}: ${e.message}", e)
+            }
+            if (versions.isEmpty()) {
+                logger.warn("[muzzle] No versions found for ${directive.group}:${directive.module} in range ${directive.versions}")
+            }
+            for (String version : versions) {
+                String coordinate = "${directive.group}:${directive.module}:${version}"
+                try {
+                    def library = resolveLibraryVersion(directive, version)
+                    targets.add([directive: index, coordinate: coordinate, version: version,
+                                 files: library.files, artifacts: library.artifacts])
+                } catch (Exception e) {
+                    throw new GradleException("[muzzle] Failed to resolve ${coordinate}; refusing an incomplete check", e)
+                }
+            }
+        }
+        // Only memoize within this task instance. In particular, metadata discovery must
+        // run again on the next invocation, even with an otherwise warm build cache.
+        resolvedTargets = targets
+        return resolvedTargets
+    }
+
+    protected List<String> discoverVersions(MuzzleDirective directive) {
+        MavenVersions.resolve(directive.group, directive.module, directive.versions, directive.skipVersions)
+    }
 
     MuzzleTask() {
         group = 'verification'
         description = 'Checks instrumentation muzzle references against library versions'
+        reportFile.convention(project.layout.buildDirectory.file('reports/muzzle/result.txt'))
+        // Discovery uses live project configurations and must not be replayed from a
+        // configuration-cache snapshot. Build-cache result reuse is independent of this.
+        notCompatibleWithConfigurationCache('Muzzle discovers current published targets before build-cache lookup')
     }
 
     @TaskAction
     void run() {
-        // Create a bootstrap classloader for this task run.
-        def bootstrapUrls = collectBootstrapClasspath()
-        def bootstrapCL = new URLClassLoader(bootstrapUrls as URL[], (ClassLoader) null)
-
-        // Initialize the instrumentation classloader once per task run — it doesn't
-        // change between library versions.
-        def instrumentationClasspath = collectInstrumentationClasspath()
-        def instrumentationUrls = instrumentationClasspath.collect { it.toURI().toURL() } as URL[]
+        // Resolve once before checking, using exactly the inputs Gradle fingerprinted.
+        def targets = targetPlan()
+        def report = reportFile.get().asFile
+        java.nio.file.Files.deleteIfExists(report.toPath())
+        def bootstrapUrls = bootstrapClasspath.files.collect { it.toURI().toURL() } as URL[]
+        def bootstrapCL = new URLClassLoader(bootstrapUrls, (ClassLoader) null)
+        def instrumentationUrls = instrumentationClasspath.files.collect { it.toURI().toURL() } as URL[]
         def instrumentationCL = new URLClassLoader(instrumentationUrls, ClassLoader.systemClassLoader)
 
         try {
-            def extension = project.extensions.findByType(MuzzleExtension)
-            if (!extension || extension.directives.isEmpty()) {
-                logger.lifecycle('[muzzle] No muzzle directives configured — skipping')
-                return
-            }
+            def configuredDirectives = directives()
 
             int totalVersions = 0
             int totalFailures = 0
             List<String> failureMessages = []
 
-            for (MuzzleDirective directive : extension.directives) {
-                logger.lifecycle("[muzzle] Checking: ${directive}")
+            for (def target : targets) {
+                MuzzleDirective directive = configuredDirectives[target.directive]
+                String version = target.version
+                logger.lifecycle("[muzzle] Checking: ${directive.group}:${directive.module}:${version}")
+                totalVersions++
+                def result = checkVersion(target.files, directive, version, bootstrapCL, instrumentationCL, directive.ignoredInstrumentation as Set)
 
-                List<String> versions
-                if (directive.pinnedVersions) {
-                    versions = directive.pinnedVersions
-                    logger.lifecycle("[muzzle] Using ${versions.size()} pinned version(s)")
+                if (result.passed && directive.assertPass) {
+                    logger.lifecycle("[muzzle]   ${version} PASS")
+                } else if (!result.passed && !directive.assertPass) {
+                    logger.lifecycle("[muzzle]   ${version} PASS (expected failure, correctly failed)")
+                } else if (!result.passed && directive.assertPass) {
+                    totalFailures++
+                    def msg = "[muzzle]   ${version} FAIL — expected to pass but got mismatches:"
+                    logger.error(msg)
+                    result.messages.each { logger.error("[muzzle]     ${it}") }
+                    failureMessages.add("${directive.group}:${directive.module}:${version} — ${result.messages.join('; ')}")
                 } else {
-                    try {
-                        versions = MavenVersions.resolve(
-                                directive.group, directive.module, directive.versions, directive.skipVersions)
-                    } catch (Exception e) {
-                        throw new GradleException("[muzzle] Failed to resolve versions for ${directive}: ${e.message}", e)
-                    }
-
-                    if (versions.isEmpty()) {
-                        logger.warn("[muzzle] No versions found for ${directive.group}:${directive.module} in range ${directive.versions}")
-                        continue
-                    }
-                }
-
-                logger.lifecycle("[muzzle] Found ${versions.size()} version(s) to check")
-
-                for (String version : versions) {
-                    totalVersions++
-
-                    List<File> libraryJars
-                    try {
-                        libraryJars = resolveLibraryVersion(directive, version)
-                    } catch (Exception e) {
-                        logger.warn("[muzzle] Failed to resolve ${directive.group}:${directive.module}:${version}: ${e.message}")
-                        continue
-                    }
-
-                    def result = checkVersion(libraryJars, directive, version, bootstrapCL, instrumentationCL, directive.ignoredInstrumentation as Set)
-
-                    if (result.passed && directive.assertPass) {
-                        logger.lifecycle("[muzzle]   ${version} PASS")
-                    } else if (!result.passed && !directive.assertPass) {
-                        logger.lifecycle("[muzzle]   ${version} PASS (expected failure, correctly failed)")
-                    } else if (!result.passed && directive.assertPass) {
-                        totalFailures++
-                        def msg = "[muzzle]   ${version} FAIL — expected to pass but got mismatches:"
-                        logger.error(msg)
-                        result.messages.each { logger.error("[muzzle]     ${it}") }
-                        failureMessages.add("${directive.group}:${directive.module}:${version} — ${result.messages.join('; ')}")
-                    } else {
-                        // passed but assertPass=false
-                        totalFailures++
-                        def msg = "[muzzle]   ${version} FAIL — expected to fail but muzzle passed"
-                        logger.error(msg)
-                        failureMessages.add("${directive.group}:${directive.module}:${version} — unexpectedly passed")
-                    }
+                    // passed but assertPass=false
+                    totalFailures++
+                    def msg = "[muzzle]   ${version} FAIL — expected to fail but muzzle passed"
+                    logger.error(msg)
+                    failureMessages.add("${directive.group}:${directive.module}:${version} — unexpectedly passed")
                 }
             }
 
@@ -105,6 +174,13 @@ class MuzzleTask extends DefaultTask {
                 throw new GradleException(
                         "[muzzle] ${totalFailures} version(s) failed:\n  " + failureMessages.join('\n  '))
             }
+            // No timestamps, absolute paths or partial results: only completed checks
+            // produce the output that Gradle may restore from its native build cache.
+            report.parentFile.mkdirs()
+            report.setText("Checked ${totalVersions} version(s), 0 failures\n" +
+                    targets.collect { target ->
+                        "${target.coordinate} ${configuredDirectives[target.directive].assertPass ? 'pass' : 'fail'}"
+                    }.join('\n') + '\n', 'UTF-8')
         } finally {
             instrumentationCL?.close()
             bootstrapCL.close()
@@ -112,46 +188,10 @@ class MuzzleTask extends DefaultTask {
     }
 
     /**
-     * Collects the classpath needed to load InstrumentationModule classes from the current project.
-     * Includes the project's own compiled classes, instrumenter, and ByteBuddy.
-     */
-    private List<File> collectInstrumentationClasspath() {
-        def files = []
-
-        // The project's own compiled classes
-        project.sourceSets.main.output.classesDirs.each { files.add(it) }
-
-        // Add compile classpath (includes instrumenter, bytebuddy, etc.)
-        project.configurations.compileClasspath.resolve().each { files.add(it) }
-
-        return files
-    }
-
-    /**
-     * Collects the bootstrap classpath: the bootstrap module's compiled classes + bootstrapLibs
-     * (OTel API and its transitive deps). This simulates what ends up on the real JVM bootstrap
-     * classpath when the agent runs.
-     */
-    private List<URL> collectBootstrapClasspath() {
-        def agentProject = project.project(':braintrust-java-agent')
-        def urls = []
-
-        // Bootstrap module compiled classes
-        def bootstrapProject = project.project(':braintrust-java-agent:bootstrap')
-        bootstrapProject.sourceSets.main.output.classesDirs.each { urls.add(it.toURI().toURL()) }
-
-        // bootstrapLibs configuration (OTel API + transitive deps like context, common)
-        agentProject.configurations.bootstrapLibs.resolve().each { urls.add(it.toURI().toURL()) }
-
-        return urls
-    }
-
-    /**
      * Resolves a specific version of the library, returning the JAR files.
      * Uses Gradle's dependency resolution for transitive deps.
      */
-    private List<File> resolveLibraryVersion(MuzzleDirective directive, String version) {
-        def configName = "muzzleCheck_${directive.group}_${directive.module}_${version}".replace('.', '_').replace('-', '_')
+    private Map resolveLibraryVersion(MuzzleDirective directive, String version) {
 
         // Create a detached configuration for this specific version
         def deps = []
@@ -181,7 +221,14 @@ class MuzzleTask extends DefaultTask {
         config.transitive = true
         config.resolutionStrategy.failOnNonReproducibleResolution()
 
-        return config.resolve().toList()
+        def files = config.resolve().toList()
+        def artifactsByFile = config.resolvedConfiguration.resolvedArtifacts.collectEntries { artifact ->
+            [(artifact.file): artifact.id.displayName]
+        }
+        return [files: files, artifacts: files.collect { file ->
+            // Artifact identity is separate from @Classpath's content normalization.
+            [id: artifactsByFile[file], name: file.name]
+        }]
     }
 
     /**

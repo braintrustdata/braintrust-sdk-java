@@ -10,4 +10,14 @@ repositories {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
+    testImplementation gradleTestKit()
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'muzzle.test.classpath', sourceSets.main.runtimeClasspath.asPath
+    systemProperty 'codeql.test.classpath', sourceSets.main.runtimeClasspath.asPath
+    systemProperty 'advisories.test.classpath', sourceSets.main.runtimeClasspath.asPath
 }

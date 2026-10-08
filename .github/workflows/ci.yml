@@ -6,9 +6,18 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  schedule:
+    # 21:13 PST / 22:13 PDT, matching the CodeQL nightly schedule.
+    - cron: '13 5 * * *'
+
+concurrency:
+  # Only newer revisions of the same PR supersede an existing run.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  build-checks:
+    if: github.event_name != 'schedule'
     # we want to run ubuntu-latest but we'll pin to a specific version so workflow is reproducable
     runs-on: ubuntu-24.04
 
@@ -21,22 +30,55 @@ jobs:
         java-version: 17
         distribution: 'temurin'
 
+    - name: Restore Gradle state
+      id: gradle-cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        # Successful PR and default-branch jobs can add dependencies and task results.
+        key: gradle-ci-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          gradle-ci-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      with:
+        cache-disabled: true
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Run all checks and tests
       run: ./gradlew compileTestJava publishToMavenLocal check
 
+    - name: Save Gradle state
+      if: success() && (github.event_name == 'pull_request' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) && steps.gradle-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
+
+    - name: Show workspace changes after failure
+      if: failure()
+      run: |
+        git status --porcelain
+        git diff --no-ext-diff
+        git diff --no-ext-diff --cached
+
     - name: Upload test results
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       if: always()
       with:
         name: test-results
-        path: build/test-results/test/
+        path: '**/build/test-results/test/'
 
-  dependency-check:
-    name: Dependency advisories
-    if: github.event_name == 'pull_request'
+  build-logic:
+    name: Build logic tests
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -52,23 +94,143 @@ jobs:
         java-version: 17
         distribution: 'temurin'
 
+    - name: Restore build-logic Gradle state
+      id: gradle-cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        # Separate ownership: parallel jobs must not compete to save the same key.
+        key: gradle-build-logic-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          gradle-build-logic-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      with:
+        cache-disabled: true
+
+    - name: Test build logic
+      # Standalone buildSrc does not inherit the root project's caching setting.
+      run: ./gradlew -p buildSrc test --build-cache --no-configuration-cache
+
+    - name: Save build-logic Gradle state
+      if: success() && (github.event_name == 'pull_request' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) && steps.gradle-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
+
+    - name: Upload build-logic test results
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: always()
+      with:
+        name: build-logic-test-results
+        path: 'buildSrc/build/test-results/test/'
+
+  # Preserve the existing required status check while the expensive jobs overlap.
+  build:
+    needs: [ build-checks, build-logic ]
+    # A skipped required check can permit merging; cancelled dependencies must fail this gate.
+    if: always() && github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Require both build jobs to pass
+      env:
+        CHECKS_RESULT: ${{ needs.build-checks.result }}
+        LOGIC_RESULT: ${{ needs.build-logic.result }}
+      run: |
+        if [ "$CHECKS_RESULT" != 'success' ] || [ "$LOGIC_RESULT" != 'success' ]; then
+          echo "::error::Build checks: $CHECKS_RESULT; build-logic tests: $LOGIC_RESULT"
+          exit 1
+        fi
+
+  dependency-check:
+    name: Dependency advisories
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      with:
+        persist-credentials: false
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+      with:
+        java-version: 17
+        distribution: 'temurin'
+
+    - name: Restore advisory Gradle downloads
+      id: gradle-downloads
+      # Only this job's downloads; never restore the full build's muzzle/task outputs.
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/*/generated-gradle-jars
+          ~/.gradle/wrapper
+        key: gradle-advisory-downloads-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.gradle', '**/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', 'buildSrc/src/main/**', '.github/dependency-graph.json') }}
+        restore-keys: |
+          gradle-advisory-downloads-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      with:
+        cache-disabled: true
+
     - name: Check shipped dependencies
       id: dependencies
-      # Check the full shipped graph, including advisories that also affect main.
+      # Fresh batched requests: GITHUB_TOKEN changes each job, invalidating prior ETags.
       env:
         GH_TOKEN: ${{ github.token }}
-      run: ./gradlew checkDependencies --console=plain
+      run: |
+        rm -f build/dependency-advisories/complete
+        ./gradlew checkDependencies --refresh-dependencies --console=plain --no-configuration-cache
+
+    - name: Identify complete advisory scan
+      id: advisory-scan
+      if: always() && (steps.dependencies.outcome == 'success' || steps.dependencies.outcome == 'failure')
+      run: |
+        if [ -f build/dependency-advisories/complete ] && [ -f build/dependency-advisories/cache.json ]; then
+          echo 'scan-complete=true' >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Save advisory Gradle downloads
+      # A completed scan with findings may save downloads, but still fails the job.
+      if: always() && steps.advisory-scan.outputs.scan-complete == 'true' && steps.gradle-downloads.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/*/generated-gradle-jars
+          ~/.gradle/wrapper
+        key: ${{ steps.gradle-downloads.outputs.cache-primary-key }}
 
     - name: Report dependency scan outcome
       if: always()
       env:
         SCAN_OUTCOME: ${{ steps.dependencies.outcome }}
+        SCAN_COMPLETE: ${{ steps.advisory-scan.outputs.scan-complete }}
       run: |
         echo '## Dependency advisories' >> "$GITHUB_STEP_SUMMARY"
-        if [ "$SCAN_OUTCOME" = 'success' ]; then
-          echo 'No matching GitHub-reviewed advisories were found in shipped dependencies.' >> "$GITHUB_STEP_SUMMARY"
+        if [ "$SCAN_OUTCOME" = 'success' ] && [ "$SCAN_COMPLETE" = 'true' ]; then
+          echo 'The live scan completed; no matching GitHub-reviewed advisories were found in shipped dependencies.' >> "$GITHUB_STEP_SUMMARY"
+        elif [ "$SCAN_COMPLETE" = 'true' ]; then
+          echo '::error::Dependency scan found advisories. Review the Check shipped dependencies step logs.'
+          echo 'The live scan completed and found advisories. Review the **Check shipped dependencies** step logs; this is not a clean scan.' >> "$GITHUB_STEP_SUMMARY"
         else
-          echo '::error::Dependency scan found advisories or could not complete. Review the Check shipped dependencies step logs.'
-          echo 'The scan found advisories or could not complete. Review the **Check shipped dependencies** step logs; this is not a clean scan.' >> "$GITHUB_STEP_SUMMARY"
+          echo '::error::Dependency scan could not complete. Review the job logs.'
+          echo 'The scan could not complete. No new Gradle download snapshot was saved; this is not a clean scan. Review the job logs.' >> "$GITHUB_STEP_SUMMARY"
         fi
         echo 'This check covers the full shipped dependency graph, not just dependencies changed by this PR. Findings or scan errors fail the check.' >> "$GITHUB_STEP_SUMMARY"
+        echo 'Every CI run makes fresh batched advisory requests; responses are not cached across jobs because GitHub scopes ETags to the per-job token.' >> "$GITHUB_STEP_SUMMARY"
+        if [ "$SCAN_OUTCOME" != 'success' ] || [ "$SCAN_COMPLETE" != 'true' ]; then
+          exit 1
+        fi

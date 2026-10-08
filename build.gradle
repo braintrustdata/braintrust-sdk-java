@@ -160,3 +160,30 @@ tasks.register('checkCodeQL', Exec) {
   workingDir rootDir
   commandLine 'mise', 'exec', '--', './scripts/check-codeql.sh'
 }
+
+// Resolve and fingerprint inputs before deciding whether a full CodeQL scan is needed.
+// --refresh-dependencies is mandatory; the subsequent scan consumes this lookup offline.
+def resetCodeqlCacheKey = tasks.register('resetCodeqlCacheKey', Delete) {
+  delete layout.buildDirectory.file('codeql/cache-key.txt')
+  delete layout.buildDirectory.file('codeql/cache-inputs.json')
+  delete layout.buildDirectory.dir('codeql/spec-input')
+}
+def codeqlProjects = allprojects.collect { owner ->
+  owner.tasks.register('codeqlProjectInputs', dev.braintrust.gradle.CodeqlProjectInputsTask) {
+    dependsOn resetCodeqlCacheKey
+    outputFile = owner.layout.buildDirectory.file('codeql/project-inputs.json')
+  }
+}
+tasks.register('codeqlCacheKey', dev.braintrust.gradle.CodeqlCacheKeyTask) {
+  group = 'verification'
+  description = 'Fingerprints exact inputs for a full CodeQL scan without compiling application code'
+  dependsOn ':braintrust-api:fetchOpenApiSpec', resetCodeqlCacheKey
+  projectInputs.from(codeqlProjects)
+  openApiSpec = project(':braintrust-api').layout.buildDirectory.file('openapi/spec.yaml')
+  specSnapshot = layout.buildDirectory.file('codeql/spec-input/openapi/spec.yaml')
+  keyFile = layout.buildDirectory.file('codeql/cache-key.txt')
+  manifestFile = layout.buildDirectory.file('codeql/cache-inputs.json')
+}
+project(':braintrust-api').tasks.matching { it.name == 'fetchOpenApiSpec' }.configureEach {
+  mustRunAfter resetCodeqlCacheKey
+}

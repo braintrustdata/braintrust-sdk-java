@@ -68,10 +68,13 @@ subprojects { subproject ->
       dependencies.add('muzzleGenerator', instrumentationApi)
       dependencies.add('muzzleGenerator', "net.bytebuddy:byte-buddy:${byteBuddyVersion}")
 
+      def muzzleOutputDir = layout.buildDirectory.dir('generated/muzzle/classes')
       task generateMuzzle(type: JavaExec) {
         dependsOn compileJava, instrumentationApi.tasks.named('compileJava')
         description = 'Generates $Muzzle side-classes for InstrumentationModule subclasses'
         group = 'build'
+        outputs.dir(muzzleOutputDir)
+        doFirst { delete muzzleOutputDir }
 
         // Classpath: compiled instrumentation classes + instrumenter + bytebuddy + deps
         classpath = files(
@@ -80,8 +83,9 @@ subprojects { subproject ->
           configurations.compileClasspath
         )
         mainClass = 'dev.braintrust.instrumentation.muzzle.MuzzleGenerator'
-        args = [sourceSets.main.java.classesDirectory.get().asFile.absolutePath]
+        args = [muzzleOutputDir.get().asFile.absolutePath]
       }
+      sourceSets.main.output.dir(muzzleOutputDir, builtBy: generateMuzzle)
 
       // Run muzzle generation after compileJava, before jar
       tasks.named('classes').configure { dependsOn generateMuzzle }
