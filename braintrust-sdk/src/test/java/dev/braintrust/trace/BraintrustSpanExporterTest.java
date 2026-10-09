@@ -11,6 +11,8 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.TraceFlags;
 import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.context.Context;
@@ -18,22 +20,28 @@ import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.DelegatingSpanData;
+import io.opentelemetry.sdk.trace.data.EventData;
+import io.opentelemetry.sdk.trace.data.LinkData;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.data.StatusData;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.security.*;
 import java.time.Duration;
+import java.util.AbstractList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import javax.net.ssl.*;
 import org.junit.jupiter.api.AfterEach;
@@ -354,49 +362,235 @@ public class BraintrustSpanExporterTest {
         assertEquals("project_name:test-project", exported.parentHeader());
     }
 
-    @ParameterizedTest
-    @EnumSource(InvalidCustomization.class)
-    void invalidCustomizerFailsEntireBatchBeforeTransport(InvalidCustomization invalid)
-            throws Exception {
+    @Test
+    void replacementSnapshotPreservesCustomizedContent() throws Exception {
         var config =
                 configBuilder()
                         .addSpanCustomizer(
                                 new SpanCustomizer() {
                                     @Override
                                     public SpanData onSpanExport(SpanData span) {
-                                        if (span.getName().equals("invalid")) {
-                                            return invalid.customize(span);
-                                        }
-                                        return withAttributes(
-                                                span,
+                                        return new DelegatingSpanData(span) {
+                                            @Override
+                                            public String getName() {
+                                                return "customized";
+                                            }
+
+                                            @Override
+                                            public SpanKind getKind() {
+                                                return SpanKind.CLIENT;
+                                            }
+
+                                            @Override
+                                            public StatusData getStatus() {
+                                                return StatusData.create(
+                                                        StatusCode.ERROR, "custom error");
+                                            }
+
+                                            @Override
+                                            public List<EventData> getEvents() {
+                                                return List.of(
+                                                        EventData.create(
+                                                                123,
+                                                                "custom event",
+                                                                Attributes.of(KEEP, "event value"),
+                                                                3));
+                                            }
+
+                                            @Override
+                                            public int getTotalRecordedEvents() {
+                                                return 4;
+                                            }
+
+                                            @Override
+                                            public List<LinkData> getLinks() {
+                                                return List.of(
+                                                        LinkData.create(
+                                                                PARENT_CONTEXT,
+                                                                Attributes.of(KEEP, "link value"),
+                                                                2));
+                                            }
+
+                                            @Override
+                                            public int getTotalRecordedLinks() {
+                                                return 5;
+                                            }
+                                        };
+                                    }
+                                })
+                        .build();
+        var span = exportSpan(config, Attributes.of(KEEP, "span value")).span();
+        assertEquals("customized", span.getName());
+        assertEquals(
+                io.opentelemetry.proto.trace.v1.Span.SpanKind.SPAN_KIND_CLIENT, span.getKind());
+        assertEquals(
+                io.opentelemetry.proto.trace.v1.Status.StatusCode.STATUS_CODE_ERROR,
+                span.getStatus().getCode());
+        assertEquals("custom error", span.getStatus().getMessage());
+        assertStringAttribute(span, KEEP.getKey(), "span value");
+        assertEquals(1, span.getEventsCount());
+        assertEquals(3, span.getDroppedEventsCount());
+        var event = span.getEvents(0);
+        assertEquals(123, event.getTimeUnixNano());
+        assertEquals("custom event", event.getName());
+        assertEquals("event value", event.getAttributes(0).getValue().getStringValue());
+        assertEquals(2, event.getDroppedAttributesCount());
+        assertEquals(1, span.getLinksCount());
+        assertEquals(4, span.getDroppedLinksCount());
+        var link = span.getLinks(0);
+        assertEquals(
+                PARENT_CONTEXT.getTraceId(),
+                HexFormat.of().formatHex(link.getTraceId().toByteArray()));
+        assertEquals(
+                PARENT_CONTEXT.getSpanId(),
+                HexFormat.of().formatHex(link.getSpanId().toByteArray()));
+        assertEquals("link value", link.getAttributes(0).getValue().getStringValue());
+        assertEquals(1, link.getDroppedAttributesCount());
+    }
+
+    @ParameterizedTest
+    @EnumSource(InvalidCustomization.class)
+    void invalidCustomizerStripsOnlyAffectedSpan(InvalidCustomization invalid) throws Exception {
+        var laterCalls = new AtomicInteger();
+        var config =
+                configBuilder()
+                        .addSpanCustomizer(
+                                new SpanCustomizer() {
+                                    @Override
+                                    public SpanData onSpanExport(SpanData span) {
+                                        var attributes =
                                                 span.getAttributes().toBuilder()
                                                         .put(PARENT, "project_name:customized")
-                                                        .build());
+                                                        .put(
+                                                                "braintrust.context_json",
+                                                                "{\"secret\":\"partial\"}")
+                                                        .put("partial", "must not survive")
+                                                        .build();
+                                        return new DelegatingSpanData(
+                                                withAttributes(span, attributes)) {
+                                            @Override
+                                            public long getStartEpochNanos() {
+                                                return 1;
+                                            }
+
+                                            @Override
+                                            public long getEndEpochNanos() {
+                                                return 2;
+                                            }
+                                        };
+                                    }
+                                })
+                        .addSpanCustomizer(
+                                new SpanCustomizer() {
+                                    @Override
+                                    public SpanData onSpanExport(SpanData span) {
+                                        return span.getName().equals("invalid")
+                                                ? invalid.customize(span)
+                                                : span;
+                                    }
+                                })
+                        .addSpanCustomizer(
+                                new SpanCustomizer() {
+                                    @Override
+                                    public SpanData onSpanExport(SpanData span) {
+                                        laterCalls.incrementAndGet();
+                                        return span;
                                     }
                                 })
                         .build();
 
-        try (var provider = SdkTracerProvider.builder().build();
+        try (var provider =
+                        SdkTracerProvider.builder()
+                                .setResource(
+                                        Resource.create(Attributes.of(KEEP, "secret resource")))
+                                .build();
                 var exporter = new BraintrustSpanExporter(config)) {
-            var tracer = provider.get("test-tracer");
-            var first = tracer.spanBuilder("valid").setParent(parentContext()).startSpan();
-            var second = tracer.spanBuilder("invalid").setParent(parentContext()).startSpan();
+            var tracer =
+                    provider.tracerBuilder("secret-scope")
+                            .setInstrumentationVersion("secret-version")
+                            .setSchemaUrl("https://secret-schema")
+                            .build();
+            var first =
+                    tracer.spanBuilder("valid")
+                            .setParent(parentContext())
+                            .setAttribute(KEEP, "keep me")
+                            .startSpan();
+            var second =
+                    tracer.spanBuilder("invalid")
+                            .setParent(parentContext())
+                            .setSpanKind(SpanKind.CLIENT)
+                            .addLink(PARENT_CONTEXT, Attributes.of(KEEP, "secret link"))
+                            .setAttribute(PARENT, "experiment_id:original")
+                            .setAttribute("braintrust.input_json", "{\"secret\":true}")
+                            .setAttribute("braintrust.context_json", "{\"secret\":\"original\"}")
+                            .setAttribute(KEEP, "secret attribute")
+                            .startSpan();
+            second.addEvent("secret event", Attributes.of(KEEP, "secret event attribute"));
+            second.setStatus(StatusCode.ERROR, "secret status");
             first.end();
             second.end();
+            var original = ((ReadableSpan) second).toSpanData();
+            var batch = List.of(((ReadableSpan) first).toSpanData(), original);
 
-            var result =
-                    exporter.export(
-                                    List.of(
-                                            ((ReadableSpan) first).toSpanData(),
-                                            ((ReadableSpan) second).toSpanData()))
-                            .join(10, TimeUnit.SECONDS);
-            assertTrue(result.isDone(), "Export must finish");
-            assertFalse(result.isSuccess(), "Invalid customization must fail the entire batch");
+            // Each submission runs the hooks again, including previously stripped records.
+            for (int attempt = 0; attempt < 2; attempt++) {
+                var result = exporter.export(batch).join(10, TimeUnit.SECONDS);
+                assertTrue(result.isDone(), "Export must finish");
+                assertTrue(result.isSuccess(), "A hook failure must not fail the batch");
+                for (int group = 0; group < 2; group++) {
+                    var request = requests.poll(10, TimeUnit.SECONDS);
+                    assertNotNull(request);
+                    var exported = request.decodeSpans();
+                    assertEquals(1, exported.size());
+                    var span = exported.get(0);
+                    if (span.getName().equals("valid")) {
+                        assertEquals("project_name:customized", request.parentHeader());
+                        assertStringAttribute(span, KEEP.getKey(), "keep me");
+                    } else {
+                        assertEquals("experiment_id:original", request.parentHeader());
+                        assertEquals("", span.getName());
+                        assertEquals(
+                                original.getTraceId(),
+                                HexFormat.of().formatHex(span.getTraceId().toByteArray()));
+                        assertEquals(
+                                original.getSpanId(),
+                                HexFormat.of().formatHex(span.getSpanId().toByteArray()));
+                        assertEquals(
+                                original.getParentSpanId(),
+                                HexFormat.of().formatHex(span.getParentSpanId().toByteArray()));
+                        assertEquals(original.getStartEpochNanos(), span.getStartTimeUnixNano());
+                        assertEquals(original.getEndEpochNanos(), span.getEndTimeUnixNano());
+                        assertEquals("", span.getTraceState());
+                        assertEquals(
+                                io.opentelemetry.proto.trace.v1.Span.SpanKind.SPAN_KIND_INTERNAL,
+                                span.getKind());
+                        assertEquals(0, span.getEventsCount());
+                        assertEquals(0, span.getLinksCount());
+                        assertEquals(0, span.getDroppedEventsCount());
+                        assertEquals(0, span.getDroppedLinksCount());
+                        assertEquals(0, span.getDroppedAttributesCount());
+                        assertEquals("", span.getStatus().getMessage());
+                        assertEquals(
+                                io.opentelemetry.proto.trace.v1.Status.StatusCode.STATUS_CODE_UNSET,
+                                span.getStatus().getCode());
+                        assertEquals(2, span.getAttributesCount());
+                        assertStringAttribute(span, PARENT.getKey(), "experiment_id:original");
+                        assertStringAttribute(
+                                span, "braintrust.context_json", "{\"customizer_error\":true}");
+                        var resource = request.decode().getResourceSpans(0);
+                        assertEquals(0, resource.getResource().getAttributesCount());
+                        assertEquals("", resource.getSchemaUrl());
+                        var scope = resource.getScopeSpans(0);
+                        assertEquals("", scope.getSchemaUrl());
+                        assertEquals("", scope.getScope().getName());
+                        assertEquals("", scope.getScope().getVersion());
+                        assertEquals(0, scope.getScope().getAttributesCount());
+                    }
+                }
+            }
+            assertEquals(2, laterCalls.get(), "Later hooks run only on the healthy record");
         }
-        assertNull(
-                requests.poll(300, TimeUnit.MILLISECONDS),
-                "No span from a failed batch may reach HTTP transport");
-        assertTrue(requests.isEmpty(), "No additional export requests are allowed");
+        assertTrue(requests.isEmpty());
     }
 
     private BraintrustConfig.Builder configBuilder() {
@@ -492,14 +686,18 @@ public class BraintrustSpanExporterTest {
             String parentHeader) {}
 
     private record CapturedRequest(byte[] body, String contentEncoding, String parentHeader) {
-        List<io.opentelemetry.proto.trace.v1.Span> decodeSpans() throws Exception {
+        ExportTraceServiceRequest decode() throws Exception {
             byte[] payload = body;
             if ("gzip".equalsIgnoreCase(contentEncoding)) {
                 try (var gzip = new GZIPInputStream(new ByteArrayInputStream(body))) {
                     payload = gzip.readAllBytes();
                 }
             }
-            return ExportTraceServiceRequest.parseFrom(payload).getResourceSpansList().stream()
+            return ExportTraceServiceRequest.parseFrom(payload);
+        }
+
+        List<io.opentelemetry.proto.trace.v1.Span> decodeSpans() throws Exception {
+            return decode().getResourceSpansList().stream()
                     .flatMap(resource -> resource.getScopeSpansList().stream())
                     .flatMap(scope -> scope.getSpansList().stream())
                     .toList();
@@ -509,17 +707,81 @@ public class BraintrustSpanExporterTest {
     private enum InvalidCustomization {
         THROWS,
         RETURNS_NULL,
+        ATTRIBUTES_THROWS,
+        NAME_THROWS,
+        LAZY_EVENT_LIST_THROWS,
+        EVENT_DATA_THROWS,
         TRACE_ID,
         SPAN_ID,
         PARENT_SPAN_ID,
         CONTEXT_TRACE_ID,
         CONTEXT_SPAN_ID,
+        CONTEXT_PARENT_TRACE_ID,
         CONTEXT_PARENT_SPAN_ID;
 
         SpanData customize(SpanData span) {
             return switch (this) {
                 case THROWS -> throw new IllegalStateException("customizer failed");
                 case RETURNS_NULL -> null;
+                case ATTRIBUTES_THROWS ->
+                        new DelegatingSpanData(span) {
+                            @Override
+                            public Attributes getAttributes() {
+                                throw new IllegalStateException("sensitive attributes");
+                            }
+                        };
+                case NAME_THROWS ->
+                        new DelegatingSpanData(span) {
+                            @Override
+                            public String getName() {
+                                throw new IllegalStateException("sensitive name");
+                            }
+                        };
+                case LAZY_EVENT_LIST_THROWS ->
+                        new DelegatingSpanData(span) {
+                            @Override
+                            public List<EventData> getEvents() {
+                                return new AbstractList<>() {
+                                    @Override
+                                    public EventData get(int index) {
+                                        throw new IllegalStateException("sensitive event list");
+                                    }
+
+                                    @Override
+                                    public int size() {
+                                        return 1;
+                                    }
+                                };
+                            }
+                        };
+                case EVENT_DATA_THROWS ->
+                        new DelegatingSpanData(span) {
+                            @Override
+                            public List<EventData> getEvents() {
+                                return List.of(
+                                        new EventData() {
+                                            @Override
+                                            public String getName() {
+                                                throw new IllegalStateException("sensitive event");
+                                            }
+
+                                            @Override
+                                            public Attributes getAttributes() {
+                                                return Attributes.empty();
+                                            }
+
+                                            @Override
+                                            public long getEpochNanos() {
+                                                return 123;
+                                            }
+
+                                            @Override
+                                            public int getTotalAttributeCount() {
+                                                return 0;
+                                            }
+                                        });
+                            }
+                        };
                 case TRACE_ID ->
                         new DelegatingSpanData(span) {
                             @Override
@@ -561,6 +823,17 @@ public class BraintrustSpanExporterTest {
                                         differentSpanId(span.getSpanId()),
                                         span.getSpanContext().getTraceFlags(),
                                         span.getSpanContext().getTraceState());
+                            }
+                        };
+                case CONTEXT_PARENT_TRACE_ID ->
+                        new DelegatingSpanData(span) {
+                            @Override
+                            public SpanContext getParentSpanContext() {
+                                return SpanContext.create(
+                                        "ffffffffffffffffffffffffffffffff",
+                                        span.getParentSpanId(),
+                                        TraceFlags.getSampled(),
+                                        TraceState.getDefault());
                             }
                         };
                 case CONTEXT_PARENT_SPAN_ID ->

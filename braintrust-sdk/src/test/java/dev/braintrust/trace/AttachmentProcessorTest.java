@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Integration tests inspecting actual OTLP payloads and attachment requests. Additional span
@@ -345,13 +346,23 @@ public class AttachmentProcessorTest {
         assertNull(attachmentRequests.poll(300, TimeUnit.MILLISECONDS));
     }
 
-    @Test
-    void rejectedBatchDoesNotUploadEarlierSpansAttachments() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void failedCustomizationSkipsOnlyAffectedSpansAttachments(boolean lazyFailure)
+            throws Exception {
         configBuilder.addSpanCustomizer(
                 new SpanCustomizer() {
                     @Override
                     public SpanData onSpanExport(SpanData span) {
                         if (span.getName().equals("reject")) {
+                            if (lazyFailure) {
+                                return new DelegatingSpanData(span) {
+                                    @Override
+                                    public String getName() {
+                                        throw new IllegalStateException("Lazy redaction failed");
+                                    }
+                                };
+                            }
                             throw new IllegalStateException("Redaction failed");
                         }
                         return span;
@@ -371,6 +382,12 @@ public class AttachmentProcessorTest {
                     source.get("test")
                             .spanBuilder("reject")
                             .setAttribute("braintrust.parent", "project_name:second")
+                            .setAttribute(
+                                    INPUT_JSON,
+                                    "{\"url\":\"data:application/pdf;base64," + BASE64_PDF + "\"}")
+                            .setAttribute(
+                                    BraintrustSpanProcessor.OUTPUT_JSON,
+                                    "{\"url\":\"data:application/pdf;base64," + BASE64_PDF + "\"}")
                             .startSpan();
             first.end();
             second.end();
@@ -381,10 +398,58 @@ public class AttachmentProcessorTest {
                                             ((ReadableSpan) second).toSpanData()))
                             .join(5, TimeUnit.SECONDS);
             assertTrue(result.isDone());
-            assertFalse(result.isSuccess());
-            assertNull(attachmentRequests.poll(300, TimeUnit.MILLISECONDS));
-            assertTrue(exports.isEmpty());
+            assertTrue(result.isSuccess());
+            assertArrayEquals(
+                    java.util.Base64.getDecoder().decode(BASE64_PNG),
+                    uploads.poll(5, TimeUnit.SECONDS));
+            assertNotNull(completedUploads.poll(5, TimeUnit.SECONDS));
+            for (int i = 0; i < 2; i++) {
+                var body = exports.poll(5, TimeUnit.SECONDS);
+                assertNotNull(body, "Expected an OTLP export");
+                var exported =
+                        ExportTraceServiceRequest.parseFrom(body)
+                                .getResourceSpans(0)
+                                .getScopeSpans(0)
+                                .getSpans(0);
+                if (exported.getName().equals("accept")) {
+                    var input =
+                            exported.getAttributesList().stream()
+                                    .filter(a -> a.getKey().equals(INPUT_JSON.getKey()))
+                                    .findFirst()
+                                    .orElseThrow()
+                                    .getValue()
+                                    .getStringValue();
+                    assertAttachmentRef(
+                            BraintrustJsonMapper.get().readTree(input).get("url"), "image/png");
+                } else {
+                    assertEquals("", exported.getName());
+                    assertFalse(
+                            exported.getAttributesList().stream()
+                                    .anyMatch(
+                                            a ->
+                                                    a.getKey().equals(INPUT_JSON.getKey())
+                                                            || a.getKey()
+                                                                    .equals(
+                                                                            BraintrustSpanProcessor
+                                                                                    .OUTPUT_JSON
+                                                                                    .getKey())));
+                    assertEquals(
+                            "{\"customizer_error\":true}",
+                            exported.getAttributesList().stream()
+                                    .filter(a -> a.getKey().equals("braintrust.context_json"))
+                                    .findFirst()
+                                    .orElseThrow()
+                                    .getValue()
+                                    .getStringValue());
+                }
+            }
         }
+        // Closing the exporter drains uploads, so absence here cannot race a pending upload.
+        assertTrue(uploads.isEmpty(), "No attachment from the stripped span may be uploaded");
+        assertEquals(
+                List.of("/api/apikey/login", "/attachment", "/upload", "/attachment/status"),
+                List.copyOf(attachmentRequests));
+        assertTrue(exports.isEmpty());
     }
 
     @Test
