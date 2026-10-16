@@ -1,0 +1,50 @@
+{
+  "id" : "1f8968cc-f8aa-3ef8-bb6e-38f1d42e01d1",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"system\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Reply with one word.\"\n    } ]\n  }, {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"What is the capital of France?\"\n    } ]\n  } ],\n  \"stream\" : false,\n  \"store\" : false\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-baa09e3f6fdb.json",
+    "headers" : {
+      "x-request-id" : "req_c56257721db34539958fa3b24cb434ba",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a4b2a0639987c586-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "4ms",
+      "x-ratelimit-remaining-tokens" : "149999917",
+      "x-ratelimit-remaining-requests" : "29998",
+      "Date" : "Thu, 15 Oct 2026 23:33:03 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=EwAkkIukZUd4VPUPdanRC3hxFbcs9GYvzHLCljHnodI-1792107182.65643-1.0.1.1-MJJjwaFf5xoBDD9pV.mzdJB1UzAisRulE44YsjX3UQ68psL.tmi17YR5TRHPyaRZm61jE7XLv5LP6FTDGGv6zoO3uEMfyar.AJKMwnCaxrR8G6TkRbxjoBkor_Zp1f5v; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 16 Oct 2026 00:03:03 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "1122",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "1f8968cc-f8aa-3ef8-bb6e-38f1d42e01d1",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-responses",
+  "requiredScenarioState" : "scenario-1-responses-2",
+  "insertionIndex" : 72
+}

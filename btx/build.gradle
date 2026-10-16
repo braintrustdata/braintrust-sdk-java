@@ -116,6 +116,7 @@ dependencies {
 test {
     useJUnitPlatform()
     workingDir = rootProject.projectDir
+    inputs.file(rootProject.file('scripts/spec-fetch.sh'))
 
     // Hand the isolated client classpaths to the test JVM (resolved lazily so configuration
     // time doesn't force dependency resolution).
@@ -146,6 +147,7 @@ tasks.register('fetchSpec', Exec) {
     description = 'Fetches braintrust-spec YAML files for the pinned ref.'
 
     inputs.property('specRef', specRef)
+    inputs.file(rootProject.file('scripts/spec-fetch.sh'))
     outputs.dir(specOutputDir)
 
     def outDir = specOutputDir.get().asFile

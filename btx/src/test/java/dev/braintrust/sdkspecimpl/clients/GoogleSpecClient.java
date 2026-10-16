@@ -5,6 +5,7 @@ import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.Part;
+import com.google.genai.types.ThinkingConfig;
 import dev.braintrust.instrumentation.genai.BraintrustGenAI;
 import dev.braintrust.sdkspecimpl.LlmSpanSpec;
 import dev.braintrust.sdkspecimpl.SpecClient;
@@ -19,15 +20,14 @@ public final class GoogleSpecClient implements SpecClient {
 
     /**
      * {@code :generateContent} specs that require Google features not yet implemented in the genai
-     * instrumentation / this client (thinking, grounding tools, response modalities, and
-     * per-modality prompt-token extraction for attachments). They are additionally listed in {@link
+     * instrumentation / this client (grounding tools, response modalities, and per-modality
+     * prompt-token extraction for attachments). They are additionally listed in {@link
      * dev.braintrust.sdkspecimpl.SpecClientRegistry#KNOWN_UNSUPPORTED_SPECS} so they load to a
      * deliberate skip instead of a failing "unsupported" sentinel. Remove an entry here once the
      * corresponding feature lands.
      */
     private static final java.util.Set<String> UNSUPPORTED_SPECS =
             java.util.Set.of(
-                    "thinking",
                     "grounding",
                     "streaming",
                     "generated_audio_usage",
@@ -113,6 +113,16 @@ public final class GoogleSpecClient implements SpecClient {
             }
             if (gc.containsKey("maxOutputTokens")) {
                 configBuilder.maxOutputTokens(((Number) gc.get("maxOutputTokens")).intValue());
+            }
+            if (gc.get("thinkingConfig") instanceof Map<?, ?> thinking) {
+                var thinkingBuilder = ThinkingConfig.builder();
+                if (thinking.get("includeThoughts") instanceof Boolean includeThoughts) {
+                    thinkingBuilder.includeThoughts(includeThoughts);
+                }
+                if (thinking.get("thinkingBudget") instanceof Number thinkingBudget) {
+                    thinkingBuilder.thinkingBudget(thinkingBudget.intValue());
+                }
+                configBuilder.thinkingConfig(thinkingBuilder.build());
             }
         }
 

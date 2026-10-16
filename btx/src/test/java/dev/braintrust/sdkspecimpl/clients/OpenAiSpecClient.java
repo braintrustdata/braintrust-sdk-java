@@ -5,6 +5,7 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.core.ObjectMappers;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import com.openai.models.responses.EasyInputMessage;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
 import com.openai.models.responses.ResponseInputItem;
@@ -99,31 +100,39 @@ public final class OpenAiSpecClient implements SpecClient {
     private void executeResponses(
             SpecClientContext ctx, Map<String, Object> request, List<ResponseInputItem> history)
             throws Exception {
-        // The responses API has multi-turn history: each turn's input items are
-        // prepended with outputs from prior turns. We deserialize the "input" field
-        // separately to accumulate history, then deserialize the rest of the body
-        // generically.
+        // Keep the original body (including instructions and scalar input) on the first turn.
+        // Only array input is needed when prepending history from earlier turns.
         String json = MAPPER.writeValueAsString(request);
-        com.fasterxml.jackson.databind.JsonNode node = ObjectMappers.jsonMapper().readTree(json);
-
-        // Deserialize this turn's input items
-        List<ResponseInputItem> thisInput =
-                ObjectMappers.jsonMapper()
-                        .convertValue(
-                                node.get("input"),
-                                ObjectMappers.jsonMapper()
-                                        .getTypeFactory()
-                                        .constructCollectionType(
-                                                List.class, ResponseInputItem.class));
-
-        // Prepend accumulated history from previous turns
-        List<ResponseInputItem> fullInput = new ArrayList<>(history);
-        fullInput.addAll(thisInput);
-
-        // Deserialize the full body, then override input with the accumulated history.
         ResponseCreateParams.Body body =
                 ObjectMappers.jsonMapper().readValue(json, ResponseCreateParams.Body.class);
-        var params = ResponseCreateParams.builder().body(body).inputOfResponse(fullInput).build();
+        var paramsBuilder = ResponseCreateParams.builder().body(body);
+
+        List<ResponseInputItem> thisInput;
+        if (request.get("input") instanceof String text) {
+            thisInput =
+                    List.of(
+                            ResponseInputItem.ofEasyInputMessage(
+                                    EasyInputMessage.builder()
+                                            .role(EasyInputMessage.Role.USER)
+                                            .content(text)
+                                            .build()));
+        } else {
+            thisInput =
+                    ObjectMappers.jsonMapper()
+                            .convertValue(
+                                    request.get("input"),
+                                    ObjectMappers.jsonMapper()
+                                            .getTypeFactory()
+                                            .constructCollectionType(
+                                                    List.class, ResponseInputItem.class));
+        }
+
+        if (!history.isEmpty()) {
+            List<ResponseInputItem> fullInput = new ArrayList<>(history);
+            fullInput.addAll(thisInput);
+            paramsBuilder.inputOfResponse(fullInput);
+        }
+        var params = paramsBuilder.build();
 
         Response response = client(ctx).responses().create(params);
 

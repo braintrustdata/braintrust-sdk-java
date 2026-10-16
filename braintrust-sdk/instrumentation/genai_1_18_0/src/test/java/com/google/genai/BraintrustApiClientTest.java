@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Transport-level coverage without credentials, network access, or recorded batch jobs. */
@@ -224,6 +225,41 @@ class BraintrustApiClientTest {
                     }
                 }
             }
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "{\"promptTokenCount\":8,\"candidatesTokenCount\":7,\"totalTokenCount\":15}"
+                        + "|{\"prompt_tokens\":8,\"completion_tokens\":7,\"tokens\":15}",
+                "{\"candidatesTokenCount\":7,\"thoughtsTokenCount\":0}"
+                        + "|{\"completion_tokens\":7,\"completion_reasoning_tokens\":0}",
+                "{\"promptTokenCount\":8,\"thoughtsTokenCount\":12,\"totalTokenCount\":20}"
+                    + "|{\"prompt_tokens\":8,\"completion_tokens\":12,\"completion_reasoning_tokens\":12,\"tokens\":20}",
+                "{}|{}",
+                "{\"candidatesTokenCount\":null,\"thoughtsTokenCount\":null}|{}",
+                "{\"candidatesTokenCount\":2147483647,\"thoughtsTokenCount\":1}"
+                        + "|{\"completion_tokens\":2147483648,\"completion_reasoning_tokens\":1}"
+            })
+    void normalizesPartialAndBoundaryUsage(String usage, String expected) throws Exception {
+        delegate.response = "{\"candidates\":[],\"usageMetadata\":" + usage + "}";
+        try (ApiResponse response =
+                invoke("post", "models/gemini:generateContent", "{}", false, false)) {
+            response.getBody().string();
+            assertEquals(JSON.readTree(expected), JSON.readTree(attribute("braintrust.metrics")));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{\"usageMetadata\":null}"})
+    void missingUsageDoesNotInventMetrics(String output) throws Exception {
+        delegate.response = output;
+        try (ApiResponse response =
+                invoke("post", "models/gemini:generateContent", "{}", false, false)) {
+            response.getBody().string();
+            assertNull(attribute("braintrust.metrics"));
         }
     }
 

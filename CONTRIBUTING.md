@@ -21,6 +21,33 @@ Because the SDK is new and under active development, third-party contribution be
 
 See [AGENTS.md](./AGENTS.md) for best practices developing, testing, and releasing the SDK.
 
+### Cross-language instrumentation specs
+
+Canonical span input/output and token metrics belong in
+[braintrust-spec](https://github.com/braintrustdata/braintrust-spec), not duplicated
+provider unit tests. Keep Java-only adapter boundaries and deterministic edge cases
+(such as absent usage fields or integer overflow) in unit tests.
+
+BTX fetches the revision pinned by `braintrustSpecRef` in `gradle.properties`.
+To develop against a separate spec worktree without changing that pin:
+
+```bash
+export BTX_SPEC_ROOT=/path/to/braintrust-spec/test/llm_span
+VCR_MODE=off ./gradlew :btx:test -Pbtx.spec.filter=openai/responses_,google/thinking
+VCR_MODE=record ./gradlew :btx:test -Pbtx.spec.filter=openai/responses_,google/thinking
+VCR_MODE=replay ./gradlew :btx:test -Pbtx.spec.filter=openai/responses_,google/thinking
+```
+
+The Responses cases exercise string input and instructions through the direct
+OpenAI SDK, plus equivalent chat messages through LangChain4j. The Google thinking
+case checks positive reasoning counts and inclusive completion-token accounting.
+The runner implements the shared `is_google_usage_metadata_normalized` predicate;
+it must not treat that predicate as a generic non-null assertion.
+
+Before merging, pin a remotely fetchable spec revision, unset `BTX_SPEC_ROOT`, and
+run `./gradlew :btx:test` in replay mode to verify the default consumption path.
+Record cassettes through VCR; never edit them by hand.
+
 ### CodeQL result caching
 
 CI installs the recommended CodeQL bundle before looking up cached SARIF results.
