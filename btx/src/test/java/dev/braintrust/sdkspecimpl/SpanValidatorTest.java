@@ -3,6 +3,7 @@ package dev.braintrust.sdkspecimpl;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,42 @@ class SpanValidatorTest {
 
     private static void validate(Object actual, Object expected) {
         SpanValidator.validateValue(actual, expected, "test");
+    }
+
+    @Test
+    void googleUsagePredicateRequiresReportedReasoningAndBalancedTotals() {
+        var predicate = new SpecMatcher.FnMatcher("is_google_usage_metadata_normalized");
+        Map<String, Object> valid =
+                Map.of(
+                        "prompt_tokens", 8,
+                        "completion_tokens", 19,
+                        "completion_reasoning_tokens", 12,
+                        "tokens", 27);
+        validate(valid, predicate);
+        for (String required : valid.keySet()) {
+            var missing = new HashMap<>(valid);
+            missing.remove(required);
+            assertThrows(AssertionError.class, () -> validate(missing, predicate), required);
+        }
+        for (Map<String, Object> changes :
+                List.<Map<String, Object>>of(
+                        Map.of("completion_tokens", -1),
+                        Map.of("completion_reasoning_tokens", 0),
+                        Map.of("completion_reasoning_tokens", 20),
+                        Map.of("tokens", 26),
+                        Map.of("tokens", Double.NaN),
+                        Map.of("prompt_tokens", "8"),
+                        Map.of("tool_use_tokens", 1))) {
+            var invalid = new HashMap<>(valid);
+            invalid.putAll(changes);
+            assertThrows(
+                    AssertionError.class, () -> validate(invalid, predicate), changes.toString());
+        }
+        assertThrows(AssertionError.class, () -> validate(null, predicate));
+        assertThrows(AssertionError.class, () -> validate(List.of(), predicate));
+        var nullToolUsage = new HashMap<>(valid);
+        nullToolUsage.put("tool_use_tokens", null);
+        validate(nullToolUsage, predicate);
     }
 
     @Test

@@ -152,9 +152,18 @@ class BraintrustApiClient extends ApiClient {
                     if (usage.containsKey("promptTokenCount")) {
                         metrics.put("prompt_tokens", (Number) usage.get("promptTokenCount"));
                     }
-                    if (usage.containsKey("candidatesTokenCount")) {
+                    Number candidates = (Number) usage.get("candidatesTokenCount");
+                    Number thoughts = (Number) usage.get("thoughtsTokenCount");
+                    // Gemini reports candidates separately from thoughts; completion includes both.
+                    // A missing component contributes zero only when the other is reported.
+                    if (candidates != null || thoughts != null) {
                         metrics.put(
-                                "completion_tokens", (Number) usage.get("candidatesTokenCount"));
+                                "completion_tokens",
+                                (candidates == null ? 0L : candidates.longValue())
+                                        + (thoughts == null ? 0L : thoughts.longValue()));
+                    }
+                    if (thoughts != null) {
+                        metrics.put("completion_reasoning_tokens", thoughts);
                     }
                     if (usage.containsKey("totalTokenCount")) {
                         metrics.put("tokens", (Number) usage.get("totalTokenCount"));

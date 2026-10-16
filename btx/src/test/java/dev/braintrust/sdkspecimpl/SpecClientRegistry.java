@@ -35,11 +35,10 @@ public final class SpecClientRegistry {
     private static final Set<String> KNOWN_UNSUPPORTED_SPECS =
             Set.of(
                     // Brand-new Google features added in braintrust-spec v0.0.10. The genai
-                    // instrumentation / GoogleSpecClient don't implement them yet (thinking,
-                    // grounding tools, response modalities, per-modality prompt-token extraction),
+                    // instrumentation / GoogleSpecClient don't implement them yet (grounding tools,
+                    // response modalities, per-modality prompt-token extraction),
                     // so they're marked unsupported rather than half-implemented. GoogleSpecClient
                     // also filters these out of supports(); see its UNSUPPORTED_SPECS.
-                    "google/thinking",
                     "google/grounding",
                     "google/streaming",
                     "google/generated_audio_usage",

@@ -322,8 +322,15 @@ public class InstrumentationSemConv {
                 metadata.put("model", requestJson.get("model").asText());
             }
             putGenerationParameters(metadata, requestJson);
-            // Chat completions API uses "messages"; Responses API uses "input"
-            if (requestJson.has("messages")) {
+            // Only Responses requests normalize input and instructions into message entries.
+            if ("POST".equals(method)
+                    && !pathSegments.isEmpty()
+                    && "responses".equals(pathSegments.get(pathSegments.size() - 1))) {
+                JsonNode input = openAIResponsesInput(requestJson);
+                if (input != null) {
+                    span.setAttribute("braintrust.input_json", toJson(input));
+                }
+            } else if (requestJson.has("messages")) {
                 span.setAttribute("braintrust.input_json", toJson(requestJson.get("messages")));
             } else if (requestJson.has("input") && requestJson.get("input").isArray()) {
                 span.setAttribute("braintrust.input_json", toJson(requestJson.get("input")));
@@ -331,6 +338,29 @@ public class InstrumentationSemConv {
         }
 
         span.setAttribute("braintrust.metadata", toJson(metadata));
+    }
+
+    @Nullable
+    private static JsonNode openAIResponsesInput(JsonNode requestJson) {
+        JsonNode input = requestJson.get("input");
+        JsonNode instructions = requestJson.get("instructions");
+        boolean hasInstructions = instructions != null && instructions.isTextual();
+        boolean hasTextInput = input != null && input.isTextual();
+        if (!hasInstructions && !hasTextInput) {
+            return input != null && input.isArray() ? input : null;
+        }
+
+        ArrayNode messages = BraintrustJsonMapper.get().createArrayNode();
+        if (hasInstructions) {
+            messages.addObject().put("role", "system").set("content", instructions);
+        }
+        if (hasTextInput) {
+            messages.addObject().put("role", "user").set("content", input);
+        } else if (input != null && input.isArray()) {
+            // Reuse heterogeneous entries, including tool calls/results and multimodal content.
+            messages.addAll((ArrayNode) input);
+        }
+        return messages;
     }
 
     @SneakyThrows
@@ -1160,8 +1190,8 @@ public class InstrumentationSemConv {
     /**
      * Request fields that are conversation content, not generation parameters. Each is already
      * captured as the span's input, so copying it into metadata would duplicate a potentially large
-     * payload. {@code instructions} (the Responses API's system prompt) belongs in the span input
-     * too — tracked separately — so it is withheld here rather than landing in metadata.
+     * payload. {@code instructions} (the Responses API's system prompt) is prepended to the span
+     * input as a system message, rather than landing in metadata.
      *
      * <p>The list spans every endpoint reachable through a wrapped client, not just chat: {@code
      * prompt} carries the user's text on legacy OpenAI completions, Anthropic's legacy {@code

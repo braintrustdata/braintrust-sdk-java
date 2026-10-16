@@ -25,6 +25,8 @@ public interface SpecMatcher {
      *   <li>{@code is_non_negative_number} - value is a number >= 0
      *   <li>{@code is_non_empty_string} - value is a non-empty string
      *   <li>{@code is_reasoning_message} - value is a non-null object (reasoning summary)
+     *   <li>{@code is_google_usage_metadata_normalized} - reported reasoning and normalized Google
+     *       token totals, as defined in the shared spec's implementation guide
      *   <li>Any string starting with {@code lambda} - treated as a loose "truthy" check (we can't
      *       evaluate Python lambdas; we just assert the value is non-null/non-empty)
      * </ul>

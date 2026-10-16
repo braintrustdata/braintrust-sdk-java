@@ -1,0 +1,48 @@
+{
+  "id" : "791670d5-6e0f-3127-b1dc-863a8dab02c0",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":\"What is the capital of France?\",\"model\":\"gpt-4o-mini\",\"instructions\":\"Reply with one word.\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-7489309b5cdb.json",
+    "headers" : {
+      "x-request-id" : "req_32b449f86a0f4f2388fcbbcb42023ec0",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a4b2a06c3934ebc3-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "8ms",
+      "x-ratelimit-remaining-tokens" : "149999830",
+      "x-ratelimit-remaining-requests" : "29996",
+      "Date" : "Thu, 15 Oct 2026 23:33:04 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=N5ri0IOT0yDsYn3jGyvFrU6T1jo7W78q9Ee.FCK3GT0-1792107184.0379653-1.0.1.1-XvL1tO00V5dr5HTl7DHiXbY5Hp8VY74snjj_ioYvd9uXXDy20blp6p_luf29SKaEYvVyVaVmsOqkdb7dBeZ837BkFFVsfpBS0mbpiaRLW6orYzdbHWBJedBvOuNC7FDh; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 16 Oct 2026 00:03:04 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "625",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "791670d5-6e0f-3127-b1dc-863a8dab02c0",
+  "persistent" : true,
+  "insertionIndex" : 70
+}

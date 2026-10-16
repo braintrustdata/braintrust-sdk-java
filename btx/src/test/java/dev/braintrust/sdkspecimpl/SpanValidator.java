@@ -274,6 +274,8 @@ public class SpanValidator {
 
     private static void assertFnMatcher(Object actual, SpecMatcher.FnMatcher fn, String context) {
         switch (fn.name()) {
+            case "is_google_usage_metadata_normalized" ->
+                    assertGoogleUsageMetadata(actual, context);
             case "is_non_negative_number" -> {
                 if (!(actual instanceof Number)) {
                     fail(
@@ -374,6 +376,35 @@ public class SpanValidator {
                     fail(String.format("%s: fn(%s): value is empty string", context, fn.name()));
                 }
             }
+        }
+    }
+
+    /** Presence rules from the shared Google predicate, plus the common token invariants. */
+    @SuppressWarnings("unchecked")
+    private static void assertGoogleUsageMetadata(Object actual, String context) {
+        if (!(actual instanceof Map)) {
+            fail(context + ": expected a Google metrics map, got " + actual);
+        }
+        Map<String, Object> metrics = (Map<String, Object>) actual;
+        for (String name :
+                List.of(
+                        "tokens",
+                        "prompt_tokens",
+                        "completion_tokens",
+                        "completion_reasoning_tokens")) {
+            if (!(metrics.get(name) instanceof Number)) {
+                fail(context + ": missing or non-numeric " + name);
+            }
+        }
+        if (((Number) metrics.get("completion_reasoning_tokens")).doubleValue() <= 0) {
+            fail(context + ": completion_reasoning_tokens must be positive");
+        }
+        if (metrics.get("tool_use_tokens") != null) {
+            fail(context + ": tool_use_tokens must be absent or null");
+        }
+        List<String> violations = TokenAccountingSpec.violations(metrics, "google");
+        if (!violations.isEmpty()) {
+            fail(context + ": " + String.join("; ", violations));
         }
     }
 

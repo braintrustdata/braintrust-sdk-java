@@ -1,0 +1,37 @@
+{
+  "id" : "b3f14c63-f340-3660-ac9d-090504568ca4",
+  "name" : "v1beta_models_gemini-2.5-flashgeneratecontent",
+  "request" : {
+    "url" : "/v1beta/models/gemini-2.5-flash:generateContent",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json; charset=UTF-8"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"contents\":[{\"parts\":[{\"text\":\"Explain why the sum of two odd integers is even. Be concise.\"}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0.0,\"thinkingConfig\":{\"includeThoughts\":true}}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1beta_models_gemini-2.5-flashgeneratecontent-db1d9e50a690.json",
+    "headers" : {
+      "X-Frame-Options" : "SAMEORIGIN",
+      "Alt-Svc" : "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "Server" : "scaffolding on HTTPServer2",
+      "X-Content-Type-Options" : "nosniff",
+      "Server-Timing" : "gfet4t7; dur=9522",
+      "Vary" : [ "Origin", "X-Origin", "Referer" ],
+      "X-Gemini-Service-Tier" : "standard",
+      "X-XSS-Protection" : "0",
+      "Date" : "Thu, 15 Oct 2026 23:33:13 GMT",
+      "Content-Type" : "application/json; charset=UTF-8"
+    }
+  },
+  "uuid" : "b3f14c63-f340-3660-ac9d-090504568ca4",
+  "persistent" : true,
+  "insertionIndex" : 5
+}

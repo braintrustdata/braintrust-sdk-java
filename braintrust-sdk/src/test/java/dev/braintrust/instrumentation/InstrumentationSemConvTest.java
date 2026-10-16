@@ -390,16 +390,192 @@ class InstrumentationSemConvTest {
      * braintrust.input_json} attribute (null when none was set).
      */
     private String inputJsonForRequest(String provider, String requestBody) {
+        return inputJsonForRequest(provider, List.of("v1", "messages"), "POST", requestBody);
+    }
+
+    private String inputJsonForRequest(
+            String provider, List<String> pathSegments, String method, String requestBody) {
         Span span = tracer.spanBuilder("llm").startSpan();
         InstrumentationSemConv.tagLLMSpanRequest(
-                span,
-                provider,
-                "https://api.anthropic.com",
-                List.of("v1", "messages"),
+                span, provider, "https://api.example.com", pathSegments, method, requestBody);
+        span.end();
+        var spans = exporter.getFinishedSpanItems();
+        return spans.get(spans.size() - 1).getAttributes().get(INPUT_JSON);
+    }
+
+    private String responsesInput(String requestBody) {
+        return inputJsonForRequest(
+                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                List.of("v1", "responses"),
                 "POST",
                 requestBody);
-        span.end();
-        return exporter.getFinishedSpanItems().get(0).getAttributes().get(INPUT_JSON);
+    }
+
+    @Test
+    void openAiResponsesRecognizesDeploymentPrefixedEndpoint() {
+        String body =
+                """
+                {"instructions": "be terse", "input": "hello"}
+                """;
+        assertEquals(
+                json(
+                        """
+                        [{"role": "system", "content": "be terse"},
+                         {"role": "user", "content": "hello"}]
+                        """),
+                json(
+                        inputJsonForRequest(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                List.of("openai", "deployments", "my-model", "responses"),
+                                "POST",
+                                body)));
+    }
+
+    @Test
+    void openAiResponsesArrayPreservesToolAndMultimodalEntriesAfterInstructions() {
+        String body =
+                """
+                {
+                  "instructions": "be terse",
+                  "input": [
+                    {"role": "user", "content": [
+                      {"type": "input_text", "text": "describe this"},
+                      {"type": "input_image", "image_url": "https://example.com/image.png"}
+                    ]},
+                    {"type": "function_call", "id": "fc_1", "call_id": "call_1",
+                     "name": "get_weather", "arguments": "{\\"city\\":\\"SF\\"}"},
+                    {"type": "function_call_output", "call_id": "call_1", "output": "sunny"},
+                    {"type": "item_reference", "id": "msg_previous"}
+                  ]
+                }
+                """;
+        JsonNode originalInput = json(body).get("input");
+        JsonNode captured = json(responsesInput(body));
+        assertEquals(originalInput.size() + 1, captured.size());
+        assertEquals(
+                json(
+                        """
+                        {"role": "system", "content": "be terse"}
+                        """),
+                captured.get(0));
+        for (int i = 0; i < originalInput.size(); i++) {
+            assertEquals(originalInput.get(i), captured.get(i + 1));
+        }
+
+        var withoutInstructions = json(body).deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) withoutInstructions)
+                .remove("instructions");
+        assertEquals(originalInput, json(responsesInput(withoutInstructions.toString())));
+    }
+
+    @Test
+    void openAiResponsesInstructionsOnlyContinuationOmitsMissingOrNullInput() {
+        for (String body :
+                List.of(
+                        """
+                        {"instructions": "continue tersely", "previous_response_id": "resp_1"}
+                        """,
+                        """
+                        {"instructions": "continue tersely", "previous_response_id": "resp_1",
+                         "input": null}
+                        """)) {
+            assertEquals(
+                    json(
+                            """
+                            [{"role": "system", "content": "continue tersely"}]
+                            """),
+                    json(responsesInput(body)));
+        }
+    }
+
+    @Test
+    void openAiResponsesAbsentOrNullInstructionsDoNotAddSystemMessage() {
+        JsonNode expected =
+                json(
+                        """
+                [{"role": "user", "content": "hello"}]
+                """);
+        for (String body :
+                List.of(
+                        """
+                        {"input": "hello"}
+                        """,
+                        """
+                        {"instructions": null, "input": "hello"}
+                        """,
+                        """
+                        {"input": [{"role": "user", "content": "hello"}]}
+                        """,
+                        """
+                        {"instructions": null, "input": [{"role": "user", "content": "hello"}]}
+                        """)) {
+            assertEquals(expected, json(responsesInput(body)));
+        }
+        for (String body :
+                List.of(
+                        "{}",
+                        "{\"instructions\": null}",
+                        "{\"input\": null}",
+                        "{\"instructions\": null, \"input\": null}")) {
+            assertNull(responsesInput(body), body);
+        }
+    }
+
+    @Test
+    void openAiResponsesEmptyContentIsPreserved() {
+        assertEquals(json("[]"), json(responsesInput("{\"input\": []}")));
+        assertEquals(
+                json(
+                        """
+                        [{"role": "system", "content": ""}, {"role": "user", "content": ""}]
+                        """),
+                json(responsesInput("{\"instructions\": \"\", \"input\": \"\"}")));
+    }
+
+    @Test
+    void openAiNonResponsesEndpointsDoNotNormalizeInputOrInstructions() {
+        for (List<String> path :
+                List.of(
+                        List.<String>of(),
+                        List.of("v1", "embeddings"),
+                        List.of("v1", "moderations"),
+                        List.of("v1", "audio", "speech"),
+                        List.of("v1", "chat", "completions"),
+                        List.of("v1", "responses", "resp_1"),
+                        List.of("responses", "batches"),
+                        List.of("v1", "not-responses"))) {
+            assertEquals(
+                    json("[\"hello\", \"world\"]"),
+                    json(
+                            inputJsonForRequest(
+                                    InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                    path,
+                                    "POST",
+                                    """
+                                    {"instructions": "be terse", "input": ["hello", "world"]}
+                                    """)),
+                    path.toString());
+        }
+        assertNull(
+                inputJsonForRequest(
+                        InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                        List.of("v1", "responses"),
+                        "GET",
+                        "{\"instructions\": \"be terse\", \"input\": \"hello\"}"));
+        assertEquals(
+                json(
+                        """
+                        [{"role": "user", "content": "chat message"}]
+                        """),
+                json(
+                        inputJsonForRequest(
+                                InstrumentationSemConv.PROVIDER_NAME_OPENAI,
+                                List.of("v1", "chat", "completions"),
+                                "POST",
+                                """
+                                {"messages": [{"role": "user", "content": "chat message"}],
+                                 "instructions": "be terse", "input": "hello"}
+                                """)));
     }
 
     @Test

@@ -226,9 +226,21 @@ public final class LangChain114OpenAiSpecClient implements SpecClient {
         for (Map<String, Object> request : spec.requests()) {
             appendInputMessages(conversation, request.get("input"));
 
+            // Instructions apply only to this turn, not to the accumulated conversation.
+            // The builder has no instructions field, so use a request-local SystemMessage.
+            // LangChain4j sends system/user text as input_text content arrays, not wire-level
+            // instructions or scalar input. The direct OpenAI client covers those wire shapes;
+            // this adapter exercises equivalent messages using the shared text normalization.
+            List<ChatMessage> messages = conversation;
+            if (request.get("instructions") instanceof String instructions) {
+                messages = new ArrayList<>(conversation.size() + 1);
+                messages.add(SystemMessage.from(instructions));
+                messages.addAll(conversation);
+            }
+
             ChatRequest chatRequest =
                     ChatRequest.builder()
-                            .messages(conversation)
+                            .messages(messages)
                             .parameters(buildParameters(request))
                             .build();
             ChatResponse response = model.chat(chatRequest);
@@ -293,8 +305,12 @@ public final class LangChain114OpenAiSpecClient implements SpecClient {
         return hosted;
     }
 
-    /** Appends this turn's role-tagged input items (user/system/assistant) to the conversation. */
+    /** Appends this turn's scalar input or role-tagged items to the conversation. */
     private static void appendInputMessages(List<ChatMessage> conversation, Object input) {
+        if (input instanceof String text) {
+            conversation.add(UserMessage.from(text));
+            return;
+        }
         if (!(input instanceof List<?> items)) {
             return;
         }
@@ -320,9 +336,6 @@ public final class LangChain114OpenAiSpecClient implements SpecClient {
      * langchain4j's {@link ChatMessage} types only carry text, so parts are concatenated. Falls
      * back to {@code toString()} only for shapes with no text parts, which would otherwise be
      * dropped silently.
-     *
-     * <p>Package-private for unit testing: no current spec uses the content-part form for a {@code
-     * /v1/responses} input, so only a unit test exercises that branch.
      */
     static String inputText(Object content) {
         if (content == null) {
