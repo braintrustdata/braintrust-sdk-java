@@ -770,12 +770,15 @@ public class InstrumentationSemConv {
     }
 
     private static final String ANTHROPIC_SERVER_TOOL_USE_TYPE = "server_tool_use";
+    // MCP connector tool calls use their own call block type, paired with "mcp_tool_result".
+    private static final String ANTHROPIC_MCP_TOOL_USE_TYPE = "mcp_tool_use";
     private static final String ANTHROPIC_TOOL_RESULT_SUFFIX = "_tool_result";
 
     /**
      * Emit child tool spans for Anthropic server-side tool use. In the Message {@code content}
-     * array these appear as a {@code server_tool_use} block (the call) and a matching {@code
-     * *_tool_result} block (e.g. {@code web_search_tool_result}), linked by {@code id} /{@code
+     * array these appear as a {@code server_tool_use} block (or {@code mcp_tool_use} for MCP
+     * connector calls) and a matching {@code *_tool_result} block (e.g. {@code
+     * web_search_tool_result} or {@code mcp_tool_result}), linked by {@code id} /{@code
      * tool_use_id}. Calls and results are paired (buffering results that arrive before their call);
      * unmatched calls and results each still get a span. Mirrors the Python SDK's {@code
      * _log_server_tool_spans}.
@@ -797,7 +800,7 @@ public class InstrumentationSemConv {
                     continue;
                 }
                 String itemType = item.path("type").asText(null);
-                if (ANTHROPIC_SERVER_TOOL_USE_TYPE.equals(itemType)) {
+                if (isAnthropicServerToolCallType(itemType)) {
                     JsonNode id = item.get("id");
                     if (id != null && id.isTextual()) {
                         callsById.put(id.asText(), item);
@@ -845,6 +848,11 @@ public class InstrumentationSemConv {
         } catch (Exception e) {
             log.debug("Could not emit Anthropic server-side child spans", e);
         }
+    }
+
+    private static boolean isAnthropicServerToolCallType(@Nullable String type) {
+        return ANTHROPIC_SERVER_TOOL_USE_TYPE.equals(type)
+                || ANTHROPIC_MCP_TOOL_USE_TYPE.equals(type);
     }
 
     private static boolean isAnthropicToolResultType(@Nullable String type) {
