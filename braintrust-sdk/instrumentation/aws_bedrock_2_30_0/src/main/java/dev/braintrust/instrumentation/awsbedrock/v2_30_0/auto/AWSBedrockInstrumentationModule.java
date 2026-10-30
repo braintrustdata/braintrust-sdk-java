@@ -38,6 +38,8 @@ public class AWSBedrockInstrumentationModule extends InstrumentationModule {
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustAWSBedrock",
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustBedrockInterceptor",
                 MANUAL_INSTRUMENTATION_PACKAGE + "BraintrustBedrockInterceptor$TeeingSubscriber",
+                MANUAL_INSTRUMENTATION_PACKAGE + "EventStreamDecoder",
+                MANUAL_INSTRUMENTATION_PACKAGE + "EventStreamDecoder$Message",
                 "dev.braintrust.json.BraintrustJsonMapper",
                 "dev.braintrust.instrumentation.InstrumentationSemConv",
                 "dev.braintrust.instrumentation.ConverseStreamAccumulator");
