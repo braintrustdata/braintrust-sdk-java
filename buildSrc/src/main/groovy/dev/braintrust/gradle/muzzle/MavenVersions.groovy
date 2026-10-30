@@ -33,6 +33,16 @@ class MavenVersions {
     }
 
     /**
+     * Returns the first, middle and last entries of a sorted version list (deduplicated).
+     */
+    static List<String> sample(List<String> sortedVersions) {
+        if (sortedVersions.size() <= 3) {
+            return sortedVersions
+        }
+        return [sortedVersions.first(), sortedVersions[sortedVersions.size().intdiv(2)], sortedVersions.last()]
+    }
+
+    /**
      * Fetches all available versions from Maven Central's maven-metadata.xml.
      */
     static List<String> fetchVersions(String group, String module) {
