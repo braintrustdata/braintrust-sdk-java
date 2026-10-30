@@ -14,6 +14,7 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.DelegatingSpanData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -368,7 +369,12 @@ public class AttachmentProcessorTest {
                         return span;
                     }
                 });
-        try (var source = SdkTracerProvider.builder().build();
+        // OTel >= 1.67 hands out noop tracers when no span processor is registered.
+        try (var source =
+                        SdkTracerProvider.builder()
+                                .addSpanProcessor(
+                                        SimpleSpanProcessor.create(SpanExporter.composite()))
+                                .build();
                 var exporter = new BraintrustSpanExporter(configBuilder.build())) {
             var first =
                     source.get("test")
