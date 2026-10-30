@@ -39,7 +39,7 @@ bootRun {
 
 This will automatically instrument major AI clients and frameworks. No code changes required. A list of supported instrumentation can be found [here](./braintrust-sdk/instrumentation)
 
-NOTE: Additional steps may be required for users running with other `-javaagent` flags. Consult [braintrust docs](https://www.braintrust.dev/docs/instrument/trace-llm-calls#java) for details.
+NOTE: Additional steps may be required for users running with other `-javaagent` flags. Consult [braintrust docs](https://docs.braintrust.dev/instrument/trace-llm-calls#java) for details.
 
 ## Eval Quickstart
 
