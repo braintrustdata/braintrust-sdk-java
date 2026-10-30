@@ -30,8 +30,6 @@ import software.amazon.awssdk.core.interceptor.SdkExecutionAttribute;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseRequest;
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseStreamRequest;
-import software.amazon.eventstream.Message;
-import software.amazon.eventstream.MessageDecoder;
 
 /**
  * AWS SDK ExecutionInterceptor that creates OpenTelemetry spans for Bedrock Converse calls,
@@ -230,7 +228,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
     }
 
     /**
-     * Tees the reactive byte stream into a {@link MessageDecoder}, forwarding each decoded
+     * Tees the reactive byte stream into an {@link EventStreamDecoder}, forwarding each decoded
      * event-stream frame to a {@link ConverseStreamAccumulator}. On completion the accumulator's
      * reconstructed Converse-shaped body is handed to semconv, so a streaming span carries the same
      * content-block shapes — text, tool use, reasoning — as a synchronous one.
@@ -239,7 +237,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
         private final Subscriber<? super ByteBuffer> downstream;
         private final Span span;
         private final Tracer tracer;
-        private final MessageDecoder decoder = new MessageDecoder();
+        private final EventStreamDecoder decoder = new EventStreamDecoder();
         private final ConverseStreamAccumulator accumulator = new ConverseStreamAccumulator();
 
         private long startNanos;
@@ -262,11 +260,9 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
             byte[] copy = new byte[buf.remaining()];
             buf.duplicate().get(copy);
             try {
-                decoder.feed(copy);
-                for (Message msg : decoder.getDecodedMessages()) {
-                    var header = msg.getHeaders().get(":event-type");
-                    if (header == null) continue;
-                    String eventType = header.getString();
+                for (EventStreamDecoder.Message msg : decoder.feed(copy)) {
+                    String eventType = msg.headers().get(":event-type");
+                    if (eventType == null) continue;
                     // First content frame marks time-to-first-token, whether the model opened with
                     // text, a tool call, or a reasoning block.
                     if (timeToFirstTokenNanos == null
@@ -275,7 +271,7 @@ class BraintrustBedrockInterceptor implements ExecutionInterceptor {
                         timeToFirstTokenNanos = System.nanoTime() - startNanos;
                     }
                     accumulator.accept(
-                            eventType, new String(msg.getPayload(), StandardCharsets.UTF_8));
+                            eventType, new String(msg.payload(), StandardCharsets.UTF_8));
                 }
             } catch (Exception e) {
                 log.debug("Failed to feed event-stream decoder", e);

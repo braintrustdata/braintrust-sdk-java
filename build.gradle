@@ -23,7 +23,7 @@ version = generateVersion()
 group = 'dev.braintrust'
 
 ext {
-  otelVersion = '1.66.0'
+  otelVersion = '1.67.0'
   otelSemConvVersion = '1.44.0'
   jacksonVersion = '2.21.7'
   jacksonDatabindNullableVersion = '0.2.11'

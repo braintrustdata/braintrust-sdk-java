@@ -28,6 +28,8 @@ import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.LinkData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.net.InetSocketAddress;
@@ -501,6 +503,10 @@ public class BraintrustSpanExporterTest {
 
         try (var provider =
                         SdkTracerProvider.builder()
+                                // OTel >= 1.67 hands out noop tracers when no span processor is
+                                // registered.
+                                .addSpanProcessor(
+                                        SimpleSpanProcessor.create(SpanExporter.composite()))
                                 .setResource(
                                         Resource.create(Attributes.of(KEEP, "secret resource")))
                                 .build();

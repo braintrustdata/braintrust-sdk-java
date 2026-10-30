@@ -6,12 +6,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import org.junit.jupiter.api.Test;
 
 public class FilterAISpansTest {
 
     private final BraintrustSampler.FilterAISpans filter = new BraintrustSampler.FilterAISpans();
-    private final SdkTracerProvider tracerProvider = SdkTracerProvider.builder().build();
+    // OTel >= 1.67 hands out noop tracers when no span processor is registered.
+    private final SdkTracerProvider tracerProvider =
+            SdkTracerProvider.builder()
+                    .addSpanProcessor(SimpleSpanProcessor.create(SpanExporter.composite()))
+                    .build();
 
     private ReadableSpan createSpan(String name, String attrKey, String attrValue) {
         var tracer = tracerProvider.get("test");

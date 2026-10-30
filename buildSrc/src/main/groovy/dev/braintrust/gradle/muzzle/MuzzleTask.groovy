@@ -87,7 +87,7 @@ abstract class MuzzleTask extends DefaultTask {
             List<String> versions
             try {
                 versions = directive.pinnedVersions
-                        ? directive.pinnedVersions.toList() : discoverVersions(directive)
+                        ? directive.pinnedVersions.toList() : sampleVersions(discoverVersions(directive))
             } catch (Exception e) {
                 throw new GradleException("[muzzle] Failed to resolve versions for ${directive}: ${e.message}", e)
             }
@@ -109,6 +109,18 @@ abstract class MuzzleTask extends DefaultTask {
         // run again on the next invocation, even with an otherwise warm build cache.
         resolvedTargets = targets
         return resolvedTargets
+    }
+
+    /**
+     * Unless {@code MUZZLE_SCAN_FULL_RANGE=true}, only check the oldest, middle and newest
+     * versions of a discovered range. Checking every release downloads several GB for
+     * frequently-published libraries.
+     */
+    private List<String> sampleVersions(List<String> versions) {
+        if (project.providers.environmentVariable('MUZZLE_SCAN_FULL_RANGE').getOrElse('false').toBoolean()) {
+            return versions
+        }
+        return MavenVersions.sample(versions)
     }
 
     protected List<String> discoverVersions(MuzzleDirective directive) {

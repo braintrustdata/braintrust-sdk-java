@@ -227,10 +227,24 @@ class AgentBootstrapTest {
     void tracerAfterShutdownPreservesParentWithoutRecording() throws Exception {
         // Load the SDK through the actual agent loader, not the application classpath.
         // A flat classpath hides the API/incubator visibility mismatch from issue #184.
-        var providerClass =
-                BraintrustBridge.getAgentClassLoader()
-                        .loadClass("io.opentelemetry.sdk.trace.SdkTracerProvider");
+        var agentLoader = BraintrustBridge.getAgentClassLoader();
+        var providerClass = agentLoader.loadClass("io.opentelemetry.sdk.trace.SdkTracerProvider");
         var builder = providerClass.getMethod("builder").invoke(null);
+        // OTel >= 1.67 hands out noop tracers when no span processor is registered.
+        var processorClass = agentLoader.loadClass("io.opentelemetry.sdk.trace.SpanProcessor");
+        var exporterClass = agentLoader.loadClass("io.opentelemetry.sdk.trace.export.SpanExporter");
+        var exporter =
+                exporterClass
+                        .getMethod("composite", exporterClass.arrayType())
+                        .invoke(
+                                null,
+                                (Object) java.lang.reflect.Array.newInstance(exporterClass, 0));
+        var processor =
+                agentLoader
+                        .loadClass("io.opentelemetry.sdk.trace.export.SimpleSpanProcessor")
+                        .getMethod("create", exporterClass)
+                        .invoke(null, exporter);
+        builder.getClass().getMethod("addSpanProcessor", processorClass).invoke(builder, processor);
         var provider = (TracerProvider) builder.getClass().getMethod("build").invoke(builder);
         var close = providerClass.getMethod("close");
         boolean closed = false;
