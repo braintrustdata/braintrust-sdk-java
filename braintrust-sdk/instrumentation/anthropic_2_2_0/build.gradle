@@ -5,7 +5,8 @@ muzzle {
   pass {
     group = 'com.anthropic'
     module = 'anthropic-java'
-    versions = '[2.2.0,)'
+    // 3.x is a breaking major (e.g. HttpRequest.body() now returns Optional); not yet supported
+    versions = '[2.2.0,3.0.0)'
   }
 }
 
