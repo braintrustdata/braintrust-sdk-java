@@ -330,6 +330,43 @@ class InstrumentationSemConvTest {
     }
 
     @Test
+    void pairsMcpToolUseWithMcpToolResult() {
+        // MCP connector calls use "mcp_tool_use" (not "server_tool_use") for the call block.
+        String body =
+                """
+                {
+                  "content": [
+                    {"type": "mcp_tool_use", "id": "mcptoolu_1", "name": "ask_wiki_question",
+                     "server_name": "deepwiki", "input": {"repoName": "braintrustdata/sdk"}},
+                    {"type": "mcp_tool_result", "tool_use_id": "mcptoolu_1", "is_error": false,
+                     "content": [{"type": "text", "text": "it is written in Java"}]},
+                    {"type": "text", "text": "here is the answer"}
+                  ]
+                }
+                """;
+
+        List<SpanData> tools = emitAnthropic(body);
+        assertEquals(1, tools.size());
+        SpanData mcp = byName(tools, "ask_wiki_question");
+
+        SpanData llm = byName(exporter.getFinishedSpanItems(), "llm");
+        assertEquals(llm.getSpanId(), mcp.getParentSpanId());
+        assertEquals("{\"type\":\"tool\"}", mcp.getAttributes().get(SPAN_ATTRIBUTES));
+
+        assertEquals(
+                "braintrustdata/sdk",
+                json(mcp.getAttributes().get(INPUT_JSON)).path("repoName").asText());
+
+        JsonNode md = json(mcp.getAttributes().get(METADATA));
+        assertEquals("mcptoolu_1", md.path("tool_use_id").asText());
+        assertEquals("mcp_tool_use", md.path("tool_call_type").asText());
+        assertEquals("mcp_tool_result", md.path("tool_result_type").asText());
+
+        JsonNode output = json(mcp.getAttributes().get(OUTPUT_JSON));
+        assertEquals("it is written in Java", output.get(0).path("text").asText());
+    }
+
+    @Test
     void serverToolResultErrorSetsErrorStatus() {
         String body =
                 """
