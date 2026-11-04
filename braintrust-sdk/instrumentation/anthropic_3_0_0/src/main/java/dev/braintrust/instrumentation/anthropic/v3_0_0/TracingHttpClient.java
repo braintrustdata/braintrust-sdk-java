@@ -1,0 +1,600 @@
+package dev.braintrust.instrumentation.anthropic.v3_0_0;
+
+import com.anthropic.core.RequestOptions;
+import com.anthropic.core.http.HttpClient;
+import com.anthropic.core.http.HttpMethod;
+import com.anthropic.core.http.HttpRequest;
+import com.anthropic.core.http.HttpRequestBody;
+import com.anthropic.core.http.HttpResponse;
+import dev.braintrust.instrumentation.InstrumentationSemConv;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class TracingHttpClient implements HttpClient {
+    private final Tracer tracer;
+    private final HttpClient underlying;
+
+    public TracingHttpClient(OpenTelemetry openTelemetry, HttpClient underlying) {
+        this(
+                openTelemetry.getTracer(
+                        BraintrustAnthropic.INSTRUMENTATION_NAME,
+                        BraintrustAnthropic.INSTRUMENTATION_VERSION),
+                underlying);
+    }
+
+    TracingHttpClient(Tracer tracer, HttpClient underlying) {
+        this.tracer = tracer;
+        this.underlying = underlying;
+    }
+
+    TracingHttpClient withTracer(Tracer tracer) {
+        return this.tracer == tracer ? this : new TracingHttpClient(tracer, underlying);
+    }
+
+    Tracer tracer() {
+        return tracer;
+    }
+
+    HttpClient underlying() {
+        return underlying;
+    }
+
+    /**
+     * Starts a request span. anthropic-java (and frameworks like Spring AI 2.x) dispatch
+     * async/streaming requests on executors where the caller's thread-local context is lost — which
+     * would orphan the span. {@link ContextCapturingProxy} captures the caller's context at the
+     * service-call boundary and threads it through as {@code headerContext}; when that is absent we
+     * fall back to whatever context is current on this thread (correct for synchronous calls). We
+     * deliberately do <em>not</em> fall back to the context that was current when the client was
+     * instrumented — a long-lived client wrapped inside some unrelated span would otherwise parent
+     * every future request to that stale span.
+     */
+    private Span startSpan(String name, @Nullable Context headerContext) {
+        Context parent = headerContext != null ? headerContext : Context.current();
+        return tracer.spanBuilder(name).setParent(parent).startSpan();
+    }
+
+    /**
+     * Extracts the caller context injected by {@link ContextCapturingProxy} (if any) and strips the
+     * internal header from the outgoing request.
+     */
+    private static ExtractedRequest extractCallerContext(HttpRequest request) {
+        var values = request.headers().values(ContextCapturingProxy.CONTEXT_HEADER);
+        if (values.isEmpty()) {
+            return new ExtractedRequest(request, null);
+        }
+        Context context = contextFromTraceparent(values.get(0));
+        HttpRequest stripped =
+                request.toBuilder()
+                        .replaceHeaders(ContextCapturingProxy.CONTEXT_HEADER, java.util.List.of())
+                        .build();
+        return new ExtractedRequest(stripped, context);
+    }
+
+    /** Parses a W3C {@code traceparent} value ({@code 00-<traceId>-<spanId>-<flags>}). */
+    @Nullable
+    private static Context contextFromTraceparent(String traceparent) {
+        try {
+            String[] parts = traceparent.split("-");
+            if (parts.length < 4) {
+                return null;
+            }
+            SpanContext spanContext =
+                    SpanContext.create(
+                            parts[1],
+                            parts[2],
+                            TraceFlags.fromHex(parts[3], 0),
+                            TraceState.getDefault());
+            if (!spanContext.isValid()) {
+                return null;
+            }
+            return Context.root().with(Span.wrap(spanContext));
+        } catch (Exception e) {
+            log.debug("invalid context header value: {}", traceparent, e);
+            return null;
+        }
+    }
+
+    private record ExtractedRequest(HttpRequest request, @Nullable Context callerContext) {}
+
+    @Override
+    public void close() {
+        underlying.close();
+    }
+
+    @Override
+    public @Nonnull HttpResponse execute(
+            @Nonnull HttpRequest httpRequest, @Nonnull RequestOptions requestOptions) {
+        var extracted = extractCallerContext(httpRequest);
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttp(extracted, requestOptions);
+        }
+        long spanStartNanos = System.nanoTime();
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            var buffered = bufferRequestBody(extracted.request());
+            var bufferedRequest = buffered.request();
+            InstrumentationSemConv.tagLLMSpanRequest(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                    bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
+                    bufferedRequest.pathSegments(),
+                    bufferedRequest.method().name(),
+                    buffered.bodyJson(),
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
+
+            var response = underlying.execute(bufferedRequest, requestOptions);
+            return new TeeingStreamHttpResponse(response, span, tracer, spanStartNanos);
+        } catch (Throwable failure) {
+            failSpanQuietly(span, failure);
+            throw failure;
+        }
+    }
+
+    @Override
+    public @Nonnull CompletableFuture<HttpResponse> executeAsync(
+            @Nonnull HttpRequest httpRequest, @Nonnull RequestOptions requestOptions) {
+        var extracted = extractCallerContext(httpRequest);
+        if (!isLlmRequest(extracted.request())) {
+            return executeHttpAsync(extracted, requestOptions);
+        }
+        long spanStartNanos = System.nanoTime();
+        var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
+        try {
+            var buffered = bufferRequestBody(extracted.request());
+            var bufferedRequest = buffered.request();
+            InstrumentationSemConv.tagLLMSpanRequest(
+                    span,
+                    InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                    bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
+                    bufferedRequest.pathSegments(),
+                    bufferedRequest.method().name(),
+                    buffered.bodyJson(),
+                    null,
+                    headersAsMap(bufferedRequest.headers()));
+            var result = new CompletableFuture<HttpResponse>();
+            underlying
+                    .executeAsync(bufferedRequest, requestOptions)
+                    .whenComplete(
+                            // Every path must settle `result`: an exception escaping this
+                            // callback would be swallowed by the discarded whenComplete future
+                            // and leave the caller waiting forever.
+                            (response, error) -> {
+                                if (error != null) {
+                                    failSpanQuietly(span, error);
+                                    result.completeExceptionally(error);
+                                    return;
+                                }
+                                TeeingStreamHttpResponse wrapped;
+                                try {
+                                    wrapped =
+                                            new TeeingStreamHttpResponse(
+                                                    response, span, tracer, spanStartNanos);
+                                } catch (Throwable failure) {
+                                    failSpanQuietly(span, failure);
+                                    try {
+                                        response.close();
+                                    } catch (Throwable closeFailure) {
+                                        if (closeFailure != failure) {
+                                            failure.addSuppressed(closeFailure);
+                                        }
+                                    }
+                                    result.completeExceptionally(failure);
+                                    return;
+                                }
+                                if (!result.complete(wrapped)) {
+                                    wrapped.close();
+                                }
+                            });
+            return result;
+        } catch (Throwable failure) {
+            failSpanQuietly(span, failure);
+            throw failure;
+        }
+    }
+
+    /** Ends failed requests, including linkage errors, without masking the original throwable. */
+    private static void failSpanQuietly(Span span, Throwable failure) {
+        try {
+            InstrumentationSemConv.tagLLMSpanResponse(span, failure);
+        } catch (Throwable taggingFailure) {
+            log.error("Could not tag span with request failure", taggingFailure);
+        }
+        try {
+            span.end();
+        } catch (Throwable endFailure) {
+            log.error("Could not end span", endFailure);
+        }
+    }
+
+    /**
+     * Only {@code POST .../messages} and the legacy {@code POST .../complete} produce model output
+     * and get the full LLM treatment. Everything else ({@code messages/batches}, {@code
+     * messages/count_tokens}, models, files, ...) gets a plain {@code anthropic.http} span with the
+     * body left untouched.
+     */
+    private static final Set<String> LLM_ENDPOINTS = Set.of("messages", "complete");
+
+    private static boolean isLlmRequest(HttpRequest request) {
+        var path = request.pathSegments();
+        return request.method() == HttpMethod.POST
+                && !path.isEmpty()
+                && LLM_ENDPOINTS.contains(path.get(path.size() - 1));
+    }
+
+    private HttpResponse executeHttp(ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("anthropic.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            var response = underlying.execute(extracted.request(), requestOptions);
+            InstrumentationSemConv.tagHttpSpanResponse(span, response.statusCode());
+            return response;
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            throw e;
+        } finally {
+            span.end();
+        }
+    }
+
+    private CompletableFuture<HttpResponse> executeHttpAsync(
+            ExtractedRequest extracted, RequestOptions requestOptions) {
+        var span = startSpan("anthropic.http", extracted.callerContext());
+        try (var ignored = span.makeCurrent()) {
+            var result = new CompletableFuture<HttpResponse>();
+            underlying
+                    .executeAsync(extracted.request(), requestOptions)
+                    .whenComplete(
+                            (response, error) -> {
+                                try {
+                                    try {
+                                        if (error != null) {
+                                            InstrumentationSemConv.tagLLMSpanResponse(span, error);
+                                        } else {
+                                            InstrumentationSemConv.tagHttpSpanResponse(
+                                                    span, response.statusCode());
+                                        }
+                                    } finally {
+                                        span.end();
+                                    }
+                                } catch (Throwable failure) {
+                                    result.completeExceptionally(error != null ? error : failure);
+                                    if (response != null) {
+                                        response.close();
+                                    }
+                                    return;
+                                }
+                                if (error != null) {
+                                    result.completeExceptionally(error);
+                                } else if (!result.complete(response)) {
+                                    // Cancellation does not cancel the transport; release a
+                                    // response
+                                    // that can no longer be delivered to its caller.
+                                    response.close();
+                                }
+                            });
+            return result;
+        } catch (Exception e) {
+            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            span.end();
+            throw e;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Request buffering — identical pattern to OpenAI TracingHttpClient
+    // -------------------------------------------------------------------------
+
+    /**
+     * Reads the request body once into memory, so it can be both recorded on the span and sent. The
+     * bytes are copied exactly once: the decoded JSON and the replacement body both read the same
+     * backing array.
+     */
+    private static BufferedRequest bufferRequestBody(HttpRequest request) {
+        // anthropic-java 3.x: HttpRequest.body() returns Optional (was nullable in 2.x)
+        HttpRequestBody originalBody = request.body().orElse(null);
+        if (originalBody == null) {
+            return new BufferedRequest(request, null);
+        }
+        var sink = new ByteSink(originalBody.contentLength());
+        originalBody.writeTo(sink);
+        var bufferedBody = new BufferedBody(sink.array(), sink.size(), originalBody.contentType());
+        return new BufferedRequest(
+                request.toBuilder().body(bufferedBody).build(),
+                sink.toString(StandardCharsets.UTF_8));
+    }
+
+    private record BufferedRequest(HttpRequest request, @Nullable String bodyJson) {}
+
+    /** {@link ByteArrayOutputStream} that exposes its backing array instead of copying it. */
+    private static final class ByteSink extends ByteArrayOutputStream {
+        ByteSink(long sizeHint) {
+            super(sizeHint > 0 && sizeHint < Integer.MAX_VALUE - 8 ? (int) sizeHint : 32);
+        }
+
+        byte[] array() {
+            return buf;
+        }
+    }
+
+    /** Repeatable body over the first {@code length} bytes of {@code bytes}. */
+    private static final class BufferedBody implements HttpRequestBody {
+        private final byte[] bytes;
+        private final int length;
+        private final String contentType;
+
+        BufferedBody(byte[] bytes, int length, String contentType) {
+            this.bytes = bytes;
+            this.length = length;
+            this.contentType = contentType;
+        }
+
+        @Override
+        public void writeTo(OutputStream outputStream) {
+            try {
+                outputStream.write(bytes, 0, length);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public String contentType() {
+            return contentType;
+        }
+
+        @Override
+        public long contentLength() {
+            return length;
+        }
+
+        @Override
+        public boolean repeatable() {
+            return true;
+        }
+
+        @Override
+        public void close() {}
+    }
+
+    // -------------------------------------------------------------------------
+    // Response tee — identical pattern to OpenAI TracingHttpClient
+    // -------------------------------------------------------------------------
+
+    /**
+     * Tees the response body so bytes are accumulated as the caller reads, then on close tags the
+     * span by auto-detecting SSE vs plain JSON from the first non-empty line.
+     */
+    private static final class TeeingStreamHttpResponse implements HttpResponse {
+        private final HttpResponse delegate;
+        private final Span span;
+        private final Tracer tracer;
+        private final long spanStartNanos;
+        private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
+        private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
+        private final InputStream teeStream;
+
+        TeeingStreamHttpResponse(
+                HttpResponse delegate, Span span, Tracer tracer, long spanStartNanos) {
+            this.delegate = delegate;
+            this.span = span;
+            this.tracer = tracer;
+            this.spanStartNanos = spanStartNanos;
+            this.teeStream =
+                    new TeeInputStream(
+                            delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
+        }
+
+        private void onFirstByte() {
+            timeToFirstTokenNanos.set(System.nanoTime() - spanStartNanos);
+        }
+
+        private void onStreamClosed(@Nullable IOException failure) {
+            try {
+                if (failure != null) {
+                    InstrumentationSemConv.tagLLMSpanResponse(span, failure);
+                }
+                byte[] bytes;
+                synchronized (teeBuffer) {
+                    bytes = teeBuffer.toByteArray();
+                }
+
+                // Recorded before tagging: the anthropic sdk raises above this layer, so the
+                // error status is ours alone to set, and losing it to a body-parsing problem is
+                // worse than losing the parsed output.
+                // Anything outside 2xx, not just 4xx/5xx: both vendor SDKs treat success as
+                // exactly 200..299, so a final 3xx that the http client did not follow (a 304, or
+                // a redirect with no usable Location) is raised to the caller as an
+                // UnexpectedStatusCodeException and must mark the span failed too.
+                int statusCode = delegate.statusCode();
+                if (statusCode < 200 || statusCode >= 300) {
+                    InstrumentationSemConv.tagLLMSpanHttpError(
+                            span, statusCode, new String(bytes, StandardCharsets.UTF_8));
+                }
+
+                // Wire-format bookkeeping lives in ResponseReassembler; this hands semconv
+                // everything the response carried in one flat call. A null body (empty or
+                // unparseable response) still tags the headers.
+                // tagLLMSpanResponse also emits child spans for any server-side tool calls (web
+                // search, etc.) nested under the LLM span while it is still live.
+                try {
+                    var reassembled =
+                            ResponseReassembler.reassemble(bytes, timeToFirstTokenNanos.get());
+                    if (reassembled.error() != null) {
+                        InstrumentationSemConv.tagLLMSpanResponse(
+                                span,
+                                com.anthropic.errors.SseException.builder()
+                                        .statusCode(statusCode)
+                                        .headers(delegate.headers())
+                                        .body(reassembled.error())
+                                        .build());
+                    }
+                    InstrumentationSemConv.tagLLMSpanResponse(
+                            tracer,
+                            span,
+                            InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
+                            reassembled.body(),
+                            reassembled.timeToFirstTokenNanos(),
+                            headersAsMap(delegate.headers()));
+                } catch (Exception e) {
+                    // Observability must never change the response behavior seen by the caller.
+                    log.error("Could not tag span from response buffer", e);
+                }
+            } finally {
+                span.end();
+            }
+        }
+
+        @Override
+        public int statusCode() {
+            return delegate.statusCode();
+        }
+
+        @Override
+        public com.anthropic.core.http.Headers headers() {
+            return delegate.headers();
+        }
+
+        @Override
+        public InputStream body() {
+            return teeStream;
+        }
+
+        @Override
+        public void close() {
+            try {
+                teeStream.close();
+            } catch (java.io.IOException ignored) {
+            }
+            delegate.close();
+        }
+    }
+
+    private static final class TeeInputStream extends InputStream {
+        private final InputStream source;
+        private final OutputStream sink;
+        private final Runnable onFirstByte;
+        private final Consumer<IOException> onClose;
+        private final AtomicBoolean firstByteSeen = new AtomicBoolean(false);
+        private final AtomicBoolean closed = new AtomicBoolean(false);
+
+        TeeInputStream(
+                InputStream source,
+                OutputStream sink,
+                Runnable onFirstByte,
+                Consumer<IOException> onClose) {
+            this.source = source;
+            this.sink = sink;
+            this.onFirstByte = onFirstByte;
+            this.onClose = onClose;
+        }
+
+        @Override
+        public int read() throws java.io.IOException {
+            try {
+                int b = source.read();
+                if (b == -1) {
+                    notifyClosed(null);
+                } else {
+                    notifyFirstByte();
+                    sink.write(b);
+                }
+                return b;
+            } catch (IOException failure) {
+                notifyReadFailed(failure);
+                throw failure;
+            }
+        }
+
+        @Override
+        public int read(byte[] buf, int off, int len) throws java.io.IOException {
+            try {
+                int n = source.read(buf, off, len);
+                if (n == -1) {
+                    notifyClosed(null);
+                } else if (n > 0) {
+                    notifyFirstByte();
+                    sink.write(buf, off, n);
+                }
+                return n;
+            } catch (IOException failure) {
+                notifyReadFailed(failure);
+                throw failure;
+            }
+        }
+
+        @Override
+        public void close() throws java.io.IOException {
+            notifyClosed(null);
+            source.close();
+        }
+
+        private void notifyFirstByte() {
+            if (!firstByteSeen.compareAndExchange(false, true)) {
+                onFirstByte.run();
+            }
+        }
+
+        private void notifyReadFailed(IOException failure) {
+            try {
+                notifyClosed(failure);
+            } catch (Throwable taggingFailure) {
+                log.error("Could not tag span from failed response stream", taggingFailure);
+            }
+        }
+
+        private void notifyClosed(@Nullable IOException failure) {
+            if (!closed.compareAndExchange(false, true)) {
+                onClose.accept(failure);
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Span tagging from buffered bytes
+    // -------------------------------------------------------------------------
+
+    /**
+     * Adapts the anthropic sdk's {@code Headers} to the vendor-neutral shape {@link
+     * InstrumentationSemConv} consumes. Returns an empty map on failure so a header-shape change
+     * can never take down the tagging that follows it.
+     */
+    private static Map<String, List<String>> headersAsMap(
+            @Nullable com.anthropic.core.http.Headers headers) {
+        if (headers == null) {
+            return Map.of();
+        }
+        try {
+            var map = new HashMap<String, List<String>>();
+            for (String name : headers.names()) {
+                map.put(name, headers.values(name));
+            }
+            return map;
+        } catch (Exception e) {
+            log.debug("could not read headers", e);
+            return Map.of();
+        }
+    }
+}

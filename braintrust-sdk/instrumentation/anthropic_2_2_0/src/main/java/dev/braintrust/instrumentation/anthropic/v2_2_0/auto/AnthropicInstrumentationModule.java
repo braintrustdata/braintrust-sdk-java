@@ -1,6 +1,7 @@
 package dev.braintrust.instrumentation.anthropic.v2_2_0.auto;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.not;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import com.anthropic.client.AnthropicClient;
@@ -10,6 +11,7 @@ import dev.braintrust.instrumentation.InstrumentationModule;
 import dev.braintrust.instrumentation.TypeInstrumentation;
 import dev.braintrust.instrumentation.TypeTransformer;
 import dev.braintrust.instrumentation.anthropic.v2_2_0.BraintrustAnthropic;
+import dev.braintrust.instrumentation.muzzle.ClassLoaderMatchers;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import java.util.List;
 import net.bytebuddy.asm.Advice;
@@ -26,11 +28,24 @@ public class AnthropicInstrumentationModule extends InstrumentationModule {
         super("anthropic_2_2_0");
     }
 
+    /**
+     * Gates this module to anthropic-java < 3.0.0 (3.x is covered by {@code anthropic_3_0_0}, whose
+     * matcher requires {@code AssistantMessageParam}, a class new in 3.0.0).
+     */
+    @Override
+    public ElementMatcher<ClassLoader> classLoaderMatcher() {
+        return not(
+                ClassLoaderMatchers.hasClassNamed(
+                        "com.anthropic.models.messages.AssistantMessageParam"));
+    }
+
     @Override
     public List<String> getHelperClassNames() {
         return List.of(
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient",
-                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$1",
+                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$BufferedRequest",
+                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$ByteSink",
+                MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$BufferedBody",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeingStreamHttpResponse",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$TeeInputStream",
                 MANUAL_INSTRUMENTATION_PACKAGE + "TracingHttpClient$ExtractedRequest",

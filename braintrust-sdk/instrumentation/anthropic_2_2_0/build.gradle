@@ -5,8 +5,16 @@ muzzle {
   pass {
     group = 'com.anthropic'
     module = 'anthropic-java'
-    // 3.x is a breaking major (e.g. HttpRequest.body() now returns Optional); not yet supported
+    // Upper-bounded below 3.0.0: 3.x is a breaking major (HttpRequest.body() now returns
+    // Optional) and the anthropic_3_0_0 module takes over.
     versions = '[2.2.0,3.0.0)'
+  }
+  // Assert the classLoaderMatcher rejects 3.0.0+ so the two anthropic modules never both
+  // instrument the same client builder.
+  fail {
+    group = 'com.anthropic'
+    module = 'anthropic-java'
+    pinVersions '3.0.0'
   }
 }
 
@@ -30,7 +38,8 @@ dependencies {
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
   testImplementation "net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}"
   testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
-  testImplementation 'com.anthropic:anthropic-java:2.2.0'
+  // Exercise later 2.x convenience APIs while retaining the 2.2.0 compilation baseline.
+  testImplementation 'com.anthropic:anthropic-java:2.75.0'
 }
 
 test {
