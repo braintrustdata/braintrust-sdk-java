@@ -2,7 +2,7 @@ package dev.braintrust.instrumentation.springai.v2_0_0;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.AnthropicClientAsync;
-import dev.braintrust.instrumentation.anthropic.v2_2_0.BraintrustAnthropic;
+import dev.braintrust.instrumentation.anthropic.BraintrustAnthropic;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
@@ -16,6 +16,10 @@ import lombok.extern.slf4j.Slf4j;
  * com.anthropic.client.AnthropicClientAsync} (streaming). Both are wrapped with the same {@code
  * TracingHttpClient} used by the anthropic-java instrumentation module. Spring AI types are only
  * accessed reflectively so this class never links against them.
+ *
+ * <p>Wrapping goes through the version-dispatching {@link BraintrustAnthropic} facade so a Spring
+ * AI release that moves to anthropic-java 3.x gets the 3.x tracing client rather than the 2.x one,
+ * which would fail every request with {@code NoSuchMethodError}.
  *
  * <p>Internal — the public entry point is {@link BraintrustSpringAI#wrap}.
  */
@@ -44,7 +48,8 @@ final class SpringAIAnthropic {
             } else if (client instanceof AnthropicClientAsync async) {
                 setField(chatModel, fieldName, BraintrustAnthropic.wrap(tracer, async));
             }
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
+            // Leave the field untouched: an uninstrumented client beats a broken one.
             log.error("failed to instrument spring ai anthropic client field {}", fieldName, e);
         }
     }

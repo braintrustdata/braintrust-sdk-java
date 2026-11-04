@@ -1,0 +1,56 @@
+{
+  "id" : "2e013003-d52f-376f-9b69-319a00ce72e3",
+  "name" : "v1_messages",
+  "request" : {
+    "url" : "/v1/messages",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"max_tokens\":128,\"messages\":[{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"claude-haiku-4-5-20251001\",\"system\":\"You are a helpful assistant.\",\"temperature\":0.0}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_messages-c9d6119efe32.json",
+    "headers" : {
+      "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
+      "Server" : "cloudflare",
+      "vary" : "Accept-Encoding",
+      "anthropic-ratelimit-output-tokens-limit" : "2000000",
+      "anthropic-ratelimit-output-tokens-reset" : "2026-11-03T02:30:42Z",
+      "anthropic-ratelimit-input-tokens-reset" : "2026-11-03T02:30:42Z",
+      "anthropic-ratelimit-tokens-remaining" : "12000000",
+      "anthropic-ratelimit-requests-limit" : "20000",
+      "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
+      "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
+      "server-timing" : "x-originResponse;dur=389",
+      "anthropic-ratelimit-input-tokens-remaining" : "10000000",
+      "anthropic-ratelimit-requests-remaining" : "19999",
+      "Content-Type" : "application/json",
+      "CF-RAY" : "a547f561bcb94855-SEA",
+      "anthropic-ratelimit-tokens-limit" : "12000000",
+      "cf-cache-status" : "DYNAMIC",
+      "request-id" : "req_011CgfD4tHvWow46e5QjJHJ8",
+      "anthropic-ratelimit-tokens-reset" : "2026-11-03T02:30:42Z",
+      "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
+      "Date" : "Tue, 03 Nov 2026 02:30:42 GMT",
+      "X-Robots-Tag" : "none",
+      "anthropic-ratelimit-requests-reset" : "2026-11-03T02:30:42Z",
+      "anthropic-ratelimit-input-tokens-limit" : "10000000",
+      "traceresponse" : "00-8de61c7b2c3e4d47fadb7dcef460b0c9-dcc07eb1bc48d0ed-01",
+      "anthropic-ratelimit-output-tokens-remaining" : "2000000"
+    }
+  },
+  "uuid" : "2e013003-d52f-376f-9b69-319a00ce72e3",
+  "persistent" : true,
+  "scenarioName" : "scenario-4-v1-messages",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-4-v1-messages-2",
+  "insertionIndex" : 62
+}

@@ -83,6 +83,11 @@ final class ContextCapturingProxy implements InvocationHandler {
                 default -> "ContextCapturingProxy(" + delegate + ")"; // toString
             };
         }
+        // Convenience overloads must call back through the proxy once they create Params.
+        // Invoking them on the delegate would bypass context capture before async dispatch.
+        if (method.isDefault()) {
+            return InvocationHandler.invokeDefault(proxy, method, args);
+        }
         Object[] invokeArgs = injectContextHeader(args);
         Object result;
         try {
@@ -96,6 +101,12 @@ final class ContextCapturingProxy implements InvocationHandler {
         if (result != null
                 && returnType.isInterface()
                 && returnType.getName().startsWith("com.anthropic.")) {
+            // withOptions can replace the transport that strips our private context header.
+            // Only keep capturing context if the derived service is instrumented too.
+            if (method.getName().equals("withOptions")
+                    && !BraintrustAnthropic.instrumentDerivedService(delegate, result)) {
+                return result;
+            }
             return Proxy.newProxyInstance(
                     returnType.getClassLoader(),
                     new Class<?>[] {returnType},

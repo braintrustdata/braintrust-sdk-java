@@ -26,9 +26,12 @@ repositories {
 //                 (main test classpath has 1.19.0 + langchain_1_14_0). Keeps the older
 //                 module under btx spec coverage even though the two langchain4j lines
 //                 cannot coexist.
+//   anthropic3  - anthropic-java 3.x, driving the anthropic_3_0_0 instrumentation module
+//                 (main test classpath has 2.x + anthropic_2_2_0).
 sourceSets {
     springai2
     langchain18
+    anthropic3
 }
 
 dependencies {
@@ -57,6 +60,17 @@ dependencies {
     langchain18Implementation "io.opentelemetry:opentelemetry-api:${rootProject.ext.otelVersion}"
     langchain18Implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
     langchain18RuntimeOnly 'org.slf4j:slf4j-simple:2.0.17'
+
+    // anthropic-java 3.x against the anthropic_3_0_0 module. Must stay >= 3.0.0 or the module's
+    // classLoaderMatcher gate rejects it.
+    anthropic3CompileOnly sourceSets.test.output
+    anthropic3CompileOnly(testFixtures(project(':test-harness')))
+
+    anthropic3Implementation project(':braintrust-sdk:instrumentation:anthropic_3_0_0')
+    anthropic3Implementation 'com.anthropic:anthropic-java:3.4.0'
+    anthropic3Implementation "io.opentelemetry:opentelemetry-api:${rootProject.ext.otelVersion}"
+    anthropic3Implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    anthropic3RuntimeOnly 'org.slf4j:slf4j-simple:2.0.17'
 }
 
 dependencies {
@@ -120,12 +134,15 @@ test {
 
     // Hand the isolated client classpaths to the test JVM (resolved lazily so configuration
     // time doesn't force dependency resolution).
-    dependsOn tasks.named('springai2Classes'), tasks.named('langchain18Classes')
+    dependsOn tasks.named('springai2Classes'), tasks.named('langchain18Classes'),
+        tasks.named('anthropic3Classes')
     doFirst {
         systemProperty 'btx.springai2.classpath',
             (sourceSets.springai2.output.classesDirs + configurations.springai2RuntimeClasspath).asPath
         systemProperty 'btx.langchain18.classpath',
             (sourceSets.langchain18.output.classesDirs + configurations.langchain18RuntimeClasspath).asPath
+        systemProperty 'btx.anthropic3.classpath',
+            (sourceSets.anthropic3.output.classesDirs + configurations.anthropic3RuntimeClasspath).asPath
     }
     testLogging {
         events "passed", "skipped", "failed"

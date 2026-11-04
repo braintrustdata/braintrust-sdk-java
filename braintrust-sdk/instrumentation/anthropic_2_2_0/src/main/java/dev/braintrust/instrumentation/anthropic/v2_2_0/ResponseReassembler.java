@@ -1,5 +1,6 @@
 package dev.braintrust.instrumentation.anthropic.v2_2_0;
 
+import com.anthropic.core.JsonValue;
 import com.anthropic.helpers.MessageAccumulator;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import dev.braintrust.json.BraintrustJsonMapper;
@@ -32,9 +33,14 @@ class ResponseReassembler {
      *
      * <p>{@code timeToFirstTokenNanos} is only populated for a stream, since a non-streaming
      * response has no first token to time.
+     *
+     * <p>{@code error} retains an SSE error payload independently of message completion.
      */
-    record Result(@Nullable String body, @Nullable Long timeToFirstTokenNanos) {
-        static final Result EMPTY = new Result(null, null);
+    record Result(
+            @Nullable String body,
+            @Nullable Long timeToFirstTokenNanos,
+            @Nullable JsonValue error) {
+        static final Result EMPTY = new Result(null, null, null);
     }
 
     /** Detects the wire format and reassembles accordingly. Never throws. */
@@ -50,10 +56,10 @@ class ResponseReassembler {
                     firstLine != null
                             && (firstLine.startsWith("data:") || firstLine.startsWith("event:"));
             if (isSse) {
-                return new Result(reassembleSse(bytes), timeToFirstTokenNanos);
+                return reassembleSse(bytes, timeToFirstTokenNanos);
             }
             // Non-streaming: plain Message JSON — pass it whole, no time_to_first_token
-            return new Result(new String(bytes, StandardCharsets.UTF_8), null);
+            return new Result(new String(bytes, StandardCharsets.UTF_8), null, null);
         } catch (Exception e) {
             log.error("Could not reassemble Anthropic response buffer", e);
             return Result.EMPTY;
@@ -84,12 +90,11 @@ class ResponseReassembler {
      * data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hi"}}
      * </pre>
      *
-     * We only need the {@code data:} lines — the event name is redundant with the {@code type}
-     * field inside the JSON. Feed each data payload to {@link MessageAccumulator} and serialize the
-     * assembled {@link com.anthropic.models.messages.Message}.
+     * Feed message data payloads to {@link MessageAccumulator} and serialize the assembled {@link
+     * com.anthropic.models.messages.Message}. Error events are returned separately so the tracing
+     * layer can report failures raised by the SDK above the HTTP stream.
      */
-    @Nullable
-    private static String reassembleSse(byte[] sseBytes) {
+    private static Result reassembleSse(byte[] sseBytes, long timeToFirstTokenNanos) {
         try {
             var mapper = BraintrustJsonMapper.get();
             var reader =
@@ -98,20 +103,39 @@ class ResponseReassembler {
                                     new ByteArrayInputStream(sseBytes), StandardCharsets.UTF_8));
             var accumulator = MessageAccumulator.create();
             String line;
+            String event = null;
             while ((line = reader.readLine()) != null) {
+                if (line.isEmpty()) {
+                    event = null;
+                    continue;
+                }
+                if (line.startsWith("event:")) {
+                    event = line.substring("event:".length()).strip();
+                    continue;
+                }
                 if (!line.startsWith("data:")) continue;
                 String data = line.substring("data:".length()).strip();
                 if (data.isEmpty()) continue;
                 try {
-                    accumulator.accumulate(mapper.readValue(data, RawMessageStreamEvent.class));
+                    var payload = mapper.readTree(data);
+                    // Preserve errors even when no complete message exists.
+                    if ("error".equals(event) || "error".equals(payload.path("type").asText())) {
+                        return new Result(
+                                null, timeToFirstTokenNanos, JsonValue.fromJsonNode(payload));
+                    }
+                    accumulator.accumulate(
+                            mapper.treeToValue(payload, RawMessageStreamEvent.class));
                 } catch (Exception ignored) {
                     // skip unrecognized event types (e.g. ping)
                 }
             }
-            return BraintrustJsonMapper.toJson(accumulator.message());
+            return new Result(
+                    BraintrustJsonMapper.toJson(accumulator.message()),
+                    timeToFirstTokenNanos,
+                    null);
         } catch (Exception e) {
             log.error("Could not parse Anthropic SSE buffer to tag streaming span output", e);
-            return null;
+            return new Result(null, timeToFirstTokenNanos, null);
         }
     }
 }

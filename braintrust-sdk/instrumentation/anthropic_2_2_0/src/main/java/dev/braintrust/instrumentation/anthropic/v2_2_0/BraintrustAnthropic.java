@@ -7,6 +7,7 @@ import com.anthropic.core.http.HttpClient;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
@@ -87,6 +88,25 @@ public final class BraintrustAnthropic {
         }
     }
 
+    /** Preserves the source's current tracer when withOptions replaces a service's transport. */
+    static boolean instrumentDerivedService(Object source, Object service) {
+        try {
+            ClientOptions options = getField(source, "clientOptions");
+            // async() can rebuild the SDK retry layer around the traced original transport.
+            HttpClient transport = options.httpClient();
+            if (!(transport instanceof TracingHttpClient)) {
+                transport = getField(options, "originalHttpClient");
+            }
+            if (transport instanceof TracingHttpClient tracing) {
+                return instrument(tracing.tracer(), service, false);
+            }
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            log.error("failed to instrument derived anthropic service", e);
+        }
+        // Without a tracing transport, adding the context proxy would leak its internal header.
+        return false;
+    }
+
     private static void instrumentHttpClient(Tracer tracer, Object client, boolean replaceTracer) {
         int[] instrumented = {0};
         forAllFields(
@@ -111,11 +131,67 @@ public final class BraintrustAnthropic {
         }
     }
 
-    /** Swaps both HTTP client fields on a {@link ClientOptions} for tracing wrappers. */
+    /**
+     * Swaps both HTTP client fields on a {@link ClientOptions} for tracing wrappers and turns off
+     * the SDK's built-in tracing.
+     */
     private static void instrumentClientOptions(
             Tracer tracer, ClientOptions clientOptions, boolean replaceTracer) {
+        disableNativeTracing(clientOptions);
+        try {
+            HttpClient original = getField(clientOptions, "originalHttpClient");
+            if (original instanceof TracingHttpClient tracing
+                    && !(clientOptions.httpClient() instanceof TracingHttpClient)) {
+                // async()/withOptions() rebuild the SDK transport around the traced original.
+                // Rebuild around its untraced delegate to retain retries without nested LLM spans.
+                var builder = clientOptions.toBuilder();
+                // Avoid the public setter's extra GC-closing wrapper for this shared transport.
+                setPrivateField(builder, "httpClient", tracing.underlying());
+                HttpClient rebuilt = builder.build().httpClient();
+                setPrivateField(
+                        clientOptions,
+                        "httpClient",
+                        new TracingHttpClient(replaceTracer ? tracer : tracing.tracer(), rebuilt));
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
         swapHttpClient(tracer, clientOptions, "originalHttpClient", replaceTracer);
         swapHttpClient(tracer, clientOptions, "httpClient", replaceTracer);
+    }
+
+    /**
+     * anthropic-java 2.72.0+ has built-in OTel tracing, on by default via GlobalOpenTelemetry,
+     * which would emit a duplicate {@code com.anthropic.sdk.java} span around each of ours. The SDK
+     * re-reads {@code ClientOptions.openTelemetry().traces().enabled()} on every API call, so
+     * replacing the field disables it for this client. Reflective because this module compiles
+     * against 2.2.0, which predates that API; a no-op on older versions. Best-effort: on failure we
+     * keep our instrumentation and accept the duplicate spans.
+     */
+    private static void disableNativeTracing(ClientOptions clientOptions) {
+        Method openTelemetryGetter;
+        try {
+            openTelemetryGetter = ClientOptions.class.getMethod("openTelemetry");
+        } catch (NoSuchMethodException e) {
+            return; // anthropic-java < 2.72.0: no built-in tracing
+        }
+        try {
+            Object otel = openTelemetryGetter.invoke(clientOptions);
+            Object traces = otel.getClass().getMethod("traces").invoke(otel);
+            if (!(Boolean) traces.getClass().getMethod("enabled").invoke(traces)) {
+                return;
+            }
+            Object builder = otel.getClass().getMethod("toBuilder").invoke(otel);
+            builder.getClass().getMethod("traces", boolean.class).invoke(builder, false);
+            setPrivateField(
+                    clientOptions,
+                    "openTelemetry",
+                    builder.getClass().getMethod("build").invoke(builder));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            log.warn(
+                    "failed to disable anthropic-java built-in tracing; spans may be duplicated",
+                    e);
+        }
     }
 
     private static void swapHttpClient(

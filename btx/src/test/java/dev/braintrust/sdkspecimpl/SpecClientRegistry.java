@@ -69,6 +69,16 @@ public final class SpecClientRegistry {
                                             "btx.langchain18.classpath",
                                             "dev.braintrust.sdkspecimpl.langchain18.LangChain18OpenAiSpecClient")),
                             new IsolatedClientStub(
+                                    "anthropic3",
+                                    "anthropic",
+                                    // anthropic-java 3.x through the anthropic_3_0_0 module; the
+                                    // "anthropic" client covers 2.x / anthropic_2_2_0.
+                                    Set.of("/v1/messages"),
+                                    Set.of(),
+                                    new SpecClient.Isolation(
+                                            "btx.anthropic3.classpath",
+                                            "dev.braintrust.sdkspecimpl.anthropic3.Anthropic3SpecClient")),
+                            new IsolatedClientStub(
                                     "springai2-openai",
                                     "openai",
                                     Set.of("/v1/chat/completions"),

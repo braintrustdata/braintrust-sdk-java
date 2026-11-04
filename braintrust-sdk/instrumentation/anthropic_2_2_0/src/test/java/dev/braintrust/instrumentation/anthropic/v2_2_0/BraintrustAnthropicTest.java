@@ -21,12 +21,14 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import org.junit.jupiter.api.BeforeAll;
@@ -973,6 +975,204 @@ public class BraintrustAnthropicTest {
         assertHttpSpan(parent, transportFailure || statusCode >= 300, transportFailure);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void cancelledLlmFutureStillEndsSpanOnTransportCompletion(boolean transportFailure) {
+        var delegate = new PassthroughHttpClient();
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        var closes = new AtomicInteger();
+        var future = client.executeAsync(messagesRequest(), RequestOptions.none());
+        assertTrue(future.cancel(true));
+        assertFalse(delegate.pending.isDone());
+        if (transportFailure) {
+            delegate.pending.completeExceptionally(new IllegalStateException("transport failed"));
+        } else {
+            delegate.pending.complete(
+                    streamResponse(new ByteArrayInputStream(new byte[0]), closes));
+        }
+        assertTrue(future.isCancelled());
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+        assertTrue(span.hasEnded());
+        assertEquals(
+                transportFailure ? StatusCode.ERROR : StatusCode.UNSET,
+                span.getStatus().getStatusCode());
+        assertEquals(transportFailure ? 1 : 0, span.getEvents().size());
+        assertEquals(transportFailure ? 0 : 1, closes.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void timeToFirstTokenIncludesTransportDelay(boolean async) throws Exception {
+        String sse =
+                """
+                event: message_start
+                data: {"type":"message_start","message":{"id":"msg_test","type":"message","role":"assistant","model":"claude-test","content":[],"usage":{"input_tokens":1,"output_tokens":0}}}
+
+                event: content_block_start
+                data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+                event: content_block_delta
+                data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+
+                event: content_block_stop
+                data: {"type":"content_block_stop","index":0}
+
+                event: message_delta
+                data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":1}}
+
+                event: message_stop
+                data: {"type":"message_stop"}
+
+                """;
+        var delegate = new PassthroughHttpClient();
+        var closes = new AtomicInteger();
+        delegate.response =
+                streamResponse(
+                        new ByteArrayInputStream(sse.getBytes(StandardCharsets.UTF_8)), closes);
+        long[] delayNanos = new long[1];
+        Runnable delay =
+                () -> {
+                    long start = System.nanoTime();
+                    try {
+                        Thread.sleep(60);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                    delayNanos[0] = System.nanoTime() - start;
+                };
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        HttpResponse response;
+        if (async) {
+            var future = client.executeAsync(messagesRequest(), RequestOptions.none());
+            delay.run();
+            delegate.pending.complete(delegate.response);
+            response = future.get(5, TimeUnit.SECONDS);
+        } else {
+            delegate.beforeResponse = delay;
+            response = client.execute(messagesRequest(), RequestOptions.none());
+        }
+        try (response) {
+            response.body().readAllBytes();
+        }
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+        var metrics =
+                JSON_MAPPER.readTree(
+                        span.getAttributes().get(AttributeKey.stringKey("braintrust.metrics")));
+        assertTrue(metrics.has("time_to_first_token"));
+        assertTrue(
+                metrics.get("time_to_first_token").asDouble() >= delayNanos[0] / 1_000_000_000.0,
+                "TTFT must include the time spent awaiting response headers");
+        assertEquals(StatusCode.UNSET, span.getStatus().getStatusCode());
+        assertTrue(span.getEvents().isEmpty());
+        assertEquals(1, closes.get());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    void streamReadFailureEndsSpanBeforeClose(boolean async, boolean bulk) throws Exception {
+        var failure = new IOException("response stream failed");
+        var source =
+                new InputStream() {
+                    private boolean first = true;
+
+                    @Override
+                    public int read() throws IOException {
+                        if (first) {
+                            first = false;
+                            return '{';
+                        }
+                        throw failure;
+                    }
+
+                    @Override
+                    public int read(byte[] bytes, int off, int len) throws IOException {
+                        int value = read();
+                        bytes[off] = (byte) value;
+                        return 1;
+                    }
+                };
+        var closes = new AtomicInteger();
+        var delegate = new PassthroughHttpClient();
+        delegate.response = streamResponse(source, closes);
+        delegate.pending.complete(delegate.response);
+        var client = new TracingHttpClient(testHarness.openTelemetry(), delegate);
+        var response =
+                async
+                        ? client.executeAsync(messagesRequest(), RequestOptions.none())
+                                .get(5, TimeUnit.SECONDS)
+                        : client.execute(messagesRequest(), RequestOptions.none());
+        var body = response.body();
+        byte[] bytes = new byte[8];
+        if (bulk) {
+            assertEquals(1, body.read(bytes, 0, bytes.length));
+        } else {
+            assertEquals('{', body.read());
+        }
+        assertSame(
+                failure,
+                assertThrows(
+                        IOException.class,
+                        () -> {
+                            if (bulk) {
+                                body.read(bytes, 0, bytes.length);
+                            } else {
+                                body.read();
+                            }
+                        }));
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size(), "read failure must export before explicit close");
+        var span = spans.get(0);
+        assertTrue(span.hasEnded());
+        assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+        assertEquals(1, span.getEvents().size());
+        assertEquals("exception", span.getEvents().get(0).getName());
+        assertEquals(
+                failure.getMessage(),
+                span.getEvents()
+                        .get(0)
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("exception.message")));
+        assertEquals(
+                "stubbed-request-id",
+                span.getAttributes().get(AttributeKey.stringKey("request-id")));
+        assertEquals(0, closes.get());
+        assertSame(failure, assertThrows(IOException.class, () -> body.read()));
+        response.close();
+        var afterClose = testHarness.awaitExportedSpans();
+        assertEquals(1, afterClose.size());
+        assertEquals(1, afterClose.get(0).getEvents().size());
+        assertEquals(1, closes.get());
+    }
+
+    private static HttpResponse streamResponse(InputStream body, AtomicInteger closes) {
+        return new HttpResponse() {
+            @Override
+            public int statusCode() {
+                return 200;
+            }
+
+            @Override
+            public Headers headers() {
+                return Headers.builder().put("request-id", "stubbed-request-id").build();
+            }
+
+            @Override
+            public InputStream body() {
+                return body;
+            }
+
+            @Override
+            public void close() {
+                closes.incrementAndGet();
+            }
+        };
+    }
+
     private void assertHttpSpan(Span parent, boolean failed, boolean exception) {
         var spans = testHarness.awaitExportedSpans();
         assertEquals(2, spans.size(), "one parent and one ended http span, no LLM/tool children");
@@ -1034,6 +1234,293 @@ public class BraintrustAnthropicTest {
                 .build();
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void structuredOutputRetainsCallerParent(boolean async) throws Exception {
+        var transport = messageTransport();
+        var client = stubbedClient(transport);
+        try (AutoCloseable ignoredClient = client::close) {
+            var params =
+                    MessageCreateParams.builder()
+                            .model(TEST_MODEL)
+                            .maxTokens(32)
+                            .addUserMessage("Return the capital of France.")
+                            .outputConfig(Capital.class)
+                            .build();
+            var parent =
+                    testHarness.openTelemetry().getTracer("test").spanBuilder("caller").startSpan();
+            try (var ignored = parent.makeCurrent()) {
+                var response =
+                        async
+                                ? client.async().messages().create(params).get(5, TimeUnit.SECONDS)
+                                : client.messages().create(params);
+                assertEquals("msg_test", response.id());
+            } finally {
+                parent.end();
+            }
+            assertRequestParent(parent);
+            assertTrue(
+                    transport
+                            .sentRequest
+                            .headers()
+                            .values(ContextCapturingProxy.CONTEXT_HEADER)
+                            .isEmpty());
+        }
+    }
+
+    public static class Capital {
+        public String city;
+    }
+
+    @Test
+    void parameterlessAsyncCallRetainsCallerParent() throws Exception {
+        var transport = new PassthroughHttpClient();
+        transport.pending.complete(
+                new StubHttpClient(
+                                200,
+                                "{\"data\":[],\"has_more\":false,\"first_id\":null,\"last_id\":null}")
+                        .execute(messagesRequest(), RequestOptions.none()));
+        var client = stubbedClient(transport);
+        try (AutoCloseable ignoredClient = client::close) {
+            var parent =
+                    testHarness.openTelemetry().getTracer("test").spanBuilder("caller").startSpan();
+            try (var ignored = parent.makeCurrent()) {
+                assertTrue(
+                        client.async()
+                                .messages()
+                                .batches()
+                                .list()
+                                .get(5, TimeUnit.SECONDS)
+                                .data()
+                                .isEmpty());
+            } finally {
+                parent.end();
+            }
+            assertRequestParent(parent);
+            assertTrue(
+                    transport
+                            .sentRequest
+                            .headers()
+                            .values(ContextCapturingProxy.CONTEXT_HEADER)
+                            .isEmpty());
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    void serviceOptionsRetainTracingWithoutLeakingContext(boolean async, boolean replaceTransport)
+            throws Exception {
+        var original = messageTransport();
+        var replacement = replaceTransport ? messageTransport() : original;
+        java.util.function.Consumer<com.anthropic.core.ClientOptions.Builder> options =
+                o -> {
+                    if (replaceTransport) {
+                        o.httpClient(replacement);
+                    } else {
+                        o.maxRetries(1);
+                    }
+                };
+        var client = stubbedClient(original);
+        try (AutoCloseable ignoredClient = client::close) {
+            var params =
+                    MessageCreateParams.builder()
+                            .model(TEST_MODEL)
+                            .maxTokens(32)
+                            .addUserMessage("Return the capital of France.")
+                            .build();
+            var parent =
+                    testHarness.openTelemetry().getTracer("test").spanBuilder("caller").startSpan();
+            try (var ignored = parent.makeCurrent()) {
+                var response =
+                        async
+                                ? client.async()
+                                        .messages()
+                                        .withOptions(options)
+                                        .create(params)
+                                        .get(5, TimeUnit.SECONDS)
+                                : client.messages().withOptions(options).create(params);
+                assertEquals("msg_test", response.id());
+            } finally {
+                parent.end();
+            }
+            if (replaceTransport) {
+                assertNull(original.sentRequest);
+            }
+            assertTrue(
+                    replacement
+                            .sentRequest
+                            .headers()
+                            .values(ContextCapturingProxy.CONTEXT_HEADER)
+                            .isEmpty(),
+                    "Internal correlation header must never reach the replacement transport");
+            assertRequestParent(parent);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    void sseErrorMarksSpanFailedWithoutChangingSdkException(boolean async, boolean partial)
+            throws Exception {
+        String error =
+                """
+                event: error
+                data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}
+
+                """;
+        if (partial) {
+            error =
+                    """
+                    event: message_start
+                    data: {"type":"message_start","message":{"id":"msg_test","type":"message","role":"assistant","model":"claude-test","content":[],"usage":{"input_tokens":1,"output_tokens":0}}}
+
+                    event: content_block_start
+                    data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+                    event: content_block_delta
+                    data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+
+                    """
+                            + error;
+        }
+        var transport = new PassthroughHttpClient();
+        transport.response =
+                new StubHttpClient(200, error).execute(messagesRequest(), RequestOptions.none());
+        transport.pending.complete(transport.response);
+        var client = stubbedClient(transport);
+        try (AutoCloseable ignoredClient = client::close) {
+            var params =
+                    MessageCreateParams.builder()
+                            .model(TEST_MODEL)
+                            .maxTokens(32)
+                            .addUserMessage("Hello")
+                            .build();
+            if (async) {
+                try (var response =
+                        client.async()
+                                .messages()
+                                .withRawResponse()
+                                .createStreaming(params)
+                                .get(5, TimeUnit.SECONDS)) {
+                    var failure =
+                            assertThrows(
+                                    com.anthropic.errors.SseException.class,
+                                    () -> response.parse().stream().forEach(event -> {}));
+                    assertTrue(failure.getMessage().contains("Overloaded"));
+                }
+            } else {
+                try (var stream = client.messages().createStreaming(params)) {
+                    var failure =
+                            assertThrows(
+                                    com.anthropic.errors.SseException.class,
+                                    () -> stream.stream().forEach(event -> {}));
+                    assertTrue(failure.getMessage().contains("Overloaded"));
+                }
+            }
+            var spans = testHarness.awaitExportedSpans();
+            assertEquals(1, spans.size());
+            var span = spans.get(0);
+            assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+            assertEquals(1, span.getEvents().size());
+            String message =
+                    span.getEvents()
+                            .get(0)
+                            .getAttributes()
+                            .get(AttributeKey.stringKey("exception.message"));
+            assertTrue(message.contains("overloaded_error"));
+            assertTrue(message.contains("Overloaded"));
+            assertEquals(
+                    "stubbed-request-id",
+                    span.getAttributes().get(AttributeKey.stringKey("request-id")));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void llmLinkageErrorEndsSpanWithoutMaskingFailure(boolean async) {
+        var failure = new NoSuchMethodError("incompatible transport API");
+        var transport =
+                new com.anthropic.core.http.HttpClient() {
+                    @Override
+                    public HttpResponse execute(HttpRequest request, RequestOptions options) {
+                        throw failure;
+                    }
+
+                    @Override
+                    public CompletableFuture<HttpResponse> executeAsync(
+                            HttpRequest request, RequestOptions options) {
+                        throw failure;
+                    }
+
+                    @Override
+                    public void close() {}
+                };
+        var client = new TracingHttpClient(testHarness.openTelemetry(), transport);
+        assertSame(
+                failure,
+                assertThrows(
+                        NoSuchMethodError.class,
+                        () -> {
+                            if (async) {
+                                client.executeAsync(messagesRequest(), RequestOptions.none());
+                            } else {
+                                client.execute(messagesRequest(), RequestOptions.none());
+                            }
+                        }));
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(1, spans.size());
+        var span = spans.get(0);
+        assertTrue(span.hasEnded());
+        assertEquals(StatusCode.ERROR, span.getStatus().getStatusCode());
+        assertEquals(1, span.getEvents().size());
+        assertEquals(
+                NoSuchMethodError.class.getName(),
+                span.getEvents()
+                        .get(0)
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("exception.type")));
+        assertEquals(
+                failure.getMessage(),
+                span.getEvents()
+                        .get(0)
+                        .getAttributes()
+                        .get(AttributeKey.stringKey("exception.message")));
+    }
+
+    private AnthropicClient stubbedClient(com.anthropic.core.http.HttpClient transport) {
+        return BraintrustAnthropic.wrap(
+                testHarness.openTelemetry(),
+                new com.anthropic.client.AnthropicClientImpl(
+                        com.anthropic.core.ClientOptions.builder()
+                                .httpClient(transport)
+                                .putHeader("x-api-key", "test-key")
+                                .maxRetries(0)
+                                .build()));
+    }
+
+    private static PassthroughHttpClient messageTransport() {
+        var transport = new PassthroughHttpClient();
+        transport.response =
+                new StubHttpClient(
+                                200,
+                                """
+                {"id":"msg_test","type":"message","role":"assistant","model":"claude-test",
+                "content":[{"type":"text","text":"{\\"city\\":\\"Paris\\"}"}],
+                "stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1,"output_tokens":1}}
+                """)
+                        .execute(messagesRequest(), RequestOptions.none());
+        transport.pending.complete(transport.response);
+        return transport;
+    }
+
+    private void assertRequestParent(Span parent) {
+        var spans = testHarness.awaitExportedSpans();
+        assertEquals(2, spans.size(), () -> "One caller and one request span: " + spans);
+        var request =
+                spans.stream().filter(s -> !s.getName().equals("caller")).findFirst().orElseThrow();
+        assertEquals(parent.getSpanContext().getSpanId(), request.getParentSpanId());
+        assertEquals(parent.getSpanContext().getTraceId(), request.getTraceId());
+    }
+
     private static final class PassthroughHttpClient implements com.anthropic.core.http.HttpClient {
         private final CompletableFuture<HttpResponse> pending = new CompletableFuture<>();
         private HttpResponse response;
@@ -1041,6 +1528,7 @@ public class BraintrustAnthropicTest {
         private boolean immediateFailure;
         private HttpRequest sentRequest;
         private Span requestSpan;
+        private Runnable beforeResponse = () -> {};
 
         @Override
         public HttpResponse execute(HttpRequest request, RequestOptions options) {
@@ -1049,6 +1537,7 @@ public class BraintrustAnthropicTest {
             if (failure != null) {
                 throw failure;
             }
+            beforeResponse.run();
             return response;
         }
 

@@ -15,6 +15,7 @@ import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,14 @@ public class TracingHttpClient implements HttpClient {
 
     TracingHttpClient withTracer(Tracer tracer) {
         return this.tracer == tracer ? this : new TracingHttpClient(tracer, underlying);
+    }
+
+    Tracer tracer() {
+        return tracer;
+    }
+
+    HttpClient underlying() {
+        return underlying;
     }
 
     /**
@@ -121,31 +131,26 @@ public class TracingHttpClient implements HttpClient {
         if (!isLlmRequest(extracted.request())) {
             return executeHttp(extracted, requestOptions);
         }
+        long spanStartNanos = System.nanoTime();
         var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try (var ignored = span.makeCurrent()) {
-            var bufferedRequest = bufferRequestBody(extracted.request());
-
-            String inputJson =
-                    bufferedRequest.body() != null
-                            ? readBodyAsString(bufferedRequest.body())
-                            : null;
-
+            var buffered = bufferRequestBody(extracted.request());
+            var bufferedRequest = buffered.request();
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson,
+                    buffered.bodyJson(),
                     null,
                     headersAsMap(bufferedRequest.headers()));
 
             var response = underlying.execute(bufferedRequest, requestOptions);
-            return new TeeingStreamHttpResponse(response, span, tracer);
-        } catch (Exception e) {
-            InstrumentationSemConv.tagLLMSpanResponse(span, e);
-            span.end();
-            throw e;
+            return new TeeingStreamHttpResponse(response, span, tracer, spanStartNanos);
+        } catch (Throwable failure) {
+            failSpanQuietly(span, failure);
+            throw failure;
         }
     }
 
@@ -156,40 +161,72 @@ public class TracingHttpClient implements HttpClient {
         if (!isLlmRequest(extracted.request())) {
             return executeHttpAsync(extracted, requestOptions);
         }
+        long spanStartNanos = System.nanoTime();
         var span = startSpan(InstrumentationSemConv.UNSET_LLM_SPAN_NAME, extracted.callerContext());
         try {
-            var bufferedRequest = bufferRequestBody(extracted.request());
-            String inputJson =
-                    bufferedRequest.body() != null
-                            ? readBodyAsString(bufferedRequest.body())
-                            : null;
+            var buffered = bufferRequestBody(extracted.request());
+            var bufferedRequest = buffered.request();
             InstrumentationSemConv.tagLLMSpanRequest(
                     span,
                     InstrumentationSemConv.PROVIDER_NAME_ANTHROPIC,
                     bufferedRequest.baseUrl() != null ? bufferedRequest.baseUrl() : "",
                     bufferedRequest.pathSegments(),
                     bufferedRequest.method().name(),
-                    inputJson,
+                    buffered.bodyJson(),
                     null,
                     headersAsMap(bufferedRequest.headers()));
-            return underlying
+            var result = new CompletableFuture<HttpResponse>();
+            underlying
                     .executeAsync(bufferedRequest, requestOptions)
-                    .thenApply(
-                            response ->
-                                    (HttpResponse)
-                                            new TeeingStreamHttpResponse(response, span, tracer))
                     .whenComplete(
-                            (response, t) -> {
-                                if (t != null) {
-                                    // this means the future itself failed
-                                    InstrumentationSemConv.tagLLMSpanResponse(span, t);
-                                    span.end();
+                            // Every path must settle `result`: an exception escaping this
+                            // callback would be swallowed by the discarded whenComplete future
+                            // and leave the caller waiting forever.
+                            (response, error) -> {
+                                if (error != null) {
+                                    failSpanQuietly(span, error);
+                                    result.completeExceptionally(error);
+                                    return;
+                                }
+                                TeeingStreamHttpResponse wrapped;
+                                try {
+                                    wrapped =
+                                            new TeeingStreamHttpResponse(
+                                                    response, span, tracer, spanStartNanos);
+                                } catch (Throwable failure) {
+                                    failSpanQuietly(span, failure);
+                                    try {
+                                        response.close();
+                                    } catch (Throwable closeFailure) {
+                                        if (closeFailure != failure) {
+                                            failure.addSuppressed(closeFailure);
+                                        }
+                                    }
+                                    result.completeExceptionally(failure);
+                                    return;
+                                }
+                                if (!result.complete(wrapped)) {
+                                    wrapped.close();
                                 }
                             });
-        } catch (Exception e) {
-            InstrumentationSemConv.tagLLMSpanResponse(span, e);
+            return result;
+        } catch (Throwable failure) {
+            failSpanQuietly(span, failure);
+            throw failure;
+        }
+    }
+
+    /** Ends failed requests, including linkage errors, without masking the original throwable. */
+    private static void failSpanQuietly(Span span, Throwable failure) {
+        try {
+            InstrumentationSemConv.tagLLMSpanResponse(span, failure);
+        } catch (Throwable taggingFailure) {
+            log.error("Could not tag span with request failure", taggingFailure);
+        }
+        try {
             span.end();
-            throw e;
+        } catch (Throwable endFailure) {
+            log.error("Could not end span", endFailure);
         }
     }
 
@@ -254,53 +291,75 @@ public class TracingHttpClient implements HttpClient {
     // Request buffering — identical pattern to OpenAI TracingHttpClient
     // -------------------------------------------------------------------------
 
-    private static HttpRequest bufferRequestBody(HttpRequest request) {
+    /**
+     * Reads the request body once into memory, so it can be both recorded on the span and sent. The
+     * bytes are copied exactly once: the decoded JSON and the replacement body both read the same
+     * backing array.
+     */
+    private static BufferedRequest bufferRequestBody(HttpRequest request) {
         HttpRequestBody originalBody = request.body();
         if (originalBody == null) {
-            return request;
+            return new BufferedRequest(request, null);
         }
-        var baos = new ByteArrayOutputStream();
-        originalBody.writeTo(baos);
-        byte[] bytes = baos.toByteArray();
-        String contentType = originalBody.contentType();
-
-        HttpRequestBody bufferedBody =
-                new HttpRequestBody() {
-                    @Override
-                    public void writeTo(OutputStream outputStream) {
-                        try {
-                            outputStream.write(bytes);
-                        } catch (java.io.IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public String contentType() {
-                        return contentType;
-                    }
-
-                    @Override
-                    public long contentLength() {
-                        return bytes.length;
-                    }
-
-                    @Override
-                    public boolean repeatable() {
-                        return true;
-                    }
-
-                    @Override
-                    public void close() {}
-                };
-
-        return request.toBuilder().body(bufferedBody).build();
+        var sink = new ByteSink(originalBody.contentLength());
+        originalBody.writeTo(sink);
+        var bufferedBody = new BufferedBody(sink.array(), sink.size(), originalBody.contentType());
+        return new BufferedRequest(
+                request.toBuilder().body(bufferedBody).build(),
+                sink.toString(StandardCharsets.UTF_8));
     }
 
-    private static String readBodyAsString(HttpRequestBody body) {
-        var baos = new ByteArrayOutputStream((int) Math.max(body.contentLength(), 0));
-        body.writeTo(baos);
-        return baos.toString(StandardCharsets.UTF_8);
+    private record BufferedRequest(HttpRequest request, @Nullable String bodyJson) {}
+
+    /** {@link ByteArrayOutputStream} that exposes its backing array instead of copying it. */
+    private static final class ByteSink extends ByteArrayOutputStream {
+        ByteSink(long sizeHint) {
+            super(sizeHint > 0 && sizeHint < Integer.MAX_VALUE - 8 ? (int) sizeHint : 32);
+        }
+
+        byte[] array() {
+            return buf;
+        }
+    }
+
+    /** Repeatable body over the first {@code length} bytes of {@code bytes}. */
+    private static final class BufferedBody implements HttpRequestBody {
+        private final byte[] bytes;
+        private final int length;
+        private final String contentType;
+
+        BufferedBody(byte[] bytes, int length, String contentType) {
+            this.bytes = bytes;
+            this.length = length;
+            this.contentType = contentType;
+        }
+
+        @Override
+        public void writeTo(OutputStream outputStream) {
+            try {
+                outputStream.write(bytes, 0, length);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public String contentType() {
+            return contentType;
+        }
+
+        @Override
+        public long contentLength() {
+            return length;
+        }
+
+        @Override
+        public boolean repeatable() {
+            return true;
+        }
+
+        @Override
+        public void close() {}
     }
 
     // -------------------------------------------------------------------------
@@ -315,15 +374,17 @@ public class TracingHttpClient implements HttpClient {
         private final HttpResponse delegate;
         private final Span span;
         private final Tracer tracer;
-        private final long spanStartNanos = System.nanoTime();
+        private final long spanStartNanos;
         private final AtomicLong timeToFirstTokenNanos = new AtomicLong();
         private final ByteArrayOutputStream teeBuffer = new ByteArrayOutputStream();
         private final InputStream teeStream;
 
-        TeeingStreamHttpResponse(HttpResponse delegate, Span span, Tracer tracer) {
+        TeeingStreamHttpResponse(
+                HttpResponse delegate, Span span, Tracer tracer, long spanStartNanos) {
             this.delegate = delegate;
             this.span = span;
             this.tracer = tracer;
+            this.spanStartNanos = spanStartNanos;
             this.teeStream =
                     new TeeInputStream(
                             delegate.body(), teeBuffer, this::onFirstByte, this::onStreamClosed);
@@ -333,8 +394,11 @@ public class TracingHttpClient implements HttpClient {
             timeToFirstTokenNanos.set(System.nanoTime() - spanStartNanos);
         }
 
-        private void onStreamClosed() {
+        private void onStreamClosed(@Nullable IOException failure) {
             try {
+                if (failure != null) {
+                    InstrumentationSemConv.tagLLMSpanResponse(span, failure);
+                }
                 byte[] bytes;
                 synchronized (teeBuffer) {
                     bytes = teeBuffer.toByteArray();
@@ -361,6 +425,15 @@ public class TracingHttpClient implements HttpClient {
                 try {
                     var reassembled =
                             ResponseReassembler.reassemble(bytes, timeToFirstTokenNanos.get());
+                    if (reassembled.error() != null) {
+                        InstrumentationSemConv.tagLLMSpanResponse(
+                                span,
+                                com.anthropic.errors.SseException.builder()
+                                        .statusCode(statusCode)
+                                        .headers(delegate.headers())
+                                        .body(reassembled.error())
+                                        .build());
+                    }
                     InstrumentationSemConv.tagLLMSpanResponse(
                             tracer,
                             span,
@@ -406,12 +479,15 @@ public class TracingHttpClient implements HttpClient {
         private final InputStream source;
         private final OutputStream sink;
         private final Runnable onFirstByte;
-        private final Runnable onClose;
+        private final Consumer<IOException> onClose;
         private final AtomicBoolean firstByteSeen = new AtomicBoolean(false);
         private final AtomicBoolean closed = new AtomicBoolean(false);
 
         TeeInputStream(
-                InputStream source, OutputStream sink, Runnable onFirstByte, Runnable onClose) {
+                InputStream source,
+                OutputStream sink,
+                Runnable onFirstByte,
+                Consumer<IOException> onClose) {
             this.source = source;
             this.sink = sink;
             this.onFirstByte = onFirstByte;
@@ -420,31 +496,41 @@ public class TracingHttpClient implements HttpClient {
 
         @Override
         public int read() throws java.io.IOException {
-            int b = source.read();
-            if (b == -1) {
-                notifyClosed();
-            } else {
-                notifyFirstByte();
-                sink.write(b);
+            try {
+                int b = source.read();
+                if (b == -1) {
+                    notifyClosed(null);
+                } else {
+                    notifyFirstByte();
+                    sink.write(b);
+                }
+                return b;
+            } catch (IOException e) {
+                notifyFailed(e);
+                throw e;
             }
-            return b;
         }
 
         @Override
         public int read(byte[] buf, int off, int len) throws java.io.IOException {
-            int n = source.read(buf, off, len);
-            if (n == -1) {
-                notifyClosed();
-            } else {
-                notifyFirstByte();
-                sink.write(buf, off, n);
+            try {
+                int n = source.read(buf, off, len);
+                if (n == -1) {
+                    notifyClosed(null);
+                } else if (n > 0) {
+                    notifyFirstByte();
+                    sink.write(buf, off, n);
+                }
+                return n;
+            } catch (IOException e) {
+                notifyFailed(e);
+                throw e;
             }
-            return n;
         }
 
         @Override
         public void close() throws java.io.IOException {
-            notifyClosed();
+            notifyClosed(null);
             source.close();
         }
 
@@ -454,9 +540,17 @@ public class TracingHttpClient implements HttpClient {
             }
         }
 
-        private void notifyClosed() {
+        private void notifyFailed(IOException failure) {
+            try {
+                notifyClosed(failure);
+            } catch (Throwable e) {
+                log.error("Could not tag span from response read failure", e);
+            }
+        }
+
+        private void notifyClosed(@Nullable IOException failure) {
             if (!closed.compareAndExchange(false, true)) {
-                onClose.run();
+                onClose.accept(failure);
             }
         }
     }
