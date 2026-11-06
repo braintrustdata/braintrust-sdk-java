@@ -1,7 +1,8 @@
 # Custom Mustache Template Patches
 
-These templates are forked from **openapi-generator v7.14.0** and contain targeted
-patches to fix bugs or add functionality not present upstream. They live under
+These templates contain targeted patches to fix bugs or add functionality not present
+upstream. Their base versions are recorded below; both were compared against v7.27.0.
+The generator runs v7.27.0 with Jackson 2. They live under
 `src/generator/` (not `src/main/resources`) so they are only available at
 code-generation time and do not appear on the runtime classpath or in the published JAR.
 
@@ -14,6 +15,10 @@ When upgrading the generator version, diff each file against the new upstream te
 ## anyof_model.mustache
 
 **Upstream:** `Java/libraries/native/anyof_model.mustache` @ v7.14.0
+
+Retained for the explicit variant API below. Upstream v7.27.0 includes container
+`TypeReference` deserialization, but not our `SchemaType`, explicit constructor, or
+named variant getters. Its Jackson 3 branches are not needed by this build.
 
 ### Patch 1 — TypeReference for container variants in deserializer
 The upstream deserializer calls `readValueAs(List.class)` / `readValueAs(Map.class)` for
@@ -64,7 +69,7 @@ parameter names or code that does not compile.
 
 ## api.mustache
 
-**Upstream:** `Java/libraries/native/api.mustache` @ v7.14.0
+**Upstream:** `Java/libraries/native/api.mustache` @ v7.27.0
 
 ### Patch 1 — anyOf/oneOf model query parameters are serialized via `parameterToPairs`
 In the `isExplode`/`!hasVars`/`isModel` branch, the upstream template serializes the parameter

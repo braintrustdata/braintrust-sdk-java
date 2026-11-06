@@ -242,6 +242,7 @@ public class DatasetBrainstoreImplTest {
                                       "input": "test input",
                                       "expected": "test output",
                                       "metadata": {
+                                        "model": "gpt-4o",
                                         "performance_strategy": "TURBO",
                                         "userId": "user123"
                                       }
@@ -260,9 +261,9 @@ public class DatasetBrainstoreImplTest {
 
         assertEquals(1, cases.size());
         Map<String, Object> metadata = cases.get(0).metadata();
-        assertFalse(metadata.isEmpty(), "metadata should not be empty");
-        assertEquals("TURBO", metadata.get("performance_strategy"));
-        assertEquals("user123", metadata.get("userId"));
+        assertEquals(
+                Map.of("model", "gpt-4o", "performance_strategy", "TURBO", "userId", "user123"),
+                metadata);
     }
 
     @Test
