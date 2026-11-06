@@ -57,9 +57,8 @@ public class Bedrock30TestUtils {
     }
 
     /**
-     * Returns a {@link BedrockRuntimeAsyncClientBuilder} pointed at the test harness WireMock
-     * endpoint, with the SigV4 host-rewrite interceptor, HTTP/1.1 forced (so WireMock can
-     * proxy/replay the event-stream), and fake credentials in replay mode.
+     * Returns a {@link BedrockRuntimeAsyncClientBuilder} with the SigV4 host-rewrite interceptor
+     * and fake credentials in replay mode. All VCR modes use the local HTTP/1.1 proxy.
      */
     public BedrockRuntimeAsyncClientBuilder asyncClientBuilder() {
         var builder =
@@ -71,7 +70,6 @@ public class Bedrock30TestUtils {
                                         .build())
                         .region(Region.of(BEDROCK_REGION))
                         .endpointOverride(URI.create(testHarness.bedrockBaseUrl(BEDROCK_REGION)))
-                        // Force HTTP/1.1 so WireMock can proxy/replay the event-stream
                         .httpClientBuilder(
                                 NettyNioAsyncHttpClient.builder().protocol(Protocol.HTTP1_1));
 
