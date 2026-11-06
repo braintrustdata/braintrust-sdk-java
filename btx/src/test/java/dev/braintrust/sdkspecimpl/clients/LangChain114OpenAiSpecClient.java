@@ -209,7 +209,7 @@ public final class LangChain114OpenAiSpecClient implements SpecClient {
         // seed it from the first request.
         String defaultModel =
                 spec.requests().isEmpty()
-                        ? "o4-mini"
+                        ? "gpt-6-luna"
                         : String.valueOf(spec.requests().get(0).get("model"));
         OpenAiResponsesChatModel model =
                 BraintrustLangchain.wrap(

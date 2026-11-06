@@ -93,7 +93,7 @@ public class VCR {
                 textToNeverRecord);
     }
 
-    private VCR(
+    VCR(
             String cassettesRoot,
             VcrMode mode,
             Map<String, String> targetUrlToCassettesDir,
@@ -112,7 +112,9 @@ public class VCR {
             String mappingsDir = entry.getValue();
             String cassettesDir = cassettesRoot + mappingsDir;
 
-            createDirectoryStructure(cassettesDir);
+            if (mode != VcrMode.OFF) {
+                createDirectoryStructure(cassettesDir);
+            }
 
             WireMockServer wireMock =
                     new WireMockServer(
@@ -161,18 +163,12 @@ public class VCR {
     }
 
     /**
-     * Get the URL for the targetUrl
-     *
-     * <p>In REPLAY/RECORD modes: returns WireMock URL (e.g. https://api.openai.com/v1 -->
-     * http://localhost:1234)
-     *
-     * <p>In OFF mode: returns the real target URL to bypass WireMock entirely
+     * Get the local WireMock URL for the target. RECORD and OFF forward requests to the real
+     * endpoint; only RECORD saves cassettes. REPLAY serves recorded responses without network
+     * calls.
      */
     public synchronized String getUrlForTargetBase(String targetUrl) {
         assertStarted();
-        if (mode == VcrMode.OFF) {
-            return targetUrl;
-        }
         WireMockServer wireMock = proxyMap.get(targetUrl);
         if (wireMock == null) {
             throw new IllegalArgumentException("Unknown target URL: " + targetUrl);
@@ -188,9 +184,13 @@ public class VCR {
             log.info("️VCR_MODE=replay: Using recorded stubs from cassettes/");
             loadAndCreateProgrammaticStubs();
         } else if (mode == VcrMode.OFF) {
-            targetUrlToMappingsDir
-                    .keySet()
-                    .forEach(url -> log.info("VCR_MODE=off: wiring clients directly to {}", url));
+            proxyMap.forEach(
+                    (url, wireMock) -> {
+                        log.info("VCR_MODE=off: Proxying to {} without recording", url);
+                        // Clear only in-memory stubs; resetMappings() also deletes cassette files.
+                        wireMock.loadMappingsUsing(mappings -> mappings.reset());
+                        wireMock.stubFor(proxyAllTo(url));
+                    });
         }
     }
 
