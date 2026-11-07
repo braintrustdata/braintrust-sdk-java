@@ -1,0 +1,52 @@
+{
+  "id" : "21029fb2-ed7c-3b83-af36-35678cb04aa0",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-6-luna\",\n  \"messages\" : [ {\n    \"role\" : \"system\",\n    \"content\" : \"you are a concise assistant\"\n  }, {\n    \"role\" : \"user\",\n    \"content\" : \"Say hello in one word.\"\n  } ],\n  \"temperature\" : 0.0,\n  \"n\" : 2,\n  \"stream\" : true,\n  \"stream_options\" : {\n    \"include_usage\" : true\n  },\n  \"max_completion_tokens\" : 100,\n  \"reasoning_effort\" : \"none\"\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-27f306b916ee.txt",
+    "headers" : {
+      "x-request-id" : "req_fb353ad3d0324ca8a5bb63ae3cdaa447",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a049d2942703b-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:02 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=3L4RUOSLob.InEmL8_n_9fQF1X.WmzMOjPSW3skukh0-1794030181.9483926-1.0.1.1-UrGvSk2_R3MdQ87Ia6dq3nx_KKvjeeBsA6_aDFeiWdxtMhbnrwGBMNgM0LDI9fcRCDfic2XXzNGW1dUswWYzVmh442CcKTV8wbOYoH9Uieqb.mJc.AJpc4phbaPq2bzP; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:02 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "505",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "text/event-stream; charset=utf-8"
+    }
+  },
+  "uuid" : "21029fb2-ed7c-3b83-af36-35678cb04aa0",
+  "persistent" : true,
+  "scenarioName" : "scenario-5-chat-completions",
+  "requiredScenarioState" : "Started",
+  "newScenarioState" : "scenario-5-chat-completions-2",
+  "insertionIndex" : 34
+}

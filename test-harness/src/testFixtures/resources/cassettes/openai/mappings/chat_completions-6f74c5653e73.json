@@ -19,13 +19,13 @@
     "status" : 404,
     "bodyFileName" : "chat_completions-6f74c5653e73.json",
     "headers" : {
-      "x-request-id" : "req_030fafbd842f46f9ba160b07afe258bd",
+      "x-request-id" : "req_455c68067d504c1abf049037450a42fa",
       "Server" : "cloudflare",
-      "CF-Ray" : "a33dd70e1bea9917-SEA",
+      "CF-Ray" : "a56a0b7f7fc94d48-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-openai-proxy-wasm" : "v0.1",
-      "Date" : "Mon, 31 Aug 2026 17:43:53 GMT",
-      "set-cookie" : "__cf_bm=TJB9Gkry_6PQo8uNVS.tS8cxSowY0036H8ixtootQwA-1788198233.2963843-1.0.1.1-mKZ45vwZZ9IGbK3OEscJtNkQWO3nloZQT6r6_7lAdDzy1pyJFKgCJstgFRwsOY5iqhYqJht07.vpMxGqs93_wwsIzEPQCc.FxvTJH0iJCFh9IRupwUxRJbmlGz4xssBG; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:13:53 GMT",
+      "Date" : "Sat, 07 Nov 2026 05:47:44 GMT",
+      "set-cookie" : "__cf_bm=LmRz77yxpRfIrDS8qJOVgywTo2s98b8.g5MD1E9.o3E-1794030463.9174826-1.0.1.1-goj_fI.M6bGRi725Eyo4tQ26gmy5y__MZDxe94yyYZC3NIBqRBh4HtvyutgRhKRqJYg.a679nLDjQXdDhyxy80hULXuqDV9gGceS1CMgB8bCeg8IUdPuUuOfAak3Dzee; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:17:44 GMT",
       "Access-Control-Expose-Headers" : [ "CF-Ray", "CF-Ray" ],
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
@@ -36,5 +36,5 @@
   },
   "uuid" : "8644d738-98a1-3e0d-a6a1-a4be31ef694b",
   "persistent" : true,
-  "insertionIndex" : 51
+  "insertionIndex" : 58
 }

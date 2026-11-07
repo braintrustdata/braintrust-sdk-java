@@ -1,16 +1,19 @@
 {
-  "id": "resp_0e547ff424934e79006ad162aef2e087d0b78fbccefe61cbcf",
+  "id": "resp_0685acee3656c9f5016aeeba6e9ac087d08f153a84c4a1f2df",
   "object": "response",
-  "created_at": 1792107182,
+  "created_at": 1794030190,
   "status": "completed",
   "access_programs": null,
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1792107183,
+  "completed_at": 1794030191,
   "error": null,
   "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
   "incomplete_details": null,
   "instructions": "Reply with one word.",
   "max_output_tokens": null,
@@ -19,7 +22,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "msg_0e547ff424934e79006ad162afa7c487d089010ce912c36d4e",
+      "id": "msg_0685acee3656c9f5016aeeba6f19c887d09946bd3752acc0e9",
       "type": "message",
       "status": "completed",
       "content": [
@@ -27,7 +30,7 @@
           "type": "output_text",
           "annotations": [],
           "logprobs": [],
-          "text": "Paris"
+          "text": "Paris."
         }
       ],
       "role": "assistant"
@@ -45,7 +48,7 @@
   },
   "safety_identifier": null,
   "service_tier": "default",
-  "store": true,
+  "store": false,
   "temperature": 1.0,
   "text": {
     "format": {
@@ -82,11 +85,11 @@
       "cache_write_tokens": 0,
       "cached_tokens": 0
     },
-    "output_tokens": 2,
+    "output_tokens": 3,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 25
+    "total_tokens": 26
   },
   "user": null,
   "metadata": {}

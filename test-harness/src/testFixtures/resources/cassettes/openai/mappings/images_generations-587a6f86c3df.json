@@ -1,0 +1,42 @@
+{
+  "id" : "a2d47e4f-6d96-399f-8e51-88f5a9b073a0",
+  "name" : "images_generations",
+  "request" : {
+    "url" : "/images/generations",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"prompt\":\"A small blue circle on a plain white background.\",\"model\":\"gpt-image-2.5-flare\",\"n\":1,\"output_format\":\"png\",\"quality\":\"low\",\"size\":\"1024x1024\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "images_generations-587a6f86c3df.json",
+    "headers" : {
+      "x-request-id" : "req_40e4515d1ca24470b1e694ecd99e2f74",
+      "openai-organization" : "braintrust-data",
+      "CF-RAY" : "a56a0b52ef744224-SEA",
+      "Server" : "cloudflare",
+      "X-Content-Type-Options" : "nosniff",
+      "cf-cache-status" : "DYNAMIC",
+      "Date" : "Sat, 07 Nov 2026 05:47:42 GMT",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=_P7J0b3QFCA_QMmhTM5r0mCMagrJDz_NT5Rv4EKu6Ks-1794030456.7854686-1.0.1.1-3gtr29HE1KlehANVjPyfnbfaBVbkPeXH2sR.4GEGbTHILHSVtqYUQwU1afz8fP0wgcl8aCc5WuugN6V95KPxiyYrylR.HVapgtGldCJWwRB07iLiVCatVdCebS_ywIGN; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:17:42 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-processing-ms" : "4907",
+      "openai-version" : "2020-10-01",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "a2d47e4f-6d96-399f-8e51-88f5a9b073a0",
+  "persistent" : true,
+  "insertionIndex" : 59
+}

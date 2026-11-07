@@ -1,0 +1,49 @@
+{
+  "id" : "bb27a1a8-de9b-3b58-b15d-7df38f369458",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"you are a helpful assistant\",\"role\":\"system\"},{\"content\":\"What is the capital of France?\",\"role\":\"user\"}],\"model\":\"gpt-6-luna\",\"stream\":false,\"temperature\":0.0,\"reasoning_effort\":\"none\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-7062e2be5a4f.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=qeKSw8Nsf6zj9ALPbFgNi6KOCUiQ.iqHVBwX0J.6I68-1794030193.314926-1.0.1.1-TqEVmbFPb7AdxnpBUbHb0O3oGd2c_XTVKaeT0h8SrEtmieeFbBoLwBmngru6IenOLDQNr_ikFJexezIIx.oPoQLYYpzXxCM4LWp9tCZc7c89CmbKNzXVXR8n0RsWaaP5; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:13 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_4779af5bfece465aa517d52d429cfabc",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a56a04e43f588383-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999982",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:13 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "563",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "bb27a1a8-de9b-3b58-b15d-7df38f369458",
+  "persistent" : true,
+  "insertionIndex" : 10
+}

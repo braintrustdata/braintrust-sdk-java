@@ -25,23 +25,25 @@ import org.junit.jupiter.api.Test;
  * Tests that prompt caching metrics (per-TTL breakdown) are correctly extracted from Anthropic API
  * responses and attached to spans.
  *
- * <p>Uses a cache-buster nonce in the system prompt to guarantee cache misses, ensuring {@code
- * cache_creation_input_tokens} is always positive. In VCR replay mode the nonce is a fixed string
- * so cassette matching still works.
+ * <p>Uses a random nonce for live requests and a client-specific stable nonce for recording and
+ * replay. Recording requires a cold cache; repeated recordings must wait for the cache TTLs.
  */
 public class BraintrustAnthropicPromptCachingTest {
     private static final String TEST_MODEL = "claude-sonnet-4-5-20250929";
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     /**
-     * Nonce injected into system prompts to bust Anthropic's server-side prompt cache. Random UUID
-     * when running live ({@code VCR_MODE=off}), fixed string otherwise so VCR cassettes match.
+     * Nonce injected into system prompts to isolate each client's Anthropic prompt cache. Random
+     * UUID in {@code VCR_MODE=off}, otherwise the versioned test class name for cassette matching.
      */
     private static final String VCR_NONCE;
 
     static {
         String vcrMode = System.getenv().getOrDefault("VCR_MODE", "replay").toUpperCase();
-        VCR_NONCE = "OFF".equals(vcrMode) ? UUID.randomUUID().toString() : "vcr-mode";
+        VCR_NONCE =
+                "OFF".equals(vcrMode)
+                        ? UUID.randomUUID().toString()
+                        : BraintrustAnthropicPromptCachingTest.class.getName();
     }
 
     @BeforeAll

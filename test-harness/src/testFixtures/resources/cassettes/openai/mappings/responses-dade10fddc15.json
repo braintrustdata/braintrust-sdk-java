@@ -19,18 +19,24 @@
     "status" : 200,
     "bodyFileName" : "responses-dade10fddc15.txt",
     "headers" : {
-      "x-request-id" : "req_9ce71d4f888644a3a3b4bb3db9a6e6c3",
+      "x-request-id" : "req_30c4412841d2479d910ecfb778ab86b5",
+      "x-ratelimit-limit-tokens" : "150000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a33dd7b00f27ec7c-SEA",
+      "CF-Ray" : "a56a0c90b8eb57bc-SEA",
       "X-Content-Type-Options" : "nosniff",
-      "Date" : "Mon, 31 Aug 2026 17:44:19 GMT",
-      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=on4ezSN4OpsqqON3jGF.5k_6oG5PA30qdpYZkg2jFno-1788198259.2028723-1.0.1.1-jJr4HwKDfdfPxGPBVOGF1iCQ5eKJrNu_sLJgpMFCFjnqcBITpId5trQcHcKhrVC.iWKfNHuAZphlFSBjv_80QTdsVxegHvcJxpTGlvdiIHRfHtA4UbJjqVZS4OHWOBb6; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:14:19 GMT",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999957",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:48:28 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=Z62_QhgJRT_g3QG0OSEnMTMaTbUT_APfKWwuirsI1l0-1794030507.6371963-1.0.1.1-uiMg3jfjqwiCIBd.DdGEdjKmQ205gSu47zU95AWCxsRGmaRiwaalIFBQDsJHCGRXhfUnkOzYA__rwknENH13T01vDVdiutFN.q6r.3KfNesRpphrl67KYT.Ap5KOaFmF; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:18:28 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "184",
+      "openai-processing-ms" : "557",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "text/event-stream; charset=utf-8"
@@ -40,5 +46,5 @@
   "persistent" : true,
   "scenarioName" : "scenario-2-responses",
   "requiredScenarioState" : "scenario-2-responses-2",
-  "insertionIndex" : 43
+  "insertionIndex" : 49
 }

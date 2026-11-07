@@ -1,0 +1,1 @@
+{"metrics":{"latencyMs":788},"output":{"message":{"content":[{"text":"Paris is the capital of France."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":1176,"cacheReadInputTokens":1176,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":12,"outputTokens":10,"serverToolUsage":{},"totalTokens":1198}}
