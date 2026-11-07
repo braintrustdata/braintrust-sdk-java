@@ -1,0 +1,110 @@
+{
+  "id": "resp_0ed86ecb83861bd6016aeeba78f09087d0a4a7f8ba87091038",
+  "object": "response",
+  "created_at": 1794030200,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030204,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_0ed86ecb83861bd6016aeeba798af487d0b98d406bc71d8fc6",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABq7rp8V169DIR2vw8iD-em5HSUno7PLyyXkMFHU7VQACtMvg2y4BjKzHC3wVKDeVx65LcQJehDa7tCTIDzdzsHBYvsXvs2kuMiAaq4y9etb10mYzUDWJEgK4eDGiLxzgyGJZ0NF9gZegMjOJHyr4EPxnhB7OeVn-zo7eZqSsIafvBA_KEmC2XPI77z6ey4xW8xSk54XyQ8sExI-V1xls_sB-giMelxL7cN1308Fu_9smnYRCiIeNbpSueElSxmjaw4x6WIEQuF8GNO7HLJ50rZGJhZAaMf0F7FbAMeJSpDwiKE-lcyxisMZI79QRiNVusiWLOJr7ThqnX3PDO5kagrfgZhqE9y4zcOGOLDafr3GP0DlWQXPvb0UNAcTckNdw78ZWIGY70oD_QAtIAcbD59UitlBs1c06jAfZnfaeWgDIXvJ3PuTd7E99LECSieDs3gOTYuyLCs-x_N0iaokzOzh4-D3CxrpSzwMg5Z-egt3K94NumlCC5BD6yCQ_q6mW7fYIhzUvVJZGj-7guDACPAUiiHoOgiD9lhLUF3Ike9BltIdLBSMdJk3j88mhhJCWkHjJjj86DIXW_l23ExiG_-8mUPGHBfIla3vgG7VfvAnQP577zt12-F9aqWiJvs3TXnsQX6RsPM5DmYK6DkyG_f0yXAzOhgkDNi4Fh3Jjuj8v3vEnMaMXxszK2NmwoF4dAWZBpGr7jOGB7F7Q05-D5flvatSA8sOZBkGX5bBTN4wLjkcQVT1MJ8Iq5o6z7xg0TLbbh53TVJnbZXwGPuQZ31gdKugqHbu-VnQJESew3czA3gviU42JQ_6CAbOnacfx6cH-Utdo0tG5jUla0Ql_ST8rP2nZPUVetWceO4IRnfP9INshOmQO6CiG9zFF49b_Iz6D7v5nZqYL_Whv53FwfODWG8P8ET4aW5RfbZ-6KxfHVa-01fFYlhzcESC4jsGjitV9ZOu6wA29kpZX2O_8ub08YZbGizabbZQiyw308bivC5MIMMGInhpjF0b5VzapkiH3q6XAnUTNNdqPulwFu6se3Q0DxX9ZguRK1-_QnRCaalctJIwyXbpYrTTgCGE7C_v5UBtRgE2NxF6EKGD0Mpsgu2CpH49ztJwwgOLpa-CYWOJvQ_x2WR-ec1w-GJhoXUHgX910-Dnj08YJWlfk54lHi0IJMQlDTaoLYufP4QPShmg6yTuG8zIiXNK6paBlY-qyJLQaZ5fFpPLtMBluNZM40FG4Vs_pLsFNCQJjhiieDZE2mvlX8toaqRRt5hFc3ux7mzXAoPfZanhVM-EPs2BTkLuUax3CBYbnhr8HYO5I2G3clBzM15yPsKEKaUNA-gFxk1QSnvvIivrCizN79r5RhsILEsfu26gfp_pxZ86VuBaDaooI7c-vKGqKHk4_LUjDGCIiH5ood2zR-C8k47KQLiq1iFYPnSZ6ABMVvfuCXP9Tq7owBQeEAlCxYsAwqpxrZNZL9Z9C-pOhl-m_xMIbU_-DpjZHj-Xoa0u_7IQOVOMh8oXydiB5WVkgaVzuldhgTr4g-HFnoK2KQKCldHDso4MOMPX6J69Z1toJeBJoTHL7TWiHMx8Px-zi5vC4sjxMIOpuWp0qxNA5TP6qovPpEQEU_bhKeFCyOm7_rT6i02qVCG5pQS71JAgajGMlRn2EmiVrOwPKaJESlLsameIKRbcrIqhYk4he-5g54X6WVjptNYhX5inzinz9EAKaf2ak8hfua2KJ3ClotLwQu9HSC1N_b2B7wadzytNV8E5O_aWNz9k0fmnsYd9DoDYkhnD0_m6U1LBORHU1yHAzB5JeMj5CdtewheTPEVd__iCSc321l0S5jXAvfSp_ICPKpwFYfIOM5Z1cvylMo1e3CZGiLPIU0D2g9YhSBNZhSnjjFOI8rdoSJn-O5H_mbnMnxIqD8Yv4I06NuHKPUNltD1rss4ti-cK-Mp_Hgfo89dVJjFL-urJLLTu6jrCnvyDZe-Yjxjn8zLcHg7_Jvhw65eWYYxDP_AF4ucYki85e4cys3uABHNneuBDh6EFgkSYl3zSUtLnwoZ5mDCvnXK5oCSTDi4vwRa-imdSPnavObnhIB7sAokvevYW-xKm86uPxgJoUlK8L6uWpXnsdzXRiM8WsvDTU6YiSzL8VhULnEp0hseCNYKRHJ30HBXRb6pFTR4ZcI1QJJuQKK8gOCth-siV19FEZNZMG5Bkw1UdsANcqk3IIg=",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Evaluating sequence patterns**\n\nI'm thinking we need to explain the ambiguity in patterns like n(n+1). For instance, when n=1, it gives us 2, and with n=2, we get 6, leading to differences of 4, 6, 8, and 10. It seems I should mention that the sequence isn't unique, as it's based on certain assumptions, but it follows a natural progression. I\u2019ll aim for a concise explanation of this."
+        }
+      ]
+    },
+    {
+      "id": "msg_0ed86ecb83861bd6016aeeba7c5af887d08008d94bf816f944",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The differences are 4, 6, 8, 10, increasing by 2 each time. A natural pattern is the product of two consecutive integers:\n\n\\[\na_n=n(n+1)\n\\]\n\nStarting with \\(n=1\\), this gives \\(2, 6, 12, 20, 30,\\ldots\\). (Other formulas could fit the first five terms, but this is the simplest common pattern.)"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 41,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 156,
+    "output_tokens_details": {
+      "reasoning_tokens": 59
+    },
+    "total_tokens": 197
+  },
+  "user": null,
+  "metadata": {}
+}

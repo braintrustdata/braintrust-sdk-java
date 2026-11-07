@@ -1,0 +1,133 @@
+{
+  "id": "resp_0457fd82f012e247016aeeba6de65887d0a788f9d69e3292a0",
+  "object": "response",
+  "created_at": 1794030190,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030192,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_0457fd82f012e247016aeeba6e8acc87d099f366d955eff8c7",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "recent AI news headline June 2025 artificial intelligence news"
+        ],
+        "query": "recent AI news headline June 2025 artificial intelligence news"
+      }
+    },
+    {
+      "id": "msg_0457fd82f012e247016aeeba706dc487d09ca4e042e322abf6",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 187,
+              "start_index": 94,
+              "title": "UK will face AI cyberattacks on critical infrastructure by 2028, official says",
+              "url": "https://apnews.com/article/4e61bf9b55c7d1d15cfd075859d2ba08?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "AP reports: \u201cUK will face AI cyberattacks on critical infrastructure by 2028, official says.\u201d ([apnews.com](https://apnews.com/article/4e61bf9b55c7d1d15cfd075859d2ba08?utm_source=openai))"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "none",
+    "mode": "standard",
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "low",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 8761,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 4454
+    },
+    "output_tokens": 75,
+    "output_tokens_details": {
+      "reasoning_tokens": 34
+    },
+    "total_tokens": 8836
+  },
+  "user": null,
+  "metadata": {}
+}

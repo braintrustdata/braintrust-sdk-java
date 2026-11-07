@@ -1,0 +1,49 @@
+{
+  "id" : "04440e81-6f7e-330d-900a-d327a8d47b5f",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-4o-mini\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"is it hotter in Paris or New York right now?\"\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"tools\" : [ {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getForecast\",\n      \"description\" : \"Get weather forecast for next N days\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          },\n          \"arg1\" : {\n            \"type\" : \"integer\"\n          }\n        },\n        \"required\" : [ \"arg0\", \"arg1\" ]\n      }\n    }\n  }, {\n    \"type\" : \"function\",\n    \"function\" : {\n      \"name\" : \"getWeather\",\n      \"description\" : \"Get current weather for a location\",\n      \"parameters\" : {\n        \"type\" : \"object\",\n        \"properties\" : {\n          \"arg0\" : {\n            \"type\" : \"string\"\n          }\n        },\n        \"required\" : [ \"arg0\" ]\n      }\n    }\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-627aafbf4ba9.json",
+    "headers" : {
+      "x-request-id" : "req_86c0db61dc8d47ce9c4264d61443caf1",
+      "x-ratelimit-limit-tokens" : "150000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a0aa5eb1d2b03-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "149999987",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:47:09 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=mEyDK4_VgUxz1MY4fVOihnCA5ANU2OmQakh3mv7XC3M-1794030429.1027172-1.0.1.1-T.uocc6sCzB6WujjqaxpEDjGWznIWNJnFuQX0dfPqF77wMjFQGgnRITnFZL9QyEwq.lJVFb84I0R3tR_Z_rwLCOma32hKoCpTG6Kl4RLgAHPFdwo.EuqjnPP_g69xM.S; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:17:09 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "805",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "04440e81-6f7e-330d-900a-d327a8d47b5f",
+  "persistent" : true,
+  "insertionIndex" : 47
+}

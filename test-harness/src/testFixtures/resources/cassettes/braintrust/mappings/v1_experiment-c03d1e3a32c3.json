@@ -21,14 +21,14 @@
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
       "X-Amz-Cf-Pop" : "SEA900-P9",
-      "Date" : "Mon, 31 Aug 2026 17:35:46 GMT",
-      "Via" : "1.1 0ddbf3138c96d4b7c9f8047edb515414.cloudfront.net (CloudFront)",
+      "Date" : "Sat, 07 Nov 2026 05:42:20 GMT",
+      "Via" : "1.1 c72e48ed2f0a994f695ca2fb4bc9247e.cloudfront.net (CloudFront)",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
-      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
       "ETag" : "W/\"20b-BR14hkFKZ7zhwSzH9Ae416ldwx0\"",
       "Access-Control-Allow-Credentials" : "true",
-      "X-Amz-Cf-Id" : "pJ3KNk3h7ZQnpJd1N28IeY-rik2Lfe8wW-pn3yerPto5ABOVumIbqw==",
+      "X-Amz-Cf-Id" : "48UOWD9uS1VN6ZHJgZP-QO7rPemKC3kUgdKrSHRiXoCGLMIqhMNH6Q==",
       "Vary" : "Origin, Accept-Encoding",
       "Expires" : "0",
       "Surrogate-Control" : "no-store",
@@ -37,5 +37,5 @@
   },
   "uuid" : "7fe31e88-6521-34d1-9dfe-f36fc5b4541b",
   "persistent" : true,
-  "insertionIndex" : 55
+  "insertionIndex" : 54
 }

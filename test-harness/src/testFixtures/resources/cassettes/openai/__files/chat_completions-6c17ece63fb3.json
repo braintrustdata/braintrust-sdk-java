@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-EhTUiOX16bRQjWpDq174c1Xh9kvTh",
+  "object": "chat.completion",
+  "created": 1794030188,
+  "model": "gpt-6-luna",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "The differences are 4, 6, 8, 10—each increases by 2. The terms follow the pattern \\(1\\cdot2,\\;2\\cdot3,\\;3\\cdot4,\\;4\\cdot5,\\;5\\cdot6\\).\n\nSo, counting the first term as \\(n=1\\), the formula is:\n\n\\[\na_n = n(n+1)\n\\]",
+        "refusal": null,
+        "annotations": []
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 41,
+    "completion_tokens": 151,
+    "total_tokens": 192,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 51,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": null
+}

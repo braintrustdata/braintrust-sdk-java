@@ -1,0 +1,49 @@
+{
+  "id" : "abde9297-125e-32d0-9a80-2bd99d87911a",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\",\"role\":\"user\"}],\"model\":\"gpt-6-luna\",\"stream\":false,\"reasoning_effort\":\"medium\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-9ce4f9f0e189.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=f7KxDjcWRQkHa.ZNwrVB5w8HBBlP.vDrxuJllTTp_C8-1794030184.182471-1.0.1.1-2eB07Yh5iv5EgVn_SLmB.1s7ZoEPnlvAaHzTwrA6ZdJRVCaetqVji0RRqh0V2OoAl7Yf1fvAr11aLiy4KNf0Xs5e8S.yZGSAXhpsR97GvHrwPGC1kbVffqFP3CshC3Yw; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:06 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_a43fe8ffca384c45832c56d4ba4fbd24",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a56a04ab293a31ba-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999970",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:06 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "1757",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "abde9297-125e-32d0-9a80-2bd99d87911a",
+  "persistent" : true,
+  "insertionIndex" : 24
+}

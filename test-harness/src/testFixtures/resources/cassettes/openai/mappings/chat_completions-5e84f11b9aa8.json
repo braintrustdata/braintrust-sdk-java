@@ -1,0 +1,51 @@
+{
+  "id" : "d6419088-ceae-3c9d-a13f-49818e4b35f7",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-6-luna\",\n  \"messages\" : [ {\n    \"role\" : \"user\",\n    \"content\" : \"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"\n  } ],\n  \"stream\" : false,\n  \"reasoning_effort\" : \"medium\"\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-5e84f11b9aa8.json",
+    "headers" : {
+      "x-request-id" : "req_7920a6cd9a6e4c9eaf1a7bf61fb0f8f6",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a05523e2f38c6-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999970",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:32 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=eELljlcevmZ_e9gu89.1vtOijP0yXouDXjrowlXuYng-1794030210.9151053-1.0.1.1-udDOgpUgfkyXM0dT.A3n_VimxNnPhOd6UZcmMhvgl4VDSZST6EONGNJ0APwVmylM7aZjgtcn.uPIuzAA6mN8TU2wkdPEYE3bIZ6BFm575y5OQnnhouqTr1mvXtzCfcG6; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:32 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "1886",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "d6419088-ceae-3c9d-a13f-49818e4b35f7",
+  "persistent" : true,
+  "scenarioName" : "scenario-1-chat-completions",
+  "requiredScenarioState" : "scenario-1-chat-completions-2",
+  "insertionIndex" : 1
+}

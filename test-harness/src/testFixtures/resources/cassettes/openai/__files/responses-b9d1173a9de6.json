@@ -1,15 +1,19 @@
 {
-  "id": "resp_02cc98ad06273a74006a95bd5b1eb087d099df8027a7abb301",
+  "id": "resp_07d9ba0693aaa73f016aeebb82c1b487d0937d9aa8bddd5ba4",
   "object": "response",
-  "created_at": 1788198235,
+  "created_at": 1794030466,
   "status": "completed",
+  "access_programs": null,
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1788198235,
+  "completed_at": 1794030467,
   "error": null,
   "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
   "incomplete_details": null,
   "instructions": "You are a helpful assistant",
   "max_output_tokens": null,
@@ -18,7 +22,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "msg_02cc98ad06273a74006a95bd5bd08887d0ac535b427d306305",
+      "id": "msg_07d9ba0693aaa73f016aeebb832ecc87d0bea9748c11fe398b",
       "type": "message",
       "status": "completed",
       "content": [
@@ -44,7 +48,7 @@
   },
   "safety_identifier": null,
   "service_tier": "default",
-  "store": true,
+  "store": false,
   "temperature": 1.0,
   "text": {
     "format": {

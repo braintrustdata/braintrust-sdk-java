@@ -1,0 +1,110 @@
+{
+  "id": "resp_026623c3dff3fc15016aeeba6f687487d0bfacab9c208286cc",
+  "object": "response",
+  "created_at": 1794030191,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030196,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_026623c3dff3fc15016aeeba7007e087d0acceb93d9cde9f0d",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABq7rp0E4XYBlQ1j-Ylhi1NNTsuACwfFTEqVmtQ6WEkJ6KB1jevd5BeZJkCHFzMSD5vZnWwERJ0VoXGy1dxCQYDF4PVZS7CkUD7JNB2vXLRQJQpStYVKn2ZbqryBLiyDBQtHGBq5Kk4SWO7ggO1vbBjLzHW0fSsqAIoV0HUU98_4A9S_XtU-8zhYCpIq14zUD-2jNWZKooGgnABS4vmZ5sUz_uhbI7o8CiigjGOf2OEBGdRjf_vTPNFs1bTcUyXFob_gSOWokAoi1pcGCnnW_fLHH64NTESWVYCWIPMzUs2HzPwKDCl78nzfPPTuvBoAapODOWFKC1gC-ZgLJNyrbWlffaGDKGaT0dv8I9b_FzvDPAjOJKgWMuMsnoZQ6IotH1zqUWbq6tVxSWQXOtHVeBzdNAjqX1zDzkI-_5Z7pda0ZfvxqZwZZdcHqvdCcWmRescoRuOly5FjiZw8ik6kaaZW84NKsX-pGr1cNQQxNhNqw15dHdRSTYtBz8NN8X5a-HZ1mr4fcFuUXKljvq0ONFELnopOVLJwIb7FbDxO0oq7u_03l-UbpzMObQUYJoDrPq3h9NY6Qgl-o-WH6lQIHLNOmQj62GY296tiXC87Udy3UcxAolp6-pxuZzt1MAZeIMX6bXuBo70McHXTlALKPjTsRPrXIRK2e8X1htAl5d9I429CTQ2oGRaZhSV-f3CA5vW4vkMlNw3H2iKY5bZ4MPwHMH0KTlF81xBVCZOMvvTxO2HGJ5IRkMQCBorFHheBz_nNOFH7N-kmuL73j835RlO3coebnhUYn9x8CMw8okwkveLh8RCShqaxKZEHt5dQ9mqpR_svTenUVsr4ubrU-gw0ODmaB1lP-PbQ7txRgvpkX9xkqpblZVeE_cSWpFbTaCx5fd3NOsZZTB1yvIw0yPi3KlxwcHDaxQNUnSOMpbhwRwEPN3lL-rJpRK_BLN4k0n6sTNpyv8Y3wYrvcGM4gg2obyK2hs1MLjA9qM7wIgN55HpA21CquvIo3zxVuME-aSqsUFyC1OisHLggs7aLC5oyHFtLxs8kxUqcSqU5hKsCzL51w4gxuvnqMKPeK276m_554od6pzImOLW3JFWbTRo44XoCGIS-2_cWfnpiwUkNQSLv-uB4FPkxCb0hDhPYSgjL7ZiORCnf8FA4lEe21C0N6nhoKDgvsdNDCftZvkIyuRYWBawTzLapAtEGo3PVcWXZyLLB11fRoqsMgEj2xIntW8c1sdXi8nonQniauirDATFz49QsL3fzUDkClGcMfHHKmR9IVrgEuhl-_wR86HiNH1xFRlHOIHwU8iwqVwRjaOv4VzCJ3LoKU4SeIKR0gAcaRU0wUHKZhNkvdK9DbOH7XzkMvHEAUpk9_2j1VQ65RyLy5s4mG4llCD1SscFA32Ll-RREgAEFr2ZbTg84s7vLk1pntLOM-A4qTq_qvT5AR1g7xgvOwAAoCzOMVwiBUbVrVSTksvzomTQE_YPFMajMZ8N-otXW8bIDcNXNchKcoJzB5PUOuoBgrNu-cEYeSeI82lB_ABK02wcwacTrA9LhOcQce3x0CQ38tfvhdLPkt37RJHXoTYMoOBQmedn1NnucK6e7CZ-8OnIjb5j-Fqw7jE9UEXT1OWu3NUA6nQe3W-vdHSFApgWlzbzdPiirUqWQnY4dhWxJZ4xPCskriSY9ABjIGIYAWtBMdGe_2AeJkZnx9ypil62VbxHyzMexg09BVn4tS3Bk7WmPFW_Xd8hfbmUgZgzsbUDGHKpfTMtb9NRK14Bf83-nRp5KhWZSQhV7rfUeb_d14XubEfhVxm3d6Wlpn8pZCLoVc33sgb7NJNoCWqs75_PcFXSj8zO5E_8lP6fUlqnFT-yswk_XlaELw-YFKJzGO52KbyZ4WBrEGza8hqfH0riHpPCTlI-n9fytdhcdgZ1HnPGLr-WKWVQsvRNEM8w7ECLsgmrTyGRpox5QZqwlwGB8TRqDTP0ybqbi7ks41-6_fZE-8zwM_f3kicSCdmUt7GW7BOfrDb0xx3qOmOEKlzzrBKz2bhF8S9vUzoAEVEG3fyW_FNx8boBxPh0Z8xmbVG2iOVkslvLKN3IXNaL2fFrnJZhaSdRiNJj5At47j5roeDPcVeLQTfLwJ-ZOi2kM5GTL-NYe-fw8s8VtRoygMAIfx2DGZ-DEpCnrp8TY2-GTQzRgClznBggClVLlNnSOO1jZyZMH_Zd5OChnhtJf0JSJlXnzp4sbzLs4cHC0h-tZCCe-d1tmE7lvdVRTVbgNkP99-LV6DM2ySbqO50=",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Explaining patterns in sequences**\n\nI need to clarify the ambiguity in the sequence pattern, possibly looking at the formula n(n+1). For instance, when n=1, it results in 2, and for n=2, it gives 6, while n=3 yields 12, and so on. It\u2019s also important to note that a finite sequence can have various patterns, with the simplest being the differences of 4, 6, 8, and 10, leading to a second difference of 2. I\u2019ll break this down step-by-step!"
+        }
+      ]
+    },
+    {
+      "id": "msg_026623c3dff3fc15016aeeba73cdac87d0867273acb007b26a",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "The terms are products of consecutive integers:\n\n\\(1\\cdot2=2,\\;2\\cdot3=6,\\;3\\cdot4=12,\\;4\\cdot5=20,\\;5\\cdot6=30.\\)\n\nSo, starting at \\(n=1\\), the formula is\n\\[\na_n=n(n+1).\n\\]\nLike any finite sequence, other patterns are possible, but this is the simplest one suggested by the terms."
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 41,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 172,
+    "output_tokens_details": {
+      "reasoning_tokens": 66
+    },
+    "total_tokens": 213
+  },
+  "user": null,
+  "metadata": {}
+}

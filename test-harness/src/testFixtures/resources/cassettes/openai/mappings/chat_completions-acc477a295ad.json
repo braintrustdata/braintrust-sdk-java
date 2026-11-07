@@ -19,25 +19,25 @@
     "status" : 200,
     "bodyFileName" : "chat_completions-acc477a295ad.txt",
     "headers" : {
-      "x-request-id" : "req_6ed871ed029b4f1d84004e496d197962",
+      "x-request-id" : "req_85566bd0229c47239211270be7fa8a77",
       "x-ratelimit-limit-tokens" : "30000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a33dd36c58a826b5-SEA",
+      "CF-Ray" : "a56a0a847c0befa2-SEA",
       "X-Content-Type-Options" : "nosniff",
       "x-ratelimit-reset-requests" : "6ms",
       "x-ratelimit-remaining-tokens" : "29999988",
       "x-openai-proxy-wasm" : "v0.1",
       "x-ratelimit-remaining-requests" : "9999",
-      "Date" : "Mon, 31 Aug 2026 17:41:25 GMT",
+      "Date" : "Sat, 07 Nov 2026 05:47:04 GMT",
       "x-ratelimit-reset-tokens" : "0s",
       "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=jZPds2ABCvBsvcTN3O8QBPc1Kwpo16AsZ2nZFXRo2Es-1788198084.5365098-1.0.1.1-fEZg_PKkg8n5vkXtBvn.Iz9ATu0sKoCQvdD3zFbKwr0s69XWhZEUv62rwim72m8XWdpZ2iPPKmNilk4QgaqnI7O2o36lBCf2ZAySmA6MpE4PPDf9ZiXdZloNmnippoBy; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:11:25 GMT",
+      "set-cookie" : "__cf_bm=UNavZ25g7A_vWPE8p9AYs4054H0.8HYR.94E7TbFzI8-1794030423.752782-1.0.1.1-wGozOu7CqIoSR3EUS3oV35qvQZe7enQ2KnXNh8csqE3iXe1DuzBbuP.frfeO29zCojryEkBxjOlszBrTDnUupscwUl4dFZ31kUG8380Ra7Oj36qV1.2YQ4m1ckS7r_s2; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:17:04 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
       "x-ratelimit-limit-requests" : "10000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "430",
+      "openai-processing-ms" : "386",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "text/event-stream; charset=utf-8"
@@ -45,5 +45,5 @@
   },
   "uuid" : "b401ee59-4b78-3f00-aaf8-7bed0d52cbad",
   "persistent" : true,
-  "insertionIndex" : 44
+  "insertionIndex" : 48
 }

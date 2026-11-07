@@ -19,12 +19,12 @@
     "status" : 200,
     "bodyFileName" : "model_us.amazon.nova-lite-v10_converse-stream-5cfd571ec323.txt",
     "headers" : {
-      "x-amzn-RequestId" : "df2be18f-9fca-4a3c-94cf-4fda481ed6c6",
-      "Date" : "Mon, 31 Aug 2026 17:36:59 GMT",
+      "x-amzn-RequestId" : "9817a38c-d262-46d3-845c-b7b7d26dc556",
+      "Date" : "Sat, 07 Nov 2026 05:43:23 GMT",
       "Content-Type" : "application/vnd.amazon.eventstream"
     }
   },
   "uuid" : "66a4f103-6844-3f6e-b848-5352f0e1e4ff",
   "persistent" : true,
-  "insertionIndex" : 2
+  "insertionIndex" : 3
 }

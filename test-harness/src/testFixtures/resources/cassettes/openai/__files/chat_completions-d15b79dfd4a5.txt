@@ -1,0 +1,16 @@
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"finish_reason":null}],"usage":null,"obfuscation":""}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}],"usage":null,"obfuscation":"mLZ3SDOJ34hHl"}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":1,"delta":{"role":"assistant","content":"","refusal":null},"finish_reason":null}],"usage":null,"obfuscation":""}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":1,"delta":{"content":"Hello"},"finish_reason":null}],"usage":null,"obfuscation":"Qy5UioGnYE9NX"}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":null,"obfuscation":"421ZWXHYxAdo"}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[{"index":1,"delta":{},"finish_reason":"stop"}],"usage":null,"obfuscation":"9QzZhwUFZhUX"}
+
+data: {"id":"chatcmpl-EhTUd70sUn2jfgnsXWAjgduV7gTVs","object":"chat.completion.chunk","created":1794030183,"model":"gpt-6-luna","service_tier":"default","system_fingerprint":null,"choices":[],"usage":{"prompt_tokens":21,"completion_tokens":8,"total_tokens":29,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":0,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0}},"obfuscation":"rmwIFq6wjFR"}
+
+data: [DONE]
+

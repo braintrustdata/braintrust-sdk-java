@@ -1,0 +1,54 @@
+{
+  "id" : "91b89dfd-7e51-3d90-9fe9-a113d353d4ea",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-6-luna\",\n  \"messages\" : [ {\n    \"role\" : \"system\",\n    \"content\" : \"you are a helpful assistant\"\n  }, {\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"text\",\n      \"text\" : \"Briefly describe these attachments\"\n    }, {\n      \"type\" : \"image_url\",\n      \"image_url\" : {\n        \"url\" : \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==\"\n      }\n    }, {\n      \"type\" : \"file\",\n      \"file\" : {\n        \"file_data\" : \"data:application/pdf;base64,JVBERi0xLjAKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSA+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDQgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjE5MAolJUVPRgo=\",\n        \"filename\" : \"blank.pdf\"\n      }\n    } ]\n  } ],\n  \"temperature\" : 0.0,\n  \"stream\" : false,\n  \"reasoning_effort\" : \"none\"\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-172e53c522a8.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-input-images" : "1ms",
+      "x-ratelimit-reset-tokens" : "0s",
+      "x-ratelimit-limit-input-images" : "50000",
+      "set-cookie" : "__cf_bm=L7BAWT_o8afrwEBiR7tlwDhaketIbmdOfh2scWqE5gw-1794030183.5484643-1.0.1.1-Lzg.8DkR2xHgYELcSOMM7q3Zu3kbid7BjIihsO53GGiCh60ta4UDw0VU1XBCv531Y2Wm8GmXahD7Qfm5HvFOEHsgbKmN.2qkYTe6SdlAY7cu1X6etu9O0L8fswU5Qj_t; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:04 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "x-ratelimit-remaining-input-images" : "49999",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_7e988764946c4054a459cbfdb07d1f52",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a56a04a728c6dc9f-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179998452",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:04 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "820",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "91b89dfd-7e51-3d90-9fe9-a113d353d4ea",
+  "persistent" : true,
+  "scenarioName" : "scenario-6-chat-completions",
+  "requiredScenarioState" : "scenario-6-chat-completions-2",
+  "insertionIndex" : 28
+}

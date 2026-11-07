@@ -19,12 +19,12 @@
     "status" : 200,
     "bodyFileName" : "model_us.anthropic.claude-haiku-4-5-20251001-v10_converse-a0c323c8e12f.json",
     "headers" : {
-      "x-amzn-RequestId" : "93bc3e2f-76f4-4b87-b322-1b188e57497a",
-      "Date" : "Mon, 31 Aug 2026 17:40:23 GMT",
+      "x-amzn-RequestId" : "3761fea1-b89c-4adf-86cb-f2b1b17ee4f1",
+      "Date" : "Sat, 07 Nov 2026 05:46:08 GMT",
       "Content-Type" : "application/json"
     }
   },
   "uuid" : "cc6b6b16-42c6-3129-87d2-4bca03124332",
   "persistent" : true,
-  "insertionIndex" : 5
+  "insertionIndex" : 8
 }

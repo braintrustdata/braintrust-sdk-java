@@ -1,0 +1,37 @@
+{
+  "id" : "585a2f26-45d4-31fb-ab0a-b24a159e85dd",
+  "name" : "v1beta_models_gemini-3.5-flash-litegeneratecontent",
+  "request" : {
+    "url" : "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json; charset=UTF-8"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"contents\":[{\"parts\":[{\"text\":\"What is the capital of France?\"}],\"role\":\"user\"}],\"generationConfig\":{\"temperature\":0.0}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1beta_models_gemini-3.5-flash-litegeneratecontent-d098aa6a94c3.json",
+    "headers" : {
+      "X-Frame-Options" : "SAMEORIGIN",
+      "Alt-Svc" : "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "Server" : "scaffolding on HTTPServer2",
+      "X-Content-Type-Options" : "nosniff",
+      "Server-Timing" : "gfet4t7; dur=624",
+      "Vary" : [ "Origin", "X-Origin", "Referer" ],
+      "X-Gemini-Service-Tier" : "standard",
+      "X-XSS-Protection" : "0",
+      "Date" : "Sat, 07 Nov 2026 05:43:08 GMT",
+      "Content-Type" : "application/json; charset=UTF-8"
+    }
+  },
+  "uuid" : "585a2f26-45d4-31fb-ab0a-b24a159e85dd",
+  "persistent" : true,
+  "insertionIndex" : 2
+}
