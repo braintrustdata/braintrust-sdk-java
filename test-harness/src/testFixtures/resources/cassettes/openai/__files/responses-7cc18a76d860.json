@@ -1,0 +1,110 @@
+{
+  "id": "resp_026623c3dff3fc15016aeeba74a5a487d094d4d7ca911f6deb",
+  "object": "response",
+  "created_at": 1794030196,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030200,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_026623c3dff3fc15016aeeba75488c87d08ba7bc196ace6e95",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABq7rp4oODNDedXWrDZtuDiNRBopvNtMFc65UAeps_3z9CguAQjjrZhG6MyrH9CkysczbdbH_POjdKPA_m76Hm2LVwMN3ZgQJSZwgB93X77dYa-cTGa_yp5HNkVXSRwyt_yhKGGIHvcaDoo3NnD6n9_EVD-zP2xhyv8Wmy9xBZndOZhMd_v8x4uGzCK1YPOexrJ_OvtPSkOm0jVLmxp0zfRMv-ywKnBsYdcgKvJ1sLfcFxcRQcKgC5pH2A9t7xtmHyQbTDg3g5F5XX4pkwF4zFWec_Vv4gtucsfZyGCWOGB4jdUYQQU7lY2dp2MesiZSyCNUWUneHGGVbNEYp-Oj8b265X8jpNmGXlNJ6wwGgJBPEZWNmWw-MuVfJXOn_UhnO_9H0og2zk1r8LzikUAMTz7BIYakqfstqrWbI1hz8KEPQP7vv4cehbrM0xMNZ6kUaR95bTgTTRRpXxuoLJuEYwNSQcf3dI61G0Bs7QQnSdXdLoXXnsrP0-Qv6jbeNFQYU1DYRGsBuxIaXSC7QaUu3hmfBV2D6mgjG9Z4i-nmmfcOtD8DCdgDqmRXiN5ZSp39UGetTq0xbhNupGzKcMyl0GOtvyqzY1KAwqtRwqqiMfEUYhnjOoZt4aYFPEoSQyDlYMVWGOAw7nkRrYAkzWbgJvB-DwHCO4HVIYs-B0-NuPiIy-oqa07XReq_iXAyT7EGgqd3JOHxmM8QSWNhQoOGi-uBwGt_Jvgq3RQOV9firz4k-y4CyaEZaw6wDJdPHQmcqeZovgctr7thCmTEOH14QmwNCyZXUgwymL0rlUeR1zK7oaSfEI-Yhm_gJ6oWMF3GETg1MO5aheFEW_ZhQ5K0cqV9UuHVy1nf_Y1BH1DRnnxWKy1sEo51xUPiF_wo9ib15lMA1du9J_NzREKYhD6NlzhOXJkROSnZGmELzU9DrgOmq_tukH4opAvaH27OYsRY49-fFIBtqlyt7TsuVNBwTD9PNUj3K5UTDILyW3r9HGmjx1EbgxfBaB-n_JbHxTDrrTUsGhgpJD4ewXikeUlFH0DYJozE4hp0B15moJi4rG56EXbTsv0OYx9LG6vKKmPvT8wm7H9TMO0T1f0ImvzoPJ7OhMp_wSLTMzJAU1PdDNEnuHA8LMPYaK7svCKHHrVCwL9kBcK4no0zm6-T4rj9YxGzEL9Cj5FST-HvLpWkdyxKIBX4LX5N2PZ2U-r-S7BPTnGxribzK--9uwEbHM5ZszzZ77KWccgUqWJ-XYe3ORMEwricUn_QZt4Fzj3tC0ZOGWDS5W7h0nF_D4EPE_vtnCaAxT-PwsDdDyuHYrokDx30DZ9wW7OdHz46WYKe6AqprqEpDNV_oxnf2LA9xaZRupDJBXxnjAUQuVG4KR7ucXnP5wvXvnKNGt1IrzTh8_yk5MINPVDx83jDVg4D8QrHpfohb7CTFVAksj_WfA_osctDCQh76HNKMlJG7PDhuO_rfSmMTguQfg-v6JiGQj2obXoWe8r5V82qMQdoIyQz0hsPFWoHgYgZ7H80TAriGuJVgQ_-kLFAq_kMTEf_KDJNgRR5wkffHEWT_eKy88Qo30xWMvC8kRaAxpEC6ScUBU03wjybHSiX4Ht_klIP47ewLYslH24wtaU7RXqOL7bA6C01OfvcPh-pekhCaeMYC1QYAF3kUudpU0PlAbEt1uyd4ZmUqtaXFQpCdk3ERmpW7paLcqFuZBRuJtv6sAPpV8NtwESax4p8UJamU9zNdZvj_stmaBjgmIm71Lwsf5FUXwDGZxTuzaRQ1iXpwrdQG_AeI4itCbNHP8Cgl0xZT2BVhFbebbLCQt7uiDFr3E1DSOorNp7YqUiH-zOJBNeRSrsiq3ZqWwRr9FTuoV_xuKRr9eH_EM0ZtXrM1VU-_BEjZrdrvrxlhs0ZW_qq3RBsV9sBV0F17TkOibhGnPqTDgn_nc7joBbzm-jd7L9a_EF4LNqb4hW4FHnXOR2le1rZYhK37MAvFZP3eOS_cjgMkTT7K0K1jBG10aa31qW4Wm33qlQoRt9WI7qKXyl4wFLw0FhJmA7c26xih1muICFjYQ9FopSfUOrCGH-neJmNrf_0lMGNFhj5ygpFUL6coACKmihPK4-Chjt11xKjBpLwprnCq6uUCkmrwFTLly4FGll_JVSy9k4Ohgk-ZnmQFn8QyIefrUWrFVL",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating sums and sequences**\n\nI need to compute 10 times 11, which is 110. Then, I realize the sum from n equals 1 to 10 is n(n+1), which gives me a total of 440 when I add the sum of squares (385) and the sum of n (55). I should check the sequence sum: 2, 6, 12, 20, 30, 42, 56, 72, 90, and 110, and yep, it equals 440. Now, I can confidently state that\u2019s correct!"
+        }
+      ]
+    },
+    {
+      "id": "msg_026623c3dff3fc15016aeeba7849c487d0a49e041be5a519f6",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Using \\(a_n=n(n+1)\\), the 10th term is\n\\[\na_{10}=10\\cdot11=\\boxed{110}.\n\\]\n\nThe sum of the first 10 terms is\n\\[\n\\sum_{n=1}^{10} n(n+1)\n=\\sum_{n=1}^{10}n^2+\\sum_{n=1}^{10}n\n=385+55\n=\\boxed{440}.\n\\]"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 247,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 171,
+    "output_tokens_details": {
+      "reasoning_tokens": 69
+    },
+    "total_tokens": 418
+  },
+  "user": null,
+  "metadata": {}
+}

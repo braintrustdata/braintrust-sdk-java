@@ -1,16 +1,19 @@
 {
-  "id": "resp_0f9477ee5bd7e331006ad162b028bc87d0bce70b43e9c5f5c5",
+  "id": "resp_0646413f10c0d8c3016aeeba656c5c87d0b1466433bfdb9c07",
   "object": "response",
-  "created_at": 1792107184,
+  "created_at": 1794030181,
   "status": "completed",
   "access_programs": null,
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1792107184,
+  "completed_at": 1794030182,
   "error": null,
   "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
   "incomplete_details": null,
   "instructions": "Reply with one word.",
   "max_output_tokens": null,
@@ -19,7 +22,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "msg_0f9477ee5bd7e331006ad162b095d487d095a969be1650d1f4",
+      "id": "msg_0646413f10c0d8c3016aeeba660b0087d0a8bad72aaac911ea",
       "type": "message",
       "status": "completed",
       "content": [
@@ -45,7 +48,7 @@
   },
   "safety_identifier": null,
   "service_tier": "default",
-  "store": true,
+  "store": false,
   "temperature": 1.0,
   "text": {
     "format": {

@@ -1,0 +1,34 @@
+{
+  "id" : "a8e836f6-957f-3e0c-b3e9-e9420776b475",
+  "name" : "api_apikey_login",
+  "request" : {
+    "url" : "/api/apikey/login",
+    "method" : "POST"
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "api_apikey_login-38adc53ea08a.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "Date" : "Sat, 07 Nov 2026 05:42:41 GMT",
+      "Via" : "1.1 1271197444822e7c59413a59ecbcecd6.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "ETag" : "W/\"178-kKbrsfThc+xXlggXc9RQYV+Gr9I\"",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "2VF5nu5n3VjCFIMA79lO_ZIB2Q0QKjA9Soh0L173BnuxuXxhu9RjJw==",
+      "Vary" : "Origin, Accept-Encoding",
+      "Expires" : "0",
+      "Surrogate-Control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "a8e836f6-957f-3e0c-b3e9-e9420776b475",
+  "persistent" : true,
+  "scenarioName" : "scenario-3-api-apikey-login",
+  "requiredScenarioState" : "scenario-3-api-apikey-login-52",
+  "newScenarioState" : "scenario-3-api-apikey-login-53",
+  "insertionIndex" : 10
+}

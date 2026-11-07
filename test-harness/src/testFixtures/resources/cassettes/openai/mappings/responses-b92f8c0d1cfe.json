@@ -1,0 +1,48 @@
+{
+  "id" : "63155cd7-3856-331d-9419-b0c46575827f",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-6-luna\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Search the web for a recent AI news headline and answer in one sentence.\"\n    } ]\n  } ],\n  \"stream\" : false,\n  \"store\" : false,\n  \"include\" : [ \"reasoning.encrypted_content\" ],\n  \"reasoning\" : {\n    \"effort\" : \"none\"\n  },\n  \"tools\" : [ {\n    \"type\" : \"web_search_preview\",\n    \"search_context_size\" : \"low\"\n  } ]\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-b92f8c0d1cfe.json",
+    "headers" : {
+      "x-request-id" : "req_5ce7bb97d594467aaeb8613109ebb37a",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a04ce5a4314fa-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179996076",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:13 GMT",
+      "x-ratelimit-reset-tokens" : "1ms",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=GAjXT_yfEwu6bR057i0.1p_OjG3Sbg5POwDhGT9R6ng-1794030189.8214064-1.0.1.1-U3yGo_F_bs7x8v21lbJD7gAciuFpNDbcSfNdHH7i9Kvm5cjPvtiZN3kaaCYAtp9n8J2MPiEZ1jSWbQDg6onDLdQrCJDGqtF99eFWTOpkJmLRlBu6OASjlxd8.ojK_znL; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:13 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "3296",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "63155cd7-3856-331d-9419-b0c46575827f",
+  "persistent" : true,
+  "insertionIndex" : 11
+}

@@ -2,34 +2,34 @@
   "object": "list",
   "data": [
     {
-      "id": "batch_6abe9f5998288190948a6f6de403ae92",
+      "id": "batch_6ad95300422c8190b5e162670505aafd",
       "object": "batch",
-      "endpoint": "/v1/responses",
-      "model": "gpt-5-mini-2025-08-07",
+      "endpoint": "/v1/chat/completions",
+      "model": "gpt-4o-mini-2024-07-18",
       "errors": null,
-      "input_file_id": "file-8nLWAZsZMcWW3aQK78iuEH",
+      "input_file_id": "file-DHeeBTVNVGzmCYs1pTWLPp",
       "completion_window": "24h",
       "status": "completed",
-      "output_file_id": "file-CUgNKJ4rnpBqedp17Pw8Vo",
+      "output_file_id": "file-Sq9GAM28yWwc4uCbvwkx5Z",
       "error_file_id": null,
-      "created_at": 1790877529,
-      "in_progress_at": 1790877531,
-      "expires_at": 1790963929,
-      "finalizing_at": 1790877543,
-      "completed_at": 1790877544,
+      "created_at": 1792627456,
+      "in_progress_at": 1792627457,
+      "expires_at": 1792713856,
+      "finalizing_at": 1792627469,
+      "completed_at": 1792627470,
       "failed_at": null,
       "expired_at": null,
       "cancelling_at": null,
       "cancelled_at": null,
       "request_counts": {
-        "total": 1,
-        "completed": 1,
+        "total": 2,
+        "completed": 2,
         "failed": 0
       },
       "usage": {
-        "input_tokens": 40,
-        "output_tokens": 57,
-        "total_tokens": 97,
+        "input_tokens": 50,
+        "output_tokens": 2,
+        "total_tokens": 52,
         "input_tokens_details": {
           "cached_tokens": 0
         },
@@ -38,11 +38,12 @@
         }
       },
       "metadata": {
-        "braintrust_run_id": "f68e8fe4-1e46-413a-aa8f-c87093080c0a"
+        "braintrust_run_id": "74947af5-8a7f-46f3-9e95-c9d4e6fd0b3d",
+        "braintrust_submission_id": "319bbef7-3f53-455a-8a9a-eefe9664d903"
       }
     }
   ],
-  "first_id": "batch_6abe9f5998288190948a6f6de403ae92",
-  "last_id": "batch_6abe9f5998288190948a6f6de403ae92",
+  "first_id": "batch_6ad95300422c8190b5e162670505aafd",
+  "last_id": "batch_6ad95300422c8190b5e162670505aafd",
   "has_more": true
 }

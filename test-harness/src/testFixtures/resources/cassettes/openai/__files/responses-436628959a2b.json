@@ -1,0 +1,208 @@
+{
+  "id": "resp_0ff065f13526f7a4016aeebb4488ac87d09b757bf061e36b5e",
+  "object": "response",
+  "created_at": 1794030404,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030410,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-4o-2024-08-06",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_0ff065f13526f7a4016aeebb45160487d0be6c9a93a11abff5",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "Moderna latest news October 2023"
+        ],
+        "query": "Moderna latest news October 2023"
+      }
+    },
+    {
+      "id": "msg_0ff065f13526f7a4016aeebb46221887d082b3f6ed832d6fa9",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 852,
+              "start_index": 694,
+              "title": "Moderna Q3 earnings: revenue up 29%, outlook raised | MRNA Stock News",
+              "url": "https://www.stocktitan.net/news/MRNA/moderna-reports-third-quarter-2026-financial-results-and-provides-9kk4tzh724ed.html?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 1662,
+              "start_index": 1470,
+              "title": "La primera vacuna contra el melanoma abre una nueva v\u00eda para tratamientos personalizados contra el c\u00e1ncer",
+              "url": "https://elpais.com/salud-y-bienestar/2026-10-24/la-primera-vacuna-contra-el-melanoma-abre-una-nueva-via-para-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2079,
+              "start_index": 2009,
+              "title": "Moderna news and analysis | KoersNu",
+              "url": "https://koersnu.nl/en/stocks/moderna?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2536,
+              "start_index": 2251,
+              "title": "La primera vacuna contra el melanoma abre una nueva v\u00eda para tratamientos personalizados contra el c\u00e1ncer",
+              "url": "https://elpais.com/salud-y-bienestar/2026-10-24/la-primera-vacuna-contra-el-melanoma-abre-una-nueva-via-para-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 2844,
+              "start_index": 2574,
+              "title": "La vacuna contra el melanoma marca un hito y abre la v\u00eda a tratamientos personalizados contra el c\u00e1ncer",
+              "url": "https://elpais.com/expres/2026-10-25/la-vacuna-contra-el-melanoma-marca-un-hito-y-abre-la-via-a-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai"
+            },
+            {
+              "type": "url_citation",
+              "end_index": 3045,
+              "start_index": 2882,
+              "title": "Las vacunas contra el c\u00e1ncer: s\u00ed, pero a\u00fan no",
+              "url": "https://elpais.com/salud-y-bienestar/2026-10-25/las-vacunas-contra-el-cancer-si-pero-aun-no.html?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "Moderna has recently achieved significant milestones across its financial performance, product development, and strategic initiatives.\n\n**Financial Performance:**\nIn the third quarter of 2026, Moderna reported a 29% increase in revenue, reaching $1.313 billion. This growth led to a net income of $162 million, a notable turnaround from a $200 million loss in the same period the previous year. Consequently, the company has raised its full-year revenue growth outlook to 15%-25%, up from the earlier projection of up to 10%. Additionally, Moderna improved its 2026 GAAP operating expense outlook by approximately $0.2 billion and expects a year-end cash balance between $4.7 and $5.2 billion. ([stocktitan.net](https://www.stocktitan.net/news/MRNA/moderna-reports-third-quarter-2026-financial-results-and-provides-9kk4tzh724ed.html?utm_source=openai))\n\n**Product Development:**\nModerna, in collaboration with Merck, has been developing a personalized mRNA-based cancer vaccine named intismeran autogene. Recent results from the Phase III INTerpath-001 trial, presented at the European Society for Medical Oncology (ESMO) congress in Madrid, demonstrated that combining this vaccine with pembrolizumab reduced the risk of melanoma recurrence or death by 42% compared to pembrolizumab alone. At the two-year mark, 82.2% of patients receiving the combination remained recurrence-free, versus 70% in the control group. However, data on overall survival are still maturing. ([elpais.com](https://elpais.com/salud-y-bienestar/2026-10-24/la-primera-vacuna-contra-el-melanoma-abre-una-nueva-via-para-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai))\n\n**Strategic Initiatives:**\nTo support its expanding operations and diversification, Moderna appointed Juan Andres as Chief Operating Officer, effective October 5, 2026. Andres, who previously served as Moderna's Chief Technical Operations and Quality Officer, returns to the company to oversee its increasing scale and vaccine portfolio growth. ([koersnu.nl](https://koersnu.nl/en/stocks/moderna?utm_source=openai))\n\nThese developments underscore Moderna's commitment to advancing mRNA technology across various therapeutic areas and enhancing its financial standing.\n\n\n## Highlights:\n- [La primera vacuna contra el melanoma abre una nueva v\u00eda para tratamientos personalizados contra el c\u00e1ncer](https://elpais.com/salud-y-bienestar/2026-10-24/la-primera-vacuna-contra-el-melanoma-abre-una-nueva-via-para-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai), Published on Saturday, October 24\n- [La vacuna contra el melanoma marca un hito y abre la v\u00eda a tratamientos personalizados contra el c\u00e1ncer](https://elpais.com/expres/2026-10-25/la-vacuna-contra-el-melanoma-marca-un-hito-y-abre-la-via-a-tratamientos-personalizados-contra-el-cancer.html?utm_source=openai), Published on Saturday, October 24\n- [Las vacunas contra el c\u00e1ncer: s\u00ed, pero a\u00fan no](https://elpais.com/salud-y-bienestar/2026-10-25/las-vacunas-contra-el-cancer-si-pero-aun-no.html?utm_source=openai), Published on Saturday, October 24 "
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "in_memory",
+  "reasoning": {
+    "context": null,
+    "effort": null,
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 0.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "function",
+      "description": "Get weather forecast for next N days",
+      "name": "getForecast",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          },
+          "arg1": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "arg0",
+          "arg1"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    },
+    {
+      "type": "function",
+      "description": "Get current weather for a location",
+      "name": "getWeather",
+      "output_schema": null,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "arg0": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "arg0"
+        ],
+        "additionalProperties": false
+      },
+      "strict": true
+    },
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "medium",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 378,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 754,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 1132
+  },
+  "user": null,
+  "metadata": {}
+}

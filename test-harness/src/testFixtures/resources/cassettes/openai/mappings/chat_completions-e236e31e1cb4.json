@@ -1,0 +1,49 @@
+{
+  "id" : "fb6f88e7-6437-3b60-bef9-871ce69a94d8",
+  "name" : "chat_completions",
+  "request" : {
+    "url" : "/chat/completions",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"messages\":[{\"content\":\"What is the weather like in Paris, France?\",\"role\":\"user\"}],\"model\":\"gpt-6-luna\",\"max_completion_tokens\":500,\"reasoning_effort\":\"none\",\"temperature\":0.0,\"tools\":[{\"function\":{\"name\":\"get_weather\",\"description\":\"Get the current weather for a location\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The city and state, e.g. San Francisco, CA\"},\"unit\":{\"type\":\"string\",\"enum\":[\"celsius\",\"fahrenheit\"],\"description\":\"The unit of temperature\"}},\"required\":[\"location\"]}},\"type\":\"function\"}],\"stream\":false}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "chat_completions-e236e31e1cb4.json",
+    "headers" : {
+      "Server" : "cloudflare",
+      "x-ratelimit-reset-tokens" : "0s",
+      "set-cookie" : "__cf_bm=1CmCLpvFeHGTB6uNn9TqJ.sbzuZpSi6VnmZOG8SWUKE-1794030189.7411416-1.0.1.1-c8zcB1jDCDsGB8Iv.QpJHfJRp.xKSodI4MEyiElXtw2QQu8XNSUxm0KHyQHIcqQr5EltjphDOO.80DnVOU7_UBxkhcLkNVTWAogyF1Lrb6MZGUpi1u8ixPPFLvHRXFlG; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:10 GMT",
+      "Access-Control-Expose-Headers" : [ "CF-Ray", "X-Request-ID", "CF-Ray" ],
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json",
+      "x-request-id" : "req_cd3b491758b845d281911209d9fbced2",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "CF-Ray" : "a56a04cdd827961b-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179999985",
+      "x-openai-proxy-wasm" : "v0.1",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:10 GMT",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "592",
+      "alt-svc" : "h3=\":443\"; ma=86400"
+    }
+  },
+  "uuid" : "fb6f88e7-6437-3b60-bef9-871ce69a94d8",
+  "persistent" : true,
+  "insertionIndex" : 16
+}

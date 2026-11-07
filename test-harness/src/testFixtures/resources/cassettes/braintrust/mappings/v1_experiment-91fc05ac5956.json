@@ -1,0 +1,44 @@
+{
+  "id" : "ec63722e-d3a7-3005-a1be-12864da7f178",
+  "name" : "v1_experiment",
+  "request" : {
+    "url" : "/v1/experiment",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"project_id\":\"f1e858a4-58e3-408f-983f-016760d7fa25\",\"name\":\"unit-test-eval\"}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_experiment-91fc05ac5956.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "Date" : "Sat, 07 Nov 2026 05:42:41 GMT",
+      "Via" : "1.1 b3a8bdee20374465a3f2aa64f19ec30e.cloudfront.net (CloudFront)",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Cache-Control" : "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "ETag" : "W/\"1c0-rOfZfVMj+H5rmOzu1dSCnRShoyM\"",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "6rOuV8wQzjnl9rnngRLKpkld_5DIjITJn0qXgOzUzFukYjPc1askOw==",
+      "Vary" : "Origin, Accept-Encoding",
+      "Expires" : "0",
+      "Surrogate-Control" : "no-store",
+      "Content-Type" : "application/json; charset=utf-8"
+    }
+  },
+  "uuid" : "ec63722e-d3a7-3005-a1be-12864da7f178",
+  "persistent" : true,
+  "scenarioName" : "scenario-2-v1-experiment",
+  "requiredScenarioState" : "scenario-2-v1-experiment-5",
+  "newScenarioState" : "scenario-2-v1-experiment-6",
+  "insertionIndex" : 9
+}
