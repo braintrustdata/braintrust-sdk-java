@@ -189,9 +189,8 @@ public class AnyOfModelTemplateTest {
 
     @Test
     void projectScoreCategories_getVariantType_minimum_viaConstructor() {
-        // Explicitly declare the List<String> variant as Minimum — this is the key fix.
-        // Without the (SchemaType, Object) constructor, getVariantType() would incorrectly
-        // return Categorical for both List variants due to erasure.
+        // Explicit variants distinguish List<String> from List<ProjectScoreCategory>
+        // despite their identical raw type after erasure.
         ProjectScoreCategories c =
                 new ProjectScoreCategories(
                         ProjectScoreCategories.SchemaType.Minimum, List.of("pass", "fail"));
@@ -200,9 +199,7 @@ public class AnyOfModelTemplateTest {
 
     @Test
     void projectScoreCategories_getVariantType_viaDeserialization_minimum() throws Exception {
-        // Uses TypeReference<List<String>> so Jackson fails fast on object elements,
-        // correctly distinguishing Minimum (List<String>) from Categorical
-        // (List<ProjectScoreCategory>)
+        // TypeReference distinguishes string elements from ProjectScoreCategory objects.
         ProjectScoreCategories c =
                 mapper.readValue("[\"pass\",\"fail\"]", ProjectScoreCategories.class);
         assertEquals(ProjectScoreCategories.SchemaType.Minimum, c.getVariantType());
@@ -249,16 +246,5 @@ public class AnyOfModelTemplateTest {
         ProjectScoreCategories c =
                 new ProjectScoreCategories(ProjectScoreCategories.SchemaType.Weighted, weights);
         assertEquals(weights, c.getWeightedInstance());
-    }
-
-    @Test
-    void projectScoreCategories_schemaType_dataType_field() {
-        // Each enum constant carries the full generic type as .dataType
-        assertEquals(
-                "List<ProjectScoreCategory>",
-                ProjectScoreCategories.SchemaType.Categorical.dataType);
-        assertEquals(
-                "Map<String, BigDecimal>", ProjectScoreCategories.SchemaType.Weighted.dataType);
-        assertEquals("List<String>", ProjectScoreCategories.SchemaType.Minimum.dataType);
     }
 }

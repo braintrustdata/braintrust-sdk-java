@@ -1,0 +1,48 @@
+{
+  "id" : "58f8e3e0-5248-345d-8172-02cea694a5eb",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\n  \"model\" : \"gpt-6-luna\",\n  \"input\" : [ {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Look at this sequence: 2, 6, 12, 20, 30. What is the pattern and what would be the formula for the nth term?\\n\"\n    } ]\n  }, {\n    \"type\" : \"reasoning\",\n    \"encrypted_content\" : \"gAAAAABq7rp8V169DIR2vw8iD-em5HSUno7PLyyXkMFHU7VQACtMvg2y4BjKzHC3wVKDeVx65LcQJehDa7tCTIDzdzsHBYvsXvs2kuMiAaq4y9etb10mYzUDWJEgK4eDGiLxzgyGJZ0NF9gZegMjOJHyr4EPxnhB7OeVn-zo7eZqSsIafvBA_KEmC2XPI77z6ey4xW8xSk54XyQ8sExI-V1xls_sB-giMelxL7cN1308Fu_9smnYRCiIeNbpSueElSxmjaw4x6WIEQuF8GNO7HLJ50rZGJhZAaMf0F7FbAMeJSpDwiKE-lcyxisMZI79QRiNVusiWLOJr7ThqnX3PDO5kagrfgZhqE9y4zcOGOLDafr3GP0DlWQXPvb0UNAcTckNdw78ZWIGY70oD_QAtIAcbD59UitlBs1c06jAfZnfaeWgDIXvJ3PuTd7E99LECSieDs3gOTYuyLCs-x_N0iaokzOzh4-D3CxrpSzwMg5Z-egt3K94NumlCC5BD6yCQ_q6mW7fYIhzUvVJZGj-7guDACPAUiiHoOgiD9lhLUF3Ike9BltIdLBSMdJk3j88mhhJCWkHjJjj86DIXW_l23ExiG_-8mUPGHBfIla3vgG7VfvAnQP577zt12-F9aqWiJvs3TXnsQX6RsPM5DmYK6DkyG_f0yXAzOhgkDNi4Fh3Jjuj8v3vEnMaMXxszK2NmwoF4dAWZBpGr7jOGB7F7Q05-D5flvatSA8sOZBkGX5bBTN4wLjkcQVT1MJ8Iq5o6z7xg0TLbbh53TVJnbZXwGPuQZ31gdKugqHbu-VnQJESew3czA3gviU42JQ_6CAbOnacfx6cH-Utdo0tG5jUla0Ql_ST8rP2nZPUVetWceO4IRnfP9INshOmQO6CiG9zFF49b_Iz6D7v5nZqYL_Whv53FwfODWG8P8ET4aW5RfbZ-6KxfHVa-01fFYlhzcESC4jsGjitV9ZOu6wA29kpZX2O_8ub08YZbGizabbZQiyw308bivC5MIMMGInhpjF0b5VzapkiH3q6XAnUTNNdqPulwFu6se3Q0DxX9ZguRK1-_QnRCaalctJIwyXbpYrTTgCGE7C_v5UBtRgE2NxF6EKGD0Mpsgu2CpH49ztJwwgOLpa-CYWOJvQ_x2WR-ec1w-GJhoXUHgX910-Dnj08YJWlfk54lHi0IJMQlDTaoLYufP4QPShmg6yTuG8zIiXNK6paBlY-qyJLQaZ5fFpPLtMBluNZM40FG4Vs_pLsFNCQJjhiieDZE2mvlX8toaqRRt5hFc3ux7mzXAoPfZanhVM-EPs2BTkLuUax3CBYbnhr8HYO5I2G3clBzM15yPsKEKaUNA-gFxk1QSnvvIivrCizN79r5RhsILEsfu26gfp_pxZ86VuBaDaooI7c-vKGqKHk4_LUjDGCIiH5ood2zR-C8k47KQLiq1iFYPnSZ6ABMVvfuCXP9Tq7owBQeEAlCxYsAwqpxrZNZL9Z9C-pOhl-m_xMIbU_-DpjZHj-Xoa0u_7IQOVOMh8oXydiB5WVkgaVzuldhgTr4g-HFnoK2KQKCldHDso4MOMPX6J69Z1toJeBJoTHL7TWiHMx8Px-zi5vC4sjxMIOpuWp0qxNA5TP6qovPpEQEU_bhKeFCyOm7_rT6i02qVCG5pQS71JAgajGMlRn2EmiVrOwPKaJESlLsameIKRbcrIqhYk4he-5g54X6WVjptNYhX5inzinz9EAKaf2ak8hfua2KJ3ClotLwQu9HSC1N_b2B7wadzytNV8E5O_aWNz9k0fmnsYd9DoDYkhnD0_m6U1LBORHU1yHAzB5JeMj5CdtewheTPEVd__iCSc321l0S5jXAvfSp_ICPKpwFYfIOM5Z1cvylMo1e3CZGiLPIU0D2g9YhSBNZhSnjjFOI8rdoSJn-O5H_mbnMnxIqD8Yv4I06NuHKPUNltD1rss4ti-cK-Mp_Hgfo89dVJjFL-urJLLTu6jrCnvyDZe-Yjxjn8zLcHg7_Jvhw65eWYYxDP_AF4ucYki85e4cys3uABHNneuBDh6EFgkSYl3zSUtLnwoZ5mDCvnXK5oCSTDi4vwRa-imdSPnavObnhIB7sAokvevYW-xKm86uPxgJoUlK8L6uWpXnsdzXRiM8WsvDTU6YiSzL8VhULnEp0hseCNYKRHJ30HBXRb6pFTR4ZcI1QJJuQKK8gOCth-siV19FEZNZMG5Bkw1UdsANcqk3IIg=\",\n    \"summary\" : [ {\n      \"type\" : \"summary_text\",\n      \"text\" : \"**Evaluating sequence patterns**\\n\\nI'm thinking we need to explain the ambiguity in patterns like n(n+1). For instance, when n=1, it gives us 2, and with n=2, we get 6, leading to differences of 4, 6, 8, and 10. It seems I should mention that the sequence isn't unique, as it's based on certain assumptions, but it follows a natural progression. I’ll aim for a concise explanation of this.\"\n    } ]\n  }, {\n    \"type\" : \"message\",\n    \"role\" : \"assistant\",\n    \"content\" : [ {\n      \"type\" : \"output_text\",\n      \"text\" : \"The differences are 4, 6, 8, 10, increasing by 2 each time. A natural pattern is the product of two consecutive integers:\\n\\n\\\\[\\na_n=n(n+1)\\n\\\\]\\n\\nStarting with \\\\(n=1\\\\), this gives \\\\(2, 6, 12, 20, 30,\\\\ldots\\\\). (Other formulas could fit the first five terms, but this is the simplest common pattern.)\"\n    } ]\n  }, {\n    \"type\" : \"message\",\n    \"role\" : \"user\",\n    \"content\" : [ {\n      \"type\" : \"input_text\",\n      \"text\" : \"Using the pattern you discovered, what would be the 10th term? And can you find the sum of the first 10 terms?\"\n    } ]\n  } ],\n  \"stream\" : false,\n  \"store\" : false,\n  \"include\" : [ \"reasoning.encrypted_content\" ],\n  \"reasoning\" : {\n    \"effort\" : \"high\",\n    \"summary\" : \"detailed\"\n  }\n}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-1efe84680b53.json",
+    "headers" : {
+      "x-request-id" : "req_54d75f7e6cea41c08b8246f5f85a6a78",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a052ca8711846-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "180000000",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:28 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=rfoyByZs.akFluBz3zOjhGRN18WMPhvAw_96rpWYi3I-1794030204.9055037-1.0.1.1-37cPWYaP6CrA84mMqMnyLnqORJktnfHo7FCG0jt9Me1C51l_CP.CyAW3tZaSpl8jWTFBl9lvB4k_EhTcmFAnYZaZYmQ6x3VZULLkjzqfn9Q78EpdM4k2Az2Izalz_pWx; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:28 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "3724",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "58f8e3e0-5248-345d-8172-02cea694a5eb",
+  "persistent" : true,
+  "insertionIndex" : 3
+}

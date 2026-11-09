@@ -5,7 +5,7 @@
         "parts": [
           {
             "text": "The capital of Germany is **Berlin**.",
-            "thoughtSignature": "EnEKbwERTTIPUi17wdVqJRLVWpXYTkQIwnj9hJ2BKAkBd64ZSvk82+sYx/gkI+cYM5FmapgO1DHm2bKErbhOci9mGRcgNZxqHJhE2QXwTosFlDTUFGunoxX4R4v0AxAYYeT1TsJO10BFuQnzdeuC+pA9xQ=="
+            "thoughtSignature": "EnMKcQFpFH0TGH7cfi5FBGXOQSJlXNj4qGiOmTYwoBxGQmlinktF1cGJtIU/4S1sJs/yTNFUAZWeXbmg8a9yUSir0BTgaDJAs6WOy3QlM3U9CxRoX47hY7c27W/wO1xxiHLGXe5ySHVhf0QJ9VdAqWbdoypg"
           }
         ],
         "role": "model"
@@ -27,5 +27,5 @@
     "serviceTier": "standard"
   },
   "modelVersion": "gemini-3.1-flash-lite",
-  "responseId": "j7yVauph1qOq2w-Q96TZCw"
+  "responseId": "Jbvuas-iBf-hz7IP8NmS8Ac"
 }

@@ -17,21 +17,22 @@
     "bodyFileName" : "v1_messages_batches-48b5199d01cc.json",
     "headers" : {
       "anthropic-organization-id" : "27796668-7351-40ac-acc4-024aee8995a5",
-      "CF-RAY" : "a467a68c4b3975eb-SEA",
+      "CF-RAY" : "a56a088fab1ab9a6-SEA",
       "Server" : "cloudflare",
       "vary" : "Accept-Encoding",
       "cf-cache-status" : "DYNAMIC",
-      "request-id" : "req_011CfmfmxGGHHLT48sYfKLne",
+      "request-id" : "req_011Cgo3B7K34Sr64sWgbQyFG",
       "strict-transport-security" : "max-age=31536000; includeSubDomains; preload",
-      "Date" : "Tue, 06 Oct 2026 21:10:03 GMT",
+      "Date" : "Sat, 07 Nov 2026 05:45:43 GMT",
       "X-Robots-Tag" : "none",
+      "Cache-Control" : "private, no-store",
       "anthropic-workspace-id" : "wrkspc_01J8hau4yJ2SKvtbeP9drm9A",
       "Content-Security-Policy" : "default-src 'none'; frame-ancestors 'none'",
-      "server-timing" : "x-originResponse;dur=157",
+      "server-timing" : "x-originResponse;dur=189",
       "Content-Type" : "application/json"
     }
   },
   "uuid" : "94f3d204-8a0b-3446-8f53-8d54bce9692d",
   "persistent" : true,
-  "insertionIndex" : 34
+  "insertionIndex" : 37
 }

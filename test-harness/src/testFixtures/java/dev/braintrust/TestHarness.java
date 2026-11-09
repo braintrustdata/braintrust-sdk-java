@@ -292,8 +292,12 @@ public class TestHarness implements AutoCloseable {
         var insertRequest = new InsertDatasetEventRequest();
         expectedData.forEach(
                 row -> {
-                    var meta = new InsertProjectLogsEventMetadata();
-                    meta.putAll(row.metadata());
+                    var meta =
+                            braintrust
+                                    .openApiClient()
+                                    .getObjectMapper()
+                                    .convertValue(
+                                            row.metadata(), InsertProjectLogsEventMetadata.class);
                     insertRequest.addEventsItem(
                             new InsertDatasetEvent()
                                     .input(row.input())

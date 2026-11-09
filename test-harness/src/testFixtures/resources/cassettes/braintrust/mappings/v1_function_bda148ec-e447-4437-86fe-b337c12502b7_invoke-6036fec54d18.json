@@ -24,17 +24,17 @@
       "X-Amz-Cf-Pop" : "SEA900-P9",
       "x-bt-function-creds-cached" : "HIT",
       "x-bt-cached" : "MISS",
-      "Date" : "Mon, 31 Aug 2026 17:36:11 GMT",
-      "Via" : "1.1 2501b465adde8e5aedc3f38e3dfcdc22.cloudfront.net (CloudFront)",
+      "Date" : "Sat, 07 Nov 2026 05:42:35 GMT",
+      "Via" : "1.1 88f286e23c15fc2f62a741db8207a67a.cloudfront.net (CloudFront)",
       "x-bt-passthrough" : "false",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
-      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "x-bt-secrets-scope" : "org_and_project",
-      "Access-Control-Allow-Credentials" : "true",
       "x-bt-stale-secrets" : "false",
-      "X-Amz-Cf-Id" : "Md7NdJ6IHhclNdHbokVN1ZyWVIenrnRqtd-1AeszPWZ5MoyHhLBdRQ==",
-      "x-bt-request-id" : "dc71534f-8e32-40d5-8f07-886abf2af265",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "ZMwDTIKBKzyS3kwzuhUZka1PBnwIf_xUcFUyXNdb9As5AAIBbxPl2g==",
       "x-bt-used-endpoint" : "OPENAI_API_KEY",
+      "x-bt-request-id" : "b8a48676-2411-4d54-a1d0-55e6c0c18c47",
       "x-bt-function-meta-cached" : "HIT",
       "cache-control" : "no-cache",
       "Content-Type" : "application/json"
@@ -42,5 +42,5 @@
   },
   "uuid" : "c5f7cafa-be93-3bae-8328-42058fb1e4cc",
   "persistent" : true,
-  "insertionIndex" : 26
+  "insertionIndex" : 25
 }

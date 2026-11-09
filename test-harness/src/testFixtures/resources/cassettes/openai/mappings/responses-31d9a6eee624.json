@@ -19,18 +19,24 @@
     "status" : 200,
     "bodyFileName" : "responses-31d9a6eee624.txt",
     "headers" : {
-      "x-request-id" : "req_decfce8cbd6f4d4082c2bae655649935",
+      "x-request-id" : "req_92fad0a3e3944a189ab6c1b623c1857c",
+      "x-ratelimit-limit-tokens" : "30000000",
       "openai-organization" : "braintrust-data",
       "Server" : "cloudflare",
-      "CF-Ray" : "a33dd3bb3efc3167-SEA",
+      "CF-Ray" : "a56a0acf5fe190db-SEA",
       "X-Content-Type-Options" : "nosniff",
-      "Date" : "Mon, 31 Aug 2026 17:41:42 GMT",
-      "access-control-expose-headers" : [ "X-Request-ID", "CF-Ray", "CF-Ray" ],
-      "set-cookie" : "__cf_bm=VCWCC7NLTn67CJtRGxKTbG8DUlEWigQSAvb29xCTnqE-1788198097.162654-1.0.1.1-fiaU48sRavwASpCc2j3FzlbccpHbbUUOfs1Ek6xpsM8JbzXcciwm02e1YCYEVZVCCVa75C5TeTqdI99F2EPdyulq0j2QR1wROHlbY53ukBI15H09BLf6oCHp589VWXGq; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 31 Aug 2026 18:11:42 GMT",
+      "x-ratelimit-reset-requests" : "6ms",
+      "x-ratelimit-remaining-tokens" : "29999667",
+      "x-ratelimit-remaining-requests" : "9999",
+      "Date" : "Sat, 07 Nov 2026 05:47:16 GMT",
+      "x-ratelimit-reset-tokens" : "0s",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=Nh.NSqD9RZtvil307T3mT5M89RjRCqVcq4wnb7kuF1g-1794030435.740261-1.0.1.1-mLkrCFdxHTduzEDmfkFl3CZI.NgS2xhXz2unz5RQiJ4khbR.db_HBjFwdne9VKn3F8WaHWe07HMJWMm_So7X0uExO6nUslX_rCZdLfJRPGyeKN0EGsrex9j3Isgaf4qY; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:17:16 GMT",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
       "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "10000",
       "openai-version" : "2020-10-01",
-      "openai-processing-ms" : "5079",
+      "openai-processing-ms" : "489",
       "alt-svc" : "h3=\":443\"; ma=86400",
       "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
       "Content-Type" : "text/event-stream; charset=utf-8"
@@ -38,5 +44,5 @@
   },
   "uuid" : "4ecd239c-fa2c-3a94-9038-bb602a460baa",
   "persistent" : true,
-  "insertionIndex" : 57
+  "insertionIndex" : 66
 }

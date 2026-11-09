@@ -1,0 +1,135 @@
+{
+  "id": "resp_0ef7f7f64fd0aef7016aeeba6715e087d09d112af3840cae5c",
+  "object": "response",
+  "created_at": 1794030184,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030189,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "ws_0ef7f7f64fd0aef7016aeeba68ece487d0b05fa9937a884cff",
+      "type": "web_search_call",
+      "status": "completed",
+      "action": {
+        "type": "search",
+        "queries": [
+          "recent AI news headline June 2026 artificial intelligence news"
+        ],
+        "query": "recent AI news headline June 2026 artificial intelligence news"
+      }
+    },
+    {
+      "id": "msg_0ef7f7f64fd0aef7016aeeba6d094887d087aff9a7b74872cf",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "end_index": 220,
+              "start_index": 127,
+              "title": "Anthropic is rapidly accelerating AI development amid slowdown calls, outside research group says",
+              "url": "https://apnews.com/article/9cf8c590ffc1abdb489179bdccc69c23?utm_source=openai"
+            }
+          ],
+          "logprobs": [],
+          "text": "AP News (November 5): **\u201cAnthropic is rapidly accelerating AI development amid slowdown calls, outside research group says.\u201d** ([apnews.com](https://apnews.com/article/9cf8c590ffc1abdb489179bdccc69c23?utm_source=openai))"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "none",
+    "mode": "standard",
+    "summary": null
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": {
+    "type": "web_search_preview"
+  },
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 1
+    }
+  },
+  "tools": [
+    {
+      "type": "web_search_preview",
+      "search_content_types": [
+        "text"
+      ],
+      "search_context_size": "low",
+      "user_location": {
+        "type": "approximate",
+        "city": null,
+        "country": "US",
+        "region": null,
+        "timezone": null
+      }
+    }
+  ],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 8666,
+    "input_tokens_details": {
+      "cache_write_tokens": 4328,
+      "cached_tokens": 0
+    },
+    "output_tokens": 79,
+    "output_tokens_details": {
+      "reasoning_tokens": 34
+    },
+    "total_tokens": 8745
+  },
+  "user": null,
+  "metadata": {}
+}

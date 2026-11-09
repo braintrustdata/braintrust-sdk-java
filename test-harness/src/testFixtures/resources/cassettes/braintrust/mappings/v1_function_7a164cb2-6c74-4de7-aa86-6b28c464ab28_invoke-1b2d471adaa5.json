@@ -1,0 +1,41 @@
+{
+  "id" : "5826395b-f43d-30b1-90b2-64cd61fded30",
+  "name" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28_invoke",
+  "request" : {
+    "url" : "/v1/function/7a164cb2-6c74-4de7-aa86-6b28c464ab28/invoke",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":{\"input\":\"carrot\",\"output\":\"java-fruit\",\"expected\":\"vegetable\",\"metadata\":{}},\"expected\":null,\"messages\":[],\"parent\":{\"object_type\":\"playground_logs\",\"object_id\":\"ceea7422-3507-4d1c-a5f7-7acf41d9fac2\",\"row_ids\":{\"id\":\"otel\",\"span_id\":\"967f1338912d4a49\",\"root_span_id\":\"a7b1358fdfe9d57cb81a53567f6959f7\"}},\"mcp_auth\":{}}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "v1_function_7a164cb2-6c74-4de7-aa86-6b28c464ab28_invoke-1b2d471adaa5.json",
+    "headers" : {
+      "X-Cache" : "Miss from cloudfront",
+      "X-Amz-Cf-Pop" : "SEA900-P9",
+      "x-bt-function-creds-cached" : "MISS",
+      "Date" : "Sat, 07 Nov 2026 05:41:53 GMT",
+      "Via" : "1.1 2772a76c066120d1905e8bfcd08c4d1c.cloudfront.net (CloudFront)",
+      "x-bt-span-export" : "AwMDAc7qdCI1B00cpfd6z0HZ+sICvAy0+iToTuuZepD5JTHgGwONeCZ487ZCJoXdKM/1KCJyeyJyb290X3NwYW5faWQiOiJhN2IxMzU4ZmRmZTlkNTdjYjgxYTUzNTY3ZjY5NTlmNyJ9",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-span-id,x-bt-span-export,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Allow-Credentials" : "true",
+      "X-Amz-Cf-Id" : "mIzYDH0m6KMeBaFiHYgbKf9vy1mb2zlXeZ3cz7lnwwckvpDud5nk3Q==",
+      "Vary" : "Origin",
+      "x-bt-span-id" : "bc0cb4fa-24e8-4eeb-997a-90f92531e01b",
+      "x-bt-function-meta-cached" : "MISS",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "5826395b-f43d-30b1-90b2-64cd61fded30",
+  "persistent" : true,
+  "insertionIndex" : 157
+}

@@ -1,15 +1,19 @@
 {
-  "id": "resp_0a4b79478d78bab2016a95bc96789087d0b0df7ca653c67156",
+  "id": "resp_02b7bfb117a08c12016aeebb2b948c87d0b6e78ef6f8885e32",
   "object": "response",
-  "created_at": 1788198038,
+  "created_at": 1794030379,
   "status": "completed",
+  "access_programs": null,
   "background": false,
   "billing": {
     "payer": "developer"
   },
-  "completed_at": 1788198041,
+  "completed_at": 1794030380,
   "error": null,
   "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
   "incomplete_details": null,
   "instructions": null,
   "max_output_tokens": null,
@@ -18,7 +22,7 @@
   "moderation": null,
   "output": [
     {
-      "id": "msg_0a4b79478d78bab2016a95bc9921e487d0860494333f647001",
+      "id": "msg_02b7bfb117a08c12016aeebb2c214087d082fcc40eddce741e",
       "type": "message",
       "status": "completed",
       "content": [

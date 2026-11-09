@@ -1,0 +1,48 @@
+{
+  "id" : "4647d0dd-85a0-3ce7-b88d-a4074e2247c0",
+  "name" : "responses",
+  "request" : {
+    "url" : "/responses",
+    "method" : "POST",
+    "headers" : {
+      "Content-Type" : {
+        "equalTo" : "application/json"
+      }
+    },
+    "bodyPatterns" : [ {
+      "equalToJson" : "{\"input\":[{\"role\":\"user\",\"content\":\"Search the web for a recent AI news headline and answer in one sentence.\"}],\"model\":\"gpt-6-luna\",\"reasoning\":{\"effort\":\"none\"},\"tool_choice\":{\"type\":\"web_search_preview\"},\"tools\":[{\"type\":\"web_search_preview\",\"search_context_size\":\"low\"}]}",
+      "ignoreArrayOrder" : true,
+      "ignoreExtraElements" : false
+    } ]
+  },
+  "response" : {
+    "status" : 200,
+    "bodyFileName" : "responses-c3a0171636a4.json",
+    "headers" : {
+      "x-request-id" : "req_255cc39218f34f9abad671d29d16fee6",
+      "x-ratelimit-limit-tokens" : "180000000",
+      "openai-organization" : "braintrust-data",
+      "Server" : "cloudflare",
+      "CF-Ray" : "a56a04a3dab906ac-SEA",
+      "X-Content-Type-Options" : "nosniff",
+      "x-ratelimit-reset-requests" : "2ms",
+      "x-ratelimit-remaining-tokens" : "179996295",
+      "x-ratelimit-remaining-requests" : "29999",
+      "Date" : "Sat, 07 Nov 2026 05:43:09 GMT",
+      "x-ratelimit-reset-tokens" : "1ms",
+      "access-control-expose-headers" : [ "X-Request-ID, Server-Timing-Total", "CF-Ray", "CF-Ray" ],
+      "set-cookie" : "__cf_bm=2kLdo2IO5077CyDxBW9FImMol45Gw7NRWIFktrSnEJ8-1794030183.0202255-1.0.1.1-Q8nCyrudp8KBmAfX9mJxp5hEGI5kD34a5KIQA5X5C8x8lxVsIfw64lheqDIPfZRA44.xgBwfPdseg6YVyJrLpepp9dYgOsw31bgJlk52QI85tsi6M6_wAiBKFs7jMpb.; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 07 Nov 2026 06:13:09 GMT",
+      "Strict-Transport-Security" : "max-age=31536000; includeSubDomains; preload",
+      "CF-Cache-Status" : "DYNAMIC",
+      "x-ratelimit-limit-requests" : "30000",
+      "openai-version" : "2020-10-01",
+      "openai-processing-ms" : "6620",
+      "alt-svc" : "h3=\":443\"; ma=86400",
+      "openai-project" : "proj_vsCSXafhhByzWOThMrJcZiw9",
+      "Content-Type" : "application/json"
+    }
+  },
+  "uuid" : "4647d0dd-85a0-3ce7-b88d-a4074e2247c0",
+  "persistent" : true,
+  "insertionIndex" : 18
+}

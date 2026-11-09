@@ -1,0 +1,110 @@
+{
+  "id": "resp_0a38607e0e7174d9016aeeba7cfc1887d09813284e2a9bcdc2",
+  "object": "response",
+  "created_at": 1794030205,
+  "status": "completed",
+  "access_programs": null,
+  "background": false,
+  "billing": {
+    "payer": "developer"
+  },
+  "completed_at": 1794030208,
+  "error": null,
+  "frequency_penalty": 0.0,
+  "image": {
+    "context_compression": "disabled"
+  },
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "max_tool_calls": null,
+  "model": "gpt-6-luna",
+  "moderation": null,
+  "output": [
+    {
+      "id": "rs_0a38607e0e7174d9016aeeba7e042887d0a142a0a73fbfc076",
+      "type": "reasoning",
+      "content": [],
+      "encrypted_content": "gAAAAABq7rqAn2NMGkfOvu__IYvKAzBhJoLGL8CixTFWmG_Id1DpH1-JQJ1M4jzmw_XBERYLw2jSaLnn2rlxXgU-yzNGhrhZvbd8WPI2fl0jC-Tl4WUCb9dfB-2AbYQ59ZJEaYSeK1-UcQ6R4YhHcFEE51TfNU80fiG-Z7zG92WTYRYUniPDIG2WUIOQY5MCNhIcugi1bCLoN5nEOb4N8Z-VUcI0uFnYEHbjMjHExM5eKbuMCFIJmS2bF0aWo0UmFjwNVTrsldBQrNCZwM4miGbJJX0BgHof0zinXDjO8oWV2XE8FDKNgreS4shW3yQHhLofpJyOyxXwhfL8FJiNM4XmDE7bBNuRfcAq8oL2hmQvRoxIjqJmDFev0NdXmmeoh52ZWMyOx1uMHDJoCxY6_-Z3yKUm7DmwbCM-iHubFZfnDbHArhRzkrv59PQbCluJGO5k_9EX8nhewc3laYxNRgM8zVjVYPoYDgAq4wOTGpdTrnwdlRSLlsaPxTdALrnkeJ61l165NoZyTZmNf4MBTStQpr4aQPllJahLkh6cNVgRLu6SMdI-hxRuuvZzxR8M3HYjw4lPCCGqQmat5Rz_HY0dRj2OqOY19Z7srwcQ7R64rcgBsaFhX0qoM-pcpw4hjk67sjtzkZG44sEM0U58h6oxHVSpjd3WN8tqdgdpQE66cd5ir4xJqqGciYAJsRWpcpU1yFIOzrgVydyQkjj_YEAtMm2ieg8cNNpYg6NJVnqYXKUmdjV_1LnEz1C_32zkOyFacrO_QNcV6Jf4IiGd6QGMuNzREzf6xZcJ83j8N5itMdyZwwmmVnLzRLjuWBkN1-FuFc2SosfHhbBpJRLARYbBw4a5fZNA_DvZJ8yQuLnjieBsR5Nel4kEOiYyQmLw-XW8t3Pz4zQGGXPQoDDeFznl7749s1D7yKB9DeGKiGbkkAbz16eF2y5DVNBFpwQZJnEp-fPMo9Rp9oNugnVG9VBIb6YFknLmViwYUS952CJwhe6o_FRpjwKd8VOxnjDI2v9z93mbfrYueKVvgTnQW7dnqVDTS1ppQrFfD933iSEZU-yiVSsV9RE9q3F4Eeo-QY6gSI3iBOM3sBIZIkccD9veSukHWIqLeFssPoy-Y_8HYmgFgKSdwjW1t3YYv3T6hUTKAnOh1E8kNct-KMTDDeaqp0InJpn50M6mRjdGiQTTDLd7A7xIOGL3z7Qm11EzXQ0RFJptPlbvEsyyO-rkrLJGnlWG129HQ6zHVCcMgKaXmPHVDYO5K2ua8Mv5gZrpQOTCkoPElBVTe5wGZOqBPSJh0ZDj300DRh9-VlyAgGGnl31cKh91XOvIYAIGvYumPI2Ya86WR3VzsI1UAWLsV6XRs8UIdu3ZRN-3E-EUtOnV1AWliyJbKRuP-yekPuCL_jfM70sBYJPUhHx13vYXvQl2PsHOuomT-diQoRDwniY7RJlGaxURpl7JRAc4jNHX8hw6KOcdGyrZu9SaBzq8oRlikxRQk0WyJ4cv7nDzmfuEEC6mvCER3gbxZdMpDUwaQMBlBPzo19L0WOGZ9PcQJZpSSzhS4Jr5tF3QlFlf82tMMTXm3WIauoz0b93f9roJ3omosOkxgFC9p-Y3mkO1Wov5xADPBVYnMTHALCPzbHHnSHSOi4RTcSwlkFpo3PlKiZOY-6WcRD2Y2Nx1NPL-0bODf6GrH4k8IpotNRk4sjeh-tsKtIQE_pPyZDK0KjPQ8E23KVG-9_KBZsov0_Lml_fg9QgZ9ZY4c939XeP2CJZYiKxssnDrdEsVMEeSW_MGvuECax9-z0uxwphktRgT1FiNgID9ye-FRozh5rTncfBa5lRhc8jghlqbdqmSFyiwK4q0Tv8E6Pwfj4CU-TAttpNznhPb_8NfzmhmnoHWu-4yCsxfFvG30P6UBUfIl8Rutmj0fFQDNlcd7isvqt7lkiONmTGCOpiA9Boc3-AIG_lME0rpzhWyS14UHmZNLf5ainI13J8c8xDx29cj9WdUsWbH3AYQ_5esafDrt1q-e_nAuFTjVKlAhbw=",
+      "summary": [
+        {
+          "type": "summary_text",
+          "text": "**Calculating series sums**\n\nI\u2019m working on an expression for the sum of n(n+1) from 1 to 10, where the result is supposed to be 110. My thought process involves calculating the sum of n\u00b2, which I found to be 385, plus the sum of n, which adds up to 55. Altogether, those values bring me to 440. I need to make sure I'm being careful with my calculations and assumptions moving forward!"
+        }
+      ]
+    },
+    {
+      "id": "msg_0a38607e0e7174d9016aeeba802c9c87d0a8d125003b876e67",
+      "type": "message",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "annotations": [],
+          "logprobs": [],
+          "text": "Using \\(a_n=n(n+1)\\), the 10th term is\n\n\\[\na_{10}=10\\cdot11=\\boxed{110}.\n\\]\n\nThe sum of the first 10 terms is\n\n\\[\n\\sum_{n=1}^{10}n(n+1)=\\sum_{n=1}^{10}n^2+\\sum_{n=1}^{10}n\n=385+55=\\boxed{440}.\n\\]"
+        }
+      ],
+      "phase": "final_answer",
+      "role": "assistant"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "presence_penalty": 0.0,
+  "previous_response_id": null,
+  "prompt_cache_key": null,
+  "prompt_cache_retention": "24h",
+  "reasoning": {
+    "context": "all_turns",
+    "effort": "high",
+    "mode": "standard",
+    "summary": "detailed"
+  },
+  "safety_identifier": null,
+  "service_tier": "default",
+  "store": false,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tool_choice": "auto",
+  "tool_usage": {
+    "image_gen": {
+      "input_tokens": 0,
+      "input_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "output_tokens": 0,
+      "output_tokens_details": {
+        "image_tokens": 0,
+        "text_tokens": 0
+      },
+      "total_tokens": 0
+    },
+    "web_search": {
+      "num_requests": 0
+    }
+  },
+  "tools": [],
+  "top_logprobs": 0,
+  "top_p": 0.98,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 231,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 148,
+    "output_tokens_details": {
+      "reasoning_tokens": 47
+    },
+    "total_tokens": 379
+  },
+  "user": null,
+  "metadata": {}
+}

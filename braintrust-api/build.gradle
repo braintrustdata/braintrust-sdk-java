@@ -18,7 +18,7 @@
 
 plugins {
     id 'java'
-    id 'org.openapi.generator' version '7.14.0'
+    id 'org.openapi.generator' version '7.27.0'
 }
 
 java {
@@ -70,11 +70,16 @@ openApiGenerate {
     // Custom templates under src/generator/ (not src/main/resources, so they don't
     // end up on the runtime classpath or in the published JAR — they're only needed
     // at code-generation time). See src/generator/templates for the diffs from upstream.
-    templateDir = "${projectDir}/src/generator/templates/Java"
+    templateDir = layout.projectDirectory.dir('src/generator/templates/Java')
 
-    inputSpec = normalizedSpecFile.map { it.asFile.absolutePath }
+    inputSpec = normalizedSpecFile
 
-    outputDir = generatedSourcesDir.map { it.asFile.absolutePath }
+    outputDir = generatedSourcesDir
+    // Remove models and endpoints no longer present in the pinned spec.
+    cleanupOutput = true
+
+    // Adapt OpenAPI 3.1 schema types to the generator's internal representation.
+    openapiNormalizer = [NORMALIZE_31SPEC: 'true']
 
     apiPackage = 'dev.braintrust.openapi.api'
     modelPackage = 'dev.braintrust.openapi.model'
@@ -144,7 +149,7 @@ openApiGenerate {
 // referenced schema, so a genuinely-narrowing allOf is left alone.
 
 tasks.register('normalizeOpenApiSpec') {
-    description = 'Collapses redundant allOf-over-$ref-plus-composition nodes before generation.'
+    description = 'Normalizes license metadata and redundant allOf compositions before generation.'
     group = 'Build'
 
     def rawSpec = openApiSpecFile
@@ -155,6 +160,15 @@ tasks.register('normalizeOpenApiSpec') {
     doLast {
         def yaml = new org.yaml.snakeyaml.Yaml()
         def spec = yaml.load(rawSpec.get().asFile.text)
+
+        // Swagger Parser requires identifier or url for OAS 3.1 licenses, although both are
+        // optional. Supply the SPDX identifier for the spec's known license without replacing
+        // upstream metadata or setting identifier alongside its mutually exclusive url field.
+        def license = spec?.info?.license
+        if (spec?.openapi?.startsWith('3.1.') && license?.name == 'Apache 2.0'
+                && !license.containsKey('identifier') && !license.containsKey('url')) {
+            license.identifier = 'Apache-2.0'
+        }
 
         // The branches of a component schema's own anyOf/oneOf, or null if it isn't a composition.
         def declaredBranches = { String refName ->

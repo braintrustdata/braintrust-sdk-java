@@ -1,5 +1,5 @@
 {
-  "id": "modr-8807",
+  "id": "modr-6485",
   "model": "omni-moderation-latest",
   "results": [
     {
@@ -20,9 +20,9 @@
         "violence/graphic": false
       },
       "category_scores": {
-        "harassment": 3.822911232549001e-6,
+        "harassment": 3.8831109868779005e-6,
         "harassment/threatening": 2.561282210758673e-7,
-        "sexual": 6.605214485464791e-6,
+        "sexual": 6.814872211615988e-6,
         "hate": 1.2606946239951315e-6,
         "hate/threatening": 4.450850519411503e-8,
         "illicit": 2.0462932829931794e-6,
@@ -31,7 +31,7 @@
         "self-harm/instructions": 2.1907815825757866e-7,
         "self-harm": 1.8925148246037342e-6,
         "sexual/minors": 1.994729721527057e-7,
-        "violence": 5.649793328376294e-6,
+        "violence": 5.475976980449466e-6,
         "violence/graphic": 8.398072034951531e-7
       },
       "category_applied_input_types": {

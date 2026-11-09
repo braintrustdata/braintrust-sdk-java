@@ -127,7 +127,7 @@ public class BraintrustOpenAITest {
                     client.images()
                             .generate(
                                     ImageGenerateParams.builder()
-                                            .model(ImageModel.GPT_IMAGE_1)
+                                            .model(ImageModel.of("gpt-image-2.5-flare"))
                                             .prompt(
                                                     "A small blue circle on a plain white"
                                                             + " background.")
@@ -148,7 +148,7 @@ public class BraintrustOpenAITest {
         } finally {
             parent.end();
         }
-        assertSingleMediaSpan(parent, "images/generations", "gpt-image-1");
+        assertSingleMediaSpan(parent, "images/generations", "gpt-image-2.5-flare");
     }
 
     @Test
@@ -491,7 +491,7 @@ public class BraintrustOpenAITest {
 
         var request =
                 ResponseCreateParams.builder()
-                        .model("o4-mini")
+                        .model("gpt-6-luna")
                         .reasoning(
                                 Reasoning.builder()
                                         .effort(ReasoningEffort.LOW)

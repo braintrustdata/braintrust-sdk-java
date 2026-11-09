@@ -20,17 +20,18 @@
     "bodyFileName" : "btql-78f0a8f58774.json",
     "headers" : {
       "X-Cache" : "Miss from cloudfront",
+      "x-bt-count" : "1",
       "X-Amz-Cf-Pop" : "SEA900-P9",
-      "x-bt-brainstore-duration-ms" : "212",
-      "x-bt-api-duration-ms" : "565",
-      "Date" : "Mon, 31 Aug 2026 17:35:26 GMT",
-      "Via" : "1.1 4c8322ac27bebc2a7e26f72c7b6ec2ee.cloudfront.net (CloudFront)",
+      "x-bt-brainstore-duration-ms" : "75",
+      "x-bt-api-duration-ms" : "124",
+      "Date" : "Sat, 07 Nov 2026 05:42:12 GMT",
+      "Via" : "1.1 e8b22a8fa8511f8f972b4965a9af80b4.cloudfront.net (CloudFront)",
       "Strict-Transport-Security" : "max-age=31536000; includeSubDomains",
-      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
+      "Access-Control-Expose-Headers" : "x-bt-cursor,x-bt-found-existing,x-bt-query-plan,x-bt-api-duration-ms,x-bt-brainstore-duration-ms,x-bt-count,x-bt-internal-trace-id,x-bt-error-origin,x-bt-used-endpoint,x-bt-overflow-url",
       "Cache-Control" : "private, no-cache",
       "Access-Control-Allow-Credentials" : "true",
-      "x-bt-internal-trace-id" : "3353eb9f75e3b9d350d5cc2c8c87c353",
-      "X-Amz-Cf-Id" : "Kh-2AE8nOkuF86RM02bR2DKdsxCjwS92RHfkpqq9ek8EoduMAlVvFA==",
+      "x-bt-internal-trace-id" : "8a55590d0fd425c4783d4dfb6f031231",
+      "X-Amz-Cf-Id" : "j4NlTyQFrFdRUtRCsQloCEKZ4CHe-f7kyRU63pT_xHL7JWdXR1zbmw==",
       "Vary" : "Origin",
       "Content-Type" : "application/json"
     }
@@ -40,5 +41,5 @@
   "scenarioName" : "scenario-16-btql",
   "requiredScenarioState" : "Started",
   "newScenarioState" : "scenario-16-btql-2",
-  "insertionIndex" : 85
+  "insertionIndex" : 84
 }
