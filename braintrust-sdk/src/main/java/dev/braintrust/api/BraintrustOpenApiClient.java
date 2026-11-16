@@ -32,7 +32,12 @@ public class BraintrustOpenApiClient extends ApiClient {
         super();
         this.config = config;
         this.updateBaseUri(config.apiUrl());
-        this.setHttpClientBuilder(HttpClient.newBuilder().sslContext(config.sslContext()));
+        var httpClientBuilder = HttpClient.newBuilder().sslContext(config.sslContext());
+        if ("http".equalsIgnoreCase(URI.create(config.apiUrl()).getScheme())) {
+            // Some HTTP servers disconnect h2c upgrade requests instead of serving HTTP/1.1.
+            httpClientBuilder.version(HttpClient.Version.HTTP_1_1);
+        }
+        this.setHttpClientBuilder(httpClientBuilder);
         this.setRequestInterceptor(req -> req.header("Authorization", "Bearer " + config.apiKey()));
     }
 

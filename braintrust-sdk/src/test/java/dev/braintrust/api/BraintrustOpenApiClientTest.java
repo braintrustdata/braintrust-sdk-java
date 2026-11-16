@@ -6,8 +6,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.sun.net.httpserver.HttpServer;
 import dev.braintrust.config.BraintrustConfig;
 import java.io.FileInputStream;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -129,6 +136,62 @@ class BraintrustOpenApiClientTest {
         wireMock.verify(
                 getRequestedFor(urlPathEqualTo("/v1/project"))
                         .withHeader("Authorization", equalTo("Bearer test-key")));
+    }
+
+    @Test
+    void of_supportsHttpServersThatDisconnectUpgradeRequests() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext(
+                "/v1/project",
+                exchange -> {
+                    try (exchange) {
+                        if (exchange.getRequestHeaders().containsKey("Upgrade")) {
+                            return;
+                        }
+                        var body = "{\"objects\":[]}".getBytes(StandardCharsets.UTF_8);
+                        exchange.getResponseHeaders().set("Content-Type", "application/json");
+                        exchange.sendResponseHeaders(200, body.length);
+                        exchange.getResponseBody().write(body);
+                    }
+                });
+        server.start();
+        try {
+            var httpClient =
+                    BraintrustOpenApiClient.of(
+                            BraintrustConfig.builder()
+                                    .apiKey("test-key")
+                                    .apiUrl("http://localhost:" + server.getAddress().getPort())
+                                    .build());
+            var projects =
+                    new dev.braintrust.openapi.api.ProjectsApi(httpClient)
+                            .getProject(null, null, null, null, "any", null);
+            assertTrue(projects.getObjects().isEmpty());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void of_preservesHttp2ForHttps() throws Exception {
+        wireMockHttps.stubFor(get(urlEqualTo("/protocol")).willReturn(aResponse().withStatus(204)));
+        var httpsUrl = "https://localhost:" + wireMockHttps.httpsPort();
+        var httpsClient =
+                BraintrustOpenApiClient.of(
+                        BraintrustConfig.builder()
+                                .apiKey("test-key")
+                                .apiUrl(httpsUrl)
+                                .sslContext(customSslContext)
+                                .build());
+        var response =
+                httpsClient
+                        .getHttpClient()
+                        .send(
+                                HttpRequest.newBuilder(URI.create(httpsUrl + "/protocol"))
+                                        .GET()
+                                        .build(),
+                                HttpResponse.BodyHandlers.discarding());
+        assertEquals(204, response.statusCode());
+        assertEquals(HttpClient.Version.HTTP_2, response.version());
     }
 
     @Test
