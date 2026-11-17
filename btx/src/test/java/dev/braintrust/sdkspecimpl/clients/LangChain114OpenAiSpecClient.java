@@ -46,6 +46,11 @@ public final class LangChain114OpenAiSpecClient implements SpecClient {
 
     @Override
     public boolean supports(LlmSpanSpec spec) {
+        // LangChain4j 1.19 exposes legacy promptCacheRetention, but cannot send
+        // prompt_cache_options or explicit breakpoints for OpenAI's new TTLs.
+        if (spec.requests().stream().anyMatch(r -> r.containsKey("prompt_cache_options"))) {
+            return false;
+        }
         return "/v1/chat/completions".equals(spec.endpoint())
                 || "/v1/responses".equals(spec.endpoint());
     }

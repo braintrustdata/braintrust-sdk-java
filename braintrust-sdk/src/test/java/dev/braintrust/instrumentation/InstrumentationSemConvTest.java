@@ -91,6 +91,96 @@ class InstrumentationSemConvTest {
     }
 
     @Test
+    void tagsOpenAIMixedCacheTtlsWithoutDoubleCounting() {
+        for (String detailsKey : List.of("input_tokens_details", "prompt_tokens_details")) {
+            exporter.reset();
+            SpanData span =
+                    tagOpenAIResponse(
+                            """
+                            {
+                              "usage": {
+                                "prompt_tokens": 12500,
+                                "completion_tokens": 420,
+                                "total_tokens": 12920,
+                                "%s": {
+                                  "cached_tokens": 2048,
+                                  "cache_write_tokens": 9600,
+                                  "cache_write_tokens_details": {
+                                    "ttl_30m_tokens": 1600,
+                                    "ttl_12h_tokens": 8000
+                                  }
+                                }
+                              }
+                            }
+                            """
+                                    .formatted(detailsKey));
+            assertEquals(
+                    json(
+                            """
+                            {"prompt_tokens":12500,"completion_tokens":420,"tokens":12920,
+                             "prompt_cached_tokens":2048,"prompt_cache_creation_30m_tokens":1600,
+                             "prompt_cache_creation_12h_tokens":8000}
+                            """),
+                    json(span.getAttributes().get(METRICS)));
+        }
+    }
+
+    @Test
+    void preservesOpenAIZeroAndPartialCacheSplits() {
+        SpanData span =
+                tagOpenAIResponse(
+                        """
+                        {"usage":{"input_tokens":20,"output_tokens":3,"input_tokens_details":{
+                          "cached_tokens":0,"cache_write_tokens":0,
+                          "cache_write_tokens_details":{"ttl_30m_tokens":0,"ttl_12h_tokens":null}
+                        }}}
+                        """);
+        assertEquals(
+                json(
+                        """
+                        {"prompt_tokens":20,"completion_tokens":3,"tokens":23,
+                         "prompt_cached_tokens":0,"prompt_cache_creation_30m_tokens":0}
+                        """),
+                json(span.getAttributes().get(METRICS)));
+    }
+
+    @Test
+    void fallsBackToReportedOpenAIAggregateWithoutTtlSplit() {
+        SpanData span =
+                tagOpenAIResponse(
+                        """
+                        {"usage":{"input_tokens":200,"output_tokens":3,"input_tokens_details":{
+                          "cache_write_tokens":160,"cache_write_tokens_details":null
+                        }}}
+                        """);
+        assertEquals(
+                json(
+                        """
+                        {"prompt_tokens":200,"completion_tokens":3,"tokens":203,
+                         "prompt_cache_creation_tokens":160}
+                        """),
+                json(span.getAttributes().get(METRICS)));
+    }
+
+    @Test
+    void doesNotInventOpenAICacheWritesForOlderModels() {
+        SpanData span =
+                tagOpenAIResponse(
+                        """
+                        {"usage":{"input_tokens":200,"output_tokens":3,"input_tokens_details":{
+                          "cached_tokens":128
+                        }}}
+                        """);
+        assertEquals(
+                json(
+                        """
+                        {"prompt_tokens":200,"completion_tokens":3,"tokens":203,
+                         "prompt_cached_tokens":128}
+                        """),
+                json(span.getAttributes().get(METRICS)));
+    }
+
+    @Test
     void tagsOpenAIAudioTranscriptionOutput() {
         SpanData span = tagOpenAIResponse("{\"text\":\"Hello from the recording.\"}");
 

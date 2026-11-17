@@ -392,10 +392,7 @@ public class InstrumentationSemConv {
                 metrics.put("completion_tokens", usage.get("completion_tokens"));
             if (usage.has("total_tokens")) metrics.put("tokens", usage.get("total_tokens"));
             if (usage.has("prompt_tokens_details")) {
-                JsonNode details = usage.get("prompt_tokens_details");
-                if (details.has("cached_tokens")) {
-                    metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
-                }
+                addOpenAICacheMetrics(metrics, usage.get("prompt_tokens_details"));
             }
             // Reasoning tokens (Chat Completions API)
             if (usage.has("completion_tokens_details")) {
@@ -414,10 +411,7 @@ public class InstrumentationSemConv {
                         usage.get("input_tokens").asLong() + usage.get("output_tokens").asLong());
             }
             if (usage.has("input_tokens_details")) {
-                JsonNode details = usage.get("input_tokens_details");
-                if (details.has("cached_tokens")) {
-                    metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
-                }
+                addOpenAICacheMetrics(metrics, usage.get("input_tokens_details"));
             }
             // Reasoning tokens (Responses API)
             if (usage.has("output_tokens_details")) {
@@ -430,6 +424,26 @@ public class InstrumentationSemConv {
 
         if (!metrics.isEmpty()) {
             span.setAttribute("braintrust.metrics", toJson(metrics));
+        }
+    }
+
+    private static void addOpenAICacheMetrics(Map<String, Object> metrics, JsonNode details) {
+        if (details.hasNonNull("cached_tokens")) {
+            metrics.put("prompt_cached_tokens", details.get("cached_tokens"));
+        }
+        JsonNode writes = details.path("cache_write_tokens_details");
+        boolean has30m = writes.hasNonNull("ttl_30m_tokens");
+        boolean has12h = writes.hasNonNull("ttl_12h_tokens");
+        if (has30m || has12h) {
+            // The TTL buckets replace the aggregate, and are already included in input tokens.
+            if (has30m) {
+                metrics.put("prompt_cache_creation_30m_tokens", writes.get("ttl_30m_tokens"));
+            }
+            if (has12h) {
+                metrics.put("prompt_cache_creation_12h_tokens", writes.get("ttl_12h_tokens"));
+            }
+        } else if (details.hasNonNull("cache_write_tokens")) {
+            metrics.put("prompt_cache_creation_tokens", details.get("cache_write_tokens"));
         }
     }
 

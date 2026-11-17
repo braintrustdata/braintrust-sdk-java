@@ -87,7 +87,7 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
 
     // OpenAI SDK
-    testImplementation 'com.openai:openai-java:2.8.1'
+    testImplementation 'com.openai:openai-java:2.15.0'
 
     // Anthropic SDK
     testImplementation 'com.anthropic:anthropic-java:2.10.0'

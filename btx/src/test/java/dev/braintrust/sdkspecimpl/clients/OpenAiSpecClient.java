@@ -134,7 +134,20 @@ public final class OpenAiSpecClient implements SpecClient {
         }
         var params = paramsBuilder.build();
 
-        Response response = client(ctx).responses().create(params);
+        Response response;
+        if (Boolean.TRUE.equals(request.get("stream"))) {
+            try (var stream = client(ctx).responses().createStreaming(params)) {
+                response =
+                        stream.stream()
+                                .flatMap(event -> event.completed().stream())
+                                .map(event -> event.response())
+                                .reduce((previous, current) -> current)
+                                .orElseThrow(
+                                        () -> new IllegalStateException("Response did not complete"));
+            }
+        } else {
+            response = client(ctx).responses().create(params);
+        }
 
         // Accumulate this turn's input + output into history for the next turn
         history.addAll(thisInput);

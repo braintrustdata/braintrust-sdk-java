@@ -175,6 +175,31 @@ class TokenAccountingSpecTest {
     @Nested
     class CacheRollIn {
 
+        @Test
+        void openAiTtlWritesAndReadsMustFitWithinPrompt() {
+            var valid =
+                    metrics(
+                            "prompt_tokens", 12500,
+                            "prompt_cached_tokens", 2048,
+                            "prompt_cache_creation_30m_tokens", 1600,
+                            "prompt_cache_creation_12h_tokens", 8000);
+            assertClean(valid);
+            valid.put("prompt_tokens", 11000);
+            assertViolation(valid, "exceeds prompt_tokens");
+        }
+
+        @Test
+        void openAiTtlCountsMustBeNonNegativeIntegers() {
+            assertViolation(
+                    metrics("prompt_cache_creation_30m_tokens", -1),
+                    "prompt_cache_creation_30m_tokens",
+                    "non-negative");
+            assertViolation(
+                    metrics("prompt_cache_creation_12h_tokens", 1.5),
+                    "prompt_cache_creation_12h_tokens",
+                    "integer");
+        }
+
         /**
          * The regression this whole helper exists for: Anthropic and Bedrock report their native
          * input count exclusive of cache tokens, so copying it into prompt_tokens as-is leaves the
