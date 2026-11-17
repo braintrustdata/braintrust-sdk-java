@@ -44,10 +44,19 @@ public final class TokenAccountingSpec {
     private static final String CACHE_CREATE = "prompt_cache_creation_tokens";
     private static final String CACHE_CREATE_5M = "prompt_cache_creation_5m_tokens";
     private static final String CACHE_CREATE_1H = "prompt_cache_creation_1h_tokens";
+    private static final String CACHE_CREATE_30M = "prompt_cache_creation_30m_tokens";
+    private static final String CACHE_CREATE_12H = "prompt_cache_creation_12h_tokens";
 
     /** Detail metrics that must not exceed {@code prompt_tokens}. */
     private static final List<String> PROMPT_SUBSET_METRICS =
-            List.of(CACHED, CACHE_CREATE, CACHE_CREATE_5M, CACHE_CREATE_1H, "prompt_audio_tokens");
+            List.of(
+                    CACHED,
+                    CACHE_CREATE,
+                    CACHE_CREATE_5M,
+                    CACHE_CREATE_1H,
+                    CACHE_CREATE_30M,
+                    CACHE_CREATE_12H,
+                    "prompt_audio_tokens");
 
     /** Detail metrics that must not exceed {@code completion_tokens}. */
     private static final List<String> COMPLETION_SUBSET_METRICS =
@@ -245,7 +254,10 @@ public final class TokenAccountingSpec {
     private static long effectiveCacheCreationTokens(Map<String, Long> counts) {
         long aggregate = counts.getOrDefault(CACHE_CREATE, 0L);
         long split =
-                counts.getOrDefault(CACHE_CREATE_5M, 0L) + counts.getOrDefault(CACHE_CREATE_1H, 0L);
+                counts.getOrDefault(CACHE_CREATE_5M, 0L)
+                        + counts.getOrDefault(CACHE_CREATE_1H, 0L)
+                        + counts.getOrDefault(CACHE_CREATE_30M, 0L)
+                        + counts.getOrDefault(CACHE_CREATE_12H, 0L);
         return Math.max(aggregate, split);
     }
 
